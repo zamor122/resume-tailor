@@ -1,2 +1,2 @@
-# resume-tailor
-A resume tailor microservice
+# Resume Tailor
+##  A microservice for tailoring your resume
