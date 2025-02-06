@@ -40,10 +40,7 @@ function Navbar() {
   return (
     <nav className="fixed top-0 left-0 w-full flex justify-between items-center px-6 sm:px-10 py-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-md z-50">
       <div className="text-lg font-bold tracking-wide text-gray-900 dark:text-white">
-        stay at home mom job
-      </div>
-      <div className="text-xl font-semibold text-gray-700 dark:text-gray-300">
-        Resume Tailor
+        ai resume tailor
       </div>
     </nav>
   );
