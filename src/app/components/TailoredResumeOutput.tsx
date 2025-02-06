@@ -1,5 +1,6 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";  // Make sure you have this installed
+import CopyButton from "./CopyButton";
 
 interface TailoredResumeOutputProps {
   newResume: string;
@@ -21,10 +22,13 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ newResume, 
   return (
     newResume && (
       <div className="glass-card">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 pb-4">
-          Your Tailored Resume
-        </h2>
-        <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800 shadow-sm min-h-[800px] prose prose-lg dark:prose-invert max-w-none">
+        <div className="flex justify-between items-center pb-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            Your Tailored Resume
+          </h2>
+          <CopyButton />
+        </div>
+        <div id="resume" className="border border-gray-300 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800 shadow-sm min-h-[800px] prose prose-lg dark:prose-invert max-w-none">
           <ReactMarkdown
             components={{
               h1: ({ children }) => (

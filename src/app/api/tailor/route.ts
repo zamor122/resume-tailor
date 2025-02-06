@@ -49,7 +49,9 @@ export async function POST(req: NextRequest) {
           parts: [
             {
               text: `
-                Using a conversational, humanized yet professional tone, tailor this resume to match the given job description, making it more relevant and aligned with the job role. 
+                Using a conversational, humanized yet professional tone, tailor this resume to match the given job description, making it significantly more relevant and aligned with the job role. 
+                Do not include any extra comments regarding clarification why something was added, removed or changed.
+                Specifically, focus on the key points in the job description by finding the qualifications and skills necessary to alter the resume to pass the ATS and be the best candidate for the position.
                 Provide the tailored resume using markdown formatting (e.g., use bullet points for skills, use headers for each section, etc.).
                 
                 Additionally, please return a JSON object with the following structure:
@@ -99,18 +101,17 @@ export async function POST(req: NextRequest) {
     // Extract response
     const tailoredResumeText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Error: No response from AI.";
     
-    // Parse the tailoredResumeText to extract the JSON object
-    let tailoredResume, changes;
-    try {
-      const jsonString = tailoredResumeText.replace(/```json\n|\n```/g, '');
-      const parsedData = JSON.parse(jsonString);
-      tailoredResume = parsedData.tailoredResume || "Error: No resume generated.";
-      changes = parsedData.changes || [];
-    } catch (error) {
-      console.error("Error parsing tailored resume:", error);
-      tailoredResume = "Error: Unable to parse resume.";
-      changes = [];
+    // Sanitize the response
+    const jsonString = tailoredResumeText.replace(/```json\n|\n```/g, '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control characters
+
+    // Validate the JSON structure
+    if (!jsonString.startsWith('{') || !jsonString.endsWith('}')) {
+      throw new Error("Invalid JSON format");
     }
+
+    const parsedData = JSON.parse(jsonString);
+    const tailoredResume = parsedData.tailoredResume || "Error: No resume generated.";
+    const changes = parsedData.changes || [];
 
     return NextResponse.json({
       tailoredResume,
