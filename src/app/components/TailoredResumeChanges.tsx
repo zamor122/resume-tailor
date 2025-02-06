@@ -15,6 +15,9 @@ const TailoredResumeChanges: React.FC<TailoredResumeChangesProps> = ({ changes, 
   if (loading) {
     return (
       <div className="glass-card">
+        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+          Changes Made:
+        </h3>
         <div className="animate-pulse space-y-4">
           {[1, 2, 3].map((i) => (
             <div 
@@ -30,6 +33,9 @@ const TailoredResumeChanges: React.FC<TailoredResumeChangesProps> = ({ changes, 
   return (
     changes.length > 0 && (
       <div className="glass-card">
+        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+          Changes Made:
+        </h3>
         <ul className="list-disc pl-6 space-y-2">
           {changes.map((change, index) => (
             <li key={index} className="text-gray-900 dark:text-gray-100">

@@ -121,10 +121,7 @@ const Home = () => {
         </div>
 
         {/* Changes Component - Takes up 4 columns */}
-        <div className="md:col-span-4 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 h-fit sticky top-24">
-          <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
-            Changes Made:
-          </h3>
+        <div className="md:col-span-4">
           <TailoredResumeChanges changes={changes} loading={loading} />
         </div>
       </div>
