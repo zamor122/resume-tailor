@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 
+let lastRequestTime: number | null = null; // Store the last request time
+
 export async function POST(req: NextRequest) {
+  const currentTime = Date.now();
+  
+  // Check if the last request was made within the last 60 seconds
+  if (lastRequestTime && currentTime - lastRequestTime < 60000) {
+    return NextResponse.json({ error: "Please wait before making another request." }, { status: 429 });
+  }
+
+  lastRequestTime = currentTime; // Update the last request time
+
   try {
     const { resume, jobDescription } = await req.json();
 
@@ -19,18 +30,17 @@ export async function POST(req: NextRequest) {
           parts: [
             {
               text: `
-                Tailor this resume to match the given job description, making it more relevant and aligned with the job role. 
+                Using a conversational, humanized yet professional tone, tailor this resume to match the given job description, making it more relevant and aligned with the job role. 
                 Provide the tailored resume using markdown formatting (e.g., use bullet points for skills, use headers for each section, etc.).
                 
-                Additionally, please return a separate key-value object with the following structure:
+                Additionally, please return a JSON object with the following structure:
                 {
                   "tailoredResume": "<Tailored Resume Content in Markdown Format>",
                   "changes": [
                     {
                       "changeDescription": "<Short description of the change made>",
                       "changeDetails": "<Details explaining what was changed and why>"
-                    },
-                    // More changes in this format...
+                    }
                   ]
                 }
     
@@ -60,21 +70,36 @@ export async function POST(req: NextRequest) {
     const data = await response.json();
 
     if (!response.ok) {
+      console.error("API Error:", data.error);
       throw new Error(data.error?.message || "Failed to generate content");
     }
 
     // Extract response
-    const tailoredResume = data.candidates?.[0]?.content?.parts?.[0]?.text || "Error: No response from AI.";
-    const changes = data.candidates?.[0]?.content?.parts?.[1]?.text || [];
+    const tailoredResumeText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Error: No response from AI.";
+    
+    // Parse the tailoredResumeText to extract the JSON object
+    let tailoredResume, changes;
+    try {
+      const jsonString = tailoredResumeText.replace(/```json\n|\n```/g, '');
+      const parsedData = JSON.parse(jsonString);
+      tailoredResume = parsedData.tailoredResume || "Error: No resume generated.";
+      changes = parsedData.changes || [];
+    } catch (error) {
+      console.error("Error parsing tailored resume:", error);
+      tailoredResume = "Error: Unable to parse resume.";
+      changes = [];
+    }
 
-    // Return both tailoredResume and changes separately
+    console.log("Changes: ", changes);
+    console.log("Tailored Resume: ", tailoredResume);
+
     return NextResponse.json({
       tailoredResume,
-      changes: changes ? JSON.parse(changes) : [] // Parse and return changes if they exist
+      changes
     }, { status: 200 });
 
   } catch (error) {
     console.error("Error tailoring resume:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error", message: error.message }, { status: 500 });
   }
 }
