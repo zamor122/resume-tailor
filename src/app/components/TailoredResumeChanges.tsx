@@ -8,9 +8,25 @@ interface Change {
 
 interface TailoredResumeChangesProps {
   changes: Change[];
+  loading?: boolean;
 }
 
-const TailoredResumeChanges: React.FC<TailoredResumeChangesProps> = ({ changes }) => {
+const TailoredResumeChanges: React.FC<TailoredResumeChangesProps> = ({ changes, loading }) => {
+  if (loading) {
+    return (
+      <div className="glass-card">
+        <div className="animate-pulse space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div 
+              key={i} 
+              className="h-16 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     changes.length > 0 && (
       <div className="glass-card">

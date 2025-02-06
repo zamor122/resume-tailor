@@ -14,13 +14,30 @@ const Home = () => {
   const [jobDescription, setJobDescription] = useState("");
   const [timerActive, setTimerActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60); // 60 seconds timer
+  const [error, setError] = useState<string | null>(null);
+
+  // Frontend validation
+  const validateInputs = () => {
+    if (!resume || resume.length < 100) {
+      setError("Please provide a more detailed resume (minimum 100 characters).");
+      return false;
+    }
+    if (!jobDescription || jobDescription.length < 100) {
+      setError("Please provide a more detailed job description (minimum 100 characters).");
+      return false;
+    }
+    setError(null);
+    return true;
+  };
 
   const handleTailorResume = async () => {
-    if (timerActive) return; // Prevent action if timer is active
+    if (timerActive) return;
+    if (!validateInputs()) return;
 
     setLoading(true);
     setNewResume("");
-    setChanges([]); // Reset changes when tailoring
+    setChanges([]);
+    setError(null);
 
     try {
       const response = await fetch("/api/tailor", {
@@ -37,10 +54,10 @@ const Home = () => {
         setChanges(data.changes || []); // Set changes as an empty array if none exist
         startTimer(); // Start the timer after a successful request
       } else {
-        setNewResume("Error tailoring resume. Try again.");
+        setError(data.message || "Error tailoring resume. Please try again.");
       }
     } catch (error) {
-      setNewResume("Server error. Please try again later.");
+      setError("Server error. Please try again later.");
       console.error("Error tailoring resume:", error);
     }
 
@@ -81,6 +98,13 @@ const Home = () => {
         />
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
+
       {/* Tailor Button */}
       <TailorButton 
         loading={loading} 
@@ -93,18 +117,16 @@ const Home = () => {
       <div className="grid md:grid-cols-12 gap-8">
         {/* Resume Component - Takes up 8 columns */}
         <div className="md:col-span-8">
-          <TailoredResumeOutput newResume={newResume} />
+          <TailoredResumeOutput newResume={newResume} loading={loading} />
         </div>
 
         {/* Changes Component - Takes up 4 columns */}
-        {newResume && changes.length > 0 && (
-          <div className="md:col-span-4 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 h-fit sticky top-24">
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
-              Changes Made:
-            </h3>
-            <TailoredResumeChanges changes={changes} />
-          </div>
-        )}
+        <div className="md:col-span-4 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 h-fit sticky top-24">
+          <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+            Changes Made:
+          </h3>
+          <TailoredResumeChanges changes={changes} loading={loading} />
+        </div>
       </div>
     </div>
   );

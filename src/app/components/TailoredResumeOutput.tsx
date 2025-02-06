@@ -3,9 +3,21 @@ import ReactMarkdown from "react-markdown";  // Make sure you have this installe
 
 interface TailoredResumeOutputProps {
   newResume: string;
+  loading?: boolean;
 }
 
-const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ newResume }) => {
+const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ newResume, loading }) => {
+  if (loading) {
+    return (
+      <div className="glass-card">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 pb-4">
+          Your Tailored Resume
+        </h2>
+        <div className="animate-pulse border border-gray-300 dark:border-gray-700 rounded-lg p-8 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 shadow-sm min-h-[800px]" />
+      </div>
+    );
+  }
+
   return (
     newResume && (
       <div className="glass-card">

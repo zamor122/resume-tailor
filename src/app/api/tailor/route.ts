@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   
   // Check if the last request was made within the last 60 seconds
   if (lastRequestTime && currentTime - lastRequestTime < 60000) {
-    return NextResponse.json({ error: "Please wait before making another request." }, { status: 429 });
+    return NextResponse.json({ error: "Request made too soon", message: "Please wait before making another request." }, { status: 429 });
   }
 
   lastRequestTime = currentTime; // Update the last request time
@@ -15,8 +15,19 @@ export async function POST(req: NextRequest) {
   try {
     const { resume, jobDescription } = await req.json();
 
-    if (!resume || !jobDescription) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    // Validate content length (minimum 100 characters for each)
+    if (!resume || resume.length < 100) {
+      return NextResponse.json({ 
+        error: "Invalid Input", 
+        message: "Please provide a more detailed resume (minimum 100 characters)." 
+      }, { status: 400 });
+    }
+
+    if (!jobDescription || jobDescription.length < 100) {
+      return NextResponse.json({ 
+        error: "Invalid Input", 
+        message: "Please provide a more detailed job description (minimum 100 characters)." 
+      }, { status: 400 });
     }
 
     // Prepare Gemini API request
@@ -89,9 +100,6 @@ export async function POST(req: NextRequest) {
       tailoredResume = "Error: Unable to parse resume.";
       changes = [];
     }
-
-    console.log("Changes: ", changes);
-    console.log("Tailored Resume: ", tailoredResume);
 
     return NextResponse.json({
       tailoredResume,
