@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 let lastRequestTime: number | null = null; // Store the last request time
 
+// Use Edge Runtime to avoid serverless function timeout
 export const runtime = 'edge'; // Add edge runtime
 export const maxDuration = 300; // Set max duration to 300 seconds
 
@@ -17,7 +18,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
+    // Increase timeout to 30 seconds (leaving buffer for Edge Runtime's 30s limit)
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     const { resume, jobDescription } = await req.json();
 

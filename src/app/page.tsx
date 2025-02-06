@@ -1,3 +1,6 @@
+//TODO, add error message on timeout to try limiting the job description text to main components
+//`TODO: Fix all timeout requests happening, maybe queue?
+
 "use client";
 
 import { useState } from "react";
