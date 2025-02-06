@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 let lastRequestTime: number | null = null; // Store the last request time
 
+export const runtime = 'edge'; // Add edge runtime
+export const maxDuration = 300; // Set max duration to 300 seconds
+
 export async function POST(req: NextRequest) {
   const currentTime = Date.now();
   
@@ -13,6 +16,9 @@ export async function POST(req: NextRequest) {
   lastRequestTime = currentTime; // Update the last request time
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
+
     const { resume, jobDescription } = await req.json();
 
     // Validate content length (minimum 100 characters for each)
@@ -76,7 +82,10 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     const data = await response.json();
 
@@ -106,8 +115,14 @@ export async function POST(req: NextRequest) {
       changes
     }, { status: 200 });
 
-  } catch (error) {
-    console.error("Error tailoring resume:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json({ 
+        error: "Timeout Error", 
+        message: "Request took too long. Please try again." 
+      }, { status: 408 });
+    }
+    
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     return NextResponse.json({ error: "Internal Server Error", message: errorMessage }, { status: 500 });
   }
