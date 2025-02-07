@@ -87,23 +87,23 @@ const Home = () => {
       {/* Hero Section */}
       <div className="py-16 text-center">
         <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-blue-500 inline-block text-transparent bg-clip-text">
-          AI Resume Tailoring
+          AI Resume Tailor
         </h1>
         <p className="text-xl text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
           Instantly customize your resume for any job posting using AI. 
           Get more interviews with perfectly tailored applications.
         </p>
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <span className="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-full">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mb-8">
+          <span className="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-full w-32 text-center">
             100% Free
           </span>
-          <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 rounded-full">
+          <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 rounded-full w-44 text-center">
             No Sign-up Required
           </span>
-          <span className="px-3 py-1 text-sm font-medium bg-purple-100 text-purple-800 rounded-full">
+          <span className="px-3 py-1 text-sm font-medium bg-purple-100 text-purple-800 rounded-full w-32 text-center">
             AI-Powered
           </span>
-          <span className="px-3 py-1 text-sm font-medium bg-orange-100 text-orange-800 rounded-full">
+          <span className="px-3 py-1 text-sm font-medium bg-orange-100 text-orange-800 rounded-full w-36 text-center">
             No Data Stored
           </span>
         </div>
@@ -138,7 +138,7 @@ const Home = () => {
       </div>
 
       {/* Input Section */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ResumeInput
           label="Your Current Resume"
           placeholder="Paste your resume here..."
@@ -169,7 +169,7 @@ const Home = () => {
       />
 
       {/* Output Section */}
-      <div className="grid md:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         <div className="md:col-span-8">
           <TailoredResumeOutput newResume={newResume} loading={loading} />
         </div>
