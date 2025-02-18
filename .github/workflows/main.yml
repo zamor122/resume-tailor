@@ -88,7 +88,7 @@ jobs:
           fi
           
           SUMMARY_CONTENT=$(cat summary.txt)
-          gh pr comment ${{ github.event.pull_request.number }} --body "### AI Summary (Gemini 1.5 Flash)
+          gh pr edit --body ${{ github.event.pull_request.number }} --body "### AI Summary (Gemini 1.5 Flash)
 
           $SUMMARY_CONTENT
 
