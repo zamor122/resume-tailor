@@ -87,11 +87,12 @@ jobs:
             exit 1
           fi
           
-          SUMMARY_CONTENT=$(cat summary.txt)
-          gh pr edit ${{ github.event.pull_request.number }} --body "### AI Summary (Gemini 1.5 Flash)
+          gh pr edit ${{ github.event.pull_request.number }} \
+            --body "$(gh pr view ${{ github.event.pull_request.number }} --json body --jq .body)
 
-          $SUMMARY_CONTENT
+            ## 🤖 AI Summary
+            $(cat summary.txt)
 
-          <sub>Generated at $(date -u)</sub>"
+            <sub>🕒 Generated at $(date -u)</sub>"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN
