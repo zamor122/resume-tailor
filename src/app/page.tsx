@@ -107,7 +107,6 @@ const Home = () => {
           <span className="px-3 py-1 text-sm font-medium bg-orange-100 text-orange-800 rounded-full w-36 text-center">
             No Data Stored
           </span>
-          <HelloButton />
         </div>
       </div>
 
