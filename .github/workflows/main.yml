@@ -7,6 +7,9 @@ on:
 jobs:
   generate-summary:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # This allows posting comments on PRs
 
     steps:
       - name: Checkout Repository
@@ -30,11 +33,13 @@ jobs:
             -d '{
               "contents": [{
                 "role": "user",
-                "parts": [{"text": "Summarize the following GitHub diff changes in a concise manner:\n\n${{ env.DIFF }}"}]
+                "parts": [{"text": "Summarize the following GitHub diff changes in a concise and structured markdown format:\n\n${{ env.DIFF }}"}]
               }]
             }')
           SUMMARY=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text')
-          echo "SUMMARY=$SUMMARY" >> $GITHUB_ENV
+          echo "SUMMARY<<EOF" >> $GITHUB_ENV
+          echo "$SUMMARY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
