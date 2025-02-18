@@ -79,7 +79,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
-      - name: Post Summary as Comment
+      - name: Update PR Description
         if: success()
         run: |
           if [ ! -f summary.txt ]; then
@@ -87,12 +87,12 @@ jobs:
             exit 1
           fi
           
-          gh pr edit ${{ github.event.pull_request.number }} \
-            --body "$(gh pr view ${{ github.event.pull_request.number }} --json body --jq .body)
+          gh pr edit "${{ github.event.pull_request.number }}" \
+            --body "$(gh pr view "${{ github.event.pull_request.number }}" --json body --jq .body)
 
-            ## 🤖  AI Summary
+            ## 🤖 AI Summary
             $(cat summary.txt)
 
             <sub>🕒 Generated at $(date -u)</sub>"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
