@@ -35,33 +35,21 @@ jobs:
             exit 1
           fi
           
-          # Read and escape the diff content
-          DIFF_CONTENT=$(cat pr_diff.txt | jq -Rs .)
-          
-          # Create temporary JSON file for the request
-          cat > request.json << EOF
-          {
-            "contents": [{
-              "role": "user",
-              "parts": [{
-                "text": "Summarize these GitHub changes concisely in markdown format:\n\n${DIFF_CONTENT}"
+          # Create JSON payload using jq
+          jq -n \
+            --arg diff "$(cat pr_diff.txt)" \
+            '{
+              contents: [{
+                role: "user",
+                parts: [{
+                  text: "Summarize these GitHub changes concisely in markdown format:\n\n\($diff)"
+                }]
+              }],
+              safetySettings: [{
+                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                threshold: "BLOCK_NONE"
               }]
-            }],
-            "safetySettings": [
-              {
-                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                "threshold": "BLOCK_NONE"
-              }
-            ]
-          }
-          EOF
-          
-          # Validate JSON before sending
-          if ! jq '.' request.json > /dev/null 2>&1; then
-            echo "::error::Invalid JSON payload generated"
-            cat request.json
-            exit 1
-          fi
+            }' > request.json
           
           # Make API request and store response
           RESPONSE=$(curl -v -s -X POST \
