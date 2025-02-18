@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write  # This allows posting comments on PRs
+      pull-requests: write
 
     steps:
       - name: Checkout Repository
@@ -18,33 +18,81 @@ jobs:
       - name: Get PR Changes
         id: pr_changes
         run: |
-          DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
-          echo "DIFF<<EOF" >> $GITHUB_ENV
-          echo "$DIFF" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          DIFF=$(gh pr diff ${{ github.event.pull_request.number }} || echo "Error fetching diff")
+          if [ "$DIFF" = "Error fetching diff" ]; then
+            echo "::error::Failed to fetch PR diff"
+            exit 1
+          fi
+          echo "$DIFF" > pr_diff.txt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate AI Summary with Gemini 1.5 Flash
         id: ai_summary
         run: |
-          RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "contents": [{
-                "role": "user",
-                "parts": [{"text": "Summarize the following GitHub diff changes in a concise and structured markdown format:\n\n${{ env.DIFF }}"}]
+          if [ ! -f pr_diff.txt ]; then
+            echo "::error::PR diff file not found"
+            exit 1
+          fi
+          
+          # Create JSON payload using jq
+          jq -n \
+            --arg diff "$(cat pr_diff.txt)" \
+            '{
+              contents: [{
+                role: "user",
+                parts: [{
+                  text: "Summarize these GitHub changes concisely in markdown format:\n\n\($diff)"
+                }]
+              }],
+              safetySettings: [{
+                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                threshold: "BLOCK_NONE"
               }]
-            }')
+            }' > request.json
+          
+          # Make API request and store response
+          RESPONSE=$(curl -v -s -X POST \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d @request.json)
+          
+          # Debug response
+          echo "API Response:"
+          echo "$RESPONSE" | jq '.'
+          
+          # Check for error in response
+          if echo "$RESPONSE" | jq -e '.error' > /dev/null; then
+            echo "::error::API returned an error:"
+            echo "$RESPONSE" | jq -r '.error.message'
+            exit 1
+          fi
+          
+          # Extract and validate the text content
           SUMMARY=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text')
-          echo "SUMMARY<<EOF" >> $GITHUB_ENV
-          echo "$SUMMARY" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          if [ "$SUMMARY" = "null" ] || [ -z "$SUMMARY" ]; then
+            echo "::error::No valid summary generated"
+            exit 1
+          fi
+          
+          echo "$SUMMARY" > summary.txt
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
-      - name: Post Summary as Comment
+      - name: Update PR Description
+        if: success()
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "### AI Summary (Gemini 1.5 Flash)\n\n${{ env.SUMMARY }}"
+          if [ ! -f summary.txt ]; then
+            echo "::error::Summary file not found"
+            exit 1
+          fi
+          
+          gh pr edit "${{ github.event.pull_request.number }}" \
+            --body "$(gh pr view "${{ github.event.pull_request.number }}" --json body --jq .body)
+
+            ## 🤖 AI Summary
+            $(cat summary.txt)
+
+            <sub>🕒 Generated at $(date -u)</sub>"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
