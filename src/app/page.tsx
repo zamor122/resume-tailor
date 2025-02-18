@@ -6,7 +6,6 @@ import TailorButton from "./components/TailorButton";
 import TailoredResumeOutput from "./components/TailoredResumeOutput";
 import TailoredResumeChanges from "./components/TailoredResumeChanges";
 import JsonLd from './components/JsonLd';
-import HelloButton from "./components/HelloButton";
 
 
 const Home = () => {
