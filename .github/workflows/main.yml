@@ -1,0 +1,45 @@
+name: AI PR Summary with Gemini 1.5 Flash
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  generate-summary:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Get PR Changes
+        id: pr_changes
+        run: |
+          DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
+          echo "DIFF<<EOF" >> $GITHUB_ENV
+          echo "$DIFF" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate AI Summary with Gemini 1.5 Flash
+        id: ai_summary
+        run: |
+          RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "contents": [{
+                "role": "user",
+                "parts": [{"text": "Summarize the following GitHub diff changes in a concise manner:\n\n${{ env.DIFF }}"}]
+              }]
+            }')
+          SUMMARY=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text')
+          echo "SUMMARY=$SUMMARY" >> $GITHUB_ENV
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Post Summary as Comment
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "### AI Summary (Gemini 1.5 Flash)\n\n${{ env.SUMMARY }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
