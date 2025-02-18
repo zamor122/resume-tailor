@@ -36,24 +36,51 @@ jobs:
           fi
           
           DIFF_CONTENT=$(cat pr_diff.txt)
-          RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d @- << EOF
-            {
-              "contents": [{
-                "role": "user",
-                "parts": [{"text": "Summarize the following GitHub diff changes in a concise and structured markdown format, focusing on key changes and their impact:\n\n$DIFF_CONTENT"}]
+          
+          # Create request payload
+          REQUEST_PAYLOAD=$(cat << EOF
+          {
+            "contents": [{
+              "role": "user",
+              "parts": [{
+                "text": "Summarize these GitHub changes concisely in markdown format:\n\n${DIFF_CONTENT}"
               }]
-            }
+            }],
+            "safetySettings": [
+              {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+              }
+            ]
+          }
           EOF
           )
           
-          if ! echo "$RESPONSE" | jq -e '.candidates[0].content.parts[0].text' > /dev/null; then
-            echo "::error::Invalid API response"
+          # Make API request and store response
+          RESPONSE=$(curl -v -s -X POST \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "$REQUEST_PAYLOAD")
+          
+          # Debug response
+          echo "API Response:"
+          echo "$RESPONSE" | jq '.'
+          
+          # Check for error in response
+          if echo "$RESPONSE" | jq -e '.error' > /dev/null; then
+            echo "::error::API returned an error:"
+            echo "$RESPONSE" | jq -r '.error.message'
             exit 1
           fi
           
-          echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' > summary.txt
+          # Extract and validate the text content
+          SUMMARY=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text')
+          if [ "$SUMMARY" = "null" ] || [ -z "$SUMMARY" ]; then
+            echo "::error::No valid summary generated"
+            exit 1
+          fi
+          
+          echo "$SUMMARY" > summary.txt
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
