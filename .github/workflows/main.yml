@@ -35,10 +35,11 @@ jobs:
             exit 1
           fi
           
-          DIFF_CONTENT=$(cat pr_diff.txt)
+          # Read and escape the diff content
+          DIFF_CONTENT=$(cat pr_diff.txt | jq -Rs .)
           
-          # Create request payload
-          REQUEST_PAYLOAD=$(cat << EOF
+          # Create temporary JSON file for the request
+          cat > request.json << EOF
           {
             "contents": [{
               "role": "user",
@@ -54,13 +55,19 @@ jobs:
             ]
           }
           EOF
-          )
+          
+          # Validate JSON before sending
+          if ! jq '.' request.json > /dev/null 2>&1; then
+            echo "::error::Invalid JSON payload generated"
+            cat request.json
+            exit 1
+          fi
           
           # Make API request and store response
           RESPONSE=$(curl -v -s -X POST \
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
             -H "Content-Type: application/json" \
-            -d "$REQUEST_PAYLOAD")
+            -d @request.json)
           
           # Debug response
           echo "API Response:"
