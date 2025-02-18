@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
           parts: [
             {
               text: `
+              
                 Using a conversational, humanized yet professional tone, tailor this resume to match the given job description, making it significantly more relevant and aligned with the job role. 
                 Do not include any extra comments regarding clarification why something was added, removed or changed.
                 Specifically, focus on the key points in the job description by finding the qualifications and skills necessary to alter the resume to pass the ATS and be the best candidate for the position.
