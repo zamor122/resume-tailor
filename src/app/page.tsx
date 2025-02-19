@@ -102,7 +102,7 @@ const Home = () => {
                 setChanges(parsedData.changes);
               }
             } catch (e) {
-              console.log('Streaming parse attempt failed:', e.message);
+              console.log('Streaming parse attempt failed:', (e as Error).message);
             }
           }
         }

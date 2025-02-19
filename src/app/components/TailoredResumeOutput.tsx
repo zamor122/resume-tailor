@@ -10,7 +10,7 @@ interface TailoredResumeOutputProps {
 const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ newResume, loading }) => {
   const [displayedContent, setDisplayedContent] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (newResume) {
