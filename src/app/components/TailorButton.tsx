@@ -7,7 +7,6 @@ interface TailorButtonProps {
 
 const TailorButton: React.FC<TailorButtonProps> = ({ loading, onClick, timerActive, timeLeft }) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
-
   return (
     <div className="flex flex-col items-center">
       {loading ? (
@@ -24,6 +23,7 @@ const TailorButton: React.FC<TailorButtonProps> = ({ loading, onClick, timerActi
           {!timerActive && (
             <span className="text-slate-500 mt-2 text-sm text-center mt-6">
               Please take a moment to review the tailored resume for any formatting or content adjustments. 😊
+              {isDevelopment && <span className="block text-green-500 font-medium">Development mode: Rate limiting disabled</span>}
             </span>
           )}
         </>
