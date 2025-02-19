@@ -1,4 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error('GEMINI_API_KEY is not defined');
+}
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 let lastRequestTime: number | null = null; // Store the last request time
 
@@ -6,127 +14,155 @@ let lastRequestTime: number | null = null; // Store the last request time
 export const runtime = 'edge'; // Add edge runtime
 export const maxDuration = 300; // Set max duration to 300 seconds
 
+// Add environment check
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 export async function POST(req: NextRequest) {
   const currentTime = Date.now();
   
-  // Check if the last request was made within the last 60 seconds
-  if (lastRequestTime && currentTime - lastRequestTime < 60000) {
-    return NextResponse.json({ error: "Request made too soon", message: "Please wait before making another request." }, { status: 429 });
+  // Only apply rate limiting in production
+  if (!isDevelopment) {
+    // Check if the last request was made within the last 60 seconds
+    if (lastRequestTime && currentTime - lastRequestTime < 60000) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: "Request made too soon", 
+          message: "Please wait before making another request." 
+        }), 
+        { status: 429 }
+      );
+    }
   }
 
   lastRequestTime = currentTime; // Update the last request time
 
   try {
-    const controller = new AbortController();
-    // Increase timeout to 30 seconds (leaving buffer for Edge Runtime's 30s limit)
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
     const { resume, jobDescription } = await req.json();
 
     // Validate content length (minimum 100 characters for each)
     if (!resume || resume.length < 100) {
-      return NextResponse.json({ 
-        error: "Invalid Input", 
-        message: "Please provide a more detailed resume (minimum 100 characters)." 
-      }, { status: 400 });
+      return new NextResponse(
+        JSON.stringify({
+          error: "Invalid Input",
+          message: "Please provide a more detailed resume (minimum 100 characters)."
+        }),
+        { status: 400 }
+      );
     }
 
     if (!jobDescription || jobDescription.length < 100) {
-      return NextResponse.json({ 
-        error: "Invalid Input", 
-        message: "Please provide a more detailed job description (minimum 100 characters)." 
-      }, { status: 400 });
+      return new NextResponse(
+        JSON.stringify({
+          error: "Invalid Input",
+          message: "Please provide a more detailed job description (minimum 100 characters)."
+        }),
+        { status: 400 }
+      );
     }
 
-    // Prepare Gemini API request
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+    // Prepare the prompt (using the same prompt as before)
+    const prompt = `
+      Using a conversational, humanized yet professional tone, tailor this resume to match the given job description, making it significantly more relevant and aligned with the job role. 
+      Do not include any extra comments regarding clarification why something was added, removed or changed.
+      Specifically, focus on the key points in the job description by finding the qualifications and skills necessary to alter the resume to pass the ATS and be the best candidate for the position.
+      Provide the tailored resume using markdown formatting (e.g., use bullet points for skills, use headers for each section, etc.).
+      
+      Additionally, please return a JSON object with the following structure:
+      {
+        "tailoredResume": "<Tailored Resume Content in Markdown Format>",
+        "changes": [
+          {
+            "changeDescription": "<Short description of the change made>",
+            "changeDetails": "<Details explaining what was changed and why>"
+          }
+        ]
+      }
 
-    const requestBody = {
+      The "tailoredResume" should be the formatted markdown resume.
+      The "changes" array should list all specific changes you made to the resume in a concise manner.
+      Each item in the "changes" array should contain:
+        - "changeDescription": A brief description of the change (e.g., "Removed irrelevant skills")
+        - "changeDetails": A clear explanation of the change and why it was made
+      
+      Do not include any extra text or paragraphs—just return the data in the specified format.
+    `;
+
+    // Create a new TransformStream for streaming
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
+
+    // Start the streaming response
+    const response = await model.generateContentStream({
       contents: [
         {
           role: "user",
           parts: [
-            {
-              text: `
-                Using a conversational, humanized yet professional tone, tailor this resume to match the given job description, making it significantly more relevant and aligned with the job role. 
-                Do not include any extra comments regarding clarification why something was added, removed or changed.
-                Specifically, focus on the key points in the job description by finding the qualifications and skills necessary to alter the resume to pass the ATS and be the best candidate for the position.
-                Provide the tailored resume using markdown formatting (e.g., use bullet points for skills, use headers for each section, etc.).
-                
-                Additionally, please return a JSON object with the following structure:
-                {
-                  "tailoredResume": "<Tailored Resume Content in Markdown Format>",
-                  "changes": [
-                    {
-                      "changeDescription": "<Short description of the change made>",
-                      "changeDetails": "<Details explaining what was changed and why>"
-                    }
-                  ]
-                }
-    
-                The "tailoredResume" should be the formatted markdown resume.
-                The "changes" array should list all specific changes you made to the resume in a concise manner.
-                Each item in the "changes" array should contain:
-                  - "changeDescription": A brief description of the change (e.g., "Removed irrelevant skills")
-                  - "changeDetails": A clear explanation of the change and why it was made
-                
-                Do not include any extra text or paragraphs—just return the data in the specified format.
-              `
-            },
+            { text: prompt },
             { text: `Resume:\n${resume}` },
             { text: `Job Description:\n${jobDescription}` }
           ]
         }
       ]
-    };
-
-    // Call Gemini API
-    const response = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal
     });
 
-    clearTimeout(timeoutId);
+    // Process the stream
+    (async () => {
+      try {
+        let accumulatedText = '';
 
-    const data = await response.json();
+        for await (const chunk of response.stream) {
+          if (chunk.text) {
+            const text = chunk.text();
+            accumulatedText += text;
+            
+            // Split by newlines and look for complete lines
+            const lines = accumulatedText.split('\n');
+            
+            // Keep the last (potentially incomplete) line
+            accumulatedText = lines.pop() || '';
+            
+            // Process complete lines
+            for (const line of lines) {
+              const cleanedLine = line.trim();
+              if (cleanedLine) {
+                const encoder = new TextEncoder();
+                await writer.write(encoder.encode(cleanedLine + '\n'));
+              }
+            }
+          }
+        }
 
-    if (!response.ok) {
-      console.error("API Error:", data.error);
-      throw new Error(data.error?.message || "Failed to generate content");
-    }
+        // Send any remaining text
+        if (accumulatedText.trim()) {
+          const encoder = new TextEncoder();
+          await writer.write(encoder.encode(accumulatedText.trim() + '\n'));
+        }
+      } catch (error) {
+        const errorResponse = JSON.stringify({
+          error: "Processing Error",
+          message: error instanceof Error ? error.message : "An unknown error occurred",
+          details: error instanceof Error ? error.stack : undefined
+        });
+        await writer.write(new TextEncoder().encode(errorResponse + '\n'));
+      } finally {
+        await writer.close();
+      }
+    })();
 
-    // Extract response
-    const tailoredResumeText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Error: No response from AI.";
-    
-    // Sanitize the response
-    const jsonString = tailoredResumeText.replace(/```json\n|\n```/g, '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control characters
+    return new NextResponse(stream.readable, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Transfer-Encoding': 'chunked'
+      }
+    });
 
-    // Validate the JSON structure
-    if (!jsonString.startsWith('{') || !jsonString.endsWith('}')) {
-      throw new Error("Invalid JSON format");
-    }
-
-    const parsedData = JSON.parse(jsonString);
-    const tailoredResume = parsedData.tailoredResume || "Error: No resume generated.";
-    const changes = parsedData.changes || [];
-
-    return NextResponse.json({
-      tailoredResume,
-      changes
-    }, { status: 200 });
-
-  } catch (error: unknown) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return NextResponse.json({ 
-        error: "Timeout Error", 
-        message: "Request took too long. Please try again." 
-      }, { status: 408 });
-    }
-    
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    return NextResponse.json({ error: "Internal Server Error", message: errorMessage }, { status: 500 });
+  } catch (error) {
+    return new NextResponse(
+      JSON.stringify({ 
+        error: "Internal Server Error", 
+        message: error instanceof Error ? error.message : "An unknown error occurred" 
+      }),
+      { status: 500 }
+    );
   }
 }
