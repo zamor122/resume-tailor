@@ -7,6 +7,7 @@ import TailoredResumeOutput from "./components/TailoredResumeOutput";
 import TailoredResumeChanges from "./components/TailoredResumeChanges";
 import JsonLd from './components/JsonLd';
 
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 const Home = () => {
   const [loading, setLoading] = useState(false);
@@ -17,6 +18,7 @@ const Home = () => {
   const [timerActive, setTimerActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60); // 60 seconds timer
   const [error, setError] = useState<string | null>(null);
+  const [hasStartedTailoring, setHasStartedTailoring] = useState(false);
 
   // Frontend validation
   const validateInputs = () => {
@@ -33,10 +35,11 @@ const Home = () => {
   };
 
   const handleTailorResume = async () => {
-    if (timerActive) return;
+    if (!isDevelopment && timerActive) return;
     if (!validateInputs()) return;
 
     setLoading(true);
+    setHasStartedTailoring(true);
     setNewResume("");
     setChanges([]);
     setError(null);
@@ -48,27 +51,74 @@ const Home = () => {
         body: JSON.stringify({ resume, jobDescription }),
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Error tailoring resume");
+      }
 
-      if (response.ok) {
-        // Set the tailored resume and changes
-        setNewResume(data.tailoredResume || "Error: No resume generated.");
-        setChanges(data.changes || []); // Set changes as an empty array if none exist
-        startTimer(); // Start the timer after a successful request
-      } else {
-        setError(data.message || "Error tailoring resume. Please try again.");
+      // Handle the streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedContent = '';
+
+      console.log('Starting stream processing');
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          console.log('Stream chunk received:', done ? 'DONE' : 'NEW DATA');
+          
+          if (done) {
+            console.log('Stream complete');
+            setLoading(false);
+            break;
+          }
+
+          const chunk = decoder.decode(value);
+          accumulatedContent += chunk;
+          
+          // Try to extract and parse complete JSON objects during streaming
+          if (accumulatedContent.includes('```json') && accumulatedContent.includes('}')) {
+            try {
+              let contentToParse = accumulatedContent;
+              contentToParse = contentToParse.replace(/```json\n/, '');
+              contentToParse = contentToParse.substring(0, contentToParse.lastIndexOf('}') + 1);
+              contentToParse = contentToParse.trim();
+
+              console.log('Attempting to parse streaming content');
+              const parsedData = JSON.parse(contentToParse);
+              console.log('Streaming parse successful:', {
+                hasResume: Boolean(parsedData.tailoredResume),
+                resumeLength: parsedData.tailoredResume?.length,
+                changesCount: parsedData.changes?.length
+              });
+              
+              if (parsedData.tailoredResume) {
+                setLoading(false);
+                // Send the complete chunk at once to maintain markdown formatting
+                setNewResume(parsedData.tailoredResume);
+              }
+              if (parsedData.changes && Array.isArray(parsedData.changes)) {
+                setChanges(parsedData.changes);
+              }
+            } catch (e) {
+              console.log('Streaming parse attempt failed:', (e as Error).message);
+            }
+          }
+        }
+        startTimer();
       }
     } catch (error) {
-      setError("Server error. Please try again later.");
+      setError(error instanceof Error ? error.message : "Server error. Please try again later.");
       console.error("Error tailoring resume:", error);
     }
-
-    setLoading(false);
   };
 
   const startTimer = () => {
+    if (isDevelopment) return;
+    
     setTimerActive(true);
-    setTimeLeft(60); // Reset timer to 60 seconds
+    setTimeLeft(60);
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
@@ -83,7 +133,7 @@ const Home = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 flex flex-col gap-8">
+    <div className="container mx-auto px-4 py-8 max-w-7xl space-y-8">
       {/* Hero Section */}
       <div className="py-16 text-center">
         <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-blue-500 inline-block text-transparent bg-clip-text">
@@ -164,19 +214,21 @@ const Home = () => {
       <TailorButton 
         loading={loading} 
         onClick={handleTailorResume} 
-        timerActive={timerActive} 
+        timerActive={!isDevelopment && timerActive} 
         timeLeft={timeLeft} 
       />
 
-      {/* Output Section */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        <div className="md:col-span-8">
-          <TailoredResumeOutput newResume={newResume} loading={loading} />
+      {/* Output Section - Only show if tailoring has started */}
+      {hasStartedTailoring && (
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          <div className="md:col-span-8">
+            <TailoredResumeOutput newResume={newResume} loading={loading} />
+          </div>
+          <div className="md:col-span-4">
+            <TailoredResumeChanges changes={changes} loading={loading} />
+          </div>
         </div>
-        <div className="md:col-span-4">
-          <TailoredResumeChanges changes={changes} loading={loading} />
-        </div>
-      </div>
+      )}
       <JsonLd />
     </div>
   );
