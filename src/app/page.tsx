@@ -6,6 +6,7 @@ import ResumeInput from "./components/ResumeInput";
 import TailorButton from "./components/TailorButton";
 import TailoredResumeChanges from "./components/TailoredResumeChanges";
 import TailoredResumeOutput from "./components/TailoredResumeOutput";
+import { analytics } from "./services/analytics";
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -37,6 +38,14 @@ const Home = () => {
   const handleTailorResume = async () => {
     if (!isDevelopment && timerActive) return;
     if (!validateInputs()) return;
+
+    analytics.trackEvent({
+      name: analytics.events.RESUME_TAILOR,
+      properties: {
+      resumeLength: resume.length,
+      jobDescriptionLength: jobDescription.length
+      }
+    });
 
     setLoading(true);
     setHasStartedTailoring(true);

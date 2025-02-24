@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-
+import { analytics } from '../services/analytics';
 interface CopyButtonProps {
   loading?: boolean;
 }
@@ -21,6 +21,14 @@ const CopyButton: React.FC<CopyButtonProps> = ({ loading }) => {
   
   const handleCopy = () => {
     try {
+      
+      analytics.trackEvent({
+        name: analytics.events.COPY_RESUME,
+        properties: {
+        success: true
+        }
+      });
+
       const element = document.getElementById("resume"); // Ensure element exists
       if (!element) {
         console.error("Element with ID 'resume' not found");
