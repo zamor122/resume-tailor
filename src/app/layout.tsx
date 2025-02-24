@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import {Analytics} from "@vercel/analytics/next";
-import Link from 'next/link';
 import Footer from './components/Footer';
+import Navigation from "./components/Navigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -93,7 +93,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col`}
       >
-        <Navbar />
+        <Navigation />
         <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
           {children}
         </main>
@@ -104,7 +104,7 @@ export default function RootLayout({
   );
 }
 
-function Navbar() {
+/* function Navbar() {
   return (
     <nav className="fixed top-0 left-0 w-full flex justify-between items-center px-6 sm:px-10 py-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-md z-50">
       <Link 
@@ -115,4 +115,4 @@ function Navbar() {
       </Link>
     </nav>
   );
-}
+} */
