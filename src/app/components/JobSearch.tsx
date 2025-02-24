@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import JobList from './JobList';
 import { Job, Location } from '../types/job';
+import { analytics } from '../services/analytics';
 
 export default function JobSearch() {
   const [jobTitle, setJobTitle] = useState('');
@@ -46,6 +47,14 @@ export default function JobSearch() {
     
     setLoading(true);
     setError(null);
+    analytics.trackEvent({
+      name: analytics.events.JOB_SEARCH,
+      properties: {
+        jobTitle: jobTitle,
+        location: useCurrentLocation ? `${userLocation?.city}, ${userLocation?.region}` : location,
+        useCurrentLocation: useCurrentLocation,
+      }
+    });
 
     try {
       // Construct search query with location if available
