@@ -7,6 +7,7 @@ import TailorButton from "./components/TailorButton";
 import TailoredResumeChanges from "./components/TailoredResumeChanges";
 import TailoredResumeOutput from "./components/TailoredResumeOutput";
 import { analytics } from "./services/analytics";
+import JobDescriptionInput from "./components/JobDescriptionInput";
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -20,6 +21,8 @@ const Home = () => {
   const [timeLeft, setTimeLeft] = useState(60); // 60 seconds timer
   const [error, setError] = useState<string | null>(null);
   const [hasStartedTailoring, setHasStartedTailoring] = useState(false);
+  const [detectedTitle, setDetectedTitle] = useState<string>("");
+  const [titleConfidence, setTitleConfidence] = useState<number>(0);
 
   // Frontend validation
   const validateInputs = () => {
@@ -141,6 +144,11 @@ const Home = () => {
     }, 1000);
   };
 
+  const handleTitleDetected = (title: string, confidence: number) => {
+    setDetectedTitle(title);
+    setTitleConfidence(confidence);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl space-y-8">
       {/* Hero Section */}
@@ -204,11 +212,12 @@ const Home = () => {
           value={resume}
           onChange={(e) => setResume(e.target.value)}
         />
-        <ResumeInput
+        <JobDescriptionInput
           label="Job Description for Tailoring"
           placeholder="Paste the job description here..."
           value={jobDescription}
           onChange={(e) => setJobDescription(e.target.value)}
+          onTitleDetected={handleTitleDetected}
         />
       </div>
 
@@ -231,7 +240,12 @@ const Home = () => {
       {hasStartedTailoring && (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           <div className="md:col-span-8">
-            <TailoredResumeOutput newResume={newResume} loading={loading} />
+            <TailoredResumeOutput 
+              newResume={newResume} 
+              loading={loading}
+              detectedTitle={detectedTitle}
+              confidence={titleConfidence}
+            />
           </div>
           <div className="md:col-span-4">
             <TailoredResumeChanges changes={changes} loading={loading} />

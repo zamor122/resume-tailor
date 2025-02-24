@@ -5,9 +5,16 @@ import CopyButton from "./CopyButton";
 interface TailoredResumeOutputProps {
   newResume: string;
   loading?: boolean;
+  detectedTitle?: string;
+  confidence?: number;
 }
 
-const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ newResume, loading }) => {
+const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ 
+  newResume, 
+  loading,
+  detectedTitle,
+  confidence 
+}) => {
   const [displayedContent, setDisplayedContent] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -54,9 +61,40 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ newResume, 
   return (
     <div className="glass-card">
       <div className="flex justify-between items-center pb-4">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-          Your Tailored Resume
-        </h2>
+      <div className="flex-1 pr-4">
+      <div className="flex flex-col sm:flex-row items-start justify-between pb-4 gap-4 sm:gap-0">
+        <div className="order-2 sm:order-1 w-full sm:w-auto sm:pr-4">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-y-2 sm:gap-x-2">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              {detectedTitle 
+                ? `Tailored Resume for ${detectedTitle}` 
+                : "Your Tailored Resume"}
+            </h2>
+            <div className="relative group inline-flex items-center">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                ({confidence ?? 0}%)
+              </span>
+              <svg 
+                className="w-4 h-4 ml-1 text-gray-500 dark:text-gray-400" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                />
+              </svg>
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                Confidence rating in detected job title
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        </div>
         {newResume && <CopyButton loading={loading || isTyping} />}
       </div>
       <div id="resume" className="border border-gray-300 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800 shadow-sm min-h-[800px] prose prose-lg dark:prose-invert max-w-none">

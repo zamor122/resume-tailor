@@ -1,7 +1,7 @@
 // Analytics event types
 export type AnalyticsEvent = {
   name: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 };
 
 // Analytics service
@@ -14,7 +14,7 @@ export const analytics = {
 
     // Send to Vercel Analytics
     if (typeof window !== 'undefined' && 'va' in window) {
-      (window as any).va?.track(event.name, event.properties);
+      (window as unknown as { va: { track: (name: string, properties?: Record<string, unknown>) => void } }).va.track(event.name, event.properties);
     }
   },
 
@@ -25,5 +25,7 @@ export const analytics = {
     COPY_RESUME: 'copy_resume',
     TOGGLE_THEME: 'toggle_theme',
     USE_LOCATION: 'use_location',
+    JOB_DESCRIPTION_ANALYSIS: 'job_description_analysis'
+
   }
 }; 
