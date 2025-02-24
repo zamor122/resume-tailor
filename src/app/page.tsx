@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import {useState} from "react";
+import JsonLd from './components/JsonLd';
 import ResumeInput from "./components/ResumeInput";
 import TailorButton from "./components/TailorButton";
-import TailoredResumeOutput from "./components/TailoredResumeOutput";
 import TailoredResumeChanges from "./components/TailoredResumeChanges";
-import JsonLd from './components/JsonLd';
+import TailoredResumeOutput from "./components/TailoredResumeOutput";
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
