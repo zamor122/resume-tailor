@@ -52,11 +52,11 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
     }
   }, [newResume]);
 
-  console.log('TailoredResumeOutput rendering:', {
+/*   console.log('TailoredResumeOutput rendering:', {
     hasContent: Boolean(newResume),
     contentLength: newResume?.length || 0,
     loading
-  });
+  }); */
 
   return (
     <div className="glass-card">
