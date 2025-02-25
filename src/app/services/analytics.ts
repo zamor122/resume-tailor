@@ -12,9 +12,18 @@ export const analytics = {
       return;
     }
 
-    // Send to Vercel Analytics
-    if (typeof window !== 'undefined' && 'va' in window) {
-      (window as unknown as { va: { track: (name: string, properties?: Record<string, unknown>) => void } }).va.track(event.name, event.properties);
+    // Send to Vercel Analytics with better error handling
+    try {
+      if (typeof window !== 'undefined' && window.va && typeof window.va === 'object') {
+        const va = window.va as { track: (name: string, properties?: Record<string, unknown>) => void };
+        if (typeof va.track === 'function') {
+          va.track(event.name, event.properties);
+        } else {
+          console.warn('Vercel Analytics track method not available');
+        }
+      }
+    } catch (error) {
+      console.warn('Error tracking analytics event:', error);
     }
   },
 
@@ -26,6 +35,5 @@ export const analytics = {
     TOGGLE_THEME: 'toggle_theme',
     USE_LOCATION: 'use_location',
     JOB_DESCRIPTION_ANALYSIS: 'job_description_analysis'
-
   }
 }; 
