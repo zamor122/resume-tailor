@@ -52,7 +52,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
             </div>
           </div>
         </div>
-        {newResume && <CopyButton textToCopy={newResume} loading={loading} />}
+        {newResume && <CopyButton loading={loading} />}
       </div>
       <div id="resume" className="border border-gray-300 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800 shadow-sm min-h-[800px] prose prose-lg dark:prose-invert max-w-none">
         {loading ? (

@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface RelevancyScores {
+export interface RelevancyScores {
   before: number;
   after: number;
   improvement: string;

@@ -10,7 +10,7 @@ import { analytics } from "./services/analytics";
 import JobDescriptionInput from "./components/JobDescriptionInput";
 import ParallaxContainer from "./components/ParallaxContainer";
 import ParallaxBackground from "./components/ParallaxBackground";
-import RelevancyScore from "./components/RelevancyScore";
+import RelevancyScore, {RelevancyScores} from "./components/RelevancyScore";
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -28,7 +28,6 @@ const Home = () => {
   const [titleConfidence, setTitleConfidence] = useState<number>(0);
   const [relevancyScores, setRelevancyScores] = useState<RelevancyScores | null>(null);
   const [scoringError, setScoringError] = useState<string | null>(null);
-  const [streamingContent, setStreamingContent] = useState("");
   const [showRelevancyScore, setShowRelevancyScore] = useState(() => {
     return !!relevancyScores || hasStartedTailoring;
   });
@@ -110,11 +109,6 @@ const Home = () => {
     setError(null);
     setRelevancyScores(null);
     setScoringError(null);
-    
-    // Clear streaming content
-    setStreamingContent("");
-
-    // Set this to true and never set it back to false
     setShowRelevancyScore(true);
 
     try {
@@ -126,71 +120,40 @@ const Home = () => {
 
       if (!response.ok) {
         const data = await response.json();
+        
+        // Handle rate limit specifically
+        if (response.status === 429) {
+          // If we get a timeRemaining value, use it to set the timer
+          if (data.timeRemaining) {
+            setTimeLeft(data.timeRemaining);
+            startTimer();
+          }
+          throw new Error(data.message || "Rate limit exceeded. Please try again later.");
+        }
+        
         throw new Error(data.message || "Error tailoring resume");
       }
 
-      // Handle the streaming response
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedContent = '';
+      const data = await response.json();
+      console.log('Received data:', data);
 
-      console.log('Starting stream processing');
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          console.log('Stream chunk received:', done ? 'DONE' : 'NEW DATA');
-          
-          if (done) {
-            console.log('Stream complete');
-            setLoading(false);
-            
-            // Try to parse the complete JSON at the end
-            try {
-              // Look for JSON in the accumulated content
-              const jsonMatch = accumulatedContent.match(/\{[\s\S]*\}/);
-              if (jsonMatch) {
-                const jsonStr = jsonMatch[0];
-                const data = JSON.parse(jsonStr);
-                
-                if (data.tailoredResume) {
-                  setNewResume(data.tailoredResume);
-                  // Calculate relevancy after we have the complete resume
-                  calculateRelevancy(data.tailoredResume);
-                }
-                
-                if (data.changes && Array.isArray(data.changes)) {
-                  setChanges(data.changes);
-                }
-              } else {
-                // If no JSON found, use the accumulated content as the resume
-                setNewResume(accumulatedContent);
-                calculateRelevancy(accumulatedContent);
-              }
-            } catch (e) {
-              console.error('Final parse failed:', e);
-              // Use accumulated content as fallback
-              setNewResume(accumulatedContent);
-              calculateRelevancy(accumulatedContent);
-            }
-            
-            break;
-          }
-
-          // Decode the chunk and add to accumulated content
-          const chunk = decoder.decode(value, { stream: true });
-          accumulatedContent += chunk;
-          
-          // Update streaming content for real-time display
-          setStreamingContent(accumulatedContent);
-        }
-        startTimer();
+      if (data.tailoredResume) {
+        setNewResume(data.tailoredResume);
+        
+        // Calculate relevancy with the new resume
+        calculateRelevancy(data.tailoredResume);
       }
+
+      if (data.changes && Array.isArray(data.changes)) {
+        setChanges(data.changes);
+      }
+
+      setLoading(false);
+      startTimer(); // Start the frontend timer as well
     } catch (error) {
       setLoading(false);
       setError(error instanceof Error ? error.message : "An unknown error occurred");
       console.error("Error:", error);
-      // Even on error, we keep the relevancy score component visible
     }
   };
 
@@ -315,16 +278,17 @@ const Home = () => {
                 loading={loading}
                 detectedTitle={detectedTitle}
                 confidence={titleConfidence}
-                streamingContent={streamingContent}
               />
             </div>
             <div className="md:col-span-4">
-              <RelevancyScore 
-                scores={relevancyScores} 
-                error={scoringError} 
-                loading={loading} 
-                visible={showRelevancyScore}
-              />
+              {(showRelevancyScore || relevancyScores) && (
+                <RelevancyScore 
+                  scores={relevancyScores} 
+                  error={scoringError} 
+                  loading={loading && showRelevancyScore} 
+                  visible={showRelevancyScore}
+                />
+              )}
               <div className="mt-6">
                 <TailoredResumeChanges changes={changes} loading={loading} />
               </div>

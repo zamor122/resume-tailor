@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { cookies } from "next/headers";
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error('GEMINI_API_KEY is not defined');
@@ -9,10 +10,44 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-export async function POST(req: NextRequest) {
-  const currentTime = Date.now();
+// Cooldown period in milliseconds (e.g., 1 minute = 60000ms)
+const COOLDOWN_PERIOD = 60000;
+const COOKIE_NAME = 'last_tailor_request';
 
+// Environment check
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+export async function POST(req: NextRequest) {
   try {
+    // Skip cooldown check in development mode
+    if (!isDevelopment) {
+      try {
+        const cookieStore = await cookies();
+        const lastRequestCookie = cookieStore.get(COOKIE_NAME);
+        
+        if (lastRequestCookie) {
+          const lastRequestTime = parseInt(lastRequestCookie.value, 10);
+          const currentTime = Date.now();
+          const timeElapsed = currentTime - lastRequestTime;
+          
+          if (timeElapsed < COOLDOWN_PERIOD) {
+            const timeRemaining = Math.ceil((COOLDOWN_PERIOD - timeElapsed) / 1000);
+            return NextResponse.json(
+              { 
+                error: "Rate limit exceeded", 
+                message: `Please wait ${timeRemaining} seconds before making another request.`,
+                timeRemaining
+              },
+              { status: 429 }
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error checking cookies:", error);
+        // Continue execution even if cookie check fails
+      }
+    }
+
     const { resume, jobDescription } = await req.json();
 
     if (!resume || !jobDescription) {
@@ -20,6 +55,24 @@ export async function POST(req: NextRequest) {
         { error: "Missing resume or job description" },
         { status: 400 }
       );
+    }
+
+    // Set the cookie with the current timestamp
+    if (!isDevelopment) {
+      try {
+        const currentTime = Date.now();
+        const cookieStore = await cookies();
+        cookieStore.set(COOKIE_NAME, currentTime.toString(), {
+          path: '/',
+          maxAge: COOLDOWN_PERIOD / 1000, // Convert to seconds for cookie maxAge
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        });
+      } catch (error) {
+        console.error("Error setting cookie:", error);
+        // Continue execution even if setting cookie fails
+      }
     }
 
     // Prepare the prompt
@@ -82,7 +135,7 @@ export async function POST(req: NextRequest) {
       // Check if the response is already valid JSON
       const jsonData = JSON.parse(text);
       return NextResponse.json(jsonData);
-    } catch (e) {
+    } catch  {
       // If not valid JSON, try to extract JSON from the text
       try {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -91,7 +144,7 @@ export async function POST(req: NextRequest) {
           const jsonData = JSON.parse(jsonStr);
           return NextResponse.json(jsonData);
         }
-      } catch (e) {
+      } catch {
         // If extraction fails, return the raw text
         return NextResponse.json({
           tailoredResume: text,

@@ -40,6 +40,16 @@ export default function Navigation() {
             >
               Job Search
             </Link>
+            <Link 
+              href="/faq" 
+              className={`transition-colors ${
+                pathname === '/faq' 
+                  ? 'text-green-500 font-medium' 
+                  : 'text-gray-600 dark:text-gray-300 hover:text-green-500'
+              }`}
+            >
+              FAQ
+            </Link>
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
