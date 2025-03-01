@@ -1,6 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = 'edge';
+export const preferredRegion = 'auto';
+export const maxDuration = 60;
+
 // Initialize with Gemini 1.5 Flash-8B for efficient title extraction
 async function getModel() {
   if (!process.env.GEMINI_API_KEY) {

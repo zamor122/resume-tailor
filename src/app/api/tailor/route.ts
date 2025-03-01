@@ -17,6 +17,10 @@ const COOKIE_NAME = 'last_tailor_request';
 // Environment check
 const isDevelopment = process.env.NODE_ENV === 'development';
 
+export const runtime = 'edge';
+export const preferredRegion = 'auto';
+export const maxDuration = 60; // This sets the max duration to 60 seconds
+
 export async function POST(req: NextRequest) {
   try {
     // Skip cooldown check in development mode

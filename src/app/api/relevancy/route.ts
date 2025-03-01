@@ -55,6 +55,10 @@ async function evaluateResumeRelevancy(resume: string, jobDescription: string): 
   }
 }
 
+export const runtime = 'edge';
+export const preferredRegion = 'auto';
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   console.log('=== Starting new relevancy calculation ===');
   try {
