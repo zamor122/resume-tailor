@@ -14,6 +14,12 @@ export default {
         foreground: "var(--foreground)",
       },
       keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '25%': { transform: 'translate(10px, 10px)' },
+          '50%': { transform: 'translate(-10px, 20px)' },
+          '75%': { transform: 'translate(-20px, -10px)' },
+        },
         typing: {
           "0%": {
             opacity: "0",
@@ -29,7 +35,10 @@ export default {
       },
       animation: {
         typing: 'typing 0.5s ease-in-out',
-        fadeIn: 'fadeIn 0.5s ease-out forwards'
+        fadeIn: 'fadeIn 0.5s ease-out forwards',
+        'float': 'float 20s ease-in-out infinite',
+        'float-delayed': 'float 25s ease-in-out infinite 2s',
+        'float-slow': 'float 30s ease-in-out infinite 4s',  
       },
     },
   },
