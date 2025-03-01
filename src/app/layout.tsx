@@ -17,11 +17,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Resume Tailor - Free ATS Resume Optimization Tool",
-  description: "Free AI-powered resume tailoring tool. Optimize your resume for ATS systems, match job descriptions instantly, and increase interview chances. No sign-up required, no data stored. Perfect for job seekers, career changers, and professionals.",
+  title: "AI Resume Tailor - Free ATS Resume Optimization with Relevancy Scoring",
+  description: "Free AI-powered resume tailoring tool with real-time relevancy scoring. Optimize your resume for ATS systems, match job descriptions with quantifiable results, and increase interview chances by up to 60%. No sign-up required, no data stored.",
   keywords: [
     "resume tailoring",
     "ATS resume optimizer",
+    "resume relevancy score",
     "job application tool",
     "resume builder",
     "free resume tool",
@@ -39,11 +40,14 @@ export const metadata: Metadata = {
     "resume improvement tool",
     "job search helper",
     "resume customization",
-    "applicant tracking system"
+    "applicant tracking system",
+    "job-specific resume",
+    "resume effectiveness measurement",
+    "resume match percentage"
   ].join(', '),
   openGraph: {
-    title: "AI Resume Tailor - Free ATS Resume Optimization Tool",
-    description: "Free AI resume tool that optimizes your resume for ATS systems and job descriptions. Get more interviews with perfectly tailored applications. No sign-up needed.",
+    title: "AI Resume Tailor - Free ATS Resume Optimization with Relevancy Scoring",
+    description: "Free AI resume tool that optimizes your resume for ATS systems with real-time relevancy scoring. See exactly how your resume matches job descriptions with quantifiable metrics. Get more interviews with perfectly tailored applications. No sign-up needed.",
     type: "website",
     locale: "en_US",
     siteName: "AI Resume Tailor",
@@ -53,7 +57,7 @@ export const metadata: Metadata = {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "AI Resume Tailor - ATS Resume Optimization Tool",
+        alt: "AI Resume Tailor - ATS Resume Optimization Tool with Relevancy Scoring",
       },
     ],
   },
@@ -106,16 +110,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-/* function Navbar() {
-  return (
-    <nav className="fixed top-0 left-0 w-full flex justify-between items-center px-6 sm:px-10 py-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-md z-50">
-      <Link 
-        href="/" 
-        className="text-lg font-bold tracking-wide text-gray-900 dark:text-white hover:text-green-600 dark:hover:text-green-400 transition-colors duration-200"
-      >
-        ai resume tailor
-      </Link>
-    </nav>
-  );
-} */

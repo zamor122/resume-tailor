@@ -17,31 +17,38 @@ const JobDescriptionInput: React.FC<ResumeInputProps> = ({
   onTitleDetected
 }) => {
   const handleBlur = async () => {
-    if (value.length >= 100) {
-      try {
-        const response = await fetch('/api/tailor/job/title', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobDescription: value })
-        });
+    // Only attempt to extract title if there's enough content
+    if (value.length < 50) return;
 
-        if (!response.ok) throw new Error('Failed to extract job title');
-        
-        const data = await response.json();
-        
-        onTitleDetected?.(data.jobTitle, data.confidence);
-        
+    try {
+      const response = await fetch('/api/tailor/job/title', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobDescription: value }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.warn('Job title extraction failed:', errorData);
+        return;
+      }
+
+      const data = await response.json();
+      if (data.jobTitle && onTitleDetected) {
+        onTitleDetected(data.jobTitle, data.confidence);
         analytics.trackEvent({
-          name: 'job_description_analysis',
+          name: analytics.events.JOB_DESCRIPTION_ANALYSIS,
           properties: {
-            detectedTitle: data.jobTitle,
-            confidence: data.confidence,
-            descriptionLength: value.length
+            success: true,
+            titleLength: data.jobTitle.length
           }
         });
-      } catch (error) {
-        console.error('Error analyzing job description:', error);
       }
+    } catch (error) {
+      console.warn('Error analyzing job description:', error);
+      // Don't throw the error - just log it and continue
     }
   };
 

@@ -1,21 +1,32 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
-const model = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!).getGenerativeModel({ model: "gemini-pro" });
+export const runtime = 'edge';
+export const preferredRegion = 'auto';
+export const maxDuration = 60;
+
+// Initialize with Gemini 1.5 Flash-8B for efficient title extraction
+async function getModel() {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not defined');
+  }
+  
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  return genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { jobDescription } = await req.json();
 
     if (!jobDescription || jobDescription.length < 100) {
-      return new NextResponse(
-        JSON.stringify({
-          error: "Invalid Input",
-          message: "Please provide a more detailed job description"
-        }),
-        { status: 400 }
-      );
+      return NextResponse.json({
+        error: "Invalid Input",
+        message: "Please provide a more detailed job description"
+      }, { status: 400 });
     }
+
+    const model = await getModel();
 
     const prompt = `
       You are a job title analyzer. Given a job description, extract the most appropriate standardized job title.
@@ -27,9 +38,6 @@ export async function POST(req: NextRequest) {
       4. Confidence should be 1-100 based on clarity of the role
       5. Remove any level indicators (e.g., "Senior", "Lead") unless crucial to the role
       
-      Example response:
-      {"jobTitle": "Software Engineer", "confidence": 95}
-      
       Job Description:
       ${jobDescription}
     `;
@@ -37,51 +45,36 @@ export async function POST(req: NextRequest) {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text().trim();
-    
+
     try {
-      // Handle potential markdown code block formatting
-      const jsonText = text.replace(/```json\n?|\n?```/g, '').trim();
-      const parsedResponse = JSON.parse(jsonText);
+      // Clean the response by removing markdown code blocks and any extra whitespace
+      const cleanedText = text
+        .replace(/```(?:json)?\n?/g, '') // Remove ```json or ``` markers
+        .replace(/```\n?$/g, '')         // Remove ending ```
+        .trim();
+      
+      const parsedResponse = JSON.parse(cleanedText);
       
       if (!parsedResponse.jobTitle || typeof parsedResponse.confidence !== 'number') {
-        console.error('Invalid response structure:', jsonText);
+        console.error('Invalid response format:', parsedResponse);
         throw new Error('Invalid response format');
       }
 
-      // Clean and standardize the job title
-      const cleanedTitle = parsedResponse.jobTitle
-        .replace(/^"?|"?$/g, '') // Remove quotes
-        .replace(/\s+/g, ' ')    // Normalize spaces
-        .trim();
-
-      return new NextResponse(
-        JSON.stringify({
-          jobTitle: cleanedTitle,
-          confidence: Math.min(100, Math.max(1, Math.round(parsedResponse.confidence)))
-        }),
-        { status: 200 }
-      );
-
+      return NextResponse.json(parsedResponse);
     } catch (parseError) {
-      console.error('Error parsing AI response:', parseError, 'Raw response:', text);
-      return new NextResponse(
-        JSON.stringify({
-          error: "Processing Error",
-          message: "Failed to parse job title from response",
-          debug: { rawResponse: text }
-        }),
-        { status: 500 }
-      );
-    }
-
-  } catch (error) {
-    console.error('Error extracting job title:', error);
-    return new NextResponse(
-      JSON.stringify({ 
+      console.error('Failed to parse AI response:', text);
+      return NextResponse.json({
         error: "Processing Error",
-        message: error instanceof Error ? error.message : "Failed to extract job title"
-      }),
-      { status: 500 }
-    );
+        message: "Failed to extract job title",
+        details: parseError instanceof Error ? parseError.message : 'Unknown parsing error'
+      }, { status: 500 });
+    }
+  } catch (error) {
+    console.error('Job title extraction error:', error);
+    return NextResponse.json({
+      error: "Server Error",
+      message: "Failed to process job description",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 
