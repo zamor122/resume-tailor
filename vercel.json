@@ -1,0 +1,30 @@
+{
+  "functions": {
+    "api/**/*": {
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/tailor",
+      "dest": "/api/tailor",
+      "headers": {
+        "x-vercel-edge-timeout": "60000"
+      }
+    },
+    {
+      "src": "/api/relevancy",
+      "dest": "/api/relevancy",
+      "headers": {
+        "x-vercel-edge-timeout": "60000"
+      }
+    },
+    {
+      "src": "/api/tailor/job/title",
+      "dest": "/api/tailor/job/title",
+      "headers": {
+        "x-vercel-edge-timeout": "60000"
+      }
+    }
+  ]
+} 

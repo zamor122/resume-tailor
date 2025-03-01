@@ -21,30 +21,25 @@ export async function POST(req: NextRequest) {
   try {
     // Skip cooldown check in development mode
     if (!isDevelopment) {
-      try {
-        const cookieStore = await cookies();
-        const lastRequestCookie = cookieStore.get(COOKIE_NAME);
+      const cookieStore = await cookies();
+      const lastRequestCookie = cookieStore.get(COOKIE_NAME);
+      
+      if (lastRequestCookie) {
+        const lastRequestTime = parseInt(lastRequestCookie.value, 10);
+        const currentTime = Date.now();
+        const timeElapsed = currentTime - lastRequestTime;
         
-        if (lastRequestCookie) {
-          const lastRequestTime = parseInt(lastRequestCookie.value, 10);
-          const currentTime = Date.now();
-          const timeElapsed = currentTime - lastRequestTime;
-          
-          if (timeElapsed < COOLDOWN_PERIOD) {
-            const timeRemaining = Math.ceil((COOLDOWN_PERIOD - timeElapsed) / 1000);
-            return NextResponse.json(
-              { 
-                error: "Rate limit exceeded", 
-                message: `Please wait ${timeRemaining} seconds before making another request.`,
-                timeRemaining
-              },
-              { status: 429 }
-            );
-          }
+        if (timeElapsed < COOLDOWN_PERIOD) {
+          const timeRemaining = Math.ceil((COOLDOWN_PERIOD - timeElapsed) / 1000);
+          return NextResponse.json(
+            { 
+              error: "Rate limit exceeded", 
+              message: `Please wait ${timeRemaining} seconds before making another request.`,
+              timeRemaining
+            },
+            { status: 429 }
+          );
         }
-      } catch (error) {
-        console.error("Error checking cookies:", error);
-        // Continue execution even if cookie check fails
       }
     }
 
@@ -58,21 +53,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Set the cookie with the current timestamp
+    const currentTime = Date.now();
     if (!isDevelopment) {
-      try {
-        const currentTime = Date.now();
-        const cookieStore = await cookies();
-        cookieStore.set(COOKIE_NAME, currentTime.toString(), {
-          path: '/',
-          maxAge: COOLDOWN_PERIOD / 1000, // Convert to seconds for cookie maxAge
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict'
-        });
-      } catch (error) {
-        console.error("Error setting cookie:", error);
-        // Continue execution even if setting cookie fails
-      }
+      const cookieStore = await cookies();
+      cookieStore.set(COOKIE_NAME, currentTime.toString(), {
+        path: '/',
+        maxAge: COOLDOWN_PERIOD / 1000, // Convert to seconds for cookie maxAge
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
     }
 
     // Prepare the prompt
