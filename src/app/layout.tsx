@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import {Analytics} from "@vercel/analytics/next";
 import Footer from './components/Footer';
 import Navigation from "./components/Navigation";
 import { ThemeProvider } from './components/ThemeProvider'
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -95,7 +97,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script defer src="https://cloud.umami.is/script.js" data-website-id="96fc4b45-d8c8-4941-8a4f-330723725623"></script>
+        <Script 
+          src="https://cloud.umami.is/script.js" 
+          data-website-id="96fc4b45-d8c8-4941-8a4f-330723725623"
+          strategy="afterInteractive"
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col`}
@@ -106,6 +112,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
