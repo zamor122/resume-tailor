@@ -88,6 +88,10 @@ export default function JobSearch() {
         console.log('Client - Found jobs:', data.jobs.length);
       }
     } catch (err) {
+      analytics.trackEvent(analytics.events.JOB_SEARCH, {
+        success: false,
+        error: err instanceof Error ? err.message : 'An error occurred'
+      });
       console.error('Client - Error during search:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

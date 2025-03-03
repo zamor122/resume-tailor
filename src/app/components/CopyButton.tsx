@@ -32,6 +32,13 @@ const CopyButton: React.FC<CopyButtonProps> = ({ loading }) => {
       const element = document.getElementById("resume"); // Ensure element exists
       if (!element) {
         console.error("Element with ID 'resume' not found");
+      analytics.trackEvent({
+        name: analytics.events.COPY_RESUME,
+        properties: {
+          success: false,
+          error: "Element with ID 'resume' not found",
+        }
+      });
         return;
       }
   

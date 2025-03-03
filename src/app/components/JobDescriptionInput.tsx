@@ -38,15 +38,16 @@ const JobDescriptionInput: React.FC<ResumeInputProps> = ({
       const data = await response.json();
       if (data.jobTitle && onTitleDetected) {
         onTitleDetected(data.jobTitle, data.confidence);
-        analytics.trackEvent({
-          name: analytics.events.JOB_DESCRIPTION_ANALYSIS,
-          properties: {
-            success: true,
-            titleLength: data.jobTitle.length
-          }
+        analytics.trackEvent(analytics.events.JOB_DESCRIPTION_ANALYSIS, {
+          success: true,
+          titleSearched: data.jobTitle
         });
       }
     } catch (error) {
+      analytics.trackEvent(analytics.events.JOB_DESCRIPTION_ANALYSIS, {
+        success: false,
+        error: error instanceof Error ? error.message : error
+      });
       console.warn('Error analyzing job description:', error);
       // Don't throw the error - just log it and continue
     }
