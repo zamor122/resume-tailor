@@ -84,7 +84,25 @@ const Home = () => {
       const scores = await response.json();
       console.log('Received relevancy scores:', scores);
       setRelevancyScores(scores);
+      
+      // Track relevancy scores
+      if (scores && !scores.error) {
+        analytics.trackEvent(analytics.events.RELEVANCY_SCORE, {
+          success: true,
+          before: scores.before,
+          after: scores.after,
+          improvement: scores.improvement.replace(/[+\-%]/g, ''),
+          isPositive: scores.improvement.startsWith('+'),
+          resumeLength: resume.length,
+          jobDescriptionLength: jobDescription.length,
+          detectedJobTitle: detectedTitle || 'none'
+        });
+      }
     } catch (error) {
+      analytics.trackEvent(analytics.events.RELEVANCY_SCORE, {
+        success: false,
+        error: error instanceof Error ? error.message : error
+      });
       console.error('Error calculating relevancy:', error);
       setScoringError(error instanceof Error ? error.message : 'Failed to calculate relevancy scores');
     }
@@ -94,12 +112,13 @@ const Home = () => {
     if (!isDevelopment && timerActive) return;
     if (!validateInputs()) return;
 
-    analytics.trackEvent({
-      name: analytics.events.RESUME_TAILOR,
-      properties: {
-        resumeLength: resume.length,
-        jobDescriptionLength: jobDescription.length
-      }
+    const startTime = Date.now();
+
+    // Track the initial tailor request
+    analytics.trackEvent(analytics.events.RESUME_TAILOR, {
+      resumeLength: resume.length,
+      jobDescriptionLength: jobDescription.length,
+      detectedJobTitle: detectedTitle || 'none'
     });
 
     setLoading(true);
@@ -128,14 +147,30 @@ const Home = () => {
             setTimeLeft(data.timeRemaining);
             startTimer();
           }
+          
+          // Track rate limit error
+          analytics.trackEvent(analytics.events.RESUME_TAILOR_ERROR, {
+            errorType: 'rate_limit',
+            timeRemaining: data.timeRemaining,
+            resumeLength: resume.length,
+            jobDescriptionLength: jobDescription.length
+          });
+          
           throw new Error(data.message || "Rate limit exceeded. Please try again later.");
         }
+        
+        // Track other errors
+        analytics.trackEvent(analytics.events.RESUME_TAILOR_ERROR, {
+          errorType: 'api_error',
+          statusCode: response.status,
+          resumeLength: resume.length,
+          jobDescriptionLength: jobDescription.length
+        });
         
         throw new Error(data.message || "Error tailoring resume");
       }
 
       const data = await response.json();
-      console.log('Received data:', data);
 
       if (data.tailoredResume) {
         setNewResume(data.tailoredResume);
@@ -148,12 +183,31 @@ const Home = () => {
         setChanges(data.changes);
       }
 
+      // Track successful tailoring
+      analytics.trackEvent(analytics.events.RESUME_TAILOR_SUCCESS, {
+        resumeLength: resume.length,
+        jobDescriptionLength: jobDescription.length,
+        processingTime: Date.now() - startTime,
+        changesCount: data.changes?.length || 0,
+        detectedJobTitle: detectedTitle || 'none'
+      });
+
       setLoading(false);
       startTimer(); // Start the frontend timer as well
     } catch (error) {
       setLoading(false);
       setError(error instanceof Error ? error.message : "An unknown error occurred");
       console.error("Error:", error);
+      
+      // Track unhandled errors
+      if (!(error instanceof Error && error.message?.includes("Rate limit"))) {
+        analytics.trackEvent(analytics.events.RESUME_TAILOR_ERROR, {
+          errorType: 'unhandled_error',
+          errorMessage: error instanceof Error ? error.message : "Unknown error",
+          resumeLength: resume.length,
+          jobDescriptionLength: jobDescription.length
+        });
+      }
     }
   };
 
