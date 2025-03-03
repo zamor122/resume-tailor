@@ -1,3 +1,10 @@
+// Type declaration for Umami
+declare global {
+  interface Window {
+    umami?: (eventName: string, eventData?: Record<string, unknown>) => void;
+  }
+}
+
 // Analytics event types
 export type AnalyticsEvent = {
   name: string;
@@ -12,15 +19,12 @@ export const analytics = {
       return;
     }
 
-    // Send to Vercel Analytics with better error handling
+    // Send to Umami Analytics
     try {
-      if (typeof window !== 'undefined' && window.va && typeof window.va === 'object') {
-        const va = window.va as { track: (name: string, properties?: Record<string, unknown>) => void };
-        if (typeof va.track === 'function') {
-          va.track(event.name, event.properties);
-        } else {
-          console.warn('Vercel Analytics track method not available');
-        }
+      if (typeof window !== 'undefined' && window.umami && typeof window.umami === 'function') {
+        window.umami(event.name, event.properties);
+      } else {
+        console.warn('Umami Analytics not available');
       }
     } catch (error) {
       console.warn('Error tracking analytics event:', error);

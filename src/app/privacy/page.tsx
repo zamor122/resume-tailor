@@ -23,7 +23,7 @@ export default function Privacy() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">Analytics</h2>
           <p>
-            We use Vercel Analytics to collect anonymous usage statistics. This helps us understand how 
+            We use Umami Analytics to collect anonymous usage statistics. This helps us understand how 
             the tool is being used and improve it. The analytics data collected includes:
           </p>
           <ul className="list-disc pl-6 mb-4">
@@ -34,6 +34,9 @@ export default function Privacy() {
           <p>
             No personally identifiable information is collected through analytics.
           </p>
+          <p>
+            We own our own analytics data and do not sell it to third parties.
+          </p>
         </section>
 
         <section className="mb-8">
@@ -42,7 +45,7 @@ export default function Privacy() {
             We use the following third-party services:
           </p>
           <ul className="list-disc pl-6 mb-4">
-            <li>Vercel - For hosting and analytics</li>
+            <li>Umami - For privacy-focused analytics</li>
             <li>Google AI - For resume processing (no data retention)</li>
           </ul>
         </section>
