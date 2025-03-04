@@ -36,5 +36,12 @@
       },
       "continue": true
     }
-  ]
+  ],
+  "crons": [{
+    "path": "/api/email/analytics",
+    "headers": {
+      "x-vercel-edge-timeout": "60000"
+    },
+    "schedule": "0 17 * * *"
+  }]
 } 
