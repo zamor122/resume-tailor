@@ -4,8 +4,6 @@ import { getClient, UmamiApiClient, WebsiteStats } from '@umami/api-client';
 // Umami API configuration
 const UMAMI_API_URL = process.env.UMAMI_API_URL || 'https://api.umami.is/v1';
 const UMAMI_WEBSITE_ID = process.env.UMAMI_WEBSITE_ID || '96fc4b45-d8c8-4941-8a4f-330723725623'; // Using the ID from your layout.tsx
-const UMAMI_USERNAME = process.env.UMAMI_USERNAME || '';
-const UMAMI_PASSWORD = process.env.UMAMI_PASSWORD || '';
 const UMAMI_API_KEY = process.env.UMAMI_API_KEY || '';
 
 // Email configuration
@@ -17,25 +15,12 @@ const EMAIL_TO = process.env.EMAIL_TO || 'hello@airesumetailor.com';
 // Get Umami client
 async function getUmamiClient() {
   try {
-    // Ensure the API URL is properly formatted
-    const baseUrl = UMAMI_API_URL.endsWith('/') 
-      ? UMAMI_API_URL.slice(0, -1) 
-      : UMAMI_API_URL;
 
-
-    console.log('Initializing Umami client with:', { 
-      url: baseUrl,
-      username: UMAMI_USERNAME ? 'provided' : 'missing',
-      password: UMAMI_PASSWORD ? 'provided' : 'missing'
-    });
-    
     const client = getClient({
       apiEndpoint: UMAMI_API_URL,
       apiKey: UMAMI_API_KEY
     });
     
-    console.log('Umami client initialized');
-    console.log("Client:", client);
     return client;
   } catch (error) {
     console.error('Umami client initialization error:', error);
@@ -191,7 +176,7 @@ export async function GET(req: NextRequest) {
   try {
     // Verify CRON_SECRET for automated runs
     if (process.env.NODE_ENV !== 'development') {
-      const authHeader = req.headers.get('Authorization');
+      const authHeader = req.headers.get('authorization');
       if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
         return NextResponse.json(
           { error: 'Unauthorized' },
