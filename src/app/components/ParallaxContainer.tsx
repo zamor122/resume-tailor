@@ -1,13 +1,46 @@
-import { ReactNode } from 'react';
+"use client"
+
+import { ReactNode, useRef, useEffect } from 'react';
+import { useTheme } from './ThemeProvider';
 
 interface ParallaxContainerProps {
   children: ReactNode;
   className?: string;
 }
 
-const ParallaxContainer: React.FC<ParallaxContainerProps> = ({ children, className = '' }) => {
+const ParallaxContainer = ({ children, className = "" }: ParallaxContainerProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
+  
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const parallaxItems = container.querySelectorAll('[data-parallax]');
+    
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      
+      parallaxItems.forEach((item) => {
+        const element = item as HTMLElement;
+        const speed = parseFloat(element.dataset.parallax || '0');
+        const yPos = -(scrollY * speed);
+        element.style.transform = `translate3d(0, ${yPos}px, 0)`;
+      });
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+  
   return (
-    <div className={`relative z-10 ${className}`}>
+    <div 
+      ref={containerRef} 
+      className={`${className} transition-colors duration-300`}
+    >
       {children}
     </div>
   );

@@ -1,30 +1,29 @@
-import { useEffect, useRef } from 'react';
+"use client"
+
+import { useTheme } from './ThemeProvider';
 
 const ParallaxBackground = () => {
-  const backgroundRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!backgroundRef.current) return;
-      const scrolled = window.scrollY;
-      backgroundRef.current.style.transform = `translateY(${scrolled * 0.1}px)`;
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
+  const { theme } = useTheme();
+  
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none" ref={backgroundRef}>
-      {/* Gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-50 to-blue-50 dark:from-gray-900 dark:to-gray-800" />
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      {/* Light mode background elements */}
+      {theme === 'light' && (
+        <>
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-gradient-to-br from-cyan-200/50 to-blue-300/30 rounded-full blur-3xl animate-float" />
+          <div className="absolute top-[60%] right-[-5%] w-[30%] h-[40%] bg-gradient-to-br from-fuchsia-200/40 to-purple-300/20 rounded-full blur-3xl animate-float-delayed" />
+          <div className="absolute top-[40%] left-[20%] w-[25%] h-[30%] bg-gradient-to-br from-amber-200/30 to-yellow-300/20 rounded-full blur-3xl animate-float-slow" />
+        </>
+      )}
       
-      {/* Floating shapes with reduced motion */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-200/30 dark:bg-purple-900/10 rounded-full mix-blend-multiply dark:mix-blend-overlay filter blur-xl animate-float opacity-70" />
-        <div className="absolute top-1/3 right-1/3 w-96 h-96 bg-blue-200/30 dark:bg-blue-900/10 rounded-full mix-blend-multiply dark:mix-blend-overlay filter blur-xl animate-float-delayed opacity-70" />
-        <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-green-200/30 dark:bg-green-900/10 rounded-full mix-blend-multiply dark:mix-blend-overlay filter blur-xl animate-float-slow opacity-70" />
-      </div>
+      {/* Dark mode background elements */}
+      {theme === 'dark' && (
+        <>
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-gradient-to-br from-cyan-900/30 to-blue-800/20 rounded-full blur-3xl animate-float" />
+          <div className="absolute top-[60%] right-[-5%] w-[30%] h-[40%] bg-gradient-to-br from-fuchsia-900/30 to-purple-800/20 rounded-full blur-3xl animate-float-delayed" />
+          <div className="absolute top-[40%] left-[20%] w-[25%] h-[30%] bg-gradient-to-br from-amber-900/20 to-yellow-800/10 rounded-full blur-3xl animate-float-slow" />
+        </>
+      )}
     </div>
   );
 };
