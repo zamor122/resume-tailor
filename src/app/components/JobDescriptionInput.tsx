@@ -55,7 +55,7 @@ const JobDescriptionInput: React.FC<ResumeInputProps> = ({
 
   return (
     <div className="input-container">
-<h2 className="text-xl font-bold gradient-job-description">
+<h2 className="text-2xl pb-4 font-bold gradient-job-description">
   {label}
 </h2>      <textarea
         id="jobDescription"

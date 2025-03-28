@@ -10,7 +10,7 @@ interface ResumeInputProps {
 const ResumeInput: React.FC<ResumeInputProps> = ({ label, placeholder, value, onChange }) => {
   return (
     <div className="input-container">
-<h2 className="text-xl font-bold gradient-current-resume">
+<h2 className="text-2xl pb-4 font-bold gradient-current-resume">
   {label}
 </h2>      <textarea
         id="resume"

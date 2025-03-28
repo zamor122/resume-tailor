@@ -26,9 +26,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (initialTheme === 'dark') {
       document.documentElement.classList.add('dark')
       document.documentElement.classList.remove('light')
+      console.log('[ThemeProvider] Initial theme: dark, HTML classes:', document.documentElement.className)
     } else {
       document.documentElement.classList.add('light')
       document.documentElement.classList.remove('dark')
+      console.log('[ThemeProvider] Initial theme: light, HTML classes:', document.documentElement.className)
     }
     
     setMounted(true)
@@ -44,9 +46,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (newTheme === 'dark') {
       document.documentElement.classList.add('dark')
       document.documentElement.classList.remove('light')
+      console.log('[ThemeProvider] Changed to dark theme, HTML classes:', document.documentElement.className)
+      
+      // Debug dark mode elements
+      setTimeout(() => {
+        const darkCards = document.querySelectorAll('.dark\\:bg-gray-800\\/90')
+        console.log(`[ThemeProvider] Found ${darkCards.length} elements with dark:bg-gray-800/90 class`)
+        
+        const darkTexts = document.querySelectorAll('.dark\\:text-gray-100')
+        console.log(`[ThemeProvider] Found ${darkTexts.length} elements with dark:text-gray-100 class`)
+      }, 100)
     } else {
       document.documentElement.classList.remove('dark')
       document.documentElement.classList.add('light')
+      console.log('[ThemeProvider] Changed to light theme, HTML classes:', document.documentElement.className)
     }
     
     localStorage.setItem('theme', newTheme)
