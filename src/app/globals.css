@@ -220,6 +220,7 @@
 /* Base styles for all output containers */
 .output-container {
   @apply bg-white
+         dark:bg-gray-900/30
          border border-gray-200
          rounded-xl p-6 shadow-lg
          border-cyan-200;
@@ -243,9 +244,13 @@
 }
 
 .resume-output-container {
-  @apply bg-white
-         border border-emerald-200
-         rounded-xl p-6 shadow-lg;
+  @apply rounded-lg shadow-lg 
+         p-6 mb-6 border 
+         border-emerald-200 
+         dark:border-emerald-800/30 
+         bg-white/30
+         dark:bg-gray-900/50
+         backdrop-blur-lg;
 }
 
  .resume-output-container {

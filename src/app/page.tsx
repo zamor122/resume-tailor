@@ -448,7 +448,7 @@ const Home = () => {
             data-parallax="0.05"
           >
             <div className="md:col-span-8">
-              <div className="output-container rounded-lg shadow-lg p-6 border border-cyan-200 dark:border-cyan-800/30 bg-white/90 dark:bg-gray-900/30 backdrop-blur-lg">
+              <div className="output-container">
                 <h3 className="text-3xl font-semibold mb-4 gradient-text-emerald">
                   Your Tailored Resume
                 </h3>
@@ -461,7 +461,7 @@ const Home = () => {
             </div>
             <div className="md:col-span-4">
               {(showRelevancyScore || relevancyScores) && (
-                <div className="output-container rounded-lg shadow-lg p-6 mb-6 border border-emerald-200 dark:border-emerald-800/30 bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-lg">
+                <div className="output-container">
                   <h3 className="text-lg font-semibold mb-3 text-emerald-600 dark:text-emerald-400">
                     Resume Relevancy
                   </h3>

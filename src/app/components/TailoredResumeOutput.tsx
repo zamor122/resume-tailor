@@ -23,9 +23,9 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
     );
   }
 
-  if (!loading) {
+  if (loading) {
     return (
-      <div className="resume-output-container bg-gray-700 backdrop-blur-lg transition-all duration-300">
+      <div className="resume-output-container">
         <div className="animate-pulse space-y-4">
           <div className="flex justify-between">
             <div className="h-7 bg-emerald-200 dark:bg-gray-700 rounded w-1/3"></div>
