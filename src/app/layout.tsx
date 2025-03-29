@@ -105,11 +105,12 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
         <ThemeProvider>
+          <div className="glass-background" />
           <Navigation />
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+          <main className="flex-grow pt-2">
             {children}
           </main>
           <Footer />

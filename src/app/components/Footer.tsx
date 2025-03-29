@@ -1,6 +1,10 @@
+"use client"
+
 import Link from 'next/link';
+import { useTheme } from './ThemeProvider';
 
 export default function Footer() {
+  const { theme } = useTheme();
   const currentYear = new Date().getFullYear();
 
   return (
@@ -35,6 +39,14 @@ export default function Footer() {
             <span className="mx-2">•</span>
             <p className="inline">© {currentYear} AI Resume Tailor</p>
           </div>
+
+          {/* Dark mode debug info - only visible in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+              Current theme: <span className="font-bold">{theme}</span> | 
+              HTML classes: <span className="font-mono">{typeof document !== 'undefined' ? document.documentElement.className : 'SSR'}</span>
+            </div>
+          )}
         </div>
       </div>
     </footer>
