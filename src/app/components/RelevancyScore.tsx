@@ -82,7 +82,9 @@ const RelevancyScore: React.FC<RelevancyScoreProps> = ({ scores, error, loading,
   }
 
   const isPositive = scores.improvement.startsWith('+');
+  const isNoChange = scores.before === scores.after;
   const improvementValue = scores.improvement.replace(/[+\-%]/g, '');
+  const isLowRelevancy = scores.before < 40 && scores.after < 40;
 
   return (
     <div className="relevancy-container bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-lg transition-all duration-200 border-cyan-500/20 dark:border-blue-400/20">
@@ -90,13 +92,15 @@ const RelevancyScore: React.FC<RelevancyScoreProps> = ({ scores, error, loading,
         <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           Relevancy Score
         </h3>
-        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-lg font-bold ${
-          isPositive 
-            ? 'bg-cyan-500/20 text-cyan-700 dark:bg-blue-400/20 dark:text-blue-300' 
-            : 'bg-pink-500/20 text-pink-700 dark:bg-red-400/20 dark:text-red-300'
-        }`}>
-          {scores.improvement}
-        </span>
+        {!isNoChange && (
+          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-lg font-bold ${
+            isPositive 
+              ? 'bg-cyan-500/20 text-cyan-700 dark:bg-blue-400/20 dark:text-blue-300' 
+              : 'bg-pink-500/20 text-pink-700 dark:bg-red-400/20 dark:text-red-300'
+          }`}>
+            {scores.improvement}
+          </span>
+        )}
       </div>
       
       <div className="flex flex-col md:flex-row items-center gap-8">
@@ -146,28 +150,57 @@ const RelevancyScore: React.FC<RelevancyScoreProps> = ({ scores, error, loading,
       {/* Improvement explanation */}
       <div className="mt-6 pt-4 border-t border-amber-500/20 dark:border-yellow-400/20">
         <div className="flex items-center gap-2">
-          <div className={`p-1 rounded-full ${
-            isPositive 
-              ? 'bg-cyan-500/20 dark:bg-blue-400/20' 
-              : 'bg-pink-500/20 dark:bg-red-400/20'
-          }`}>
-            <svg className={`w-5 h-5 ${
-              isPositive 
-                ? 'text-cyan-600 dark:text-blue-400' 
-                : 'text-pink-600 dark:text-red-400'
-            }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isPositive ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-              )}
-            </svg>
-          </div>
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-            {isPositive 
-              ? `Your resume is now ${improvementValue}% more relevant to the job description!` 
-              : `Your resume relevancy has decreased by ${improvementValue}%. Please review the changes.`}
-          </p>
+          {!isNoChange ? (
+            <>
+              <div className={`p-1 rounded-full ${
+                isPositive 
+                  ? 'bg-cyan-500/20 dark:bg-blue-400/20' 
+                  : 'bg-pink-500/20 dark:bg-red-400/20'
+              }`}>
+                <svg className={`w-5 h-5 ${
+                  isPositive 
+                    ? 'text-cyan-600 dark:text-blue-400' 
+                    : 'text-pink-600 dark:text-red-400'
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {isPositive ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                  )}
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {isPositive 
+                  ? `Your resume is now ${improvementValue}% more relevant to the job description!` 
+                  : `Your resume relevancy has decreased by ${improvementValue}%. Please review the changes.`}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className={`p-1 rounded-full ${
+                isLowRelevancy 
+                  ? 'bg-pink-500/20 dark:bg-red-400/20' 
+                  : 'bg-emerald-500/20 dark:bg-emerald-400/20'
+              }`}>
+                <svg className={`w-5 h-5 ${
+                  isLowRelevancy 
+                    ? 'text-pink-600 dark:text-red-400' 
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {isLowRelevancy ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  )}
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {isLowRelevancy 
+                  ? `We're sorry, but your experience doesn't appear to match the job qualifications. Your relevancy score of ${scores.after}% is below our recommended threshold.` 
+                  : `Your resume already matches the job description perfectly! No changes were necessary to improve your relevancy score of ${scores.after}%.`}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>
