@@ -8,7 +8,7 @@ if (!process.env.GEMINI_API_KEY) {
 
 // Initialize the Google AI client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 // Cooldown period in milliseconds (e.g., 1 minute = 60000ms)
 const COOLDOWN_PERIOD = 60000;
