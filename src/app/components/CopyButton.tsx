@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { analytics } from '../services/analytics';
-
 interface CopyButtonProps {
   text: string;
 }

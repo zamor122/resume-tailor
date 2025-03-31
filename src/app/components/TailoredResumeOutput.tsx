@@ -12,7 +12,7 @@ interface TailoredResumeOutputProps {
 const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ 
   newResume, 
   loading,
-  detectedTitle,
+  //detectedTitle,
   error,
 }) => {
   if (error) {

@@ -1,7 +1,6 @@
 "use client"
 
 import { ReactNode, useRef, useEffect } from 'react';
-import { useTheme } from './ThemeProvider';
 
 interface ParallaxContainerProps {
   children: ReactNode;
@@ -10,7 +9,6 @@ interface ParallaxContainerProps {
 
 const ParallaxContainer = ({ children, className = "" }: ParallaxContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { theme } = useTheme();
   
   useEffect(() => {
     const container = containerRef.current;

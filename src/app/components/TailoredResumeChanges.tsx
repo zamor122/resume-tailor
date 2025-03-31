@@ -62,7 +62,7 @@ const TailoredResumeChanges: React.FC<TailoredResumeChangesProps> = ({ changes =
   }, [changes, hasTyped]);
 
   return (
-    <div className="glass-card">
+    <div className="resume-output-container">
       <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
         Changes Made:
       </h3>

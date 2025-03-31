@@ -28,7 +28,7 @@ const RelevancyScore: React.FC<RelevancyScoreProps> = ({ scores, error, loading,
 
   if (loading || !scores) {
     return (
-      <div className="relevancy-container bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-lg transition-all duration-200 border-cyan-500/20 dark:border-blue-400/20">
+      <div className="relevancy-container">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             Relevancy Score

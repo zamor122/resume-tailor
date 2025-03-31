@@ -461,7 +461,7 @@ const Home = () => {
             </div>
             <div className="md:col-span-4">
               {(showRelevancyScore || relevancyScores) && (
-                <div className="output-container">
+                <div className="output-container mb-12">
                   <h3 className="text-lg font-semibold mb-3 text-emerald-600 dark:text-emerald-400">
                     Resume Relevancy
                   </h3>
@@ -473,7 +473,7 @@ const Home = () => {
                   />
                 </div>
               )}
-              <div className="rounded-lg shadow-lg p-6 border border-amber-200 dark:border-amber-800/30 bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-lg">
+              <div className="improvement-container">
                 <h3 className="text-lg font-semibold mb-3 text-amber-600 dark:text-amber-400">
                   Improvement Summary
                 </h3>
