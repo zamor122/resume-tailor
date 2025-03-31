@@ -3,13 +3,39 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from './ThemeProvider';
+import { useEffect, useState } from 'react';
 
 export default function Navigation() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Use useEffect to handle client-side rendering
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleToggleTheme = () => {
+    console.log("Current theme before toggle:", theme);
+    toggleTheme();
+    // Log current classes after toggle
+    setTimeout(() => {
+      console.log("Current HTML classes after toggle:", document.documentElement.className);
+    }, 100);
+  };
+
+  // Force the correct background based on current theme
+  const navBackground = theme === 'dark' 
+    ? 'backdrop-blur-md bg-gray-900/30 border-gray-800' 
+    : 'backdrop-blur-md bg-white/30 border-gray-200';
+
+  // Don't render with correct theme data until component is mounted
+  if (!mounted) {
+    return <nav className="h-16 backdrop-blur-md bg-transparent"></nav>;
+  }
 
   return (
-    <nav className="bg-white dark:bg-gray-900 shadow-sm">
+    <nav className={`sticky top-0 z-50 ${navBackground} border-b shadow-sm transition-all duration-300`}>
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           <Link 
@@ -25,7 +51,7 @@ export default function Navigation() {
               className={`transition-colors ${
                 pathname === '/' 
                   ? 'text-green-500 font-medium' 
-                  : 'text-gray-600 dark:text-gray-300 hover:text-green-500'
+                  : theme === 'dark' ? 'text-gray-300 hover:text-green-500' : 'text-gray-600 hover:text-green-500'
               }`}
             >
               Resume Tailor
@@ -35,7 +61,7 @@ export default function Navigation() {
               className={`transition-colors ${
                 pathname === '/jobs' 
                   ? 'text-green-500 font-medium' 
-                  : 'text-gray-600 dark:text-gray-300 hover:text-green-500'
+                  : theme === 'dark' ? 'text-gray-300 hover:text-green-500' : 'text-gray-600 hover:text-green-500'
               }`}
             >
               Job Search
@@ -45,15 +71,20 @@ export default function Navigation() {
               className={`transition-colors ${
                 pathname === '/faq' 
                   ? 'text-green-500 font-medium' 
-                  : 'text-gray-600 dark:text-gray-300 hover:text-green-500'
+                  : theme === 'dark' ? 'text-gray-300 hover:text-green-500' : 'text-gray-600 hover:text-green-500'
               }`}
             >
               FAQ
             </Link>
             <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              onClick={handleToggleTheme}
+              className={`p-2 rounded-lg transition-colors backdrop-blur-sm ${
+                theme === 'dark' 
+                  ? 'bg-gray-800/80 hover:bg-gray-700/80' 
+                  : 'bg-gray-100/80 hover:bg-gray-200/80'
+              }`}
               aria-label="Toggle theme"
+              type="button"
             >
               {theme === 'dark' ? (
                 <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">

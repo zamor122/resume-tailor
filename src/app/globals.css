@@ -2,71 +2,270 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
+  /* Base theme variables */
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #ffffff; /* Pure white */
+    --foreground: #1a1a1a; /* Near black */
+    --foreground-darker: #000000; /* Pure black */
+    --foreground-light: #f8f9fa; /* Light gray */
+    --shadow-light: rgba(255, 255, 255, 0.8);
+    --shadow-dark: rgba(0, 0, 0, 0.15);
+    
+    /* Primary colors - blue tones */
+    --primary: #2563eb; /* Royal blue */
+    --primary-light: #3b82f6; /* Bright blue */
+    --primary-dark: #1d4ed8; /* Deep blue */
+    
+    --cyan: #3b82f6; /* Bright cyan */
+    --cyan-light: #60a5fa; /* Lighter cyan */
+    --cyan-dark: #2563eb; /* Deep cyan */
+
+    /* Secondary colors - purple */
+    --secondary: #7c3aed; /* Vivid purple */
+    --secondary-light: #8b5cf6; /* Light purple */
+    --secondary-dark: #6d28d9; /* Deep purple */
+    
+    --pink: #e11d48; /* Rich red */
+    --pink-light: #f43f5e; /* Light red */
+    --pink-dark: #be123c; /* Deep red */
+    
+    --amber: #eab308; /* Yellow */
+    --amber-light: #facc15; /* Bright yellow */
+    --amber-dark: #ca8a04; /* Deep yellow */
+    
+    --emerald: #4f46e5; /* Indigo */
+    --emerald-light: #6366f1; /* Light indigo */
+    --emerald-dark: #4338ca; /* Deep indigo */
+    
+    color-scheme: light;
+  }
+
+  html.dark {
+    --background: #0f172a; /* Dark blue background */
+    --foreground: #e2e8f0; /* Light gray */
+    --foreground-darker: #f8fafc; /* Near white */
+    --foreground-light: #1e293b; /* Slate blue */
+    --shadow-light: rgba(30, 41, 59, 0.5);
+    --shadow-dark: rgba(0, 0, 0, 0.6);
+    
+    /* Dark mode colors */
+    --primary: #3b82f6; /* Bright blue */
+    --primary-light: #60a5fa; /* Lighter blue */
+    --primary-dark: #2563eb; /* Royal blue */
+    
+    --secondary: #8b5cf6; /* Light purple */
+    --secondary-light: #a78bfa; /* Lighter purple */
+    --secondary-dark: #7c3aed; /* Vivid purple */
+
+    --secondary-cyan: #3b82f6; /* Bright cyan */
+    --secondary-cyan-light: #60a5fa; /* Lighter cyan */
+    --secondary-cyan-dark: #2563eb; /* Deep cyan */
+  
+    --pink: #f43f5e; /* Light red */
+    --pink-light: #fb7185; /* Lighter red */
+    --pink-dark: #e11d48; /* Rich red */
+    
+    --amber: #facc15; /* Bright yellow */
+    --amber-light: #fde047; /* Lighter yellow */
+    --amber-dark: #eab308; /* Yellow */
+    
+    --emerald: #6366f1; /* Light indigo */
+    --emerald-light: #818cf8; /* Lighter indigo */
+    --emerald-dark: #4f46e5; /* Indigo */
+    
+    color-scheme: dark;
+}
+}
+
+@layer components {
+  /* Gradient texts */
+  .gradient-text {
+    background-image: linear-gradient(to right, var(--primary-light), var(--primary-dark));
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
+
+  .gradient-text-cyan {
+    background-image: linear-gradient(to right, var(--cyan-light), var(--cyan-dark), var(--cyan-light));
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
+
+  .gradient-text-pink {
+    background-image: linear-gradient(to right, var(--pink-light), var(--pink-dark), var(--pink-light));
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
+
+  .gradient-text-amber {
+    background-image: linear-gradient(to right, var(--amber-light), var(--amber-dark), var(--amber-light));
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
+
+  .gradient-text-emerald {
+    background-image: linear-gradient(to right, var(--emerald-light), var(--emerald-dark), var(--emerald-light));
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
+
+  .input-container textarea {
+    @apply w-full min-h-[200px] p-6 
+           bg-gray-100/10
+           dark:bg-gray-800/30
+           hover:border-gray-300
+           focus:border-gray-400
+           focus:ring-2 focus:ring-gray-200
+           focus:outline-none
+           text-black
+           dark:text-white
+           dark:placeholder:text-gray-400
+           placeholder:text-gray-600
+           transition-all duration-300 ease-in-out
+           rounded-lg shadow-lg;
+  }
+
+  .input-container label {
+    @apply block text-xl font-semibold mb-8 text-center text-black dark:text-gray-100;
+  }
+
+  /* Feature card styles */
+  .feature-card {
+    @apply p-6 bg-white dark:bg-gray-800/35 rounded-xl shadow-md hover:shadow-lg transition-all duration-300;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+/* Title gradients matching the style of Smart Features */
+.gradient-smart-features {
+  @apply bg-gradient-to-r from-amber-500 to-fuchsia-500 bg-clip-text text-transparent;
 }
 
-.glass-card {
-  @apply bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700;
+.gradient-how-it-works {
+  @apply bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent;
 }
 
-.input-textarea {
-  @apply w-full mt-2 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-green-400 focus:outline-none resize-none h-64;
+.gradient-current-resume {
+  @apply bg-gradient-to-r from-fuchsia-500 to-purple-500 bg-clip-text text-transparent;
 }
 
-/* Add these animation classes to your existing CSS */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+.gradient-job-description {
+  @apply bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent;
 }
 
-.animate-shimmer {
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite linear;
+/* Relevancy Score */
+.relevancy-score {
+  @apply bg-white
+         border border-cyan-200
+         text-black
+         rounded-xl p-6 shadow-lg;
 }
 
-.animation-delay-100 {
-  animation-delay: 0.1s;
+ .relevancy-score {
+  @apply bg-gray-800
+         border-white/10
+         text-gray-100;
 }
 
-.animation-delay-200 {
-  animation-delay: 0.2s;
+/* Resume Output */
+.resume-output {
+  @apply bg-white
+         border border-emerald-200
+         text-black
+         rounded-xl p-6 shadow-lg;
 }
 
-.animation-delay-300 {
-  animation-delay: 0.3s;
+ .resume-output {
+  @apply bg-gray-800
+         border-white/10
+         text-gray-100;
 }
 
-.animation-delay-400 {
-  animation-delay: 0.4s;
+/* Changes Section */
+.changes-section {
+  @apply bg-white
+         border border-amber-200
+         text-black
+         rounded-xl p-6 shadow-lg;
 }
 
-.animation-delay-500 {
-  animation-delay: 0.5s;
+ .changes-section {
+  @apply bg-gray-800
+         border-white/10
+         text-gray-100;
 }
 
-.animation-delay-600 {
-  animation-delay: 0.6s;
+/* Common text styles */
+.section-title {
+  @apply text-gray-900 font-semibold text-lg;
 }
 
-.animation-delay-700 {
-  animation-delay: 0.7s;
+ .section-title {
+  @apply text-gray-100;
 }
+
+.section-text {
+  @apply text-gray-800;
+}
+
+ .section-text {
+  @apply text-gray-300;
+}
+
+/* Base styles for all output containers */
+.output-container {
+  @apply bg-white
+         dark:bg-gray-900/30
+         border border-gray-200
+         rounded-xl p-6 shadow-lg
+         border-cyan-200;
+}
+
+/* If you need specific variations for each component */
+.relevancy-container {
+  @apply bg-white
+         backdrop-blur-lg 
+         transition-all 
+         duration-200 
+         dark:bg-gray-900/30
+         border border-cyan-200
+         dark:border-blue-200/20
+         rounded-xl p-6 shadow-lg;
+}
+
+.resume-output-container {
+  @apply rounded-lg shadow-lg 
+         p-6 mb-6 border 
+         border-emerald-200 
+         dark:border-emerald-800/30 
+         bg-white/30
+         dark:bg-gray-900/50
+         backdrop-blur-lg;
+}
+
+.changes-container {
+  @apply bg-white
+         border border-amber-200
+         rounded-xl p-6 shadow-lg;
+}
+
+ .changes-container {
+  @apply bg-gray-800
+         border-white/10;
+}
+
+.improvement-container {
+  @apply rounded-lg 
+          shadow-lg p-6 
+          border border-emerald-200 
+          dark:border-cyan-200 
+          bg-white/30
+          dark:bg-gray-900/50
+          backdrop-blur-lg
+}
+
