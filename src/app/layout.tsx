@@ -103,11 +103,10 @@ export default function RootLayout({
           data-website-id="96fc4b45-d8c8-4941-8a4f-330723725623"
           strategy="afterInteractive"
         />
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5839711747501766"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
+        <Script 
+        async 
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5839711747501766"
+        crossOrigin="anonymous"
         />
       </head>
       <body
