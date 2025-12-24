@@ -19,6 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://airesumetailor.com'),
   title: "AI Resume Tailor - Free ATS Resume Optimization with Relevancy Scoring",
   description: "Free AI-powered resume tailoring tool with real-time relevancy scoring. Optimize your resume for ATS systems, match job descriptions with quantifiable results, and increase interview chances by up to 60%. No sign-up required, no data stored.",
   keywords: [
@@ -88,7 +89,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "your-google-site-verification", // Add your verification code
+    google: "ca-pub-5839711747501766", // Updated with your AdSense publisher ID
   },
 };
 
@@ -97,25 +98,24 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <head>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
+      >
         <Script 
           src="https://cloud.umami.is/script.js" 
           data-website-id="96fc4b45-d8c8-4941-8a4f-330723725623"
           strategy="afterInteractive"
         />
         <Script 
-        async 
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5839711747501766"
-        crossOrigin="anonymous"
+          async 
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5839711747501766"
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
         />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
-      >
         <ThemeProvider>
           <div className="glass-background" />
           <Navigation />
-          <main className="flex-grow pt-2">
+          <main className="flex-grow pt-2 relative">
             {children}
           </main>
           <Footer />
