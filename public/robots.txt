@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /private/
 
-Sitemap: https://airesumetailor.com/sitemap.xml 
+Sitemap: https://airesumetailor.com/sitemap.xml

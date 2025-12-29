@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { getModelFromSession } from "@/app/utils/model-helper";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -14,7 +8,7 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const { resume, jobDescription } = await req.json();
+    const { resume, jobDescription, sessionId, modelKey } = await req.json();
     
     if (!resume || resume.length < 100) {
       return NextResponse.json({
@@ -26,18 +20,25 @@ export async function POST(req: NextRequest) {
     const prompt = `
       Transform this resume into a compelling narrative that tells a story while maintaining professionalism and ATS compatibility.
       
+      CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact before/after examples for each section.
+      - Require specific before/after examples for each section (full text, not summaries)
+      - Provide narrative arc with concrete examples from the resume
+      - Include storytelling technique explanations with exact examples
+      - Show quantifiable achievement enhancements with specific numbers
+      - Maintain ATS compatibility (keep keywords, structure)
+      
       ${jobDescription ? `Target Job:\n${jobDescription.substring(0, 2000)}\n\n` : ''}
       
       Current Resume:
       ${resume.substring(0, 6000)}
       
       Analyze and enhance:
-      1. Narrative flow and coherence
-      2. Impact storytelling (quantifiable achievements)
-      3. Career progression narrative
-      4. Value proposition clarity
+      1. Narrative flow and coherence (specific improvements)
+      2. Impact storytelling (quantifiable achievements with exact numbers)
+      3. Career progression narrative (specific progression story)
+      4. Value proposition clarity (exact value statement)
       5. Emotional connection (while staying professional)
-      6. Unique differentiators
+      6. Unique differentiators (specific differentiators)
       
       Return ONLY a JSON object:
       {
@@ -50,11 +51,14 @@ export async function POST(req: NextRequest) {
         },
         "enhancedSections": [
           {
-            "section": "<section name>",
-            "original": "<original text>",
-            "enhanced": "<enhanced version with better storytelling>",
-            "improvements": ["improvement1", ...],
-            "impact": "<why this is better>"
+            "section": "<exact section name>",
+            "original": "<complete original text from resume>",
+            "enhanced": "<complete enhanced version with better storytelling>",
+            "improvements": ["<specific improvement1>", ...],
+            "impact": "<specific reason why this is better for narrative and ATS>",
+            "storytellingTechniques": ["<technique1 used>", ...],
+            "keywordsPreserved": <boolean, if keywords maintained>,
+            "atsCompatible": <boolean>
           }
         ],
         "narrativeArc": {
@@ -73,10 +77,13 @@ export async function POST(req: NextRequest) {
         ],
         "quantifiableAchievements": [
           {
-            "achievement": "<achievement>",
-            "current": "<how it's currently stated>",
-            "enhanced": "<more compelling version>",
-            "impact": "<why better>"
+            "achievement": "<specific achievement from resume>",
+            "current": "<exact current statement>",
+            "enhanced": "<exact enhanced version with numbers/metrics>",
+            "impact": "<specific reason why better (more compelling, shows value)>",
+            "metricsAdded": ["<metric1>", ...],
+            "beforeNumbers": "<numbers in current version>",
+            "afterNumbers": "<numbers in enhanced version>"
           }
         ],
         "valueProposition": {
@@ -94,14 +101,22 @@ export async function POST(req: NextRequest) {
       }
     `;
 
-    let result;
-    let response;
+    // Get session preferences for model selection
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
+
     let text;
-    
     try {
-      result = await model.generateContent(prompt);
-      response = await result.response;
-      text = response.text().trim();
+      const result = await generateWithFallback(
+        prompt,
+        selectedModel,
+        undefined,
+        sessionApiKeys
+      );
+      text = result.text.trim();
     } catch (apiError: any) {
       // Handle quota/rate limit errors
       if (apiError?.status === 429 || apiError?.message?.includes('429') || apiError?.message?.includes('quota')) {

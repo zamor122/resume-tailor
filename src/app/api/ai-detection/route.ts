@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { isRateLimitError } from "@/app/services/ai-provider";
+import { DEFAULT_MODEL } from "@/app/config/models";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -14,7 +9,7 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const { text } = await req.json();
+    const { text, sessionId, modelKey } = await req.json();
     
     if (!text || text.length < 50) {
       return NextResponse.json({
@@ -46,18 +41,45 @@ export async function POST(req: NextRequest) {
       ${text.substring(0, 5000)}
     `;
 
-    let result;
-    let response;
-    let textResponse;
+    // Get session preferences for model selection
+    let sessionApiKeys: Record<string, string> | undefined;
+    let selectedModel = modelKey || DEFAULT_MODEL;
+    
+    if (sessionId) {
+      try {
+        const sessionResponse = await fetch(`${req.nextUrl.origin}/api/mcp/session-manager`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get', sessionId }),
+        });
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          if (sessionData.session?.preferences?.modelPreferences?.defaultModel) {
+            selectedModel = sessionData.session.preferences.modelPreferences.defaultModel;
+          }
+          if (sessionData.session?.preferences?.apiKeys) {
+            sessionApiKeys = sessionData.session.preferences.apiKeys;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch session preferences:', e);
+      }
+    }
+
+    let textResponse: string;
     
     try {
-      result = await model.generateContent(prompt);
-      response = await result.response;
-      textResponse = response.text().trim();
+      const result = await generateWithFallback(
+        prompt,
+        selectedModel,
+        undefined,
+        sessionApiKeys
+      );
+      textResponse = result.text.trim();
     } catch (apiError: any) {
       // Handle quota/rate limit errors
-      if (apiError?.status === 429 || apiError?.message?.includes('429') || apiError?.message?.includes('quota')) {
-        console.error('Gemini API quota exceeded:', apiError);
+      if (isRateLimitError(apiError)) {
+        console.error('API quota exceeded:', apiError);
         
         // Return fallback detection with warning
         const aiIndicators = [

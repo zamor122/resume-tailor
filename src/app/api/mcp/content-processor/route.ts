@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { isRateLimitError } from "@/app/services/ai-provider";
+import { getModelFromSession } from "@/app/utils/model-helper";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -110,7 +105,13 @@ interface ProcessedContent {
 
 export async function POST(req: NextRequest) {
   try {
-    const { type, content, resume, jobDescription } = await req.json();
+    const { type, content, resume, jobDescription, sessionId, modelKey } = await req.json();
+    
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
     
     const contentToProcess = content || (type === "resume" ? resume : jobDescription);
     
@@ -205,18 +206,20 @@ export async function POST(req: NextRequest) {
       ${contentToProcess.substring(0, 12000)}
     `;
 
-    let result;
-    let response;
-    let text;
+    let text: string;
     
     try {
-      result = await model.generateContent(prompt);
-      response = await result.response;
-      text = response.text().trim();
+      const result = await generateWithFallback(
+        prompt,
+        selectedModel,
+        undefined,
+        sessionApiKeys
+      );
+      text = result.text.trim();
     } catch (apiError: any) {
       // Handle quota/rate limit errors
-      if (apiError?.status === 429 || apiError?.message?.includes('429') || apiError?.message?.includes('quota')) {
-        console.error('Gemini API quota exceeded in content processor:', apiError);
+      if (isRateLimitError(apiError)) {
+        console.error('API quota exceeded in content processor:', apiError);
         
         // Return fallback with basic extraction
         const entities = {

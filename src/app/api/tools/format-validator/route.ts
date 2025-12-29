@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { getModelFromSession } from "@/app/utils/model-helper";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -14,7 +8,7 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const { resume } = await req.json();
+    const { resume, sessionId, modelKey } = await req.json();
     
     if (!resume || resume.length < 100) {
       return NextResponse.json({
@@ -42,12 +36,19 @@ export async function POST(req: NextRequest) {
     const prompt = `
       Analyze the resume formatting for ATS compatibility.
       
+      CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact locations and fix instructions.
+      - Require specific line/character positions for issues (e.g., "Line 15", "Section: Experience, bullet 3")
+      - Provide exact fix instructions with full before/after examples
+      - Include parsing accuracy estimates per section (0-100%)
+      - Specify which ATS systems would fail (exact system names)
+      - Provide exact file format recommendations with reasoning
+      
       Check for:
-      1. Proper section headers
-      2. Consistent formatting
-      3. Readable structure
-      4. ATS-friendly elements
-      5. File format recommendations
+      1. Proper section headers (exact format issues)
+      2. Consistent formatting (specific inconsistencies)
+      3. Readable structure (specific structural problems)
+      4. ATS-friendly elements (specific missing elements)
+      5. File format recommendations (exact format with reasoning)
       
       Return ONLY a JSON object:
       {
@@ -56,31 +57,76 @@ export async function POST(req: NextRequest) {
         "issues": [
           {
             "type": "<formatting|structure|content>",
-            "severity": "<critical|warning|info>",
-            "description": "<issue>",
-            "location": "<where in resume>",
-            "fix": "<how to fix>"
+            "severity": "<critical|high|medium|low>",
+            "description": "<specific issue description>",
+            "location": "<exact location: line number, section name, character position, or 'Section: X, bullet Y'>",
+            "before": "<exact problematic text>",
+            "after": "<exact fixed text>",
+            "fix": "<specific fix instructions with example>",
+            "atsSystemsAffected": ["<exact ATS system names that would fail>"],
+            "impact": "<specific impact on parsing, e.g., 'Prevents contact info extraction'>",
+            "timeToFix": "<exact time estimate, e.g., '2 minutes'>"
           }
         ],
-        "strengths": ["<strength1>", ...],
+        "sectionAnalysis": {
+          "header": {"parsingAccuracy": <number 0-100>, "issues": ["<issue1>", ...]},
+          "contact": {"parsingAccuracy": <number 0-100>, "issues": ["<issue1>", ...]},
+          "experience": {"parsingAccuracy": <number 0-100>, "issues": ["<issue1>", ...]},
+          "education": {"parsingAccuracy": <number 0-100>, "issues": ["<issue1>", ...]},
+          "skills": {"parsingAccuracy": <number 0-100>, "issues": ["<issue1>", ...]}
+        },
+        "strengths": [
+          {
+            "strength": "<specific strength>",
+            "impact": "<how this helps ATS parsing>"
+          }
+        ],
         "recommendations": [
           {
-            "action": "<what to do>",
-            "priority": "<high|medium|low>",
-            "impact": "<expected improvement>"
+            "action": "<specific action to take>",
+            "priority": "<critical|high|medium|low>",
+            "impact": "<specific expected improvement, e.g., '+10% parsing accuracy'>",
+            "location": "<where to apply>",
+            "example": "<before> → <after>"
           }
         ],
-        "fileFormat": "<pdf|docx|txt|recommended>",
-        "estimatedParsingAccuracy": <number 0-100>
+        "fileFormat": {
+          "recommended": "<pdf|docx|txt>",
+          "reason": "<specific reason>",
+          "alternatives": [
+            {
+              "format": "<format>",
+              "pros": ["<pro1>", ...],
+              "cons": ["<con1>", ...]
+            }
+          ]
+        },
+        "estimatedParsingAccuracy": <number 0-100, overall>,
+        "atsSystemCompatibility": {
+          "workday": {"compatible": <boolean>, "accuracy": <number 0-100>},
+          "taleo": {"compatible": <boolean>, "accuracy": <number 0-100>},
+          "greenhouse": {"compatible": <boolean>, "accuracy": <number 0-100>}
+        }
       }
       
       Resume:
       ${resume.substring(0, 5000)}
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    // Get session preferences for model selection
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
+
+    const result = await generateWithFallback(
+      prompt,
+      selectedModel,
+      undefined,
+      sessionApiKeys
+    );
+    const text = result.text.trim();
 
     try {
       const cleanedText = text
@@ -139,10 +185,12 @@ export async function POST(req: NextRequest) {
         atsCompatible: parsedResponse.atsCompatible !== false && programmaticIssues.filter(i => i.severity === 'critical').length === 0,
         score: Math.max(0, Math.min(100, (parsedResponse.score || 70) - (programmaticIssues.filter(i => i.severity === 'critical').length * 10))),
         issues: [...(parsedResponse.issues || []), ...programmaticIssues],
+        sectionAnalysis: parsedResponse.sectionAnalysis || {},
         strengths: parsedResponse.strengths || [],
         recommendations: parsedResponse.recommendations || [],
-        fileFormat: parsedResponse.fileFormat || "pdf",
+        fileFormat: parsedResponse.fileFormat || { recommended: "pdf", reason: "Best ATS compatibility" },
         estimatedParsingAccuracy: parsedResponse.estimatedParsingAccuracy || 75,
+        atsSystemCompatibility: parsedResponse.atsSystemCompatibility || {},
         checks: checks,
         timestamp: new Date().toISOString(),
       });

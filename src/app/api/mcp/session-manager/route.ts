@@ -27,6 +27,11 @@ interface Session {
     autoTailor?: boolean;
     showAIDetection?: boolean;
     defaultWorkflow?: string;
+    modelPreferences?: {
+      defaultModel?: string;
+      fallbackModels?: string[];
+    };
+    apiKeys?: Record<string, string>; // For future user-provided keys
   };
   metrics?: {
     totalToolsRun: number;

@@ -2,13 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import ChatInterface, { ChatMessage } from "./components/ChatInterface";
-import ComparisonView from "./components/ComparisonView";
+import ComparisonModal from "./components/ComparisonModal";
 import ControlPanel from "./components/ControlPanel";
 import ToolsPanel from "./components/ToolsPanel";
+import ToolResultsModal from "./components/ToolResultsModal";
 import { RelevancyScores } from "./components/RelevancyScore";
 import { analytics } from "./services/analytics";
 import JsonLd from "./components/JsonLd";
 import { parseCommand, getAvailableCommands, formatCommandSuggestions, type CommandContext } from "./utils/commandParser";
+import { useEngagementTracking } from "./hooks/useEngagementTracking";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
@@ -31,12 +33,30 @@ export default function Home() {
   const [classification, setClassification] = useState<any>(null);
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [settings, setSettings] = useState({
-    showAIDetection: true,
-    showRelevancyScore: true,
-    showComparison: true,
-    showChat: true,
     layout: "grid",
+    fontSize: "medium",
   });
+  const [showComparisonModal, setShowComparisonModal] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string | undefined>();
+  const [toolModal, setToolModal] = useState<{ toolId: string; result: any } | null>(null);
+
+  // Track engagement to prevent false bounces
+  useEngagementTracking();
+
+  // Track page view on mount
+  useEffect(() => {
+    // Track page view with analytics
+    analytics.trackEvent(analytics.events.PAGE_VIEW, { 
+      page: 'home',
+      timestamp: new Date().toISOString()
+    });
+    
+    // Track session start
+    analytics.trackEvent(analytics.events.SESSION_START, {
+      timestamp: new Date().toISOString(),
+      referrer: document.referrer || 'direct',
+    });
+  }, []);
 
   // Initialize session and welcome message
   useEffect(() => {
@@ -50,6 +70,11 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json();
           setSessionId(data.sessionId);
+          
+          // Load model preference from session
+          if (data.session?.preferences?.modelPreferences?.defaultModel) {
+            setSelectedModel(data.session.preferences.modelPreferences.defaultModel);
+          }
         }
       } catch (error) {
         console.error("Failed to initialize session:", error);
@@ -74,7 +99,11 @@ export default function Home() {
       const response = await fetch("/api/ai-detection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ 
+          text,
+          sessionId,
+          modelKey: selectedModel,
+        }),
       });
 
       if (response.ok) {
@@ -96,6 +125,8 @@ export default function Home() {
           originalResume: original,
           tailoredResume: tailored,
           jobDescription: jobDesc,
+          sessionId,
+          modelKey: selectedModel,
         }),
       });
 
@@ -146,9 +177,16 @@ export default function Home() {
         break;
 
       case 'showComparison':
+        // Track command usage
+        analytics.trackEvent(analytics.events.COMMAND_SHOW_COMPARISON, {
+          hasResume: !!resume,
+          hasTailoredResume: !!tailoredResume,
+          timestamp: new Date().toISOString(),
+        });
+        
         if (resume && tailoredResume) {
-          responseMessage = "✅ Comparison view is now visible! Check the right panel to see the before/after comparison.\n\nYou can switch between Split View, Unified Diff, and Line Diff modes.";
-          setSettings(prev => ({ ...prev, showComparison: true }));
+          responseMessage = "✅ Opening comparison view in a modal window...";
+          setShowComparisonModal(true);
         } else {
           responseMessage = "I need to optimize your resume first before I can show a comparison. Please paste both your resume and job description, then type 'tailor'.";
         }
@@ -196,6 +234,12 @@ export default function Home() {
         break;
 
       case 'export':
+        // Track export action
+        analytics.trackEvent(analytics.events.EXPORT_RESUME, {
+          hasTailoredResume: !!tailoredResume,
+          timestamp: new Date().toISOString(),
+        });
+        
         if (tailoredResume) {
           const blob = new Blob([tailoredResume], { type: 'text/plain' });
           const url = URL.createObjectURL(blob);
@@ -256,6 +300,13 @@ export default function Home() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    
+    // Track chat message sent
+    analytics.trackEvent(analytics.events.CHAT_MESSAGE_SENT, {
+      length: content.length,
+      isCommand: content.trim().length <= 150,
+      timestamp: new Date().toISOString(),
+    });
     
     // Track message in session
     if (sessionId) {
@@ -383,7 +434,9 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           text: content,
-          existingContext 
+          existingContext,
+          sessionId,
+          modelKey: selectedModel, 
         }),
       });
 
@@ -412,6 +465,27 @@ export default function Home() {
       // Step 3: Process content based on classification
       if (classificationResult.type === "resume" || classificationResult.type === "mixed") {
         setResume(content);
+        
+        // Track resume input
+        analytics.trackEvent(analytics.events.RESUME_PASTED, {
+          length: content.length,
+          confidence: classificationResult.confidence,
+          timestamp: new Date().toISOString(),
+        });
+        
+        // Track content classification
+        analytics.trackEvent(analytics.events.CONTENT_CLASSIFIED, {
+          type: classificationResult.type,
+          confidence: classificationResult.confidence,
+          timestamp: new Date().toISOString(),
+        });
+        
+        // Track user journey step
+        analytics.trackEvent(analytics.events.USER_JOURNEY_STEP, {
+          step: 'resume_input',
+          hasJobDescription: !!jobDescription,
+          timestamp: new Date().toISOString(),
+        });
         
         // Update session
         if (sessionId) {
@@ -500,6 +574,12 @@ export default function Home() {
 
         // If we have both resume and job description, automatically create context pair and tailor
         if (jobDescription) {
+          // Track conversion event - user has both inputs
+          analytics.trackEvent(analytics.events.CONVERSION_EVENT, {
+            milestone: 'both_inputs_provided',
+            timestamp: new Date().toISOString(),
+          });
+          
           // Small delay to let the message appear first
           setTimeout(() => {
             createContextPairAndTailor(content, jobDescription);
@@ -507,6 +587,27 @@ export default function Home() {
         }
       } else if (classificationResult.type === "job_description") {
         setJobDescription(content);
+        
+        // Track job description input
+        analytics.trackEvent(analytics.events.JOB_DESCRIPTION_PASTED, {
+          length: content.length,
+          confidence: classificationResult.confidence,
+          timestamp: new Date().toISOString(),
+        });
+        
+        // Track content classification
+        analytics.trackEvent(analytics.events.CONTENT_CLASSIFIED, {
+          type: classificationResult.type,
+          confidence: classificationResult.confidence,
+          timestamp: new Date().toISOString(),
+        });
+        
+        // Track user journey step
+        analytics.trackEvent(analytics.events.USER_JOURNEY_STEP, {
+          step: 'job_description_input',
+          hasResume: !!resume,
+          timestamp: new Date().toISOString(),
+        });
         
         // Update session
         if (sessionId) {
@@ -552,6 +653,14 @@ export default function Home() {
         }
         
         messageContent += `\n${resume ? "🔄 Optimizing your resume automatically..." : "Now paste your resume to get started!"}\n\n💡 Your resume will be automatically tailored once you paste both your resume and job description.`;
+        
+        // Track conversion event if both inputs are now available
+        if (resume) {
+          analytics.trackEvent(analytics.events.CONVERSION_EVENT, {
+            milestone: 'both_inputs_provided',
+            timestamp: new Date().toISOString(),
+          });
+        }
 
         const assistantMessage: ChatMessage = {
           id: `assistant-${Date.now()}`,
@@ -662,26 +771,39 @@ export default function Home() {
     
     switch (toolId) {
       case "ats-simulator":
-        return `ATS Compatibility Score: ${result.atsScore || 0}%\n\nIssues Found: ${result.issues?.length || 0}\n${result.recommendations?.slice(0, 3).map((r: string) => `• ${r}`).join('\n') || 'No recommendations'}`;
+        const criticalIssues = result.issues?.filter((i: any) => i.severity === 'critical' || i.severity === 'high') || [];
+        const compatibleSystems = result.atsSystemCompatibility ? Object.entries(result.atsSystemCompatibility)
+          .filter(([_, v]: [string, any]) => v.compatible)
+          .map(([name]) => name) : [];
+        return `ATS Score: ${result.atsScore || 0}%\nParsing Accuracy: ${result.parsingAccuracy || result.atsScore || 0}%\n\nCritical Issues: ${criticalIssues.length}\nCompatible ATS Systems: ${compatibleSystems.length > 0 ? compatibleSystems.join(', ') : 'None'}\n\nTop Issues:\n${criticalIssues.slice(0, 3).map((i: any) => `• ${i.description} (${i.location || 'Unknown location'})`).join('\n') || 'No critical issues'}\n\nView Details for full analysis and recommendations.`;
       case "keyword-analyzer":
         const keywordCount = Object.values(result.keywords || {}).flat().length;
-        return `Found ${keywordCount} keywords\nIndustry: ${result.industry || 'N/A'}\nExperience Level: ${result.experienceLevel || 'N/A'}\n\nTop Recommendations:\n${result.recommendations?.slice(0, 3).map((r: any) => `• ${r.keyword || r}: ${r.suggestion || ''}`).join('\n') || 'No recommendations'}`;
+        const missingCritical = result.missingFromResume?.filter((k: any) => k.importance === 'critical' || k.importanceScore >= 80) || [];
+        return `Keywords Found: ${keywordCount}\nIndustry: ${result.industry || 'N/A'}\nExperience Level: ${result.experienceLevel || 'N/A'}\n\nMissing Critical Keywords: ${missingCritical.length}\n${missingCritical.slice(0, 3).map((k: any) => `• ${k.keyword} (${k.importanceScore || 0}% importance)`).join('\n') || 'None'}\n\nView Details for full keyword analysis and incorporation strategies.`;
       case "skills-gap":
-        return `Match Score: ${result.matchScore || 0}%\n\nMatched Skills: ${result.skills?.matched?.length || 0}\nMissing Skills: ${result.skills?.missing?.length || 0}\n\nTop Action Items:\n${result.actionPlan?.slice(0, 3).map((a: any) => `• ${a.action || a} (${a.timeline || 'N/A'})`).join('\n') || 'No action items'}`;
+        const criticalMissing = result.skills?.missing?.filter((s: any) => s.importance === 'critical' || s.importanceScore >= 80) || [];
+        return `Match Score: ${result.matchScore || 0}%\nBreakdown: Skills ${result.matchBreakdown?.skills || 0}% | Experience ${result.matchBreakdown?.experience || 0}% | Education ${result.matchBreakdown?.education || 0}%\n\nMatched: ${result.skills?.matched?.length || 0} | Missing: ${result.skills?.missing?.length || 0} | Extra: ${result.skills?.extra?.length || 0}\n\nCritical Missing Skills:\n${criticalMissing.slice(0, 3).map((s: any) => `• ${s.skill} (Learn in ${s.learningPath?.timeEstimate || 'N/A'})`).join('\n') || 'None'}\n\nEstimated Time to Close Gaps: ${result.estimatedTimeToCloseGaps || 'Unknown'}\n\nView Details for prioritized learning paths and resources.`;
       case "interview-prep":
-        return `Generated ${result.behavioral?.length || 0} behavioral questions\n${result.technical?.length || 0} technical questions\n${result.questionsToAsk?.length || 0} questions to ask\n\nTips:\n${result.interviewTips?.slice(0, 3).map((t: string) => `• ${t}`).join('\n') || 'No tips available'}`;
+        return `Generated ${result.behavioral?.length || 0} behavioral questions\n${result.technical?.length || 0} technical questions\n${result.situational?.length || 0} situational questions\n${result.questionsToAsk?.length || 0} questions to ask interviewer\n\nTalking Points: ${result.talkingPoints?.length || 0}\nRed Flags to Address: ${result.redFlags?.length || 0}\n\nView Details for complete STAR examples, answer approaches, and interview strategies.`;
       case "format-validator":
-        return `ATS Compatible: ${result.atsCompatible ? '✓ Yes' : '✗ No'}\nScore: ${result.score || 0}%\nEstimated Parsing: ${result.estimatedParsingAccuracy || 0}%\n\nIssues: ${result.issues?.length || 0}\n${result.issues?.slice(0, 3).map((i: any) => `• ${i.description || i}`).join('\n') || 'No issues found'}`;
+        const criticalFormatIssues = result.issues?.filter((i: any) => i.severity === 'critical' || i.severity === 'high') || [];
+        return `ATS Compatible: ${result.atsCompatible ? '✓ Yes' : '✗ No'}\nScore: ${result.score || 0}%\nParsing Accuracy: ${result.estimatedParsingAccuracy || 0}%\n\nCritical Issues: ${criticalFormatIssues.length}\n${criticalFormatIssues.slice(0, 3).map((i: any) => `• ${i.description} (${i.location || 'Unknown'})`).join('\n') || 'No critical issues'}\n\nView Details for section-by-section analysis and fix instructions.`;
       case "resume-versions":
-        return `Versions: ${result.versions?.length || 0}\nLatest: ${result.latestVersion || 'N/A'}\n${result.summary || 'No summary available'}`;
+        return `Total Versions: ${result.totalVersions || 0}\nLatest: ${result.latestVersion || 'N/A'}\n\nView Details to compare versions and track improvements.`;
       case "ats-optimizer":
-        return `Current Score: ${result.currentScore || 0}%\nOptimized Score: ${result.optimizedScore || 0}%\nImprovements: ${result.improvements?.length || 0}\n${result.recommendations?.slice(0, 3).map((r: any) => `• ${r}`).join('\n') || 'No recommendations'}`;
+        const quickWins = result.quickWins?.filter((w: any) => w.priority === 'critical' || w.priority === 'high') || [];
+        return `Current: ${result.currentScore || 0}% → Projected: ${result.projectedScore || 0}%\nPotential Improvement: +${result.potentialImprovement || 0}%\n\nQuick Wins: ${quickWins.length}\n${quickWins.slice(0, 3).map((w: any) => `• ${w.action} (+${w.impact || 0} points, ${w.timeEstimate || 'N/A'})`).join('\n') || 'None'}\n\nView Details for implementation plan and priority matrix.`;
       case "resume-storyteller":
-        return `Stories Generated: ${result.stories?.length || 0}\n${result.summary || 'No stories available'}`;
+        return `Narrative Score: ${result.narrativeScore || 0}%\nEnhanced Sections: ${result.enhancedSections?.length || 0}\nStorytelling Techniques: ${result.storytellingTechniques?.length || 0}\n\nView Details for before/after examples and narrative improvements.`;
       case "multi-job-comparison":
-        return `Jobs Compared: ${result.comparisons?.length || 0}\n${result.summary || 'No comparison available'}`;
+        const avgMatch = result.overallAnalysis?.averageMatch || 0;
+        const bestMatch = result.jobComparisons?.find((j: any) => j.jobIndex === result.overallAnalysis?.bestMatch);
+        return `Jobs Compared: ${result.totalJobs || 0}\nAverage Match: ${avgMatch}%\nBest Match: ${bestMatch?.jobTitle || 'N/A'} (${bestMatch?.matchScore || 0}%)\nVersatility Score: ${result.overallAnalysis?.versatility || 0}%\n\nView Details for individual comparisons and optimization strategies.`;
       case "skills-market-value":
-        return `Skills Analyzed: ${result.skillsAnalysis?.length || 0}\nMarket Value: ${result.marketPositioning?.overallValue || 0}%\n${result.recommendations?.slice(0, 3).map((r: any) => `• ${r.action || r}`).join('\n') || 'No recommendations'}`;
+        const topSkills = result.skillsAnalysis?.slice(0, 3).filter((s: any) => s.marketValue?.demandScore >= 70) || [];
+        const salaryRange = result.salaryPotential?.currentEstimate || 'N/A';
+        const potentialRange = result.salaryPotential?.withSkillDevelopment || 'N/A';
+        return `Market Value: ${result.marketPositioning?.overallValue || 0}%\nCompetitive Advantage: ${result.marketPositioning?.competitiveAdvantage || 0}%\n\nSalary: ${salaryRange} → ${potentialRange}\nPotential Increase: ${result.salaryPotential?.potentialIncrease || 'N/A'}\n\nTop High-Value Skills:\n${topSkills.map((s: any) => `• ${s.skill} (${s.marketValue?.demandScore || 0}% demand, ${s.marketValue?.salaryRange || 'N/A'})`).join('\n') || 'None'}\n\nView Details for ROI calculations and skill development recommendations.`;
       default:
         return result.summary || result.message || JSON.stringify(result, null, 2).substring(0, 500);
     }
@@ -703,28 +825,53 @@ export default function Home() {
       const response = await fetch("/api/tailor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume: resumeText, jobDescription: jobDescText }),
+        body: JSON.stringify({ 
+          resume: resumeText, 
+          jobDescription: jobDescText,
+          sessionId,
+          modelKey: selectedModel,
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to tailor resume");
-      }
-
       const data = await response.json();
-      
-      // Check for quota exceeded
-      if (data.quotaExceeded) {
-        const retryMessage = data.canRetryImmediately 
-          ? "You can retry immediately, or wait for better results."
-          : `Please wait ${data.retryAfter || 30} seconds before trying again.`;
+
+      // Check for error response
+      if (data.error || !response.ok) {
+        const errorMessage = data.message || "Failed to tailor resume";
+        const model = data.model || selectedModel || "selected model";
+        const suggestions = data.suggestions || {};
         
-        const quotaMessage: ChatMessage = {
-          id: `quota-tailor-${Date.now()}`,
+        let errorContent = `❌ Error: ${errorMessage}\n\n`;
+        
+        if (suggestions.checkApiKey) {
+          errorContent += `🔑 **Check Your API Key:**\n`;
+          errorContent += `- Verify your API key is correct and valid\n`;
+          errorContent += `- Ensure the API key has the necessary permissions\n`;
+          errorContent += `- Check that the environment variable is set correctly\n\n`;
+        }
+        
+        if (suggestions.switchModel) {
+          errorContent += `🔄 **Try a Different Model:**\n`;
+          errorContent += `- Open the settings panel (⚙️ icon)\n`;
+          errorContent += `- Select a different model from the dropdown\n`;
+          errorContent += `- Some models may have different availability or rate limits\n\n`;
+        }
+        
+        if (suggestions.retryAfter) {
+          errorContent += `⏱️ **Wait and Retry:**\n`;
+          errorContent += `- Wait ${suggestions.retryAfter} seconds before trying again\n`;
+          errorContent += `- Rate limits reset after the specified time\n\n`;
+        }
+        
+        errorContent += `💡 **Your original resume has been preserved.**`;
+        
+        const errorChatMessage: ChatMessage = {
+          id: `error-tailor-${Date.now()}`,
           role: "assistant",
-          content: `⚠️ API Quota Exceeded\n\nUnable to optimize resume at this time.\n${retryMessage}\n\nYour original resume is preserved.\n\n💡 Tip: You can try again now - the system will attempt to process your request.\n\nFor more information: https://ai.google.dev/gemini-api/docs/rate-limits`,
+          content: errorContent,
           timestamp: new Date(),
         };
-        setMessages((prev) => [...prev, quotaMessage]);
+        setMessages((prev) => [...prev, errorChatMessage]);
         setLoading(false);
         return;
       }
@@ -752,7 +899,7 @@ export default function Home() {
       const successMessage: ChatMessage = {
         id: `success-${Date.now()}`,
         role: "assistant",
-        content: `✅ Resume optimized successfully!\n\n📊 Relevancy Score: ${scores?.before || 0}% → ${scores?.after || 0}% (${scores?.improvement || "+0%"})\n\n🔍 AI Detection:\n• Original: ${originalAIScore}% AI\n• Tailored: ${tailoredAIScore}% AI\n\n${data.changes?.length || 0} optimizations made. Check the comparison view to see all changes!`,
+        content: `✅ Resume optimized successfully!\n\n📊 Relevancy Score: ${scores?.before || 0}% → ${scores?.after || 0}% (${scores?.improvement || "+0%"})\n\n🔍 AI Detection:\n• Original: ${originalAIScore}% AI\n• Tailored: ${tailoredAIScore}% AI\n\n${data.changes?.length || 0} optimizations made.\n\n💡 Click the "Compare" button (bottom right) or type "show comparison" to see all changes!`,
         timestamp: new Date(),
         metadata: {
           type: "analysis",
@@ -770,6 +917,18 @@ export default function Home() {
         resumeLength: resumeText.length,
         jobDescriptionLength: jobDescText.length,
         changesCount: data.changes?.length || 0,
+        relevancyBefore: scores?.before || 0,
+        relevancyAfter: scores?.after || 0,
+        relevancyImprovement: scores?.improvement || '0%',
+        executionTime: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Track conversion event - successful tailoring
+      analytics.trackEvent(analytics.events.CONVERSION_EVENT, {
+        milestone: 'resume_tailored',
+        relevancyImprovement: scores?.improvement || '0%',
+        timestamp: new Date().toISOString(),
       });
 
       // Track successful tool execution
@@ -817,11 +976,8 @@ export default function Home() {
     }
   };
 
-  // Determine grid layout based on what's visible
-  const showComparison = settings.showComparison && resume && tailoredResume;
-  const gridCols = settings.layout === "grid" 
-    ? (showComparison ? "lg:grid-cols-4" : "lg:grid-cols-3")
-    : "grid-cols-1";
+  // Grid layout - no longer needs to account for comparison view
+  const gridCols = settings.layout === "grid" ? "lg:grid-cols-3" : "grid-cols-1";
 
   return (
     <div className="h-screen bg-background text-foreground grid-pattern overflow-hidden flex flex-col">
@@ -829,7 +985,7 @@ export default function Home() {
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
-      </div>
+          </div>
 
       <div className="container mx-auto px-4 py-4 max-w-[1800px] relative z-10 flex-1 flex flex-col min-h-0">
         {/* Header */}
@@ -849,35 +1005,43 @@ export default function Home() {
                 <span className="text-sm text-gray-300">System Online</span>
               </div>
             </div>
-          </div>
+              </div>
         </header>
 
         {/* Main Content Grid */}
         <div className={`grid gap-6 ${gridCols} flex-1 min-h-0`}>
           {/* Chat Interface */}
-          {settings.showChat && (
-            <div className={`flex-1 min-h-0 ${showComparison ? "lg:col-span-2" : "lg:col-span-2"}`}>
-              <ChatInterface
-                messages={messages}
-                onSendMessage={handleSendMessage}
-                isLoading={loading}
-                relevancyScores={relevancyScores}
-                aiDetection={aiDetection || undefined}
-                classification={classification}
-                contextStatus={{
-                  hasResume: !!resume,
-                  hasJobDescription: !!jobDescription,
-                  contextPairId: contextPairId || undefined
-                }}
-              />
-            </div>
-          )}
+          <div className="flex-1 min-h-0 lg:col-span-2">
+            <ChatInterface
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              isLoading={loading}
+              relevancyScores={relevancyScores}
+              aiDetection={aiDetection || undefined}
+              classification={classification}
+              contextStatus={{
+                hasResume: !!resume,
+                hasJobDescription: !!jobDescription,
+                contextPairId: contextPairId || undefined
+              }}
+              onOpenComparison={() => setShowComparisonModal(true)}
+              hasTailoredResume={!!tailoredResume}
+              fontSize={settings.fontSize as "small" | "medium" | "large"}
+              resume={resume}
+              jobDescription={jobDescription}
+            />
+          </div>
 
           {/* Tools Panel */}
           <div className="flex-1 min-h-0">
             <ToolsPanel
               resume={resume}
               jobDescription={jobDescription}
+              sessionId={sessionId}
+              selectedModel={selectedModel}
+              onViewDetails={(toolId, result) => {
+                setToolModal({ toolId, result });
+              }}
               onToolResult={(toolId, result) => {
                 // Add tool results to chat
                 const toolNames: Record<string, string> = {
@@ -903,44 +1067,49 @@ export default function Home() {
             />
           </div>
 
-          {/* Comparison View */}
-          {showComparison && (
-            <div className="flex-1 min-h-0 lg:col-span-1">
-              <ComparisonView
-                original={resume}
-                tailored={tailoredResume}
-                viewMode="split"
-                showLineNumbers={true}
-              />
-            </div>
-          )}
-
-          {/* Placeholder when no comparison available */}
-          {settings.showComparison && !showComparison && (
-            <div className="flex-1 min-h-0 lg:col-span-1 glass rounded-2xl flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary mb-4 mx-auto flex items-center justify-center">
-                  <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-bold mb-2 gradient-text-cyber">Comparison View</h3>
-                <p className="text-gray-400">
-                  Optimize your resume to see the before/after comparison
-                </p>
-              </div>
-            </div>
-          )}
         </div>
-      </div>
+        </div>
 
       {/* Control Panel */}
       <ControlPanel
         onViewChange={(view) => console.log("View changed:", view)}
         onSettingsChange={(newSettings) => setSettings(newSettings)}
+        sessionId={sessionId}
+        selectedModel={selectedModel}
+        onModelChange={(modelKey) => setSelectedModel(modelKey)}
       />
 
+      {/* Comparison Modal */}
+      {resume && tailoredResume && (
+        <ComparisonModal
+          isOpen={showComparisonModal}
+          onClose={() => setShowComparisonModal(false)}
+          original={resume}
+          tailored={tailoredResume}
+          fontSize={settings.fontSize as "small" | "medium" | "large"}
+        />
+      )}
+
+      {/* Tool Results Modal */}
+      {toolModal && (
+        <ToolResultsModal
+          isOpen={!!toolModal}
+          onClose={() => setToolModal(null)}
+          title={`${toolModal.toolId.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} - Detailed Results`}
+          subtitle="Comprehensive analysis and recommendations"
+        >
+          <div className="space-y-6">
+            <pre className="text-xs text-gray-300 bg-gray-900/50 p-4 rounded-lg overflow-auto max-h-96">
+              {JSON.stringify(toolModal.result, null, 2)}
+            </pre>
+            <div className="text-sm text-gray-400">
+              <p>Full detailed analysis is available above. Specific modal components for each tool will be implemented to provide better visualization.</p>
+            </div>
+          </div>
+        </ToolResultsModal>
+      )}
+
       <JsonLd />
-    </div>
+          </div>
   );
 }

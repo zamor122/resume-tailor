@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { getModelFromSession } from "@/app/utils/model-helper";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -14,7 +8,7 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const { jobDescription, industry } = await req.json();
+    const { jobDescription, industry, sessionId, modelKey } = await req.json();
     
     if (!jobDescription || jobDescription.length < 100) {
       return NextResponse.json({
@@ -25,6 +19,13 @@ export async function POST(req: NextRequest) {
 
     const prompt = `
       Analyze the following job description and extract industry-specific keywords that are critical for ATS systems and recruiters.
+      
+      CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact numbers, frequencies, and specific resume sections.
+      - Require keyword frequency counts (exact number of occurrences)
+      - Provide synonyms and alternative terms (exact terms)
+      - Specify exact resume sections where keywords should appear
+      - Include keyword importance scores (0-100)
+      - Provide natural incorporation examples
       
       ${industry ? `Industry: ${industry}` : ''}
       
@@ -38,20 +39,26 @@ export async function POST(req: NextRequest) {
       7. Power Words (high-impact terms that stand out)
       
       For each keyword, provide:
-      - The keyword/phrase
+      - The keyword/phrase (exact term)
       - Importance level (critical, high, medium, low)
-      - Frequency in job description
-      - Alternative terms/synonyms
+      - Importance score (0-100)
+      - Frequency in job description (exact count)
+      - Alternative terms/synonyms (exact terms)
+      - Recommended resume sections (specific sections)
+      - Incorporation example (exact phrase or sentence)
       
       Return ONLY a JSON object with this exact format:
       {
         "keywords": {
           "technical": [
             {
-              "term": "<keyword>",
+              "term": "<exact keyword>",
               "importance": "<critical|high|medium|low>",
-              "frequency": <number>,
-              "synonyms": ["synonym1", "synonym2"]
+              "importanceScore": <number 0-100>,
+              "frequency": <exact number of occurrences>,
+              "synonyms": ["<exact synonym1>", "<exact synonym2>"],
+              "recommendedSections": ["<section1>", "<section2>"],
+              "incorporationExample": "<exact phrase showing how to use>"
             }
           ],
           "soft": [...],
@@ -60,14 +67,35 @@ export async function POST(req: NextRequest) {
           "actionVerbs": [...],
           "powerWords": [...]
         },
-        "missingFromResume": ["keyword1", "keyword2", ...],
+        "keywordDensity": {
+          "totalKeywords": <number>,
+          "criticalKeywords": <number>,
+          "averageFrequency": <number>,
+          "mostFrequent": [{"keyword": "<term>", "count": <number>}, ...]
+        },
+        "missingFromResume": [
+          {
+            "keyword": "<keyword>",
+            "importance": "<critical|high|medium|low>",
+            "importanceScore": <number 0-100>,
+            "recommendedSections": ["<section1>", ...],
+            "incorporationExample": "<exact phrase>"
+          }
+        ],
         "recommendations": [
           {
             "keyword": "<keyword>",
-            "reason": "<why it's important>",
-            "suggestion": "<how to incorporate>"
+            "reason": "<specific reason why it's important>",
+            "suggestion": "<specific action: exact section and example phrase>",
+            "expectedImpact": "<how this improves ATS match>",
+            "priority": "<critical|high|medium|low>"
           }
         ],
+        "industryBenchmark": {
+          "industryAverage": <number of keywords typically found>,
+          "thisJob": <number of keywords found>,
+          "comparison": "<above|at|below average>"
+        },
         "industry": "<detected or provided industry>",
         "experienceLevel": "<entry|mid|senior|executive>"
       }
@@ -76,9 +104,20 @@ export async function POST(req: NextRequest) {
       ${jobDescription.substring(0, 8000)}
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    // Get session preferences for model selection
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
+
+    const result = await generateWithFallback(
+      prompt,
+      selectedModel,
+      undefined,
+      sessionApiKeys
+    );
+    const text = result.text.trim();
 
     try {
       const cleanedText = text
@@ -90,8 +129,10 @@ export async function POST(req: NextRequest) {
       
       return NextResponse.json({
         keywords: parsedResponse.keywords || {},
+        keywordDensity: parsedResponse.keywordDensity || {},
         missingFromResume: parsedResponse.missingFromResume || [],
         recommendations: parsedResponse.recommendations || [],
+        industryBenchmark: parsedResponse.industryBenchmark || {},
         industry: parsedResponse.industry || industry || "Unknown",
         experienceLevel: parsedResponse.experienceLevel || "mid",
         timestamp: new Date().toISOString(),

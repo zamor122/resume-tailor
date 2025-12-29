@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Footer from './components/Footer';
 import Navigation from "./components/Navigation";
 import { ThemeProvider } from './components/ThemeProvider'
+import UmamiVerifier from './components/UmamiVerifier';
 import Script from "next/script";
 
 const geistSans = Geist({
@@ -20,7 +21,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://airesumetailor.com'),
-  title: "AI Resume Tailor - Free ATS Resume Optimization with Relevancy Scoring",
+  title: {
+    default: "AI Resume Tailor - Free ATS Resume Optimization with Relevancy Scoring",
+    template: "%s | AI Resume Tailor"
+  },
   description: "Free AI-powered resume tailoring tool with real-time relevancy scoring. Optimize your resume for ATS systems, match job descriptions with quantifiable results, and increase interview chances by up to 60%. No sign-up required, no data stored.",
   keywords: [
     "resume tailoring",
@@ -46,13 +50,27 @@ export const metadata: Metadata = {
     "applicant tracking system",
     "job-specific resume",
     "resume effectiveness measurement",
-    "resume match percentage"
-  ].join(', '),
+    "resume match percentage",
+    "free resume analyzer",
+    "resume checker",
+    "ATS compatibility checker",
+    "resume score calculator",
+    "job application optimizer",
+    "resume AI tool"
+  ],
+  applicationName: "AI Resume Tailor",
+  referrer: "origin-when-cross-origin",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   openGraph: {
     title: "AI Resume Tailor - Free ATS Resume Optimization with Relevancy Scoring",
     description: "Free AI resume tool that optimizes your resume for ATS systems with real-time relevancy scoring. See exactly how your resume matches job descriptions with quantifiable metrics. Get more interviews with perfectly tailored applications. No sign-up needed.",
     type: "website",
     locale: "en_US",
+    alternateLocale: ["en_GB", "en_CA", "en_AU"],
     siteName: "AI Resume Tailor",
     url: "https://airesumetailor.com",
     images: [
@@ -61,6 +79,7 @@ export const metadata: Metadata = {
         width: 1200,
         height: 630,
         alt: "AI Resume Tailor - ATS Resume Optimization Tool with Relevancy Scoring",
+        type: "image/jpeg",
       },
     ],
   },
@@ -89,7 +108,22 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "ca-pub-5839711747501766", // Updated with your AdSense publisher ID
+    google: "ca-pub-5839711747501766", // AdSense publisher ID
+  },
+  other: {
+    "google-site-verification": "ca-pub-5839711747501766",
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "AI Resume Tailor",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
   },
 };
 
@@ -102,6 +136,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
         <Script 
+          id="umami-analytics"
           src="https://cloud.umami.is/script.js" 
           data-website-id="96fc4b45-d8c8-4941-8a4f-330723725623"
           strategy="afterInteractive"
@@ -113,9 +148,10 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         <ThemeProvider>
+          <UmamiVerifier />
           <div className="glass-background" />
           <Navigation />
-          <main className="flex-grow pt-2 relative">
+          <main className="flex-grow pt-2 relative" role="main">
             {children}
           </main>
           <Footer />

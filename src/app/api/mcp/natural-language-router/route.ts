@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { isRateLimitError } from "@/app/services/ai-provider";
+import { getModelFromSession } from "@/app/utils/model-helper";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -95,7 +90,7 @@ const availableTools: Record<string, AvailableTool> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userQuery, context } = await req.json();
+    const { userQuery, context, sessionId, modelKey } = await req.json();
     
     if (!userQuery || typeof userQuery !== 'string') {
       return NextResponse.json({
@@ -160,10 +155,20 @@ Examples:
 
 Return ONLY the JSON, no other text.`;
 
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
+
     try {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const textResponse = response.text().trim();
+      const result = await generateWithFallback(
+        prompt,
+        selectedModel,
+        undefined,
+        sessionApiKeys
+      );
+      const textResponse = result.text.trim();
       
       // Extract JSON from response
       const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
@@ -190,8 +195,8 @@ Return ONLY the JSON, no other text.`;
       });
     } catch (apiError: any) {
       // Handle quota/rate limit errors
-      if (apiError?.status === 429 || apiError?.message?.includes('429') || apiError?.message?.includes('quota')) {
-        console.warn('Gemini API quota exceeded for natural language router. Using fallback.');
+      if (isRateLimitError(apiError)) {
+        console.warn('API quota exceeded for natural language router. Using fallback.');
         
         // Fallback: simple keyword matching
         const lowerQuery = userQuery.toLowerCase();

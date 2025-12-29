@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { getModelFromSession } from "@/app/utils/model-helper";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -14,7 +8,7 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const { jobDescription, resume } = await req.json();
+    const { jobDescription, resume, sessionId, modelKey } = await req.json();
     
     if (!jobDescription || jobDescription.length < 100) {
       return NextResponse.json({
@@ -26,66 +20,90 @@ export async function POST(req: NextRequest) {
     const prompt = `
       Generate comprehensive interview preparation materials based on a job description and candidate resume.
       
-      Create:
-      1. Behavioral interview questions (STAR method)
-      2. Technical interview questions (if applicable)
-      3. Situational questions
-      4. Questions to ask the interviewer
-      5. Key talking points from resume
-      6. Potential red flags to address
+      CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include complete examples from the candidate's resume.
+      - Require specific examples from candidate's resume (exact achievements, projects, experiences)
+      - Provide complete STAR responses, not just frameworks (full Situation, Task, Action, Result)
+      - Include difficulty ratings and specific answer approaches
+      - Reference specific resume achievements with exact details
+      - Provide concrete talking points with evidence from resume
       
       ${resume ? `Candidate Resume:\n${resume.substring(0, 3000)}\n\n` : ''}
+      
+      Create:
+      1. Behavioral interview questions (STAR method) - with complete example responses
+      2. Technical interview questions (if applicable) - with answer approaches
+      3. Situational questions - with specific scenarios
+      4. Questions to ask the interviewer - tailored to this role
+      5. Key talking points from resume - with exact evidence
+      6. Potential red flags to address - with specific mitigation strategies
       
       Return ONLY a JSON object with this exact format:
       {
         "behavioral": [
           {
-            "question": "<question>",
-            "why": "<why they might ask this>",
+            "question": "<exact question>",
+            "why": "<specific reason why they might ask this based on job description>",
             "starFramework": {
-              "situation": "<example situation>",
-              "task": "<example task>",
-              "action": "<example action>",
-              "result": "<example result>"
+              "situation": "<complete situation from candidate's resume with specific details>",
+              "task": "<specific task or challenge from candidate's experience>",
+              "action": "<exact actions candidate took from their resume>",
+              "result": "<specific, quantifiable results from candidate's resume>"
             },
-            "tips": ["<tip1>", ...]
+            "completeExample": "<full STAR response using candidate's actual experience>",
+            "tips": ["<specific tip1>", ...],
+            "keywords": ["<keywords to include>", ...]
           }
         ],
         "technical": [
           {
-            "question": "<question>",
-            "category": "<category>",
+            "question": "<exact technical question>",
+            "category": "<exact category, e.g., 'System Design', 'Algorithms', 'Database'>",
             "difficulty": "<easy|medium|hard>",
-            "answer": "<suggested answer approach>",
-            "resources": ["<resource1>", ...]
+            "answer": "<specific answer approach with steps>",
+            "answerFramework": "<structured approach to answer>",
+            "resources": [
+              {
+                "type": "<article|video|course|book>",
+                "name": "<exact resource name>",
+                "url": "<URL if available>"
+              }
+            ],
+            "relatedToResume": <boolean, if relates to candidate's experience>,
+            "resumeConnection": "<how to connect to candidate's experience>"
           }
         ],
         "situational": [
           {
-            "question": "<question>",
-            "scenario": "<scenario description>",
-            "approach": "<how to answer>"
+            "question": "<exact situational question>",
+            "scenario": "<specific scenario description>",
+            "approach": "<specific approach with steps>",
+            "exampleFromResume": "<similar situation from candidate's resume if applicable>",
+            "keyPoints": ["<point1>", ...]
           }
         ],
         "questionsToAsk": [
           {
-            "question": "<question>",
-            "category": "<culture|role|growth|team>",
-            "why": "<why this is a good question>"
+            "question": "<exact question to ask>",
+            "category": "<culture|role|growth|team|compensation>",
+            "why": "<specific reason why this is a good question for this role>",
+            "followUp": "<potential follow-up question>"
           }
         ],
         "talkingPoints": [
           {
-            "point": "<talking point>",
-            "evidence": "<evidence from resume>",
-            "impact": "<how to present this>"
+            "point": "<specific talking point>",
+            "evidence": "<exact evidence from resume with details>",
+            "impact": "<specific way to present this with numbers/metrics>",
+            "whenToUse": "<when in interview to bring this up>"
           }
         ],
         "redFlags": [
           {
-            "issue": "<potential concern>",
-            "howToAddress": "<how to address it>",
-            "positiveSpin": "<positive way to frame>"
+            "issue": "<specific potential concern>",
+            "evidence": "<what in resume might raise this concern>",
+            "howToAddress": "<specific strategy to address it>",
+            "positiveSpin": "<exact positive way to frame>",
+            "preparation": "<how to prepare for this question>"
           }
         ],
         "interviewTips": [
@@ -99,9 +117,20 @@ export async function POST(req: NextRequest) {
       ${jobDescription.substring(0, 5000)}
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    // Get session preferences for model selection
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
+
+    const result = await generateWithFallback(
+      prompt,
+      selectedModel,
+      undefined,
+      sessionApiKeys
+    );
+    const text = result.text.trim();
 
     try {
       const cleanedText = text

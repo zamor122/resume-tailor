@@ -6,12 +6,18 @@ const JsonLd: React.FC = () => {
     "@type": "WebApplication",
     "name": "AI Resume Tailor",
     "description": "Free AI-powered resume tailoring tool with real-time relevancy scoring. Optimize your resume for ATS systems and match job descriptions with quantifiable results.",
+    "url": "https://airesumetailor.com",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "All",
+    "browserRequirements": "Requires JavaScript. Requires HTML5.",
+    "softwareVersion": "2.0",
+    "releaseNotes": "Latest version with AI-powered resume optimization and relevancy scoring",
     "offers": {
       "@type": "Offer",
       "price": "0",
-      "priceCurrency": "USD"
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock",
+      "validFrom": "2024-01-01"
     },
     "featureList": [
       "Resume optimization for ATS systems",
@@ -19,8 +25,24 @@ const JsonLd: React.FC = () => {
       "Job description matching",
       "Keyword optimization",
       "Formatting improvements",
-      "Quantifiable improvement metrics"
-    ]
+      "Quantifiable improvement metrics",
+      "AI-powered content analysis",
+      "Multi-job comparison",
+      "Resume version control",
+      "Interview preparation tools"
+    ],
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "156",
+      "bestRating": "5",
+      "worstRating": "1"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "AI Resume Tailor",
+      "url": "https://airesumetailor.com"
+    }
   };
 
   const serviceSchema = {
@@ -28,15 +50,38 @@ const JsonLd: React.FC = () => {
     "@type": "SoftwareApplication",
     "name": "AI Resume Tailor",
     "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web Browser",
     "offers": {
       "@type": "Offer",
       "price": "0",
-      "priceCurrency": "USD"
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
     },
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "4.8",
-      "ratingCount": "156"
+      "ratingCount": "156",
+      "bestRating": "5",
+      "worstRating": "1"
+    },
+    "screenshot": "https://airesumetailor.com/og-image.jpg",
+    "softwareVersion": "2.0"
+  };
+  
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "AI Resume Tailor",
+    "url": "https://airesumetailor.com",
+    "logo": "https://airesumetailor.com/og-image.jpg",
+    "description": "Free AI-powered resume optimization and ATS compatibility tool",
+    "sameAs": [
+      "https://twitter.com/airesumetailor"
+    ],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "Customer Service",
+      "availableLanguage": ["English"]
     }
   };
 
@@ -88,6 +133,10 @@ const JsonLd: React.FC = () => {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
       />
       <script
         type="application/ld+json"

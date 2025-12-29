@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { isRateLimitError } from "@/app/services/ai-provider";
+import { DEFAULT_MODEL } from "@/app/config/models";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -40,7 +35,7 @@ interface ClassificationResult {
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, existingContext } = await req.json();
+    const { text, existingContext, sessionId, modelKey } = await req.json();
     
     if (!text || text.length < 50) {
       return NextResponse.json({
@@ -119,79 +114,63 @@ export async function POST(req: NextRequest) {
       ${text.substring(0, 10000)}
     `;
 
-    let result;
-    let response;
-    let textResponse;
+    // Get session preferences for model selection
+    let sessionApiKeys: Record<string, string> | undefined;
+    let selectedModel = modelKey || DEFAULT_MODEL;
+    
+    if (sessionId) {
+      try {
+        const sessionResponse = await fetch(`${req.nextUrl.origin}/api/mcp/session-manager`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get', sessionId }),
+        });
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          if (sessionData.session?.preferences?.modelPreferences?.defaultModel) {
+            selectedModel = sessionData.session.preferences.modelPreferences.defaultModel;
+          }
+          if (sessionData.session?.preferences?.apiKeys) {
+            sessionApiKeys = sessionData.session.preferences.apiKeys;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch session preferences:', e);
+      }
+    }
+
+    let textResponse: string;
     
     try {
-      result = await model.generateContent(prompt);
-      response = await result.response;
-      textResponse = response.text().trim();
+      const result = await generateWithFallback(
+        prompt,
+        selectedModel,
+        undefined,
+        sessionApiKeys
+      );
+      textResponse = result.text.trim();
     } catch (apiError: any) {
-      // Handle quota/rate limit errors
-      if (apiError?.status === 429 || apiError?.message?.includes('429') || apiError?.message?.includes('quota')) {
-        console.error('Gemini API quota exceeded:', apiError);
-        
-        // Return fallback classification with warning
-        const lowerText = text.toLowerCase();
-        const resumeIndicators = [
-          /email.*@/i,
-          /phone|mobile|cell/i,
-          /experience|work history|employment/i,
-          /education|degree|university|college/i,
-          /skills|technical skills|proficiencies/i,
-          /summary|objective|profile/i
-        ];
-        
-        const jobDescIndicators = [
-          /we are looking for|seeking/i,
-          /requirements|qualifications/i,
-          /responsibilities|duties|you will/i,
-          /salary|compensation|benefits/i,
-          /apply now|how to apply/i,
-          /company|organization|about us/i
-        ];
-        
-        const resumeScore = resumeIndicators.filter(regex => regex.test(text)).length;
-        const jobDescScore = jobDescIndicators.filter(regex => regex.test(text)).length;
-        
-        let type: "resume" | "job_description" | "mixed" | "unclear" = "unclear";
-        let confidence = 30; // Lower confidence for fallback
-        
-        if (resumeScore > jobDescScore && resumeScore >= 2) {
-          type = "resume";
-          confidence = Math.min(70, 30 + (resumeScore * 8));
-        } else if (jobDescScore > resumeScore && jobDescScore >= 2) {
-          type = "job_description";
-          confidence = Math.min(70, 30 + (jobDescScore * 8));
-        } else if (resumeScore === jobDescScore && resumeScore >= 1) {
-          type = "mixed";
-          confidence = 50;
-        }
-        
-        return NextResponse.json({
-          type,
-          confidence,
-          reasoning: [
-            "⚠️ API quota exceeded - using fallback classification",
-            `Found ${resumeScore} resume indicators and ${jobDescScore} job description indicators`,
-            "Classification may be less accurate. You can retry now or wait for quota reset."
-          ],
-          extractedData: {
-            resume: {},
-            jobDescription: {}
-          },
-          suggestions: [
-            "You can retry immediately - the system will attempt again",
-            "For best results, wait 30 seconds before retrying",
-            "Fallback classification is working but less accurate than AI"
-          ],
-          quotaExceeded: true,
-          retryAfter: 30,
-          canRetryImmediately: true
-        });
-      }
-      throw apiError; // Re-throw if not a quota error
+      // Log the full error for debugging
+      console.error('Error in classify-content API:', {
+        message: apiError.message,
+        status: apiError.status,
+        model: selectedModel,
+        error: apiError
+      });
+
+      // Return error response - classification will fail gracefully
+      return NextResponse.json({
+        error: true,
+        message: apiError.message || 'Failed to classify content',
+        model: selectedModel,
+        status: apiError.status,
+        suggestions: {
+          checkApiKey: true,
+          switchModel: true
+        },
+        type: "unclear",
+        confidence: 0
+      }, { status: 400 });
     }
 
     try {

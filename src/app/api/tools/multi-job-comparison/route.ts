@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { getModelFromSession } from "@/app/utils/model-helper";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -14,7 +8,7 @@ export const maxDuration = 90; // Longer for multiple jobs
 
 export async function POST(req: NextRequest) {
   try {
-    const { resume, jobDescriptions, jobDescription } = await req.json();
+    const { resume, jobDescriptions, jobDescription, sessionId, modelKey } = await req.json();
     
     // Handle both single jobDescription and array of jobDescriptions
     let jobDescs: any[] = [];
@@ -49,6 +43,13 @@ export async function POST(req: NextRequest) {
     const prompt = `
       Compare this resume against multiple job descriptions simultaneously and provide comprehensive insights.
       
+      CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact match scores, percentages, and specific recommendations.
+      - Require specific match scores for each job (0-100 with breakdown)
+      - Provide common skill/requirement analysis with exact percentages
+      - Include versatility score calculation with methodology
+      - Suggest resume versions for different job clusters with specific changes
+      - Provide specific optimization strategies with expected improvements
+      
       Resume:
       ${resume.substring(0, 5000)}
       
@@ -70,13 +71,49 @@ export async function POST(req: NextRequest) {
         "jobComparisons": [
           {
             "jobIndex": <number>,
-            "jobTitle": "<title>",
-            "matchScore": <number 0-100>,
-            "strengths": ["strength1", ...],
-            "gaps": ["gap1", ...],
-            "uniqueRequirements": ["req1", ...],
-            "commonRequirements": ["req1", ...],
-            "recommendations": ["rec1", ...]
+            "jobTitle": "<exact job title>",
+            "matchScore": <number 0-100, exact score>,
+            "matchBreakdown": {
+              "skills": <number 0-100>,
+              "experience": <number 0-100>,
+              "education": <number 0-100>,
+              "keywords": <number 0-100>
+            },
+            "strengths": [
+              {
+                "strength": "<specific strength>",
+                "evidence": "<evidence from resume>",
+                "impact": "<how this helps>"
+              }
+            ],
+            "gaps": [
+              {
+                "gap": "<specific gap>",
+                "importance": "<critical|high|medium|low>",
+                "impact": "<how this hurts match>"
+              }
+            ],
+            "uniqueRequirements": [
+              {
+                "requirement": "<exact requirement>",
+                "inResume": <boolean>,
+                "importance": "<critical|high|medium|low>"
+              }
+            ],
+            "commonRequirements": [
+              {
+                "requirement": "<exact requirement>",
+                "frequency": <number, how many jobs require this>,
+                "inResume": <boolean>
+              }
+            ],
+            "recommendations": [
+              {
+                "recommendation": "<specific recommendation>",
+                "priority": "<high|medium|low>",
+                "expectedImprovement": <points added to score>
+              }
+            ]
           }
         ],
         "commonThemes": {
@@ -88,24 +125,42 @@ export async function POST(req: NextRequest) {
         "optimizationStrategy": {
           "universalImprovements": [
             {
-              "action": "<action>",
-              "impact": "<impact on all jobs>",
-              "priority": "<high|medium|low>"
+              "action": "<specific action>",
+              "impact": "<specific impact on all jobs, e.g., '+5 points average'>",
+              "priority": "<critical|high|medium|low>",
+              "implementation": "<how to implement>",
+              "timeEstimate": "<time to implement>"
             }
           ],
           "jobSpecificOptimizations": [
             {
               "jobIndex": <number>,
-              "optimizations": ["opt1", ...],
-              "expectedImprovement": <score increase>
+              "optimizations": [
+                {
+                  "optimization": "<specific optimization>",
+                  "action": "<exact action to take>",
+                  "expectedImprovement": <exact points added>,
+                  "example": "<before> → <after>"
+                }
+              ],
+              "expectedImprovement": <exact score increase>
             }
           ],
           "resumeVersions": [
             {
-              "version": "<version name>",
-              "targetJobs": [<job indices>],
-              "keyChanges": ["change1", ...],
-              "expectedMatch": <average score>
+              "version": "<exact version name>",
+              "targetJobs": [<exact job indices>],
+              "keyChanges": [
+                {
+                  "change": "<specific change>",
+                  "section": "<section name>",
+                  "before": "<current text>",
+                  "after": "<new text>",
+                  "reason": "<why this helps these jobs>"
+                }
+              ],
+              "expectedMatch": <exact average score>,
+              "versatilityScore": <number 0-100>
             }
           ]
         },
@@ -126,9 +181,20 @@ export async function POST(req: NextRequest) {
       }
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    // Get session preferences for model selection
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
+
+    const result = await generateWithFallback(
+      prompt,
+      selectedModel,
+      undefined,
+      sessionApiKeys
+    );
+    const text = result.text.trim();
 
     try {
       const cleanedText = text

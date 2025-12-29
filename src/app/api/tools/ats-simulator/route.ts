@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { getModelFromSession } from "@/app/utils/model-helper";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -14,7 +8,7 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const { resume } = await req.json();
+    const { resume, sessionId, modelKey } = await req.json();
     
     if (!resume || resume.length < 100) {
       return NextResponse.json({
@@ -24,65 +18,109 @@ export async function POST(req: NextRequest) {
     }
 
     const prompt = `
-      You are an ATS (Applicant Tracking System) simulator. Analyze the following resume as if you were parsing it through a real ATS system.
+      You are an ATS (Applicant Tracking System) simulator. Analyze the following resume as if you were parsing it through real ATS systems.
       
-      Simulate how major ATS systems (like Workday, Taleo, Greenhouse, Lever) would parse this resume.
+      CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact numbers, line references, and ATS system names.
+      
+      Simulate how major ATS systems (Workday, Taleo, Greenhouse, Lever, iCIMS, Bullhorn) would parse this resume.
       
       Analyze:
-      1. Contact Information Extraction (name, email, phone, location)
-      2. Skills Extraction (technical skills, soft skills)
-      3. Work Experience Parsing (job titles, companies, dates, descriptions)
-      4. Education Parsing (degrees, institutions, dates)
-      5. Keywords Detection (industry keywords, technologies)
-      6. Formatting Issues (headers, sections, bullet points)
-      7. ATS Compatibility Score (0-100)
+      1. Contact Information Extraction (name, email, phone, location) - Provide parsing confidence % for each field
+      2. Skills Extraction (technical skills, soft skills) - List exact skills found and confidence %
+      3. Work Experience Parsing (job titles, companies, dates, descriptions) - Specify which sections parse correctly/incorrectly
+      4. Education Parsing (degrees, institutions, dates) - Provide parsing accuracy %
+      5. Keywords Detection (industry keywords, technologies) - Count occurrences
+      6. Formatting Issues (headers, sections, bullet points) - Provide specific line numbers or section names
+      7. ATS Compatibility Score (0-100) - Calculate based on specific criteria
       
       Return ONLY a JSON object with this exact format:
       {
         "atsScore": <number 0-100>,
+        "parsingAccuracy": <number 0-100, overall parsing confidence>,
+        "atsSystemCompatibility": {
+          "workday": {"compatible": <boolean>, "score": <number 0-100>, "issues": ["issue1", ...]},
+          "taleo": {"compatible": <boolean>, "score": <number 0-100>, "issues": ["issue1", ...]},
+          "greenhouse": {"compatible": <boolean>, "score": <number 0-100>, "issues": ["issue1", ...]},
+          "lever": {"compatible": <boolean>, "score": <number 0-100>, "issues": ["issue1", ...]}
+        },
         "parsedData": {
           "contactInfo": {
             "name": "<extracted name or null>",
             "email": "<extracted email or null>",
             "phone": "<extracted phone or null>",
-            "location": "<extracted location or null>"
+            "location": "<extracted location or null>",
+            "parsingConfidence": {"name": <number 0-100>, "email": <number 0-100>, "phone": <number 0-100>, "location": <number 0-100>}
           },
-          "skills": ["skill1", "skill2", ...],
+          "skills": [
+            {"skill": "<skill name>", "confidence": <number 0-100>, "source": "<where found in resume>"}
+          ],
           "experience": [
             {
               "title": "<job title>",
               "company": "<company name>",
               "dates": "<date range>",
-              "description": "<parsed description>"
+              "description": "<parsed description>",
+              "parsingAccuracy": <number 0-100>,
+              "sectionParsed": <boolean>
             }
           ],
           "education": [
             {
               "degree": "<degree>",
               "institution": "<institution>",
-              "dates": "<date range>"
+              "dates": "<date range>",
+              "parsingAccuracy": <number 0-100>
             }
           ]
+        },
+        "sectionAnalysis": {
+          "header": {"parsed": <boolean>, "accuracy": <number 0-100>, "issues": ["issue1", ...]},
+          "experience": {"parsed": <boolean>, "accuracy": <number 0-100>, "issues": ["issue1", ...]},
+          "education": {"parsed": <boolean>, "accuracy": <number 0-100>, "issues": ["issue1", ...]},
+          "skills": {"parsed": <boolean>, "accuracy": <number 0-100>, "issues": ["issue1", ...]}
         },
         "issues": [
           {
             "type": "<formatting|missing|unparseable>",
-            "severity": "<low|medium|high>",
-            "description": "<issue description>",
-            "recommendation": "<how to fix>"
+            "severity": "<critical|high|medium|low>",
+            "description": "<specific issue description>",
+            "location": "<exact location: line number, section name, or character position>",
+            "atsSystemsAffected": ["<ATS system names that would fail>"],
+            "recommendation": "<specific fix with example>",
+            "impact": "<how this affects parsing score>"
           }
         ],
-        "keywords": ["keyword1", "keyword2", ...],
-        "recommendations": ["recommendation1", "recommendation2", ...]
+        "keywords": [
+          {"keyword": "<keyword>", "count": <number>, "importance": "<critical|high|medium|low>"}
+        ],
+        "recommendations": [
+          {
+            "priority": "<critical|high|medium|low>",
+            "action": "<specific action to take>",
+            "expectedImprovement": <number, points added to score>,
+            "example": "<before> → <after>"
+          }
+        ]
       }
       
       Resume to analyze:
       ${resume.substring(0, 10000)}
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    // Get session preferences for model selection
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
+
+    const result = await generateWithFallback(
+      prompt,
+      selectedModel,
+      undefined,
+      sessionApiKeys
+    );
+    const text = result.text.trim();
 
     try {
       const cleanedText = text
@@ -95,7 +133,10 @@ export async function POST(req: NextRequest) {
       // Validate and enhance response
       return NextResponse.json({
         atsScore: Math.min(100, Math.max(0, parsedResponse.atsScore || 0)),
+        parsingAccuracy: parsedResponse.parsingAccuracy || parsedResponse.atsScore || 0,
+        atsSystemCompatibility: parsedResponse.atsSystemCompatibility || {},
         parsedData: parsedResponse.parsedData || {},
+        sectionAnalysis: parsedResponse.sectionAnalysis || {},
         issues: parsedResponse.issues || [],
         keywords: parsedResponse.keywords || [],
         recommendations: parsedResponse.recommendations || [],

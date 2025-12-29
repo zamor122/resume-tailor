@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { cookies } from "next/headers";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-// Initialize the Google AI client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { getModelProvider, isRateLimitError } from "@/app/services/ai-provider";
+import { DEFAULT_MODEL } from "@/app/config/models";
 
 // Cooldown period in milliseconds (e.g., 1 minute = 60000ms)
 const COOLDOWN_PERIOD = 60000;
@@ -30,11 +24,15 @@ export async function POST(req: NextRequest) {
   // Parse request body early so we can use it in error handlers
   let resume = "";
   let jobDescription = "";
+  let sessionId: string | undefined;
+  let modelKey: string | undefined;
   
   try {
     const body = await req.json();
     resume = body.resume || "";
     jobDescription = body.jobDescription || "";
+    sessionId = body.sessionId;
+    modelKey = body.modelKey;
   } catch (e) {
     return NextResponse.json(
       { error: "Invalid JSON", message: "Request body must be valid JSON" },
@@ -130,53 +128,71 @@ export async function POST(req: NextRequest) {
       Do not include any extra text or paragraphs—just return the data in the specified format.
     `;
 
-    // Generate content without streaming
-    let result;
-    let response;
-    let text;
+    // Get session preferences for model selection
+    let sessionApiKeys: Record<string, string> | undefined;
+    let selectedModel = modelKey || DEFAULT_MODEL;
+    
+    if (sessionId) {
+      try {
+        const sessionResponse = await fetch(`${req.nextUrl.origin}/api/mcp/session-manager`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get', sessionId }),
+        });
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          if (sessionData.session?.preferences?.modelPreferences?.defaultModel) {
+            selectedModel = sessionData.session.preferences.modelPreferences.defaultModel;
+          }
+          if (sessionData.session?.preferences?.apiKeys) {
+            sessionApiKeys = sessionData.session.preferences.apiKeys;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch session preferences:', e);
+      }
+    }
+
+    // Generate content using the abstraction layer
+    let text: string;
     
     try {
-      result = await model.generateContent({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: prompt },
-              { text: `Resume:\n${resume}` },
-              { text: `Job Description:\n${jobDescription}` }
-            ]
-          }
-        ]
+      const fullPrompt = `${prompt}\n\nResume:\n${resume}\n\nJob Description:\n${jobDescription}`;
+      const result = await generateWithFallback(
+        fullPrompt,
+        selectedModel,
+        undefined,
+        sessionApiKeys
+      );
+      text = result.text;
+    } catch (apiError: any) {
+      // Log the full error for debugging
+      console.error('Error in tailor API:', {
+        message: apiError.message,
+        status: apiError.status,
+        model: selectedModel,
+        error: apiError
       });
 
-      response = result.response;
-      text = response.text();
-    } catch (apiError: any) {
-      // Handle quota/rate limit errors
-      if (apiError?.status === 429 || apiError?.message?.includes('429') || apiError?.message?.includes('quota')) {
-        console.error('Gemini API quota exceeded in tailor:', apiError);
-        
-        // Extract retry delay from error if available, but cap at reasonable time
-        const retryDelay = apiError?.errorDetails?.find((d: any) => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo')?.retryDelay || '30';
-        let retrySeconds = typeof retryDelay === 'string' ? parseInt(retryDelay.replace('s', '')) || 30 : 30;
-        // Cap retry time at 30 seconds for better UX
-        retrySeconds = Math.min(retrySeconds, 30);
-        
-        return NextResponse.json({
-          tailoredResume: resume, // Return original resume as fallback
-          changes: [
-            {
-              changeDescription: "⚠️ API Quota Exceeded",
-              changeDetails: `Unable to optimize resume due to API quota limits. You can retry immediately or wait ${retrySeconds} seconds for better results. Your original resume is preserved.`
-            }
-          ],
-          quotaExceeded: true,
-          retryAfter: retrySeconds,
-          canRetryImmediately: true,
-          message: `API quota exceeded. You can retry now or wait ${retrySeconds} seconds for optimal results.`
-        }, { status: 200 }); // Return 200 with warning instead of 500
-      }
-      throw apiError; // Re-throw if not a quota error
+      // Extract error details
+      const errorMessage = apiError.message || 'Unknown error occurred';
+      const status = apiError.status;
+      const suggestions = apiError.suggestions || {};
+
+      // Return user-friendly error response
+      return NextResponse.json({
+        error: true,
+        message: errorMessage,
+        model: selectedModel,
+        status: status,
+        suggestions: {
+          checkApiKey: suggestions.checkApiKey || false,
+          switchModel: suggestions.switchModel || false,
+          retryAfter: suggestions.retryAfter
+        },
+        tailoredResume: resume, // Return original resume
+        changes: []
+      }, { status: 400 }); // Return 400 for client errors
     }
 
     // Try to parse the response as JSON
@@ -203,11 +219,9 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     // Check if it's a quota error that wasn't caught earlier
-    if (error && typeof error === 'object' && 'status' in error && (error as any).status === 429) {
+    if (isRateLimitError(error)) {
       const apiError = error as any;
-      const retryDelay = apiError?.errorDetails?.find((d: any) => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo')?.retryDelay || '30';
-      let retrySeconds = typeof retryDelay === 'string' ? parseInt(retryDelay.replace('s', '')) || 30 : 30;
-      retrySeconds = Math.min(retrySeconds, 30);
+      const retrySeconds = apiError.retryAfter || 30;
       
       return NextResponse.json({
         tailoredResume: resume || "",

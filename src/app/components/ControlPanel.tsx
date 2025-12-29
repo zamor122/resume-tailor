@@ -1,20 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import ModelSelector from "./ModelSelector";
 
 interface ControlPanelProps {
   onViewChange?: (view: string) => void;
   onSettingsChange?: (settings: any) => void;
+  sessionId?: string | null;
+  selectedModel?: string;
+  onModelChange?: (modelKey: string) => void;
 }
 
-export default function ControlPanel({ onViewChange, onSettingsChange }: ControlPanelProps) {
+export default function ControlPanel({
+  onViewChange,
+  onSettingsChange,
+  sessionId,
+  selectedModel,
+  onModelChange,
+}: ControlPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [settings, setSettings] = useState({
-    showAIDetection: true,
-    showRelevancyScore: true,
-    showComparison: true,
-    showChat: true,
-    theme: "dark",
     fontSize: "medium",
     layout: "grid",
   });
@@ -46,13 +51,14 @@ export default function ControlPanel({ onViewChange, onSettingsChange }: Control
 
       {/* Panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-40 w-80 glass-strong rounded-2xl p-6 
-                      border border-white/20 shadow-2xl animate-fadeIn">
+        <div className="fixed bottom-24 right-6 z-40 w-80 rounded-2xl p-6 
+                      border border-white/20 shadow-2xl animate-fadeIn
+                      bg-[var(--foreground-light)] backdrop-blur-none">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold gradient-text-cyber">Control Panel</h3>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-300 hover:text-white transition-colors"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -61,59 +67,25 @@ export default function ControlPanel({ onViewChange, onSettingsChange }: Control
           </div>
 
           <div className="space-y-4">
-            {/* View Controls */}
-            <div>
-              <label className="text-sm font-semibold text-gray-300 mb-2 block">Views</label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings.showChat}
-                    onChange={(e) => handleSettingChange("showChat", e.target.checked)}
-                    className="w-4 h-4 rounded bg-white/10 border-white/20 text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-gray-400">Chat Interface</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings.showComparison}
-                    onChange={(e) => handleSettingChange("showComparison", e.target.checked)}
-                    className="w-4 h-4 rounded bg-white/10 border-white/20 text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-gray-400">Comparison View</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings.showAIDetection}
-                    onChange={(e) => handleSettingChange("showAIDetection", e.target.checked)}
-                    className="w-4 h-4 rounded bg-white/10 border-white/20 text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-gray-400">AI Detection</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings.showRelevancyScore}
-                    onChange={(e) => handleSettingChange("showRelevancyScore", e.target.checked)}
-                    className="w-4 h-4 rounded bg-white/10 border-white/20 text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-gray-400">Relevancy Score</span>
-                </label>
-              </div>
+            {/* Model Selection */}
+            <div className="pb-4 border-b border-white/20">
+              <ModelSelector
+                selectedModel={selectedModel}
+                onModelChange={onModelChange}
+                sessionId={sessionId}
+              />
             </div>
 
             {/* Layout */}
             <div>
-              <label className="text-sm font-semibold text-gray-300 mb-2 block">Layout</label>
+              <label className="text-sm font-semibold text-gray-200 mb-2 block">Layout</label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => handleSettingChange("layout", "grid")}
                   className={`px-3 py-2 rounded-lg text-sm transition-all ${
                     settings.layout === "grid"
                       ? "bg-primary/20 text-primary border border-primary/50"
-                      : "bg-white/5 text-gray-400 hover:bg-white/10"
+                      : "bg-white/10 text-gray-200 hover:bg-white/15"
                   }`}
                 >
                   Grid
@@ -133,7 +105,7 @@ export default function ControlPanel({ onViewChange, onSettingsChange }: Control
 
             {/* Font Size */}
             <div>
-              <label className="text-sm font-semibold text-gray-300 mb-2 block">Font Size</label>
+              <label className="text-sm font-semibold text-gray-200 mb-2 block">Font Size</label>
               <div className="grid grid-cols-3 gap-2">
                 {["small", "medium", "large"].map((size) => (
                   <button
@@ -142,7 +114,7 @@ export default function ControlPanel({ onViewChange, onSettingsChange }: Control
                     className={`px-3 py-2 rounded-lg text-sm transition-all capitalize ${
                       settings.fontSize === size
                         ? "bg-primary/20 text-primary border border-primary/50"
-                        : "bg-white/5 text-gray-400 hover:bg-white/10"
+                        : "bg-white/10 text-gray-200 hover:bg-white/15"
                     }`}
                   >
                     {size}
@@ -152,8 +124,8 @@ export default function ControlPanel({ onViewChange, onSettingsChange }: Control
             </div>
 
             {/* Quick Actions */}
-            <div className="pt-4 border-t border-white/10">
-              <label className="text-sm font-semibold text-gray-300 mb-2 block">Quick Actions</label>
+            <div className="pt-4 border-t border-white/20">
+              <label className="text-sm font-semibold text-gray-200 mb-2 block">Quick Actions</label>
               <div className="space-y-2">
                 <button className="w-full px-4 py-2 rounded-lg bg-primary/20 text-primary 
                                  hover:bg-primary/30 transition-colors text-sm font-semibold">

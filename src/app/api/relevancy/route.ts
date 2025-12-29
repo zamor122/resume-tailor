@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { DEFAULT_MODEL } from "@/app/config/models";
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-// Initialize the Google AI client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-
-async function evaluateResumeRelevancy(resume: string, jobDescription: string): Promise<number> {
+async function evaluateResumeRelevancy(
+  resume: string,
+  jobDescription: string,
+  modelKey?: string,
+  sessionApiKeys?: Record<string, string>
+): Promise<number> {
   try {
     const prompt = `
       You are an expert ATS (Applicant Tracking System) evaluator. Your task is to analyze how well a resume matches a job description.
@@ -35,9 +33,13 @@ async function evaluateResumeRelevancy(resume: string, jobDescription: string): 
       Do not include any explanation, just the number.
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    const result = await generateWithFallback(
+      prompt,
+      modelKey || DEFAULT_MODEL,
+      undefined,
+      sessionApiKeys
+    );
+    const text = result.text.trim();
     
     // Extract just the number from the response
     const score = parseInt(text.replace(/\D/g, ''));
@@ -62,7 +64,32 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   console.log('=== Starting new relevancy calculation ===');
   try {
-    const { originalResume, tailoredResume, jobDescription } = await req.json();
+    const { originalResume, tailoredResume, jobDescription, sessionId, modelKey } = await req.json();
+    
+    // Get session preferences for model selection
+    let sessionApiKeys: Record<string, string> | undefined;
+    let selectedModel = modelKey || DEFAULT_MODEL;
+    
+    if (sessionId) {
+      try {
+        const sessionResponse = await fetch(`${req.nextUrl.origin}/api/mcp/session-manager`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get', sessionId }),
+        });
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          if (sessionData.session?.preferences?.modelPreferences?.defaultModel) {
+            selectedModel = sessionData.session.preferences.modelPreferences.defaultModel;
+          }
+          if (sessionData.session?.preferences?.apiKeys) {
+            sessionApiKeys = sessionData.session.preferences.apiKeys;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch session preferences:', e);
+      }
+    }
     
     // Clean and validate texts
     const cleanText = (text: string) => {
@@ -81,10 +108,10 @@ export async function POST(req: NextRequest) {
 
     // Evaluate both resumes against the job description
     console.log('Evaluating original resume...');
-    const beforeScore = await evaluateResumeRelevancy(cleanedOriginal, cleanedJob);
+    const beforeScore = await evaluateResumeRelevancy(cleanedOriginal, cleanedJob, selectedModel, sessionApiKeys);
     
     console.log('Evaluating tailored resume...');
-    const afterScore = await evaluateResumeRelevancy(cleanedTailored, cleanedJob);
+    const afterScore = await evaluateResumeRelevancy(cleanedTailored, cleanedJob, selectedModel, sessionApiKeys);
 
     console.log('Scores:', { before: beforeScore, after: afterScore });
 

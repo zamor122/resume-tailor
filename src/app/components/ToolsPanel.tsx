@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { analytics } from "../services/analytics";
+import InfoTooltip from "./InfoTooltip";
 
 interface Tool {
   id: string;
@@ -10,6 +12,9 @@ interface Tool {
   endpoint: string;
   requiresResume?: boolean;
   requiresJobDescription?: boolean;
+  tooltip?: string;
+  needsLocation?: boolean;
+  needsIndustry?: boolean;
 }
 
 const availableTools: Tool[] = [
@@ -20,6 +25,7 @@ const availableTools: Tool[] = [
     icon: "🔍",
     endpoint: "/api/tools/ats-simulator",
     requiresResume: true,
+    tooltip: "Simulates how major ATS systems (Workday, Taleo, Greenhouse) parse your resume. Identifies parsing issues before submission.",
   },
   {
     id: "ats-optimizer",
@@ -28,6 +34,7 @@ const availableTools: Tool[] = [
     icon: "⚡",
     endpoint: "/api/tools/ats-optimizer",
     requiresResume: true,
+    tooltip: "Real-time optimization suggestions with projected score improvements. Prioritized by impact vs effort.",
   },
   {
     id: "keyword-analyzer",
@@ -36,6 +43,8 @@ const availableTools: Tool[] = [
     icon: "🔑",
     endpoint: "/api/tools/keyword-analyzer",
     requiresJobDescription: true,
+    tooltip: "Extracts industry-specific keywords from job descriptions. Identifies missing keywords and suggests natural incorporation strategies.",
+    needsIndustry: true,
   },
   {
     id: "skills-gap",
@@ -45,6 +54,7 @@ const availableTools: Tool[] = [
     endpoint: "/api/tools/skills-gap",
     requiresResume: true,
     requiresJobDescription: true,
+    tooltip: "Compares your skills against job requirements. Provides prioritized learning paths with timelines and resources.",
   },
   {
     id: "skills-market-value",
@@ -53,6 +63,9 @@ const availableTools: Tool[] = [
     icon: "💰",
     endpoint: "/api/tools/skills-market-value",
     requiresResume: true,
+    tooltip: "Analyzes market demand and salary impact of your skills. Provides ROI-based recommendations for skill development.",
+    needsLocation: true,
+    needsIndustry: true,
   },
   {
     id: "interview-prep",
@@ -61,6 +74,7 @@ const availableTools: Tool[] = [
     icon: "💼",
     endpoint: "/api/tools/interview-prep",
     requiresJobDescription: true,
+    tooltip: "Generates comprehensive interview questions tailored to the job. Includes STAR method examples and talking points from your resume.",
   },
   {
     id: "format-validator",
@@ -69,6 +83,7 @@ const availableTools: Tool[] = [
     icon: "✅",
     endpoint: "/api/tools/format-validator",
     requiresResume: true,
+    tooltip: "Validates ATS-friendly formatting. Identifies formatting issues that prevent ATS systems from parsing your resume correctly.",
   },
   {
     id: "resume-storyteller",
@@ -77,6 +92,7 @@ const availableTools: Tool[] = [
     icon: "📖",
     endpoint: "/api/tools/resume-storyteller",
     requiresResume: true,
+    tooltip: "Transforms your resume into a compelling narrative while maintaining ATS compatibility. Enhances storytelling without sacrificing keywords.",
   },
   {
     id: "multi-job-comparison",
@@ -86,6 +102,7 @@ const availableTools: Tool[] = [
     endpoint: "/api/tools/multi-job-comparison",
     requiresResume: true,
     requiresJobDescription: true,
+    tooltip: "Compares your resume against multiple jobs simultaneously. Identifies common themes and optimization strategies for multiple applications.",
   },
   {
     id: "resume-versions",
@@ -94,6 +111,7 @@ const availableTools: Tool[] = [
     icon: "📝",
     endpoint: "/api/tools/resume-versions",
     requiresResume: true,
+    tooltip: "Tracks resume versions over time. Compare versions, analyze changes, and understand resume evolution.",
   },
 ];
 
@@ -101,11 +119,17 @@ interface ToolsPanelProps {
   resume?: string;
   jobDescription?: string;
   onToolResult?: (toolId: string, result: any) => void;
+  sessionId?: string | null;
+  selectedModel?: string;
+  onViewDetails?: (toolId: string, result: any) => void;
 }
 
-export default function ToolsPanel({ resume, jobDescription, onToolResult }: ToolsPanelProps) {
+export default function ToolsPanel({ resume, jobDescription, onToolResult, sessionId, selectedModel, onViewDetails }: ToolsPanelProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, any>>({});
+  const [location, setLocation] = useState<string>("");
+  const [industry, setIndustry] = useState<string>("");
+  const [showContextInputs, setShowContextInputs] = useState<Record<string, boolean>>({});
 
   const runTool = async (tool: Tool) => {
     if (tool.requiresResume && !resume) {
@@ -117,7 +141,35 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult }: Too
       return;
     }
 
+    // Track tool opened
+    analytics.trackEvent(analytics.events.TOOL_OPENED, {
+      toolId: tool.id,
+      toolName: tool.name,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Track specific tool event
+    const toolEventMap: { [key: string]: string } = {
+      'ats-simulator': analytics.events.ATS_SIMULATOR,
+      'keyword-analyzer': analytics.events.KEYWORD_ANALYZER,
+      'skills-gap': analytics.events.SKILLS_GAP,
+      'interview-prep': analytics.events.INTERVIEW_PREP,
+      'format-validator': analytics.events.FORMAT_VALIDATOR,
+      'ats-optimizer': analytics.events.ATS_OPTIMIZER,
+      'resume-versions': analytics.events.RESUME_VERSIONS,
+      'resume-storyteller': analytics.events.RESUME_STORYTELLER,
+      'multi-job-comparison': analytics.events.MULTI_JOB_COMPARISON,
+      'skills-market-value': analytics.events.SKILLS_MARKET_VALUE,
+    };
+    
+    if (toolEventMap[tool.id]) {
+      analytics.trackEvent(toolEventMap[tool.id], {
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     setLoading(tool.id);
+    const startTime = Date.now();
 
     try {
       const body: any = {};
@@ -129,21 +181,36 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult }: Too
           body.jobDescriptions = jobDescription ? [jobDescription] : [];
         }
       }
-      if (tool.id === "keyword-analyzer" && jobDescription) {
-        // Try to detect industry
-        const industryMatch = jobDescription.match(/(software|tech|finance|healthcare|education|marketing|sales)/i);
-        if (industryMatch) body.industry = industryMatch[1];
+      // Add location and industry context
+      if (tool.needsLocation && location) {
+        body.location = location;
       }
-      // Add sessionId for resume-versions if available
-      if (tool.id === "resume-versions") {
+      if (tool.needsIndustry) {
+        if (industry) {
+          body.industry = industry;
+        } else if (jobDescription) {
+          // Try to detect industry from job description
+          const industryMatch = jobDescription.match(/(software|tech|finance|healthcare|education|marketing|sales|engineering|design|consulting)/i);
+          if (industryMatch) body.industry = industryMatch[1];
+        }
+      }
+      // Add sessionId and modelKey for all tools
+      if (sessionId) {
+        body.sessionId = sessionId;
+      }
+      if (selectedModel) {
+        body.modelKey = selectedModel;
+      }
+      // Add sessionId for resume-versions if available (fallback to localStorage)
+      if (tool.id === "resume-versions" && !sessionId) {
         // Try to get sessionId from localStorage or generate one
         if (typeof window !== 'undefined') {
-          let sessionId = localStorage.getItem('resume-tailor-session-id');
-          if (!sessionId) {
-            sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            localStorage.setItem('resume-tailor-session-id', sessionId);
+          let localSessionId = localStorage.getItem('resume-tailor-session-id');
+          if (!localSessionId) {
+            localSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem('resume-tailor-session-id', localSessionId);
           }
-          body.sessionId = sessionId;
+          body.sessionId = localSessionId;
         }
       }
 
@@ -158,11 +225,31 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult }: Too
       }
 
       const result = await response.json();
+      const executionTime = Date.now() - startTime;
+      
       setResults((prev) => ({ ...prev, [tool.id]: result }));
+      
+      // Track tool completed
+      analytics.trackEvent(analytics.events.TOOL_COMPLETED, {
+        toolId: tool.id,
+        toolName: tool.name,
+        executionTime,
+        success: true,
+        timestamp: new Date().toISOString(),
+      });
+      
       onToolResult?.(tool.id, result);
     } catch (error) {
       console.error(`Error running tool ${tool.id}:`, error);
       alert(`Failed to run ${tool.name}: ${error instanceof Error ? error.message : "Unknown error"}`);
+      
+      // Track tool error
+      analytics.trackEvent(analytics.events.TOOL_ERROR, {
+        toolId: tool.id,
+        toolName: tool.name,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      });
     } finally {
       setLoading(null);
     }
@@ -214,6 +301,9 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult }: Too
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h4 className="font-semibold text-sm">{tool.name}</h4>
+                    {tool.tooltip && (
+                      <InfoTooltip content={tool.tooltip} />
+                    )}
                     {isLoading && (
                       <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                     )}
@@ -226,6 +316,39 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult }: Too
                     )}
                   </div>
                   <p className="text-xs text-gray-400">{tool.description}</p>
+                  {(tool.needsLocation || tool.needsIndustry) && !isDisabled && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowContextInputs(prev => ({ ...prev, [tool.id]: !prev[tool.id] }));
+                      }}
+                      className="mt-1 text-xs text-primary hover:text-primary-light transition-colors"
+                    >
+                      {showContextInputs[tool.id] ? "Hide" : "Add"} context
+                    </button>
+                  )}
+                  {showContextInputs[tool.id] && (
+                    <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+                      {tool.needsLocation && (
+                        <input
+                          type="text"
+                          placeholder="Location (e.g., San Francisco, CA)"
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                          className="w-full px-2 py-1 text-xs bg-white/5 border border-white/10 rounded text-gray-300 placeholder-gray-500 focus:outline-none focus:border-primary/50"
+                        />
+                      )}
+                      {tool.needsIndustry && (
+                        <input
+                          type="text"
+                          placeholder="Industry (e.g., Software, Finance)"
+                          value={industry}
+                          onChange={(e) => setIndustry(e.target.value)}
+                          className="w-full px-2 py-1 text-xs bg-white/5 border border-white/10 rounded text-gray-300 placeholder-gray-500 focus:outline-none focus:border-primary/50"
+                        />
+                      )}
+                    </div>
+                  )}
                   {isDisabled && (
                     <p className="text-xs text-red-400 mt-1">
                       {tool.requiresResume && !resume ? "Resume required" : ""}
@@ -236,7 +359,7 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult }: Too
               </div>
               
               {isCompleted && results[tool.id] && (
-                <div className="mt-3 pt-3 border-t border-white/10">
+                <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
                   <div className="text-xs text-gray-400">
                     {tool.id === "ats-simulator" && (
                       <span>ATS Score: <span className="text-primary font-bold">{results[tool.id].atsScore}%</span></span>
@@ -269,6 +392,17 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult }: Too
                       <span>Versions: <span className="text-green-400 font-bold">{results[tool.id]?.totalVersions || 0}</span></span>
                     )}
                   </div>
+                  {onViewDetails && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewDetails(tool.id, results[tool.id]);
+                      }}
+                      className="w-full px-3 py-1.5 text-xs font-semibold bg-primary/20 text-primary hover:bg-primary/30 rounded-lg transition-colors"
+                    >
+                      View Details
+                    </button>
+                  )}
                 </div>
               )}
             </button>

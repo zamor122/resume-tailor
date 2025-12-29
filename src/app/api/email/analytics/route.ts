@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getClient, UmamiApiClient, WebsiteStats } from '@umami/api-client';
 
 // Umami API configuration
-const UMAMI_API_URL = process.env.UMAMI_API_URL || 'https://api.umami.is/v1';
+// Note: For cloud.umami.is, the API endpoint should be https://cloud.umami.is/api
+// For self-hosted instances, use your own API endpoint
+const UMAMI_API_URL = process.env.UMAMI_API_URL || 'https://cloud.umami.is/api';
 const UMAMI_WEBSITE_ID = process.env.UMAMI_WEBSITE_ID || '96fc4b45-d8c8-4941-8a4f-330723725623'; // Using the ID from your layout.tsx
 const UMAMI_API_KEY = process.env.UMAMI_API_KEY || '';
 
@@ -15,7 +17,20 @@ const EMAIL_TO = process.env.EMAIL_TO || 'hello@airesumetailor.com';
 // Get Umami client
 async function getUmamiClient() {
   try {
-
+    if (!UMAMI_API_KEY) {
+      throw new Error('UMAMI_API_KEY environment variable is not set');
+    }
+    
+    if (!UMAMI_WEBSITE_ID) {
+      throw new Error('UMAMI_WEBSITE_ID environment variable is not set');
+    }
+    
+    console.log('Initializing Umami client with:', {
+      apiEndpoint: UMAMI_API_URL,
+      websiteId: UMAMI_WEBSITE_ID,
+      hasApiKey: !!UMAMI_API_KEY
+    });
+    
     const client = getClient({
       apiEndpoint: UMAMI_API_URL,
       apiKey: UMAMI_API_KEY
@@ -44,8 +59,10 @@ async function getWebsiteStats(client: UmamiApiClient): Promise<WebsiteStats> {
     const endAt = yesterdayEnd.getTime();
     
     console.log('Fetching stats with time range:', {
-      startAt,
-      endAt,
+      startAt: new Date(startAt).toISOString(),
+      endAt: new Date(endAt).toISOString(),
+      startTimestamp: startAt,
+      endTimestamp: endAt,
     });
     
     const { ok, data, status, error } = await client.getWebsiteStats(UMAMI_WEBSITE_ID, {
@@ -64,6 +81,8 @@ async function getWebsiteStats(client: UmamiApiClient): Promise<WebsiteStats> {
     if (!data) {
       throw new Error(`Failed to fetch website stats: No data returned`);
     }
+    
+    console.log('Fetched stats data:', JSON.stringify(data, null, 2));
     return data;
   } catch (error) {
     console.error('Error fetching website stats:', error);
@@ -80,7 +99,24 @@ function formatEmailContent(stats: WebsiteStats) {
     day: 'numeric',
   });
 
-  console.log("Stats:", stats);
+  console.log("Formatting email with stats:", JSON.stringify(stats, null, 2));
+  
+  // Safely extract values with fallbacks
+  const pageviews = stats?.pageviews?.value ?? 0;
+  const visitors = stats?.visitors?.value ?? 0;
+  const visits = stats?.visits?.value ?? 0;
+  const bounces = stats?.bounces?.value ?? 0;
+  const totaltime = stats?.totaltime?.value ?? 0;
+  
+  // Calculate bounce rate safely (avoid division by zero)
+  const bounceRate = visits > 0 ? ((bounces / visits) * 100).toFixed(2) : '0.00';
+  
+  // Calculate average visit duration in minutes (totaltime is in seconds)
+  const avgDurationMinutes = visits > 0 ? (totaltime / visits / 60).toFixed(2) : '0.00';
+  
+  // Calculate average visit duration in seconds for display
+  const avgDurationSeconds = visits > 0 ? (totaltime / visits).toFixed(0) : '0';
+  
   return `
     <html>
       <head>
@@ -91,43 +127,47 @@ function formatEmailContent(stats: WebsiteStats) {
           h2 { color: #2c7a7b; margin-top: 30px; }
           .stat-box { background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
           .stat-value { font-size: 24px; font-weight: bold; color: #2c7a7b; }
-          .stat-label { font-size: 14px; color: #666; }
+          .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
           th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
           th { background-color: #f5f5f5; }
+          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; }
         </style>
       </head>
       <body>
         <div class="container">
           <h1>AI Resume Tailor Analytics Report</h1>
-          <p>Here's your analytics report for ${date}</p>
+          <p>Here's your analytics report for <strong>${date}</strong></p>
           
           <div class="stat-box">
-            <div class="stat-value">${stats.pageviews.value}</div>
+            <div class="stat-value">${pageviews.toLocaleString()}</div>
             <div class="stat-label">Page Views</div>
           </div>
           
           <div class="stat-box">
-            <div class="stat-value">${stats.visitors.value}</div>
+            <div class="stat-value">${visitors.toLocaleString()}</div>
             <div class="stat-label">Unique Visitors</div>
           </div>
 
           <div class="stat-box">
-            <div class="stat-value">${stats.visits.value}</div>
+            <div class="stat-value">${visits.toLocaleString()}</div>
             <div class="stat-label">Total Visits</div>
           </div>
           
           <div class="stat-box">
-            <div class="stat-value">${Math.round(((stats.bounces.value / stats.visits.value) * 100) * 100) / 100}%</div>
+            <div class="stat-value">${bounceRate}%</div>
             <div class="stat-label">Bounce Rate</div>
           </div>
                     
           <div class="stat-box">
-            <div class="stat-value">${Math.round(stats.totaltime.value / 600 * 100) / 100} minutes</div>
-            <div class="stat-label">Visit Duration</div>
+            <div class="stat-value">${avgDurationMinutes} minutes</div>
+            <div class="stat-label">Average Visit Duration (${avgDurationSeconds} seconds)</div>
           </div>
           
-          <p>This report was automatically generated from your Umami analytics data.</p>
+          <div class="footer">
+            <p>This report was automatically generated from your Umami analytics data.</p>
+            <p>Report generated at: ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC</p>
+          </div>
         </div>
       </body>
     </html>
@@ -174,36 +214,53 @@ async function sendEmail(subject: string, htmlContent: string) {
 
 export async function GET(req: NextRequest) {
   try {
-    // Verify CRON_SECRET for automated runs
+    // Verify CRON_SECRET for automated runs (skip in development)
     if (process.env.NODE_ENV !== 'development') {
       const authHeader = req.headers.get('authorization');
-      if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      const cronSecret = process.env.CRON_SECRET;
+      
+      if (!cronSecret) {
+        console.warn('CRON_SECRET not set, but required in production');
+      }
+      
+      if (authHeader !== `Bearer ${cronSecret}`) {
         return NextResponse.json(
-          { error: 'Unauthorized' },
+          { error: 'Unauthorized', message: 'Missing or invalid authorization header' },
           { status: 401 }
         );
       }
     }
 
+    console.log('Starting analytics email generation...');
+    
     // Initialize Umami client
     const client = await getUmamiClient();
+    console.log('Umami client initialized successfully');
     
     // Fetch analytics data
     const stats = await getWebsiteStats(client);
+    console.log('Analytics stats fetched successfully');
     
     // Format email content
     const htmlContent = formatEmailContent(stats);
+    console.log('Email content formatted');
     
     // Send email
     const emailResult = await sendEmail(
       `AI Resume Tailor Analytics Report - ${new Date().toLocaleDateString()}`,
       htmlContent
     );
+    console.log('Email sent successfully:', emailResult);
     
     return NextResponse.json({
       success: true,
       message: 'Analytics email sent successfully',
-      emailId: emailResult.id
+      emailId: emailResult.id,
+      stats: {
+        pageviews: stats?.pageviews?.value ?? 0,
+        visitors: stats?.visitors?.value ?? 0,
+        visits: stats?.visits?.value ?? 0,
+      }
     });
   } catch (error) {
     console.error('Error in analytics email endpoint:', error);

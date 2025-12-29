@@ -1,12 +1,14 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import CopyButton from './CopyButton';
+import { getProseFontSizeClass } from '@/app/utils/fontSize';
 
 interface TailoredResumeOutputProps {
   newResume: string;
   loading: boolean;
   detectedTitle?: string;
   error?: string;
+  fontSize?: "small" | "medium" | "large";
 }
 
 const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ 
@@ -14,7 +16,9 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   loading,
   //detectedTitle,
   error,
+  fontSize = "medium",
 }) => {
+  const proseFontSizeClass = getProseFontSizeClass(fontSize);
   if (error) {
     return (
       <div className="mb-4 p-4 bg-pink-50 dark:bg-red-900/20 text-pink-600 dark:text-red-400 rounded-lg">
@@ -49,7 +53,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
         <CopyButton text={newResume} />
       </div>
       
-      <div className="prose prose-emerald dark:prose-invert max-w-none">
+      <div className={`prose prose-emerald dark:prose-invert max-w-none ${proseFontSizeClass}`}>
         <ReactMarkdown>{newResume}</ReactMarkdown>
       </div>
     </div>

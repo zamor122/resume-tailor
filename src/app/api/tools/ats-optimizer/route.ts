@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { getModelFromSession } from "@/app/utils/model-helper";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -14,7 +8,7 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const { resume, jobDescription, currentScore } = await req.json();
+    const { resume, jobDescription, currentScore, sessionId, modelKey } = await req.json();
     
     if (!resume || resume.length < 100) {
       return NextResponse.json({
@@ -26,6 +20,12 @@ export async function POST(req: NextRequest) {
     const prompt = `
       You are an ATS optimization expert. Analyze this resume and provide REAL-TIME, ACTIONABLE suggestions to improve its ATS compatibility score.
       
+      CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact numbers, percentages, timeframes, and concrete examples.
+      - Require specific score improvements per action (e.g., "+5 points", not "improves score")
+      - Provide exact before/after examples with full text
+      - Include time estimates for each fix (e.g., "2 minutes", "15 minutes")
+      - Calculate ROI (score gain / time invested)
+      
       Current ATS Score: ${currentScore || "Not provided"}
       
       ${jobDescription ? `Target Job Description:\n${jobDescription.substring(0, 3000)}\n\n` : ''}
@@ -33,33 +33,50 @@ export async function POST(req: NextRequest) {
       Resume:
       ${resume.substring(0, 8000)}
       
-      Provide specific, implementable suggestions that will immediately improve the ATS score.
-      
       Return ONLY a JSON object:
       {
         "currentScore": ${currentScore || 0},
-        "projectedScore": <number 0-100 after implementing suggestions>,
+        "projectedScore": <number 0-100 after implementing all suggestions>,
         "quickWins": [
           {
             "priority": "<critical|high|medium|low>",
             "action": "<specific action to take>",
-            "location": "<where in resume>",
-            "impact": <number 1-10, score improvement>,
+            "location": "<exact location: section name, line number, or character position>",
+            "impact": <number, exact points added to score (e.g., 5, 10, 15)>,
             "effort": "<low|medium|high>",
-            "example": "<before> → <after>"
+            "timeEstimate": "<specific time estimate, e.g., '2 minutes', '15 minutes', '1 hour'>",
+            "roi": <number, impact points per minute>,
+            "before": "<exact current text>",
+            "after": "<exact improved text>",
+            "reason": "<why this improves ATS parsing>"
           }
         ],
         "keywordOptimization": {
-          "missing": ["keyword1", "keyword2", ...],
-          "underused": ["keyword1", ...],
-          "overused": ["keyword1", ...],
-          "suggestions": [
+          "missing": [
             {
               "keyword": "<keyword>",
-              "currentCount": <number>,
-              "recommendedCount": <number>,
-              "whereToAdd": "<section>",
-              "context": "<how to naturally incorporate>"
+              "importance": "<critical|high|medium|low>",
+              "expectedImpact": <points added>,
+              "suggestedLocations": ["<section1>", "<section2>"]
+            }
+          ],
+          "underused": [
+            {
+              "keyword": "<keyword>",
+              "currentCount": <exact number>,
+              "recommendedCount": <exact number>,
+              "whereToAdd": "<specific section or location>",
+              "context": "<exact phrase or sentence showing how to naturally incorporate>",
+              "expectedImpact": <points added>
+            }
+          ],
+          "overused": [
+            {
+              "keyword": "<keyword>",
+              "currentCount": <exact number>,
+              "recommendedCount": <exact number>,
+              "whereToRemove": "<specific location>",
+              "reason": "<why reducing helps>"
             }
           ]
         },
@@ -68,45 +85,76 @@ export async function POST(req: NextRequest) {
             {
               "type": "<issue type>",
               "severity": "<critical|high|medium|low>",
-              "description": "<what's wrong>",
-              "fix": "<exact fix>",
-              "lineNumber": <approximate line>
+              "description": "<specific issue description>",
+              "location": "<exact location: line number, section, or character position>",
+              "fix": "<exact fix with full text example>",
+              "before": "<current problematic text>",
+              "after": "<fixed text>",
+              "impact": <points added>,
+              "timeEstimate": "<time to fix>"
             }
-          ],
-          "recommendations": ["rec1", ...]
+          ]
         },
         "structure": {
-          "sections": ["section1", ...],
-          "missingSections": ["section1", ...],
+          "sections": ["<section1>", ...],
+          "missingSections": [
+            {
+              "section": "<section name>",
+              "importance": "<critical|high|medium|low>",
+              "expectedImpact": <points added>,
+              "suggestedContent": "<example content>"
+            }
+          ],
           "order": "<optimal|suboptimal>",
-          "recommendations": ["rec1", ...]
+          "recommendedOrder": ["<section1>", "<section2>", ...],
+          "expectedImpact": <points added if reordered>
         },
         "content": {
-          "strengths": ["strength1", ...],
-          "weaknesses": ["weakness1", ...],
+          "strengths": ["<specific strength>", ...],
+          "weaknesses": ["<specific weakness>", ...],
           "suggestions": [
             {
               "section": "<section name>",
-              "current": "<current content snippet>",
-              "improved": "<improved version>",
-              "reason": "<why this is better>"
+              "current": "<exact current content snippet>",
+              "improved": "<exact improved version>",
+              "reason": "<specific reason why this is better for ATS>",
+              "impact": <points added>
             }
           ]
         },
         "implementationPlan": [
           {
             "step": <number>,
-            "action": "<action>",
-            "estimatedTime": "<time>",
-            "expectedImpact": <score improvement>
+            "action": "<specific action>",
+            "estimatedTime": "<exact time estimate, e.g., '2 minutes'>",
+            "expectedImpact": <exact points added>,
+            "priority": "<critical|high|medium|low>",
+            "dependencies": ["<step numbers this depends on>"]
           }
-        ]
+        ],
+        "priorityMatrix": {
+          "highImpactLowEffort": [<quick win indices>],
+          "highImpactHighEffort": [<indices>],
+          "lowImpactLowEffort": [<indices>],
+          "lowImpactHighEffort": [<indices>]
+        }
       }
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    // Get session preferences for model selection
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
+
+    const result = await generateWithFallback(
+      prompt,
+      selectedModel,
+      undefined,
+      sessionApiKeys
+    );
+    const text = result.text.trim();
 
     try {
       const cleanedText = text
@@ -129,6 +177,7 @@ export async function POST(req: NextRequest) {
         structure: parsedResponse.structure || {},
         content: parsedResponse.content || {},
         implementationPlan: parsedResponse.implementationPlan || [],
+        priorityMatrix: parsedResponse.priorityMatrix || {},
         potentialImprovement: projectedScore - (parsedResponse.currentScore || currentScore || 0),
         timestamp: new Date().toISOString(),
       });

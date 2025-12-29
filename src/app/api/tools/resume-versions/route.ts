@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateWithFallback } from "@/app/services/model-fallback";
+import { getModelFromSession } from "@/app/utils/model-helper";
 import DiffMatchPatch from "diff-match-patch";
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -29,7 +23,7 @@ const versionStore = new Map<string, ResumeVersion[]>();
 
 export async function POST(req: NextRequest) {
   try {
-    const { action, versions, currentResume, compareWith, sessionId } = await req.json();
+    const { action, versions, currentResume, compareWith, sessionId, modelKey } = await req.json();
     
     // Use sessionId if provided, otherwise use a default key
     const storageKey = sessionId || 'default';
@@ -59,24 +53,52 @@ export async function POST(req: NextRequest) {
 
       // Analyze the version (with quota error handling)
       const analysisPrompt = `
-        Analyze this resume version and extract key metrics:
+        Analyze this resume version and extract key metrics.
+        
+        CRITICAL: Provide SPECIFIC, ACTIONABLE data. Include exact numbers and specific details.
         
         Resume:
         ${currentResume.substring(0, 5000)}
         
         Return JSON:
         {
-          "jobTitle": "<detected or suggested job title>",
-          "keyStrengths": ["strength1", ...],
-          "sections": ["section1", ...],
-          "wordCount": <number>,
-          "estimatedRelevancy": <number 0-100>
+          "jobTitle": "<exact detected or suggested job title>",
+          "keyStrengths": [
+            {
+              "strength": "<specific strength>",
+              "evidence": "<evidence from resume>",
+              "impact": "<how this helps>"
+            }
+          ],
+          "sections": ["<exact section1>", ...],
+          "wordCount": <exact number>,
+          "estimatedRelevancy": <number 0-100>,
+          "atsScore": <estimated ATS score 0-100>,
+          "keywordCount": <exact number of keywords>,
+          "quantifiableAchievements": <exact count>,
+          "improvementAreas": [
+            {
+              "area": "<specific area>",
+              "suggestion": "<specific suggestion>"
+            }
+          ]
         }
       `;
 
       try {
-        const result = await model.generateContent(analysisPrompt);
-        const text = result.response.text().trim();
+        // Get session preferences for model selection
+        const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+          sessionId,
+          modelKey,
+          req.nextUrl.origin
+        );
+        const result = await generateWithFallback(
+          analysisPrompt,
+          selectedModel,
+          undefined,
+          sessionApiKeys
+        );
+        const text = result.text.trim();
         const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
         const analysis = JSON.parse(cleanedText);
         newVersion.jobTitle = analysis.jobTitle;
@@ -138,7 +160,13 @@ export async function POST(req: NextRequest) {
 
       // AI analysis of changes
       const analysisPrompt = `
-        Compare these two resume versions and provide insights:
+        Compare these two resume versions and provide insights.
+        
+        CRITICAL: Provide SPECIFIC, ACTIONABLE data. Include exact change descriptions, improvement metrics, and specific recommendations.
+        - Provide specific change descriptions with exact text examples
+        - Calculate improvement metrics between versions (ATS score, keyword count, etc.)
+        - Include version-specific job targeting recommendations
+        - Provide specific evidence for improvements/regressions
         
         Version 1 (${v1.timestamp}):
         ${v1.content.substring(0, 3000)}
@@ -148,18 +176,69 @@ export async function POST(req: NextRequest) {
         
         Return JSON:
         {
-          "improvements": ["improvement1", ...],
-          "regressions": ["regression1", ...],
-          "overallAssessment": "<assessment>",
-          "recommendation": "<recommendation>",
-          "keyChanges": ["change1", ...]
+          "improvements": [
+            {
+              "improvement": "<specific improvement>",
+              "evidence": "<exact text showing improvement>",
+              "impact": "<specific impact, e.g., '+5 ATS points', 'Better keyword density'>",
+              "section": "<section where improvement occurred>"
+            }
+          ],
+          "regressions": [
+            {
+              "regression": "<specific regression>",
+              "evidence": "<exact text showing regression>",
+              "impact": "<specific impact>",
+              "section": "<section where regression occurred>",
+              "recommendation": "<how to fix>"
+            }
+          ],
+          "overallAssessment": "<specific assessment with metrics>",
+          "recommendation": "<specific recommendation with action items>",
+          "keyChanges": [
+            {
+              "change": "<specific change description>",
+              "type": "<added|removed|modified>",
+              "section": "<section name>",
+              "before": "<exact text before>",
+              "after": "<exact text after>",
+              "impact": "<specific impact>"
+            }
+          ],
+          "metrics": {
+            "atsScoreChange": <number, change in ATS score>,
+            "keywordCountChange": <number, change in keyword count>,
+            "wordCountChange": <number, change in word count>,
+            "quantifiableAchievementsChange": <number, change in achievements>
+          },
+          "jobTargeting": {
+            "version1": {
+              "bestFor": ["<job type1>", ...],
+              "reason": "<specific reason>"
+            },
+            "version2": {
+              "bestFor": ["<job type1>", ...],
+              "reason": "<specific reason>"
+            }
+          }
         }
       `;
 
       let aiAnalysis = null;
       try {
-        const result = await model.generateContent(analysisPrompt);
-        const text = result.response.text().trim();
+        // Get session preferences for model selection
+        const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+          sessionId,
+          modelKey,
+          req.nextUrl.origin
+        );
+        const result = await generateWithFallback(
+          analysisPrompt,
+          selectedModel,
+          undefined,
+          sessionApiKeys
+        );
+        const text = result.text.trim();
         const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
         aiAnalysis = JSON.parse(cleanedText);
       } catch (e: any) {
