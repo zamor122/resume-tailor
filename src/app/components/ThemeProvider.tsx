@@ -6,7 +6,7 @@ import { analytics } from '../services/analytics'
 type Theme = 'light' | 'dark'
 
 const ThemeContext = createContext({
-  theme: 'light' as Theme,
+  theme: 'dark' as Theme,
   toggleTheme: () => {}
 })
 
@@ -15,59 +15,45 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme | undefined>(undefined)
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    // Check localStorage first
-    const savedTheme = localStorage.getItem('theme') as Theme
-    const initialTheme = savedTheme || 'light'
-    
-    setTheme(initialTheme)
-    
-    // Apply the theme class directly to the document element
-    if (initialTheme === 'dark') {
-      document.documentElement.classList.add('dark')
-      document.documentElement.classList.remove('light')
-      console.log('[ThemeProvider] Initial theme: dark, HTML classes:', document.documentElement.className)
+  const applyTheme = (nextTheme: Theme) => {
+    const root = document.documentElement
+    const body = document.body
+
+    // Set classes on both html and body for consistent styling
+    if (nextTheme === 'dark') {
+      root.classList.add('dark')
+      root.classList.remove('light')
+      body.classList.add('dark')
+      body.classList.remove('light')
     } else {
-      document.documentElement.classList.add('light')
-      document.documentElement.classList.remove('dark')
-      console.log('[ThemeProvider] Initial theme: light, HTML classes:', document.documentElement.className)
+      root.classList.add('light')
+      root.classList.remove('dark')
+      body.classList.add('light')
+      body.classList.remove('dark')
     }
+
+    // Set data-theme for components/CSS that read it
+    root.setAttribute('data-theme', nextTheme)
+    body.setAttribute('data-theme', nextTheme)
+
+    // Optional: let the browser know which color scheme to prefer
+    root.style.colorScheme = nextTheme === 'dark' ? 'dark' : 'light'
+    body.style.colorScheme = nextTheme === 'dark' ? 'dark' : 'light'
+  }
+
+  useEffect(() => {
+    // Dark-mode only: always force dark theme
+    const initialTheme: Theme = 'dark'
+    setTheme(initialTheme)
+    applyTheme(initialTheme)
     
     setMounted(true)
   }, [])
 
   const toggleTheme = () => {
-    if (!theme) return
-    
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
-    
-    // Apply theme classes more deterministically
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark')
-      document.documentElement.classList.remove('light')
-      console.log('[ThemeProvider] Changed to dark theme, HTML classes:', document.documentElement.className)
-      
-      // Debug dark mode elements
-      setTimeout(() => {
-        const darkCards = document.querySelectorAll('.dark\\:bg-gray-800\\/90')
-        console.log(`[ThemeProvider] Found ${darkCards.length} elements with dark:bg-gray-800/90 class`)
-        
-        const darkTexts = document.querySelectorAll('.dark\\:text-gray-100')
-        console.log(`[ThemeProvider] Found ${darkTexts.length} elements with dark:text-gray-100 class`)
-      }, 100)
-    } else {
-      document.documentElement.classList.remove('dark')
-      document.documentElement.classList.add('light')
-      console.log('[ThemeProvider] Changed to light theme, HTML classes:', document.documentElement.className)
-    }
-    
-    localStorage.setItem('theme', newTheme)
-    
-    // Track theme toggle in analytics
-    analytics.trackEvent(analytics.events.TOGGLE_THEME, {
-      theme: newTheme
-    })
+    // Intentionally disabled (dark-mode only)
+    // Track attempt in analytics to understand user demand
+    analytics.trackEvent(analytics.events.TOGGLE_THEME, { theme: 'dark' })
   }
 
   // Return null during SSR to prevent hydration issues
@@ -76,7 +62,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme: theme || 'light', toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: theme || 'dark', toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   )

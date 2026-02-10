@@ -280,10 +280,9 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult, sessi
           const isCompleted = status === "completed";
 
           return (
-            <button
+            <div
               key={tool.id}
               onClick={() => !isDisabled && !isLoading && runTool(tool)}
-              disabled={isDisabled || isLoading}
               className={`
                 relative p-4 rounded-xl border-2 transition-all text-left
                 ${isDisabled 
@@ -291,7 +290,7 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult, sessi
                   : isLoading
                   ? "bg-primary/10 border-primary/50 cursor-wait"
                   : isCompleted
-                  ? "bg-green-500/10 border-green-500/50 hover:bg-green-500/20"
+                  ? "bg-green-500/10 border-green-500/50 hover:bg-green-500/20 cursor-pointer"
                   : "bg-white/5 border-white/20 hover:bg-white/10 hover:border-primary/50 cursor-pointer"
                 }
               `}
@@ -317,15 +316,24 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult, sessi
                   </div>
                   <p className="text-xs text-gray-400">{tool.description}</p>
                   {(tool.needsLocation || tool.needsIndustry) && !isDisabled && (
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowContextInputs(prev => ({ ...prev, [tool.id]: !prev[tool.id] }));
                       }}
-                      className="mt-1 text-xs text-primary hover:text-primary-light transition-colors"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowContextInputs(prev => ({ ...prev, [tool.id]: !prev[tool.id] }));
+                        }
+                      }}
+                      className="mt-1 text-xs text-primary hover:text-primary-light transition-colors cursor-pointer"
                     >
                       {showContextInputs[tool.id] ? "Hide" : "Add"} context
-                    </button>
+                    </div>
                   )}
                   {showContextInputs[tool.id] && (
                     <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -393,19 +401,28 @@ export default function ToolsPanel({ resume, jobDescription, onToolResult, sessi
                     )}
                   </div>
                   {onViewDetails && (
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={(e) => {
                         e.stopPropagation();
                         onViewDetails(tool.id, results[tool.id]);
                       }}
-                      className="w-full px-3 py-1.5 text-xs font-semibold bg-primary/20 text-primary hover:bg-primary/30 rounded-lg transition-colors"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onViewDetails(tool.id, results[tool.id]);
+                        }
+                      }}
+                      className="w-full px-3 py-1.5 text-xs font-semibold bg-primary/20 text-primary hover:bg-primary/30 rounded-lg transition-colors cursor-pointer text-center"
                     >
                       View Details
-                    </button>
+                    </div>
                   )}
                 </div>
               )}
-            </button>
+            </div>
           );
         })}
       </div>

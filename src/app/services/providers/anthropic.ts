@@ -13,7 +13,12 @@ export class AnthropicProvider implements AIProvider {
     if (!key) {
       throw new Error('ANTHROPIC_API_KEY is not defined');
     }
-    this.client = new Anthropic({ apiKey: key });
+    // Allow browser environment for tests
+    const isTestEnv = process.env.NODE_ENV === 'test' || typeof window !== 'undefined';
+    this.client = new Anthropic({ 
+      apiKey: key,
+      ...(isTestEnv && { dangerouslyAllowBrowser: true })
+    });
   }
 
   getModelId(): string {
@@ -83,4 +88,6 @@ export class AnthropicProvider implements AIProvider {
     }
   }
 }
+
+
 

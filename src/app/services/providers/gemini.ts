@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIProvider, ModelOptions, GenerateContentResult, RateLimitError } from '@/app/types/model';
-import { isRateLimitError } from '../ai-provider';
 
 export class GeminiProvider implements AIProvider {
   private client: GoogleGenerativeAI;
@@ -100,4 +99,8 @@ export class GeminiProvider implements AIProvider {
     }
   }
 }
+
+
+
+
 

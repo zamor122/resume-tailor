@@ -1,4 +1,6 @@
-import { DEFAULT_MODEL } from '@/app/config/models';
+// Default model is configurable via env to make switching providers/models trivial.
+// Prefer DEFAULT_MODEL_KEY (server/runtime). Keep a safe fallback for local dev.
+const DEFAULT_MODEL_KEY = process.env.DEFAULT_MODEL_KEY || 'cerebras:gpt-oss-120b';
 
 export async function getModelFromSession(
   sessionId: string | undefined,
@@ -8,7 +10,8 @@ export async function getModelFromSession(
   modelKey: string;
   sessionApiKeys?: Record<string, string>;
 }> {
-  let selectedModel = modelKey || DEFAULT_MODEL;
+  // Default to Cerebras if no model specified
+  let selectedModel = modelKey || DEFAULT_MODEL_KEY;
   let sessionApiKeys: Record<string, string> | undefined;
 
   if (sessionId) {
@@ -20,9 +23,8 @@ export async function getModelFromSession(
       });
       if (sessionResponse.ok) {
         const sessionData = await sessionResponse.json();
-        if (sessionData.session?.preferences?.modelPreferences?.defaultModel) {
-          selectedModel = sessionData.session.preferences.modelPreferences.defaultModel;
-        }
+        
+        // Get API keys from session if available
         if (sessionData.session?.preferences?.apiKeys) {
           sessionApiKeys = sessionData.session.preferences.apiKeys;
         }
@@ -30,6 +32,14 @@ export async function getModelFromSession(
     } catch (e) {
       console.warn('Failed to fetch session preferences:', e);
     }
+  }
+
+  // Use env-configured default if no model explicitly provided
+  if (!modelKey) {
+    selectedModel = DEFAULT_MODEL_KEY;
+    console.log(`[Model Selection] Using default model: ${selectedModel}`);
+  } else {
+    console.log(`[Model Selection] Using provided model: ${selectedModel}`);
   }
 
   return {

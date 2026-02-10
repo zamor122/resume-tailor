@@ -76,6 +76,20 @@ export class GroqProvider implements AIProvider {
         throw rateLimitError;
       }
 
+      // Handle decommissioned model errors specifically
+      if (
+        error?.error?.code === 'model_decommissioned' ||
+        error?.message?.includes('decommissioned') ||
+        error?.message?.includes('no longer supported')
+      ) {
+        const decommissionedError = new Error(
+          `Model "${this.modelId}" has been decommissioned. Please use a different model.`
+        );
+        (decommissionedError as any).status = 400;
+        (decommissionedError as any).code = 'model_decommissioned';
+        throw decommissionedError;
+      }
+
       throw error;
     }
   }

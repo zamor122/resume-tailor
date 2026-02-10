@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Footer from './components/Footer';
 import Navigation from "./components/Navigation";
 import { ThemeProvider } from './components/ThemeProvider'
+import { AuthProvider } from './contexts/AuthContext';
 import UmamiVerifier from './components/UmamiVerifier';
 import Script from "next/script";
 
@@ -148,6 +149,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         <ThemeProvider>
+          <AuthProvider>
           <UmamiVerifier />
           <div className="glass-background" />
           <Navigation />
@@ -157,6 +159,7 @@ export default function RootLayout({
           <Footer />
           <Analytics />
           <SpeedInsights />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback } from "@/app/services/model-fallback";
 import { getModelFromSession } from "@/app/utils/model-helper";
 import DiffMatchPatch from "diff-match-patch";
+import {
+  getResumeVersionAnalysisPrompt,
+  getResumeVersionComparisonPrompt,
+} from "@/app/prompts";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -52,38 +56,7 @@ export async function POST(req: NextRequest) {
       };
 
       // Analyze the version (with quota error handling)
-      const analysisPrompt = `
-        Analyze this resume version and extract key metrics.
-        
-        CRITICAL: Provide SPECIFIC, ACTIONABLE data. Include exact numbers and specific details.
-        
-        Resume:
-        ${currentResume.substring(0, 5000)}
-        
-        Return JSON:
-        {
-          "jobTitle": "<exact detected or suggested job title>",
-          "keyStrengths": [
-            {
-              "strength": "<specific strength>",
-              "evidence": "<evidence from resume>",
-              "impact": "<how this helps>"
-            }
-          ],
-          "sections": ["<exact section1>", ...],
-          "wordCount": <exact number>,
-          "estimatedRelevancy": <number 0-100>,
-          "atsScore": <estimated ATS score 0-100>,
-          "keywordCount": <exact number of keywords>,
-          "quantifiableAchievements": <exact count>,
-          "improvementAreas": [
-            {
-              "area": "<specific area>",
-              "suggestion": "<specific suggestion>"
-            }
-          ]
-        }
-      `;
+      const analysisPrompt = getResumeVersionAnalysisPrompt(currentResume);
 
       try {
         // Get session preferences for model selection
@@ -159,70 +132,7 @@ export async function POST(req: NextRequest) {
       const similarity = 1 - (dmp.diff_levenshtein(diffs) / Math.max(v1.content.length, v2.content.length));
 
       // AI analysis of changes
-      const analysisPrompt = `
-        Compare these two resume versions and provide insights.
-        
-        CRITICAL: Provide SPECIFIC, ACTIONABLE data. Include exact change descriptions, improvement metrics, and specific recommendations.
-        - Provide specific change descriptions with exact text examples
-        - Calculate improvement metrics between versions (ATS score, keyword count, etc.)
-        - Include version-specific job targeting recommendations
-        - Provide specific evidence for improvements/regressions
-        
-        Version 1 (${v1.timestamp}):
-        ${v1.content.substring(0, 3000)}
-        
-        Version 2 (${v2.timestamp}):
-        ${v2.content.substring(0, 3000)}
-        
-        Return JSON:
-        {
-          "improvements": [
-            {
-              "improvement": "<specific improvement>",
-              "evidence": "<exact text showing improvement>",
-              "impact": "<specific impact, e.g., '+5 ATS points', 'Better keyword density'>",
-              "section": "<section where improvement occurred>"
-            }
-          ],
-          "regressions": [
-            {
-              "regression": "<specific regression>",
-              "evidence": "<exact text showing regression>",
-              "impact": "<specific impact>",
-              "section": "<section where regression occurred>",
-              "recommendation": "<how to fix>"
-            }
-          ],
-          "overallAssessment": "<specific assessment with metrics>",
-          "recommendation": "<specific recommendation with action items>",
-          "keyChanges": [
-            {
-              "change": "<specific change description>",
-              "type": "<added|removed|modified>",
-              "section": "<section name>",
-              "before": "<exact text before>",
-              "after": "<exact text after>",
-              "impact": "<specific impact>"
-            }
-          ],
-          "metrics": {
-            "atsScoreChange": <number, change in ATS score>,
-            "keywordCountChange": <number, change in keyword count>,
-            "wordCountChange": <number, change in word count>,
-            "quantifiableAchievementsChange": <number, change in achievements>
-          },
-          "jobTargeting": {
-            "version1": {
-              "bestFor": ["<job type1>", ...],
-              "reason": "<specific reason>"
-            },
-            "version2": {
-              "bestFor": ["<job type1>", ...],
-              "reason": "<specific reason>"
-            }
-          }
-        }
-      `;
+      const analysisPrompt = getResumeVersionComparisonPrompt(v1, v2);
 
       let aiAnalysis = null;
       try {

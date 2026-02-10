@@ -30,12 +30,12 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     description: 'Advanced reasoning capabilities',
   },
 
-  // OpenAI Models
+  // OpenAI Models (No free tier - must bring own API key)
   'openai:gpt-4o-mini': {
     provider: 'openai',
     modelId: 'gpt-4o-mini',
     name: 'GPT-4o Mini',
-    freeTierLimit: '$5 credits for new users',
+    // No freeTierLimit - no free tier available
     requiresApiKey: true,
     apiKeyEnvVar: 'OPENAI_API_KEY',
     description: 'Cost-effective GPT-4 variant',
@@ -44,7 +44,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'openai',
     modelId: 'gpt-4o',
     name: 'GPT-4o',
-    freeTierLimit: '$5 credits for new users',
+    // No freeTierLimit - no free tier available
     requiresApiKey: true,
     apiKeyEnvVar: 'OPENAI_API_KEY',
     description: 'Most capable GPT-4 model',
@@ -53,18 +53,18 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'openai',
     modelId: 'gpt-3.5-turbo',
     name: 'GPT-3.5 Turbo',
-    freeTierLimit: '$5 credits for new users',
+    // No freeTierLimit - no free tier available
     requiresApiKey: true,
     apiKeyEnvVar: 'OPENAI_API_KEY',
     description: 'Fast and affordable option',
   },
 
-  // Anthropic Claude Models
+  // Anthropic Claude Models (No free tier - must bring own API key)
   'anthropic:claude-3-5-haiku-20241022': {
     provider: 'anthropic',
     modelId: 'claude-3-5-haiku-20241022',
     name: 'Claude 3.5 Haiku',
-    freeTierLimit: 'Limited free tier',
+    // No freeTierLimit - no free tier available
     requiresApiKey: true,
     apiKeyEnvVar: 'ANTHROPIC_API_KEY',
     description: 'Fast and efficient Claude model',
@@ -73,7 +73,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'anthropic',
     modelId: 'claude-3-5-sonnet-20241022',
     name: 'Claude 3.5 Sonnet',
-    freeTierLimit: 'Limited free tier',
+    // No freeTierLimit - no free tier available
     requiresApiKey: true,
     apiKeyEnvVar: 'ANTHROPIC_API_KEY',
     description: 'Balanced performance and capability',
@@ -82,28 +82,29 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'anthropic',
     modelId: 'claude-3-opus-20240229',
     name: 'Claude 3 Opus',
-    freeTierLimit: 'Limited',
+    // No freeTierLimit - no free tier available
     requiresApiKey: true,
     apiKeyEnvVar: 'ANTHROPIC_API_KEY',
     description: 'Most capable Claude model',
   },
 
-  // Cerebras Models (OpenAI-compatible)
+  // Cerebras Models (OpenAI-compatible) - Free tier available
+  // Note: Model names may need to be verified with Cerebras API
   'cerebras:llama-3.3-70b': {
     provider: 'cerebras',
-    modelId: 'llama-3.3-70b',
-    name: 'Llama 3.3 70B (Cerebras)',
-    freeTierLimit: '1M tokens/day, 14,400 requests/day',
+    modelId: 'llama-3.1-70b-instruct', // Using known working model name
+    name: 'Llama 3.1 70B Instruct (Cerebras)',
+    freeTierLimit: '1M tokens/day (High speed)',
     requiresApiKey: true,
     apiKeyEnvVar: 'CEREBRAS_API_KEY',
     baseUrl: 'https://api.cerebras.ai/v1',
-    description: 'High-performance Llama 3.3 model (65K context)',
+    description: 'High-performance Llama 3.1 model (65K context)',
   },
   'cerebras:llama3.1-8b': {
     provider: 'cerebras',
-    modelId: 'llama3.1-8b',
-    name: 'Llama 3.1 8B (Cerebras)',
-    freeTierLimit: '1M tokens/day, 14,400 requests/day',
+    modelId: 'llama-3.1-8b-instruct', // Using instruct variant
+    name: 'Llama 3.1 8B Instruct (Cerebras)',
+    freeTierLimit: '1M tokens/day (High speed)',
     requiresApiKey: true,
     apiKeyEnvVar: 'CEREBRAS_API_KEY',
     baseUrl: 'https://api.cerebras.ai/v1',
@@ -113,7 +114,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'cerebras',
     modelId: 'gpt-oss-120b',
     name: 'GPT-OSS 120B (Cerebras)',
-    freeTierLimit: '1M tokens/day, 14,400 requests/day',
+    freeTierLimit: '1M tokens/day (High speed)',
     requiresApiKey: true,
     apiKeyEnvVar: 'CEREBRAS_API_KEY',
     baseUrl: 'https://api.cerebras.ai/v1',
@@ -123,7 +124,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'cerebras',
     modelId: 'qwen-3-32b',
     name: 'Qwen 3 32B (Cerebras)',
-    freeTierLimit: '1M tokens/day, 14,400 requests/day',
+    freeTierLimit: '1M tokens/day (High speed)',
     requiresApiKey: true,
     apiKeyEnvVar: 'CEREBRAS_API_KEY',
     baseUrl: 'https://api.cerebras.ai/v1',
@@ -133,19 +134,19 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'cerebras',
     modelId: 'qwen-3-235b-a22b-instruct-2507',
     name: 'Qwen 3 235B Instruct (Cerebras)',
-    freeTierLimit: '1M tokens/day, 1,440 requests/day (Preview)',
+    freeTierLimit: '1M tokens/day (High speed, Preview)',
     requiresApiKey: true,
     apiKeyEnvVar: 'CEREBRAS_API_KEY',
     baseUrl: 'https://api.cerebras.ai/v1',
     description: 'Large Qwen 3 instruct model (65K context, Preview)',
   },
 
-  // DeepSeek Models (OpenAI-compatible)
+  // DeepSeek Models (No free tier - must bring own API key)
   'deepseek:deepseek-chat': {
     provider: 'deepseek',
     modelId: 'deepseek-chat',
     name: 'DeepSeek Chat',
-    freeTierLimit: 'Generous free tier',
+    // No freeTierLimit - no free tier available
     requiresApiKey: true,
     apiKeyEnvVar: 'DEEPSEEK_API_KEY',
     baseUrl: 'https://api.deepseek.com/v1',
@@ -155,39 +156,49 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'deepseek',
     modelId: 'deepseek-coder',
     name: 'DeepSeek Coder',
-    freeTierLimit: 'Generous free tier',
+    // No freeTierLimit - no free tier available
     requiresApiKey: true,
     apiKeyEnvVar: 'DEEPSEEK_API_KEY',
     baseUrl: 'https://api.deepseek.com/v1',
     description: 'Specialized for code generation',
   },
 
-  // Groq Models
+  // Groq Models - Free tier available
   'groq:llama-3.1-70b-versatile': {
     provider: 'groq',
     modelId: 'llama-3.1-70b-versatile',
-    name: 'Llama 3.1 70B (Groq)',
-    freeTierLimit: '1,000 requests/day',
+    name: 'Llama 3.1 70B (Groq) [DEPRECATED]',
+    freeTierLimit: '~14.4k requests/day (Small models)',
     requiresApiKey: true,
     apiKeyEnvVar: 'GROQ_API_KEY',
-    description: 'Ultra-fast inference',
+    description: 'DEPRECATED - Use llama-3.3-70b-versatile instead',
+    // deprecated: true, // Removed deprecated property as it's not in ModelConfig interface
+  },
+  'groq:llama-3.3-70b-versatile': {
+    provider: 'groq',
+    modelId: 'llama-3.3-70b-versatile',
+    name: 'Llama 3.3 70B (Groq)',
+    freeTierLimit: '~14.4k requests/day (Small models)',
+    requiresApiKey: true,
+    apiKeyEnvVar: 'GROQ_API_KEY',
+    description: 'Ultra-fast inference - Current Llama 3.3 model',
   },
   'groq:mixtral-8x7b-32768': {
     provider: 'groq',
     modelId: 'mixtral-8x7b-32768',
     name: 'Mixtral 8x7B (Groq)',
-    freeTierLimit: '1,000 requests/day',
+    freeTierLimit: '~14.4k requests/day (Small models)',
     requiresApiKey: true,
     apiKeyEnvVar: 'GROQ_API_KEY',
     description: 'Fast Mixtral model',
   },
 
-  // Mistral Models
+  // Mistral Models (Evaluation - Strict limits or trial only)
   'mistral:mistral-small-latest': {
     provider: 'mistral',
     modelId: 'mistral-small-latest',
     name: 'Mistral Small',
-    freeTierLimit: 'Substantial monthly tokens',
+    freeTierLimit: 'Evaluation: 1 req/sec or trial only',
     requiresApiKey: true,
     apiKeyEnvVar: 'MISTRAL_API_KEY',
     description: 'Efficient and fast',
@@ -196,7 +207,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'mistral',
     modelId: 'mistral-medium-latest',
     name: 'Mistral Medium',
-    freeTierLimit: 'Substantial monthly tokens',
+    freeTierLimit: 'Evaluation: 1 req/sec or trial only',
     requiresApiKey: true,
     apiKeyEnvVar: 'MISTRAL_API_KEY',
     description: 'Balanced performance',
@@ -205,18 +216,18 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'mistral',
     modelId: 'mistral-large-latest',
     name: 'Mistral Large',
-    freeTierLimit: 'Substantial monthly tokens',
+    freeTierLimit: 'Evaluation: 1 req/sec or trial only',
     requiresApiKey: true,
     apiKeyEnvVar: 'MISTRAL_API_KEY',
     description: 'Most capable Mistral model',
   },
 
-  // Hugging Face Models
+  // Hugging Face Models - Free tier available
   'huggingface:meta-llama/Llama-3.1-8B-Instruct': {
     provider: 'huggingface',
     modelId: 'meta-llama/Llama-3.1-8B-Instruct',
     name: 'Llama 3.1 8B (Hugging Face)',
-    freeTierLimit: '1,000 requests/day',
+    freeTierLimit: '~1k requests/5 min (Serverless)',
     requiresApiKey: true,
     apiKeyEnvVar: 'HUGGINGFACE_API_KEY',
     description: 'Open-source Llama model',
@@ -225,18 +236,18 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'huggingface',
     modelId: 'mistralai/Mistral-7B-Instruct-v0.2',
     name: 'Mistral 7B (Hugging Face)',
-    freeTierLimit: '1,000 requests/day',
+    freeTierLimit: '~1k requests/5 min (Serverless)',
     requiresApiKey: true,
     apiKeyEnvVar: 'HUGGINGFACE_API_KEY',
     description: 'Open-source Mistral model',
   },
 
-  // OpenRouter Models (aggregator)
+  // OpenRouter Models (aggregator) - Free tier available (free models only)
   'openrouter:openai/gpt-4o-mini': {
     provider: 'openrouter',
     modelId: 'openai/gpt-4o-mini',
     name: 'GPT-4o Mini (OpenRouter)',
-    freeTierLimit: '50 requests/day (1,000 with $10 top-up)',
+    freeTierLimit: '50 requests/day (Free models only)',
     requiresApiKey: true,
     apiKeyEnvVar: 'OPENROUTER_API_KEY',
     description: 'Access via OpenRouter',
@@ -245,21 +256,32 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     provider: 'openrouter',
     modelId: 'anthropic/claude-3.5-haiku',
     name: 'Claude 3.5 Haiku (OpenRouter)',
-    freeTierLimit: '50 requests/day (1,000 with $10 top-up)',
+    freeTierLimit: '50 requests/day (Free models only)',
     requiresApiKey: true,
     apiKeyEnvVar: 'OPENROUTER_API_KEY',
     description: 'Access via OpenRouter',
   },
 };
 
-export const DEFAULT_MODEL = 'gemini:gemini-2.5-flash-lite';
+/**
+ * Default model can be configured via environment variable(s).
+ *
+ * - Server/runtime: DEFAULT_MODEL_KEY
+ * - Client/build-time: NEXT_PUBLIC_DEFAULT_MODEL_KEY
+ *
+ * Both should be a valid key from MODEL_CONFIGS, e.g. "cerebras:gpt-oss-120b".
+ */
+export const DEFAULT_MODEL =
+  (process.env.NEXT_PUBLIC_DEFAULT_MODEL_KEY ||
+    process.env.DEFAULT_MODEL_KEY ||
+    'gemini:gemini-2.5-flash-lite') as string;
 
 export const FALLBACK_MODELS = [
   'gemini:gemini-2.5-flash-lite',
   'openai:gpt-4o-mini',
   'anthropic:claude-3-5-haiku-20241022',
   'deepseek:deepseek-chat',
-  'groq:llama-3.1-70b-versatile',
+  'groq:llama-3.3-70b-versatile',
 ];
 
 export function getModelConfig(modelKey: string): ModelConfig | undefined {

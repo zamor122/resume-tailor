@@ -10,11 +10,29 @@ declare global {
   }
 }
 
+// Check if we're in development mode
+const isDevelopment = () => {
+  if (typeof window === 'undefined') {
+    return process.env.NODE_ENV === 'development';
+  }
+  return process.env.NODE_ENV === 'development' || 
+         process.env.NEXT_PUBLIC_NODE_ENV === 'development' ||
+         window.location.hostname === 'localhost' ||
+         window.location.hostname === '127.0.0.1';
+};
+
 export default function UmamiVerifier() {
   const [status, setStatus] = useState<'checking' | 'ready' | 'failed'>('checking');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // Skip verification in development mode
+    if (isDevelopment()) {
+      console.log('[Umami] 🚫 DEV MODE - Analytics verification skipped');
+      setStatus('ready');
+      return;
+    }
 
     // Wait for Umami to load and verify it's working
     const verifyUmami = (): boolean => {
@@ -23,7 +41,7 @@ export default function UmamiVerifier() {
         console.log('[Umami] ✅ Analytics verified and ready');
         setStatus('ready');
         
-        // Test tracking a verification event
+        // Test tracking a verification event (only in production)
         try {
           window.umami.track('umami_verified', { 
             timestamp: new Date().toISOString(),

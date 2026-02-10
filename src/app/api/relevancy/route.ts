@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback } from "@/app/services/model-fallback";
-import { DEFAULT_MODEL } from "@/app/config/models";
+import { getModelFromSession } from "@/app/utils/model-helper";
+import { getRelevancyScorePrompt } from "@/app/prompts";
 
 async function evaluateResumeRelevancy(
   resume: string,
@@ -9,33 +10,14 @@ async function evaluateResumeRelevancy(
   sessionApiKeys?: Record<string, string>
 ): Promise<number> {
   try {
-    const prompt = `
-      You are an expert ATS (Applicant Tracking System) evaluator. Your task is to analyze how well a resume matches a job description.
-      
-      Job Description:
-      """
-      ${jobDescription}
-      """
-      
-      Resume:
-      """
-      ${resume}
-      """
-      
-      Evaluate how well this resume addresses the specific requirements, skills, and qualifications mentioned in the job description.
-      Consider the following factors:
-      1. Key skills and technologies mentioned in the job description that appear in the resume
-      2. Required qualifications and how well they are addressed
-      3. Relevant experience that matches job responsibilities
-      4. Use of similar terminology and industry keywords
-      
-      Return ONLY a numerical score from 0-100 representing the percentage match between the resume and job requirements.
-      Do not include any explanation, just the number.
-    `;
+    const prompt = getRelevancyScorePrompt(jobDescription, resume);
 
+    if (!modelKey) {
+      throw new Error('Model selection is required for relevancy evaluation.');
+    }
     const result = await generateWithFallback(
       prompt,
-      modelKey || DEFAULT_MODEL,
+      modelKey,
       undefined,
       sessionApiKeys
     );
@@ -67,29 +49,11 @@ export async function POST(req: NextRequest) {
     const { originalResume, tailoredResume, jobDescription, sessionId, modelKey } = await req.json();
     
     // Get session preferences for model selection
-    let sessionApiKeys: Record<string, string> | undefined;
-    let selectedModel = modelKey || DEFAULT_MODEL;
-    
-    if (sessionId) {
-      try {
-        const sessionResponse = await fetch(`${req.nextUrl.origin}/api/mcp/session-manager`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get', sessionId }),
-        });
-        if (sessionResponse.ok) {
-          const sessionData = await sessionResponse.json();
-          if (sessionData.session?.preferences?.modelPreferences?.defaultModel) {
-            selectedModel = sessionData.session.preferences.modelPreferences.defaultModel;
-          }
-          if (sessionData.session?.preferences?.apiKeys) {
-            sessionApiKeys = sessionData.session.preferences.apiKeys;
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to fetch session preferences:', e);
-      }
-    }
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
     
     // Clean and validate texts
     const cleanText = (text: string) => {

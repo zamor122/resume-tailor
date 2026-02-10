@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/app/lib/supabase/server";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -40,9 +41,6 @@ interface Session {
   };
 }
 
-// In-memory storage (can be replaced with database later)
-const sessionStore = new Map<string, Session>();
-
 export async function POST(req: NextRequest) {
   try {
     const { action, sessionId, data } = await req.json();
@@ -67,7 +65,22 @@ export async function POST(req: NextRequest) {
         }
       };
 
-      sessionStore.set(newSessionId, session);
+      // Store in Supabase
+      const { error: insertError } = await supabaseAdmin
+        .from('sessions')
+        .insert({
+          id: newSessionId,
+          data: session as any,
+          user_id: data?.userId || null,
+        });
+
+      if (insertError) {
+        console.error('Error creating session:', insertError);
+        return NextResponse.json({
+          error: "Server Error",
+          message: "Failed to create session"
+        }, { status: 500 });
+      }
 
       return NextResponse.json({
         success: true,
@@ -84,13 +97,20 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      const session = sessionStore.get(sessionId);
-      if (!session) {
+      const { data: sessionRow, error: fetchError } = await supabaseAdmin
+        .from('sessions')
+        .select('data')
+        .eq('id', sessionId)
+        .single();
+
+      if (fetchError || !sessionRow) {
         return NextResponse.json({
           error: "Not Found",
           message: "Session not found"
         }, { status: 404 });
       }
+
+      const session = sessionRow.data as Session;
 
       return NextResponse.json({
         success: true,
@@ -106,9 +126,16 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      let session = sessionStore.get(sessionId);
-      // Auto-create session if it doesn't exist (for dev mode resilience)
-      if (!session) {
+      // Get existing session or create new one
+      const { data: sessionRow } = await supabaseAdmin
+        .from('sessions')
+        .select('data')
+        .eq('id', sessionId)
+        .single();
+
+      let session: Session;
+      if (!sessionRow) {
+        // Auto-create session if it doesn't exist (for dev mode resilience)
         const now = new Date().toISOString();
         session = {
           sessionId,
@@ -125,7 +152,16 @@ export async function POST(req: NextRequest) {
             successRate: 100
           }
         };
-        sessionStore.set(sessionId, session);
+        
+        await supabaseAdmin
+          .from('sessions')
+          .insert({
+            id: sessionId,
+            data: session as any,
+            user_id: data?.userId || null,
+          });
+      } else {
+        session = sessionRow.data as Session;
       }
 
       const updatedSession: Session = {
@@ -146,7 +182,22 @@ export async function POST(req: NextRequest) {
         updatedSession.preferences = { ...updatedSession.preferences, ...data.preferences };
       }
 
-      sessionStore.set(sessionId, updatedSession);
+      // Update in Supabase
+      const { error: updateError } = await supabaseAdmin
+        .from('sessions')
+        .update({
+          data: updatedSession as any,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId);
+
+      if (updateError) {
+        console.error('Error updating session:', updateError);
+        return NextResponse.json({
+          error: "Server Error",
+          message: "Failed to update session"
+        }, { status: 500 });
+      }
 
       return NextResponse.json({
         success: true,
@@ -162,9 +213,23 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      let session = sessionStore.get(sessionId);
-      // Auto-create session if it doesn't exist (for dev mode resilience)
-      if (!session) {
+      if (!data?.role || !data?.content) {
+        return NextResponse.json({
+          error: "Invalid Input",
+          message: "Role and content are required"
+        }, { status: 400 });
+      }
+
+      // Get existing session or create new one
+      const { data: sessionRow } = await supabaseAdmin
+        .from('sessions')
+        .select('data')
+        .eq('id', sessionId)
+        .single();
+
+      let session: Session;
+      if (!sessionRow) {
+        // Auto-create session if it doesn't exist (for dev mode resilience)
         const now = new Date().toISOString();
         session = {
           sessionId,
@@ -181,14 +246,16 @@ export async function POST(req: NextRequest) {
             successRate: 100
           }
         };
-        sessionStore.set(sessionId, session);
-      }
-
-      if (!data?.role || !data?.content) {
-        return NextResponse.json({
-          error: "Invalid Input",
-          message: "Role and content are required"
-        }, { status: 400 });
+        
+        await supabaseAdmin
+          .from('sessions')
+          .insert({
+            id: sessionId,
+            data: session as any,
+            user_id: data?.userId || null,
+          });
+      } else {
+        session = sessionRow.data as Session;
       }
 
       const updatedSession: Session = {
@@ -204,7 +271,22 @@ export async function POST(req: NextRequest) {
         ]
       };
 
-      sessionStore.set(sessionId, updatedSession);
+      // Update in Supabase
+      const { error: updateError } = await supabaseAdmin
+        .from('sessions')
+        .update({
+          data: updatedSession as any,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId);
+
+      if (updateError) {
+        console.error('Error updating session:', updateError);
+        return NextResponse.json({
+          error: "Server Error",
+          message: "Failed to update session"
+        }, { status: 500 });
+      }
 
       return NextResponse.json({
         success: true,
@@ -220,9 +302,23 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      let session = sessionStore.get(sessionId);
-      // Auto-create session if it doesn't exist (for dev mode resilience)
-      if (!session) {
+      if (!data?.toolId) {
+        return NextResponse.json({
+          error: "Invalid Input",
+          message: "Tool ID is required"
+        }, { status: 400 });
+      }
+
+      // Get existing session or create new one
+      const { data: sessionRow } = await supabaseAdmin
+        .from('sessions')
+        .select('data')
+        .eq('id', sessionId)
+        .single();
+
+      let session: Session;
+      if (!sessionRow) {
+        // Auto-create session if it doesn't exist (for dev mode resilience)
         const now = new Date().toISOString();
         session = {
           sessionId,
@@ -239,14 +335,16 @@ export async function POST(req: NextRequest) {
             successRate: 100
           }
         };
-        sessionStore.set(sessionId, session);
-      }
-
-      if (!data?.toolId) {
-        return NextResponse.json({
-          error: "Invalid Input",
-          message: "Tool ID is required"
-        }, { status: 400 });
+        
+        await supabaseAdmin
+          .from('sessions')
+          .insert({
+            id: sessionId,
+            data: session as any,
+            user_id: data?.userId || null,
+          });
+      } else {
+        session = sessionRow.data as Session;
       }
 
       const toolExecution = {
@@ -277,7 +375,22 @@ export async function POST(req: NextRequest) {
         successRate: (successfulTools / totalTools) * 100 || 100
       };
 
-      sessionStore.set(sessionId, updatedSession);
+      // Update in Supabase
+      const { error: updateError } = await supabaseAdmin
+        .from('sessions')
+        .update({
+          data: updatedSession as any,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId);
+
+      if (updateError) {
+        console.error('Error updating session:', updateError);
+        return NextResponse.json({
+          error: "Server Error",
+          message: "Failed to update session"
+        }, { status: 500 });
+      }
 
       return NextResponse.json({
         success: true,
@@ -293,13 +406,20 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      const session = sessionStore.get(sessionId);
-      if (!session) {
+      const { data: sessionRow, error: fetchError } = await supabaseAdmin
+        .from('sessions')
+        .select('data, created_at')
+        .eq('id', sessionId)
+        .single();
+
+      if (fetchError || !sessionRow) {
         return NextResponse.json({
           error: "Not Found",
           message: "Session not found"
         }, { status: 404 });
       }
+
+      const session = sessionRow.data as Session;
 
       const analytics = {
         sessionDuration: new Date().getTime() - new Date(session.createdAt).getTime(),
@@ -323,20 +443,34 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "list") {
-      const sessions = Array.from(sessionStore.values());
-      
+      const { data: sessions, error: fetchError } = await supabaseAdmin
+        .from('sessions')
+        .select('id, data, created_at, updated_at')
+        .order('updated_at', { ascending: false });
+
+      if (fetchError) {
+        console.error('Error listing sessions:', fetchError);
+        return NextResponse.json({
+          error: "Server Error",
+          message: "Failed to list sessions"
+        }, { status: 500 });
+      }
+
       return NextResponse.json({
         success: true,
-        sessions: sessions.map(s => ({
-          sessionId: s.sessionId,
-          createdAt: s.createdAt,
-          updatedAt: s.updatedAt,
-          hasResume: !!s.resume,
-          jobDescriptionCount: s.jobDescriptions.length,
-          toolExecutionsCount: s.toolExecutions.length,
-          metrics: s.metrics
-        })),
-        count: sessions.length
+        sessions: (sessions || []).map(s => {
+          const sessionData = s.data as Session;
+          return {
+            sessionId: s.id,
+            createdAt: sessionData.createdAt || s.created_at,
+            updatedAt: sessionData.updatedAt || s.updated_at,
+            hasResume: !!sessionData.resume,
+            jobDescriptionCount: sessionData.jobDescriptions?.length || 0,
+            toolExecutionsCount: sessionData.toolExecutions?.length || 0,
+            metrics: sessionData.metrics
+          };
+        }),
+        count: sessions?.length || 0
       });
     }
 

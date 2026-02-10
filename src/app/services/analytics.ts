@@ -74,6 +74,12 @@ export const events = {
   TIME_ON_PAGE: 'time_on_page',
   SCROLL_DEPTH: 'scroll_depth',
   INTERACTION: 'interaction', // Generic interaction tracker
+  
+  // Rate Limiting & Quota
+  MODEL_RATE_LIMIT_HIT: 'MODEL_RATE_LIMIT_HIT', // Track when per-IP rate limit is hit
+  MODEL_QUOTA_EXCEEDED: 'MODEL_QUOTA_EXCEEDED', // Track when API quota is exceeded
+  RATE_LIMIT_BACKEND_ENFORCED: 'RATE_LIMIT_BACKEND_ENFORCED', // Track backend-enforced rate limits
+  CEREBRAS_GLOBAL_LIMIT_HIT: 'CEREBRAS_GLOBAL_LIMIT_HIT', // Track when Cerebras global limit is hit
 };
 
 // Add TypeScript type definition for the Umami window object
@@ -111,6 +117,18 @@ const waitForUmami = (maxWait = 5000): Promise<boolean> => {
   });
 };
 
+// Check if we're in development mode
+const isDevelopment = () => {
+  if (typeof window === 'undefined') {
+    return process.env.NODE_ENV === 'development';
+  }
+  // Check both server-side and client-side environment
+  return process.env.NODE_ENV === 'development' || 
+         process.env.NEXT_PUBLIC_NODE_ENV === 'development' ||
+         window.location.hostname === 'localhost' ||
+         window.location.hostname === '127.0.0.1';
+};
+
 // Track events using the Umami window object
 export const trackEvent = async (
   eventName: string | {name: string, properties?: Record<string, unknown>}, 
@@ -133,6 +151,12 @@ export const trackEvent = async (
     
     if (typeof window === 'undefined') {
       return false;
+    }
+
+    // Skip sending to Umami in development mode
+    if (isDevelopment()) {
+      console.log(`[Analytics] 🚫 DEV MODE - Event logged but NOT sent to Umami: ${name}`, data);
+      return true; // Return true to indicate the event was "handled" (logged)
     }
 
     // Wait for Umami to be available

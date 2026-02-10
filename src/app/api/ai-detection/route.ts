@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback } from "@/app/services/model-fallback";
 import { isRateLimitError } from "@/app/services/ai-provider";
-import { DEFAULT_MODEL } from "@/app/config/models";
+import { getModelFromSession } from "@/app/utils/model-helper";
+import { getAIDetectionPrompt } from "@/app/prompts";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -18,53 +19,14 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const prompt = `
-      Analyze the following text and determine if it appears to be written by AI or a human.
-      
-      Consider these factors:
-      1. Natural language patterns and flow
-      2. Repetitive phrases or structures
-      3. Overly formal or generic language
-      4. Lack of personal voice or unique expressions
-      5. Perfect grammar without natural variations
-      6. Generic buzzwords or corporate speak
-      
-      Return ONLY a JSON object with this exact format:
-      {
-        "aiScore": <number 0-100, where 0 is definitely human and 100 is definitely AI>,
-        "confidence": <number 0-100, how confident you are in this assessment>,
-        "indicators": ["indicator1", "indicator2", ...],
-        "humanScore": <number 0-100, inverse of aiScore>
-      }
-      
-      Text to analyze:
-      ${text.substring(0, 5000)}
-    `;
+    const prompt = getAIDetectionPrompt(text);
 
     // Get session preferences for model selection
-    let sessionApiKeys: Record<string, string> | undefined;
-    let selectedModel = modelKey || DEFAULT_MODEL;
-    
-    if (sessionId) {
-      try {
-        const sessionResponse = await fetch(`${req.nextUrl.origin}/api/mcp/session-manager`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get', sessionId }),
-        });
-        if (sessionResponse.ok) {
-          const sessionData = await sessionResponse.json();
-          if (sessionData.session?.preferences?.modelPreferences?.defaultModel) {
-            selectedModel = sessionData.session.preferences.modelPreferences.defaultModel;
-          }
-          if (sessionData.session?.preferences?.apiKeys) {
-            sessionApiKeys = sessionData.session.preferences.apiKeys;
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to fetch session preferences:', e);
-      }
-    }
+    const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
+      sessionId,
+      modelKey,
+      req.nextUrl.origin
+    );
 
     let textResponse: string;
     
@@ -114,13 +76,13 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      // Clean the response
-      const cleanedText = textResponse
-        .replace(/```(?:json)?\n?/g, '')
-        .replace(/```\n?$/g, '')
-        .trim();
+      // Use improved JSON extraction that handles reasoning text
+      const { parseJSONFromText } = await import('@/app/utils/json-extractor');
+      const parsedResponse = parseJSONFromText(textResponse);
       
-      const parsedResponse = JSON.parse(cleanedText);
+      if (!parsedResponse) {
+        throw new Error('Could not extract valid JSON from response');
+      }
       
       // Validate response structure
       if (typeof parsedResponse.aiScore !== 'number' || 

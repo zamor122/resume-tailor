@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata = {
   title: "Frequently Asked Questions - AI Resume Tailor",
-  description: "Get answers to common questions about AI Resume Tailor's relevancy scoring, ATS optimization, and job-specific resume tailoring features.",
+  description: "Understand what AI Resume Tailor is, who it helps, what you see before and after purchasing, and how your information is handled.",
 };
 
 export default function FAQPage() {
@@ -12,91 +12,108 @@ export default function FAQPage() {
       <h1 className="text-3xl font-bold mb-8">Frequently Asked Questions</h1>
       
       <div className="space-y-8">
+        <section>
+          <h2 className="text-2xl font-semibold mb-4">What AI Resume Tailor Does</h2>
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h3 className="text-xl font-medium mb-2">A quick way to match your resume to a job</h3>
+              <p className="text-gray-700 dark:text-gray-300">
+                Paste your resume and the job description, and the AI rewrites your resume so it clearly speaks to what that employer is asking for.
+              </p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h3 className="text-xl font-medium mb-2">Keeps things clear and ATS-friendly</h3>
+              <p className="text-gray-700 dark:text-gray-300">
+                The tool highlights the skills and keywords employers expect, while keeping your wording clean and easy for applicant tracking systems to read.
+              </p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h3 className="text-xl font-medium mb-2">Shows you how it improved your resume</h3>
+              <p className="text-gray-700 dark:text-gray-300">
+                You get a side-by-side look at the original and the tailored version so you can see what changed and why it is more relevant.
+              </p>
+            </div>
+          </div>
+        </section>
 
-      <section>
-          <h2 className="text-2xl font-semibold mb-4">Using AI Resume Tailor</h2>
-          
+        <section>
+          <h2 className="text-2xl font-semibold mb-4">Who It Helps &amp; Why</h2>
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">Is AI Resume Tailor free to use?</h3>
+              <h3 className="text-xl font-medium mb-2">For anyone applying to jobs</h3>
               <p className="text-gray-700 dark:text-gray-300">
-                Yes, AI Resume Tailor is completely free to use with no hidden fees or subscriptions. 
-                We don&apos;t even require you to create an account.
+                Whether you are early in your career, switching industries, or a seasoned professional, it saves you time tailoring each application.
               </p>
             </div>
-            
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">Does AI Resume Tailor store my resume data?</h3>
+              <h3 className="text-xl font-medium mb-2">Helps you speak the employer&apos;s language</h3>
               <p className="text-gray-700 dark:text-gray-300">
-                No, we don&apos;t store your resume or job description data. All processing happens in real-time 
-                and your information is discarded after the tailoring is complete. Your privacy is our priority.
+                The AI emphasizes the experiences, achievements, and keywords that match the job post so your resume feels specific, not generic.
               </p>
             </div>
-            
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">How often can I use the tool?</h3>
+              <h3 className="text-xl font-medium mb-2">Gives confidence before you apply</h3>
               <p className="text-gray-700 dark:text-gray-300">
-                To ensure fair usage for all users, there&apos;s a 60-second cooldown period between tailoring requests. 
-                This gives you time to review your tailored resume and make any additional adjustments.
+                Clear suggestions and a relevance check help you submit with confidence that your resume covers what hiring managers expect.
               </p>
             </div>
           </div>
         </section>
-        
+
         <section>
-          <h2 className="text-2xl font-semibold mb-4">About Resume Relevancy Scoring</h2>
-          
+          <h2 className="text-2xl font-semibold mb-4">What You See in Your Results</h2>
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">How does the resume relevancy score work?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                Our AI analyzes your resume against the job description to calculate a relevancy percentage. 
-                After tailoring, you&apos;ll see both your original and new scores, showing exactly how much your 
-                resume has improved. The score considers keyword matching, skills alignment, experience relevance, 
-                and formatting optimization.
-              </p>
+              <h3 className="text-xl font-medium mb-2">Instant preview</h3>
+              <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                <li>A tailored resume preview based on your job description.</li>
+                <li>A relevance check that shows how well it matches the role.</li>
+                <li>Highlighted keywords and skills the job posting cares about.</li>
+              </ul>
             </div>
-            
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">How accurate is the relevancy scoring?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                Our relevancy scoring uses advanced AI to simulate how ATS systems evaluate resumes. 
-                While no system can perfectly predict every ATS, our scoring provides a reliable benchmark 
-                for improvement. Users typically see a 30-60% increase in relevancy after tailoring.
-              </p>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">What&apos;s a good relevancy score?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                A score above 70% is generally considered good, while 85%+ is excellent. 
-                However, even a 20% improvement can significantly increase your chances of getting 
-                past ATS filters and into the hands of a hiring manager.
-              </p>
+              <h3 className="text-xl font-medium mb-2">Clear action items</h3>
+              <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                <li>Suggestions on phrasing achievements so they stand out.</li>
+                <li>Areas to tighten or remove if they are not relevant to the role.</li>
+                <li>Simple edits that keep formatting neat for ATS systems.</li>
+              </ul>
             </div>
           </div>
         </section>
-        
+
         <section>
-          <h2 className="text-2xl font-semibold mb-4">Job-Specific Features</h2>
-          
+          <h2 className="text-2xl font-semibold mb-4">Before You Purchase vs. After</h2>
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">How does job title detection work?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                Our AI automatically analyzes the job description to detect the most likely job title. 
-                This helps tailor your resume specifically for that role and provides more accurate 
-                relevancy scoring.
-              </p>
+              <h3 className="text-xl font-medium mb-2">What you see right away</h3>
+              <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                <li>A quick preview of how your resume changes for the role.</li>
+                <li>A relevance check to show if the tailoring is on target.</li>
+                <li>Key highlights so you know what the AI focused on.</li>
+              </ul>
             </div>
-            
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">Can I use this for any job type?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                Yes! AI Resume Tailor works for virtually any job type across industries. Whether you&apos;re 
-                applying for technical roles, creative positions, management jobs, or entry-level positions, 
-                our tool can help optimize your resume.
-              </p>
+              <h3 className="text-xl font-medium mb-2">What unlocks after purchase</h3>
+              <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                <li>The full tailored resume ready to copy, download, or share.</li>
+                <li>Complete suggestions and wording you can reuse for similar roles.</li>
+                <li>Access for continued tailoring without re-entering payment each time during your access window.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-semibold mb-4">Data &amp; Privacy</h2>
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h3 className="text-xl font-medium mb-2">What we keep and what we do not</h3>
+              <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                <li>We do not store your resume or job description after tailoring; they are used in the moment to generate your results.</li>
+                <li>We keep only what is needed to provide access you purchase (like payment confirmations and, if you share it, your email).</li>
+                <li>We may track anonymous usage patterns to keep the service reliable, but not the contents of your resume.</li>
+              </ul>
             </div>
           </div>
         </section>

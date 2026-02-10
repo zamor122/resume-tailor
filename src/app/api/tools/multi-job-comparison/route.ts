@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback } from "@/app/services/model-fallback";
 import { getModelFromSession } from "@/app/utils/model-helper";
+import { getMultiJobComparisonPrompt } from "@/app/prompts";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -40,146 +41,10 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const prompt = `
-      Compare this resume against multiple job descriptions simultaneously and provide comprehensive insights.
-      
-      CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact match scores, percentages, and specific recommendations.
-      - Require specific match scores for each job (0-100 with breakdown)
-      - Provide common skill/requirement analysis with exact percentages
-      - Include versatility score calculation with methodology
-      - Suggest resume versions for different job clusters with specific changes
-      - Provide specific optimization strategies with expected improvements
-      
-      Resume:
-      ${resume.substring(0, 5000)}
-      
-      Job Descriptions:
-      ${jobDescs.map((job: any, index: number) => {
-        const jobText = typeof job === 'string' ? job : (job.description || job.title || JSON.stringify(job));
-        return `Job ${index + 1}:\n${jobText.substring(0, 2000)}`;
-      }).join('\n\n---\n\n')}
-      
-      Return ONLY a JSON object:
-      {
-        "overallAnalysis": {
-          "bestMatch": <job index (0-based)>,
-          "worstMatch": <job index>,
-          "averageMatch": <number 0-100>,
-          "matchRange": "<low-high>",
-          "versatility": <number 0-100, how well resume fits multiple roles>
-        },
-        "jobComparisons": [
-          {
-            "jobIndex": <number>,
-            "jobTitle": "<exact job title>",
-            "matchScore": <number 0-100, exact score>,
-            "matchBreakdown": {
-              "skills": <number 0-100>,
-              "experience": <number 0-100>,
-              "education": <number 0-100>,
-              "keywords": <number 0-100>
-            },
-            "strengths": [
-              {
-                "strength": "<specific strength>",
-                "evidence": "<evidence from resume>",
-                "impact": "<how this helps>"
-              }
-            ],
-            "gaps": [
-              {
-                "gap": "<specific gap>",
-                "importance": "<critical|high|medium|low>",
-                "impact": "<how this hurts match>"
-              }
-            ],
-            "uniqueRequirements": [
-              {
-                "requirement": "<exact requirement>",
-                "inResume": <boolean>,
-                "importance": "<critical|high|medium|low>"
-              }
-            ],
-            "commonRequirements": [
-              {
-                "requirement": "<exact requirement>",
-                "frequency": <number, how many jobs require this>,
-                "inResume": <boolean>
-              }
-            ],
-            "recommendations": [
-              {
-                "recommendation": "<specific recommendation>",
-                "priority": "<high|medium|low>",
-                "expectedImprovement": <points added to score>
-              }
-            ]
-          }
-        ],
-        "commonThemes": {
-          "requiredSkills": ["skill1", ...],
-          "commonKeywords": ["keyword1", ...],
-          "sharedRequirements": ["req1", ...],
-          "industryTrends": ["trend1", ...]
-        },
-        "optimizationStrategy": {
-          "universalImprovements": [
-            {
-              "action": "<specific action>",
-              "impact": "<specific impact on all jobs, e.g., '+5 points average'>",
-              "priority": "<critical|high|medium|low>",
-              "implementation": "<how to implement>",
-              "timeEstimate": "<time to implement>"
-            }
-          ],
-          "jobSpecificOptimizations": [
-            {
-              "jobIndex": <number>,
-              "optimizations": [
-                {
-                  "optimization": "<specific optimization>",
-                  "action": "<exact action to take>",
-                  "expectedImprovement": <exact points added>,
-                  "example": "<before> → <after>"
-                }
-              ],
-              "expectedImprovement": <exact score increase>
-            }
-          ],
-          "resumeVersions": [
-            {
-              "version": "<exact version name>",
-              "targetJobs": [<exact job indices>],
-              "keyChanges": [
-                {
-                  "change": "<specific change>",
-                  "section": "<section name>",
-                  "before": "<current text>",
-                  "after": "<new text>",
-                  "reason": "<why this helps these jobs>"
-                }
-              ],
-              "expectedMatch": <exact average score>,
-              "versatilityScore": <number 0-100>
-            }
-          ]
-        },
-        "insights": {
-          "careerFit": "<analysis>",
-          "marketPositioning": "<analysis>",
-          "skillGaps": ["gap1", ...],
-          "opportunities": ["opp1", ...]
-        },
-        "recommendations": [
-          {
-            "type": "<universal|specific>",
-            "priority": "<high|medium|low>",
-            "recommendation": "<recommendation>",
-            "appliesTo": [<job indices or "all">]
-          }
-        ]
-      }
-    `;
+    const prompt = getMultiJobComparisonPrompt(
+      resume,
+      jobDescs.map((job: any) => typeof job === 'string' ? job : (job.description || job.title || JSON.stringify(job)))
+    );
 
     // Get session preferences for model selection
     const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(

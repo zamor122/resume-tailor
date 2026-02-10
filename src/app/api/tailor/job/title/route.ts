@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
+import { getJobTitleExtractionPrompt } from "@/app/prompts";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -12,7 +13,11 @@ async function getModel() {
   }
   
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  return genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+  const model =
+    process.env.GEMINI_JOB_TITLE_MODEL ||
+    process.env.DEFAULT_GEMINI_MODEL ||
+    "gemini-2.5-flash-lite";
+  return genAI.getGenerativeModel({ model });
 }
 
 export async function POST(req: NextRequest) {
@@ -28,19 +33,7 @@ export async function POST(req: NextRequest) {
 
     const model = await getModel();
 
-    const prompt = `
-      You are a job title analyzer. Given a job description, extract the most appropriate standardized job title.
-      
-      Rules:
-      1. Return ONLY a JSON object with no additional text or explanation
-      2. The JSON must be in this exact format: {"jobTitle": "string", "confidence": number}
-      3. The job title should be standardized and widely recognized
-      4. Confidence should be 1-100 based on clarity of the role
-      5. Remove any level indicators (e.g., "Senior", "Lead") unless crucial to the role
-      
-      Job Description:
-      ${jobDescription}
-    `;
+    const prompt = getJobTitleExtractionPrompt(jobDescription);
 
     const result = await model.generateContent(prompt);
     const response = await result.response;

@@ -1,0 +1,4 @@
+{"location":"humanize/stream/route.ts:POST","message":"request received","data":{"hasResume":true,"hasJobDesc":true,"jobDescLen":5117},"timestamp":1770682059335,"hypothesisId":"company"}
+{"location":"humanize/stream/route.ts:start","message":"stream started","data":{"jobDescLen":5117},"timestamp":1770682059526,"hypothesisId":"company"}
+{"location":"humanize/stream/route.ts:companyResearch","message":"company research from preGen","data":{"companyName":"","raw":false},"timestamp":1770682062021,"hypothesisId":"company"}
+{"location":"humanize/stream/route.ts:insertData","message":"company_name for DB","data":{"company_name":"(null)","source":""},"timestamp":1770682066079,"hypothesisId":"company"}

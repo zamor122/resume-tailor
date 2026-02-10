@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback } from "@/app/services/model-fallback";
 import { getModelFromSession } from "@/app/utils/model-helper";
+import { getFormatValidatorPrompt } from "@/app/prompts";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -33,85 +34,7 @@ export async function POST(req: NextRequest) {
       properFormatting: /^[A-Z][a-z]+ [A-Z][a-z]+/m.test(resume), // Name format
     };
 
-    const prompt = `
-      Analyze the resume formatting for ATS compatibility.
-      
-      CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact locations and fix instructions.
-      - Require specific line/character positions for issues (e.g., "Line 15", "Section: Experience, bullet 3")
-      - Provide exact fix instructions with full before/after examples
-      - Include parsing accuracy estimates per section (0-100%)
-      - Specify which ATS systems would fail (exact system names)
-      - Provide exact file format recommendations with reasoning
-      
-      Check for:
-      1. Proper section headers (exact format issues)
-      2. Consistent formatting (specific inconsistencies)
-      3. Readable structure (specific structural problems)
-      4. ATS-friendly elements (specific missing elements)
-      5. File format recommendations (exact format with reasoning)
-      
-      Return ONLY a JSON object:
-      {
-        "atsCompatible": <boolean>,
-        "score": <number 0-100>,
-        "issues": [
-          {
-            "type": "<formatting|structure|content>",
-            "severity": "<critical|high|medium|low>",
-            "description": "<specific issue description>",
-            "location": "<exact location: line number, section name, character position, or 'Section: X, bullet Y'>",
-            "before": "<exact problematic text>",
-            "after": "<exact fixed text>",
-            "fix": "<specific fix instructions with example>",
-            "atsSystemsAffected": ["<exact ATS system names that would fail>"],
-            "impact": "<specific impact on parsing, e.g., 'Prevents contact info extraction'>",
-            "timeToFix": "<exact time estimate, e.g., '2 minutes'>"
-          }
-        ],
-        "sectionAnalysis": {
-          "header": {"parsingAccuracy": <number 0-100>, "issues": ["<issue1>", ...]},
-          "contact": {"parsingAccuracy": <number 0-100>, "issues": ["<issue1>", ...]},
-          "experience": {"parsingAccuracy": <number 0-100>, "issues": ["<issue1>", ...]},
-          "education": {"parsingAccuracy": <number 0-100>, "issues": ["<issue1>", ...]},
-          "skills": {"parsingAccuracy": <number 0-100>, "issues": ["<issue1>", ...]}
-        },
-        "strengths": [
-          {
-            "strength": "<specific strength>",
-            "impact": "<how this helps ATS parsing>"
-          }
-        ],
-        "recommendations": [
-          {
-            "action": "<specific action to take>",
-            "priority": "<critical|high|medium|low>",
-            "impact": "<specific expected improvement, e.g., '+10% parsing accuracy'>",
-            "location": "<where to apply>",
-            "example": "<before> → <after>"
-          }
-        ],
-        "fileFormat": {
-          "recommended": "<pdf|docx|txt>",
-          "reason": "<specific reason>",
-          "alternatives": [
-            {
-              "format": "<format>",
-              "pros": ["<pro1>", ...],
-              "cons": ["<con1>", ...]
-            }
-          ]
-        },
-        "estimatedParsingAccuracy": <number 0-100, overall>,
-        "atsSystemCompatibility": {
-          "workday": {"compatible": <boolean>, "accuracy": <number 0-100>},
-          "taleo": {"compatible": <boolean>, "accuracy": <number 0-100>},
-          "greenhouse": {"compatible": <boolean>, "accuracy": <number 0-100>}
-        }
-      }
-      
-      Resume:
-      ${resume.substring(0, 5000)}
-    `;
+    const prompt = getFormatValidatorPrompt(resume);
 
     // Get session preferences for model selection
     const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback } from "@/app/services/model-fallback";
 import { getModelFromSession } from "@/app/utils/model-helper";
+import { getATSOptimizerPrompt } from "@/app/prompts";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -17,129 +18,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const prompt = `
-      You are an ATS optimization expert. Analyze this resume and provide REAL-TIME, ACTIONABLE suggestions to improve its ATS compatibility score.
-      
-      CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact numbers, percentages, timeframes, and concrete examples.
-      - Require specific score improvements per action (e.g., "+5 points", not "improves score")
-      - Provide exact before/after examples with full text
-      - Include time estimates for each fix (e.g., "2 minutes", "15 minutes")
-      - Calculate ROI (score gain / time invested)
-      
-      Current ATS Score: ${currentScore || "Not provided"}
-      
-      ${jobDescription ? `Target Job Description:\n${jobDescription.substring(0, 3000)}\n\n` : ''}
-      
-      Resume:
-      ${resume.substring(0, 8000)}
-      
-      Return ONLY a JSON object:
-      {
-        "currentScore": ${currentScore || 0},
-        "projectedScore": <number 0-100 after implementing all suggestions>,
-        "quickWins": [
-          {
-            "priority": "<critical|high|medium|low>",
-            "action": "<specific action to take>",
-            "location": "<exact location: section name, line number, or character position>",
-            "impact": <number, exact points added to score (e.g., 5, 10, 15)>,
-            "effort": "<low|medium|high>",
-            "timeEstimate": "<specific time estimate, e.g., '2 minutes', '15 minutes', '1 hour'>",
-            "roi": <number, impact points per minute>,
-            "before": "<exact current text>",
-            "after": "<exact improved text>",
-            "reason": "<why this improves ATS parsing>"
-          }
-        ],
-        "keywordOptimization": {
-          "missing": [
-            {
-              "keyword": "<keyword>",
-              "importance": "<critical|high|medium|low>",
-              "expectedImpact": <points added>,
-              "suggestedLocations": ["<section1>", "<section2>"]
-            }
-          ],
-          "underused": [
-            {
-              "keyword": "<keyword>",
-              "currentCount": <exact number>,
-              "recommendedCount": <exact number>,
-              "whereToAdd": "<specific section or location>",
-              "context": "<exact phrase or sentence showing how to naturally incorporate>",
-              "expectedImpact": <points added>
-            }
-          ],
-          "overused": [
-            {
-              "keyword": "<keyword>",
-              "currentCount": <exact number>,
-              "recommendedCount": <exact number>,
-              "whereToRemove": "<specific location>",
-              "reason": "<why reducing helps>"
-            }
-          ]
-        },
-        "formatting": {
-          "issues": [
-            {
-              "type": "<issue type>",
-              "severity": "<critical|high|medium|low>",
-              "description": "<specific issue description>",
-              "location": "<exact location: line number, section, or character position>",
-              "fix": "<exact fix with full text example>",
-              "before": "<current problematic text>",
-              "after": "<fixed text>",
-              "impact": <points added>,
-              "timeEstimate": "<time to fix>"
-            }
-          ]
-        },
-        "structure": {
-          "sections": ["<section1>", ...],
-          "missingSections": [
-            {
-              "section": "<section name>",
-              "importance": "<critical|high|medium|low>",
-              "expectedImpact": <points added>,
-              "suggestedContent": "<example content>"
-            }
-          ],
-          "order": "<optimal|suboptimal>",
-          "recommendedOrder": ["<section1>", "<section2>", ...],
-          "expectedImpact": <points added if reordered>
-        },
-        "content": {
-          "strengths": ["<specific strength>", ...],
-          "weaknesses": ["<specific weakness>", ...],
-          "suggestions": [
-            {
-              "section": "<section name>",
-              "current": "<exact current content snippet>",
-              "improved": "<exact improved version>",
-              "reason": "<specific reason why this is better for ATS>",
-              "impact": <points added>
-            }
-          ]
-        },
-        "implementationPlan": [
-          {
-            "step": <number>,
-            "action": "<specific action>",
-            "estimatedTime": "<exact time estimate, e.g., '2 minutes'>",
-            "expectedImpact": <exact points added>,
-            "priority": "<critical|high|medium|low>",
-            "dependencies": ["<step numbers this depends on>"]
-          }
-        ],
-        "priorityMatrix": {
-          "highImpactLowEffort": [<quick win indices>],
-          "highImpactHighEffort": [<indices>],
-          "lowImpactLowEffort": [<indices>],
-          "lowImpactHighEffort": [<indices>]
-        }
-      }
-    `;
+    const prompt = getATSOptimizerPrompt(resume, jobDescription, currentScore);
 
     // Get session preferences for model selection
     const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
