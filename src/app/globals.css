@@ -322,13 +322,15 @@
   }
 
   .resume-output-container {
-    @apply rounded-lg shadow-lg p-6 mb-6 border border-emerald-500/20 dark:border-emerald-800/30 bg-white/10 dark:bg-gray-900/50 backdrop-blur-lg;
+    @apply rounded-lg shadow-lg p-6 mb-6 border border-emerald-500/20 dark:border-emerald-800/30 bg-white/10 dark:bg-gray-900/50 backdrop-blur-lg min-w-0 overflow-x-hidden;
   }
 
   /* Tailored resume preview - improved legibility */
   .resume-prose {
     @apply leading-relaxed;
     line-height: 1.6;
+    overflow-wrap: break-word;
+    word-break: break-all;
   }
 
   .resume-prose h1 {

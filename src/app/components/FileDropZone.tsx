@@ -22,7 +22,6 @@ export default function FileDropZone({
   const processFile = useCallback(
     async (file: File) => {
       if (!file) return;
-
       const isPdf = file.type === "application/pdf";
       const isTxt = file.type === "text/plain" || file.name.endsWith(".txt");
 

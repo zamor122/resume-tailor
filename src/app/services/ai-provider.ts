@@ -2,6 +2,15 @@ import type { AIProvider, ModelOptions, GenerateContentResult } from '@/app/type
 import { parseModelKey, getModelConfig } from '@/app/config/models';
 import { DEFAULT_MODEL } from '@/app/config/models';
 import { isRateLimitError as checkRateLimit } from './error-utils';
+import { OpenAIProvider } from './providers/openai';
+import { AnthropicProvider } from './providers/anthropic';
+import { GeminiProvider } from './providers/gemini';
+import { CerebrasProvider } from './providers/cerebras';
+import { DeepSeekProvider } from './providers/deepseek';
+import { GroqProvider } from './providers/groq';
+import { MistralProvider } from './providers/mistral';
+import { HuggingFaceProvider } from './providers/huggingface';
+import { OpenRouterProvider } from './providers/openrouter';
 
 export { isRateLimitError, isModelUnavailableError } from './error-utils';
 
@@ -30,42 +39,24 @@ export function createProvider(
   apiKey?: string
 ): AIProvider {
   switch (provider) {
-    case 'openai': {
-      const { OpenAIProvider } = require('./providers/openai');
+    case 'openai':
       return new OpenAIProvider(modelId, apiKey);
-    }
-    case 'anthropic': {
-      const { AnthropicProvider } = require('./providers/anthropic');
+    case 'anthropic':
       return new AnthropicProvider(modelId, apiKey);
-    }
-    case 'gemini': {
-      const { GeminiProvider } = require('./providers/gemini');
+    case 'gemini':
       return new GeminiProvider(modelId, apiKey);
-    }
-    case 'cerebras': {
-      const { CerebrasProvider } = require('./providers/cerebras');
+    case 'cerebras':
       return new CerebrasProvider(modelId, apiKey);
-    }
-    case 'deepseek': {
-      const { DeepSeekProvider } = require('./providers/deepseek');
+    case 'deepseek':
       return new DeepSeekProvider(modelId, apiKey);
-    }
-    case 'groq': {
-      const { GroqProvider } = require('./providers/groq');
+    case 'groq':
       return new GroqProvider(modelId, apiKey);
-    }
-    case 'mistral': {
-      const { MistralProvider } = require('./providers/mistral');
+    case 'mistral':
       return new MistralProvider(modelId, apiKey);
-    }
-    case 'huggingface': {
-      const { HuggingFaceProvider } = require('./providers/huggingface');
+    case 'huggingface':
       return new HuggingFaceProvider(modelId, apiKey);
-    }
-    case 'openrouter': {
-      const { OpenRouterProvider } = require('./providers/openrouter');
+    case 'openrouter':
       return new OpenRouterProvider(modelId, apiKey);
-    }
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }

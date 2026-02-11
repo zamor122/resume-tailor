@@ -7,6 +7,18 @@ afterEach(() => {
   cleanup();
 });
 
+// Mock AuthContext
+vi.mock('@/app/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: null,
+    loading: false,
+    signIn: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+    signInWithOAuth: vi.fn(),
+  }),
+}));
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -40,6 +52,8 @@ vi.mock('next/script', () => ({
 
 // Mock environment variables
 process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3000';
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
 // NODE_ENV is read-only; Vitest sets it to 'test' when running tests
 
 // Mock window.matchMedia

@@ -10,7 +10,7 @@ describe('Evaluation Prompts', () => {
     it('should generate a relevancy score prompt', () => {
       const prompt = getRelevancyScorePrompt('Job description', 'Resume content');
 
-      expect(prompt).toContain('ATS');
+      expect(prompt).toContain('resume evaluator');
       expect(prompt).toContain('Job description');
       expect(prompt).toContain('Resume content');
       expect(prompt).toContain('0-100');

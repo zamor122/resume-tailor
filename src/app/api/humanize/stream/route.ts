@@ -10,6 +10,7 @@ import { checkApiRateLimit, trackRateLimitHit, estimateTokens } from "@/app/util
 import { cleanJobDescription as cleanJobDescriptionUtil } from "@/app/utils/jobDescriptionCleaner";
 import { sanitizeResumeForATS } from "@/app/utils/atsSanitizer";
 import { looksLikeCompanyName } from "@/app/utils/companyNameValidator";
+import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
 
 // Changed to nodejs runtime because Cerebras SDK requires Node.js modules
 export const runtime = 'nodejs';
@@ -42,6 +43,17 @@ export async function POST(req: NextRequest) {
       JSON.stringify({ error: "Missing resume or job description" }),
       {
         status: 400,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  // Auth required before tailoring - first 3 resumes free for signed-in users
+  if (!userId) {
+    return new Response(
+      JSON.stringify({ error: "Sign in to tailor your resume. Your first 3 are free.", requireAuth: true }),
+      {
+        status: 401,
         headers: { "Content-Type": "application/json" },
       }
     );
@@ -225,7 +237,7 @@ export async function POST(req: NextRequest) {
         // Calculate baseline ATS score before generation
         streamClosed = !sendSSE(controller, "status", {
           stage: "preprocessing",
-          message: "Calculating baseline ATS score...",
+          message: "Calculating baseline job match score...",
           progress: 35,
         });
         if (streamClosed) return;
@@ -345,6 +357,7 @@ export async function POST(req: NextRequest) {
         }
 
         tailoredResume = sanitizeResumeForATS(tailoredResume);
+        tailoredResume = deduplicateResumeSections(tailoredResume);
 
         // Stream sections as they're processed
         const sections = tailoredResume.split(/\n(?=#|\n)/);
@@ -364,7 +377,7 @@ export async function POST(req: NextRequest) {
         // Step 3: Post-Generation - Use MCP Tools (Parallel, Deterministic, No AI Calls)
         streamClosed = !sendSSE(controller, "status", {
           stage: "scoring",
-          message: "Calculating ATS score...",
+          message: "Calculating job match score...",
           progress: 90,
         });
         if (streamClosed) return;
@@ -498,11 +511,8 @@ export async function POST(req: NextRequest) {
         streamClosed = !sendSSE(controller, "complete", {
           tailoredResume,
           improvementMetrics,
-          matchScore: {
-            before: beforeScore,
-            after: afterScore,
-          },
-          metrics: beforeMetrics && afterMetrics ? { before: beforeMetrics, after: afterMetrics } : undefined,
+          matchScore: afterScore,
+          metrics: afterMetrics ?? undefined,
           validationResult,
           contentMap: obfuscationResult.contentMap,
           freeReveal: obfuscationResult.freeReveal,

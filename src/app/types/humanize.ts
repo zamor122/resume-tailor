@@ -23,8 +23,10 @@ export interface HumanizeResponse {
     sectionsOptimized?: number;
     qualityScore?: number;
   };
-  matchScore?: { before: number; after: number };
-  metrics?: { before: ResumeMetricsSnapshot; after: ResumeMetricsSnapshot };
+  /** Job match score (optimized resume) - we no longer display before scores */
+  matchScore?: number;
+  /** Metrics for the optimized resume - we no longer display before metrics */
+  metrics?: ResumeMetricsSnapshot;
   qualityMetrics?: Record<string, unknown>;
   validationResult?: unknown;
   companyResearch?: unknown;

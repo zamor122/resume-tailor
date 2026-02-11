@@ -8,83 +8,60 @@ interface ImprovementHighlightsProps {
     atsKeywordsMatched?: number;
     activeVoiceConversions?: number;
     sectionsOptimized?: number;
-    matchScore?: { before: number; after: number };
+    matchScore?: number;
   };
-  beforeMetrics?: ResumeMetricsSnapshot | null;
-  afterMetrics?: ResumeMetricsSnapshot | null;
+  metricsSnapshot?: ResumeMetricsSnapshot | null;
 }
 
 export default function ImprovementHighlights({
   metrics,
-  beforeMetrics,
-  afterMetrics,
+  metricsSnapshot,
 }: ImprovementHighlightsProps) {
   const highlights: Array<{ icon: string; text: string; color: string }> = [];
 
-  if (beforeMetrics && afterMetrics) {
-    if (beforeMetrics.jdCoverage && afterMetrics.jdCoverage && afterMetrics.jdCoverage.total > 0) {
-      const beforePct = beforeMetrics.jdCoverage.percentage;
-      const afterPct = afterMetrics.jdCoverage.percentage;
-      const delta = afterPct - beforePct;
+  if (metricsSnapshot) {
+    if (metricsSnapshot.jdCoverage && metricsSnapshot.jdCoverage.total > 0) {
       highlights.push({
         icon: "📋",
-        text: `JD coverage: ${beforePct}% → ${afterPct}%${delta > 0 ? ` (+${delta}%)` : ""}`,
+        text: `JD coverage: ${metricsSnapshot.jdCoverage.percentage}%`,
         color: "text-green-400",
       });
     }
-    if (
-      beforeMetrics.criticalKeywords &&
-      afterMetrics.criticalKeywords &&
-      afterMetrics.criticalKeywords.total > 0
-    ) {
-      const before = beforeMetrics.criticalKeywords;
-      const after = afterMetrics.criticalKeywords;
+    if (metricsSnapshot.criticalKeywords && metricsSnapshot.criticalKeywords.total > 0) {
+      const kw = metricsSnapshot.criticalKeywords;
       highlights.push({
         icon: "🎯",
-        text: `Critical keywords: ${before.matched}/${before.total} → ${after.matched}/${after.total}`,
+        text: `Critical keywords: ${kw.matched}/${kw.total}`,
         color: "text-green-400",
       });
     }
-    if (beforeMetrics.concreteEvidence && afterMetrics.concreteEvidence) {
-      const beforePct = beforeMetrics.concreteEvidence.percentage;
-      const afterPct = afterMetrics.concreteEvidence.percentage;
-      if (afterPct > beforePct) {
-        highlights.push({
-          icon: "📊",
-          text: `Bullets with concrete evidence: ${beforePct}% → ${afterPct}%`,
-          color: "text-blue-400",
-        });
-      }
+    if (metricsSnapshot.concreteEvidence) {
+      highlights.push({
+        icon: "📊",
+        text: `Bullets with concrete evidence: ${metricsSnapshot.concreteEvidence.percentage}%`,
+        color: "text-blue-400",
+      });
     }
-    if (
-      typeof beforeMetrics.platformOwnership === "number" &&
-      typeof afterMetrics.platformOwnership === "number" &&
-      afterMetrics.platformOwnership > beforeMetrics.platformOwnership
-    ) {
+    if (typeof metricsSnapshot.platformOwnership === "number") {
       highlights.push({
         icon: "🏗️",
-        text: `Platform ownership signals: ${beforeMetrics.platformOwnership} → ${afterMetrics.platformOwnership}`,
+        text: `Platform ownership signals: ${metricsSnapshot.platformOwnership}`,
         color: "text-purple-400",
       });
     }
-    if (beforeMetrics.skimSuccess && afterMetrics.skimSuccess) {
-      const beforePct = beforeMetrics.skimSuccess.percentage;
-      const afterPct = afterMetrics.skimSuccess.percentage;
-      if (afterPct > beforePct) {
-        highlights.push({
-          icon: "⚡",
-          text: `Skim success: ${beforePct}% → ${afterPct}%`,
-          color: "text-yellow-400",
-        });
-      }
+    if (metricsSnapshot.skimSuccess) {
+      highlights.push({
+        icon: "⚡",
+        text: `Skim success: ${metricsSnapshot.skimSuccess.percentage}%`,
+        color: "text-yellow-400",
+      });
     }
   }
 
-  if (highlights.length === 0 && metrics.matchScore) {
-    const improvement = metrics.matchScore.after - metrics.matchScore.before;
+  if (highlights.length === 0 && typeof metrics.matchScore === "number") {
     highlights.push({
       icon: "📈",
-      text: `Match score: ${metrics.matchScore.before}% → ${metrics.matchScore.after}%${improvement > 0 ? ` (+${improvement}%)` : ""}`,
+      text: `Job Match: ${metrics.matchScore}%`,
       color: "text-green-400",
     });
   }

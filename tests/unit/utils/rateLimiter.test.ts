@@ -86,15 +86,15 @@ describe('rateLimiter utilities', () => {
 
   describe('getRateLimitStatus', () => {
     it('should return zero status for new IP/endpoint', () => {
-      const status = getRateLimitStatus('127.0.0.1', '/api/test');
+      const status = getRateLimitStatus(`test-${Date.now()}-${Math.random()}`, '/api/status-test');
       expect(status.perMinute.current).toBe(0);
       expect(status.perHour.current).toBe(0);
       expect(status.perDay.current).toBe(0);
     });
 
     it('should track current usage across windows', () => {
-      const ip = '127.0.0.1';
-      const endpoint = '/api/test';
+      const ip = `test-${Date.now()}-${Math.random()}`;
+      const endpoint = '/api/status-test';
       
       // Make some requests
       checkRateLimit(ip, endpoint);
@@ -108,8 +108,8 @@ describe('rateLimiter utilities', () => {
     });
 
     it('should respect window boundaries', async () => {
-      const ip = '127.0.0.1';
-      const endpoint = '/api/test';
+      const ip = `test-${Date.now()}-${Math.random()}`;
+      const endpoint = '/api/window-test';
       
       checkRateLimit(ip, endpoint);
       

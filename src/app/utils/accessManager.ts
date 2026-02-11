@@ -1,6 +1,6 @@
 import { supabase } from "@/app/lib/supabase/client";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
-import { getTierConfig } from "@/app/config/pricing";
+import { getTierConfig, FREE_RESUME_LIMIT } from "@/app/config/pricing";
 
 export interface AccessInfo {
   hasAccess: boolean;
@@ -189,4 +189,33 @@ export function isAccessExpired(expiresAt: Date | null): boolean {
  * Get upgrade options (uses upgradeCalculator)
  */
 export { getUpgradeOptions } from '@/app/utils/upgradeCalculator';
+
+/**
+ * Get IDs of the user's first N resumes by created_at (oldest first)
+ * Used for "first 3 free" - these resumes get full access without payment
+ */
+export async function getFreeResumeIdsServer(userId: string): Promise<string[]> {
+  if (!userId) return [];
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('resumes')
+      .select('id')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(FREE_RESUME_LIMIT);
+    if (error || !data) return [];
+    return data.map((r) => r.id);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Check if a resume is within the user's first N free resumes (server-side)
+ */
+export async function isWithinFreeResumeLimitServer(resumeId: string, userId: string): Promise<boolean> {
+  if (!resumeId || !userId) return false;
+  const ids = await getFreeResumeIdsServer(userId);
+  return ids.includes(resumeId);
+}
 

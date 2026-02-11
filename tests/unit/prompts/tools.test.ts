@@ -63,7 +63,7 @@ describe('Tool Prompts', () => {
     it('should generate an ATS optimizer prompt', () => {
       const prompt = getATSOptimizerPrompt('Resume', 'Job description', 60);
 
-      expect(prompt).toContain('ATS optimization expert');
+      expect(prompt).toContain('resume optimization expert');
       expect(prompt).toContain('Resume');
       expect(prompt).toContain('Job description');
       expect(prompt).toContain('60');

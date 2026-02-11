@@ -20,7 +20,7 @@ ${resume.substring(0, 4000)}
     : "";
 
   return `
-Extract keywords from this job description for ATS/resume optimization.
+Extract keywords from this job description for resume tailoring and job match optimization.
 ${jobTitle ? `Job title: ${jobTitle}` : ""}
 ${resumeContext}
 

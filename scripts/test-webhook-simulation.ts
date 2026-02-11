@@ -32,7 +32,7 @@ function loadEnv() {
 
 const envVars = loadEnv();
 const stripe = new Stripe(envVars.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-12-15.clover',
+  apiVersion: '2026-01-28.clover',
 });
 
 async function simulateWebhook() {

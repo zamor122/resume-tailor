@@ -17,8 +17,9 @@ interface ResumeData {
   obfuscatedResume: string;
   contentMap?: Record<string, string> | null;
   jobDescription?: string;
-  matchScore?: { before: number; after: number };
-  metrics?: { before: ResumeMetricsSnapshot; after: ResumeMetricsSnapshot };
+  jobTitle?: string | null;
+  matchScore?: number;
+  metrics?: ResumeMetricsSnapshot;
   improvementMetrics?: {
     quantifiedBulletsAdded?: number;
     atsKeywordsMatched?: number;
@@ -83,7 +84,8 @@ export default function ResumeDetailPage() {
           obfuscatedResume: json.obfuscatedResume ?? "",
           contentMap: json.contentMap,
           jobDescription: json.jobDescription,
-          matchScore: json.matchScore ?? { before: 0, after: 0 },
+          jobTitle: json.jobTitle ?? null,
+          matchScore: typeof json.matchScore === "number" ? json.matchScore : 0,
           metrics: json.metrics ?? undefined,
           improvementMetrics: json.improvementMetrics ?? {},
           freeReveal: json.freeReveal ?? null,
@@ -143,7 +145,7 @@ export default function ResumeDetailPage() {
   }
 
   const displayResume = data.isUnlocked ? data.tailoredResume : data.obfuscatedResume;
-  const matchScore = data.matchScore ?? { before: 0, after: 0 };
+  const matchScore = data.matchScore ?? 0;
   const metrics = {
     ...data.improvementMetrics,
     matchScore,
@@ -167,10 +169,10 @@ export default function ResumeDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        <div className="md:col-span-8 space-y-6">
+        <div className="md:col-span-8 space-y-6 min-w-0">
           <div className="output-container">
             <h2 className="text-2xl font-semibold mb-4 gradient-text-emerald">Your Tailored Resume</h2>
-            <PaymentGate resumeId={data.resumeId} onUnlock={() => {}}>
+            <PaymentGate resumeId={data.resumeId} onUnlock={() => {}} isUnlocked={data.isUnlocked}>
               {data.freeReveal && !data.isUnlocked && (
                 <FreeReveal
                   section={data.freeReveal.section}
@@ -178,7 +180,12 @@ export default function ResumeDetailPage() {
                   improvedText={data.freeReveal.improvedText}
                 />
               )}
-              <TailoredResumeOutput newResume={displayResume} loading={false} />
+              <TailoredResumeOutput
+                newResume={displayResume}
+                loading={false}
+                showDownload={data.isUnlocked}
+                downloadJobTitle={data.jobTitle ?? undefined}
+              />
             </PaymentGate>
           </div>
         </div>
@@ -189,54 +196,42 @@ export default function ResumeDetailPage() {
             </h3>
             <div className="flex items-center gap-4">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Your resume</p>
-                <p className="text-3xl font-bold text-gray-700 dark:text-gray-300">
-                  {matchScore.before}%
-                </p>
-              </div>
-              <span className="text-2xl text-gray-400">→</span>
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Optimized</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Job Match</p>
                 <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {matchScore.after}%
+                  {matchScore}%
                 </p>
               </div>
-              {matchScore.after - matchScore.before > 0 && (
-                <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-                  +{matchScore.after - matchScore.before} pts
-                </span>
-              )}
             </div>
-            {data.metrics?.before && data.metrics?.after && (
+            {data.metrics && (
               <div className="mt-4 space-y-2 text-sm">
-                {data.metrics.before.jdCoverage && data.metrics.after.jdCoverage && data.metrics.after.jdCoverage.total > 0 && (
+                {data.metrics.jdCoverage && data.metrics.jdCoverage.total > 0 && (
                   <div className="flex justify-between text-gray-600 dark:text-gray-400">
                     <span>JD coverage</span>
-                    <span>{data.metrics.before.jdCoverage.percentage}% → {data.metrics.after.jdCoverage.percentage}%</span>
+                    <span>{data.metrics.jdCoverage.percentage}%</span>
                   </div>
                 )}
-                {data.metrics.before.criticalKeywords && data.metrics.after.criticalKeywords && data.metrics.after.criticalKeywords.total > 0 && (
+                {data.metrics.criticalKeywords && data.metrics.criticalKeywords.total > 0 && (
                   <div className="flex justify-between text-gray-600 dark:text-gray-400">
                     <span>Critical keywords</span>
-                    <span>{data.metrics.before.criticalKeywords.matched}/{data.metrics.before.criticalKeywords.total} → {data.metrics.after.criticalKeywords.matched}/{data.metrics.after.criticalKeywords.total}</span>
+                    <span>{data.metrics.criticalKeywords.matched}/{data.metrics.criticalKeywords.total}</span>
                   </div>
                 )}
-                {data.metrics.before.concreteEvidence && data.metrics.after.concreteEvidence && (
+                {data.metrics.concreteEvidence && (
                   <div className="flex justify-between text-gray-600 dark:text-gray-400">
                     <span>Concrete evidence</span>
-                    <span>{data.metrics.before.concreteEvidence.percentage}% → {data.metrics.after.concreteEvidence.percentage}%</span>
+                    <span>{data.metrics.concreteEvidence.percentage}%</span>
                   </div>
                 )}
-                {typeof data.metrics.before.platformOwnership === "number" && typeof data.metrics.after.platformOwnership === "number" && (
+                {typeof data.metrics.platformOwnership === "number" && (
                   <div className="flex justify-between text-gray-600 dark:text-gray-400">
                     <span>Platform signals</span>
-                    <span>{data.metrics.before.platformOwnership} → {data.metrics.after.platformOwnership}</span>
+                    <span>{data.metrics.platformOwnership}</span>
                   </div>
                 )}
-                {data.metrics.before.skimSuccess && data.metrics.after.skimSuccess && (
+                {data.metrics.skimSuccess && (
                   <div className="flex justify-between text-gray-600 dark:text-gray-400">
                     <span>Skim success</span>
-                    <span>{data.metrics.before.skimSuccess.percentage}% → {data.metrics.after.skimSuccess.percentage}%</span>
+                    <span>{data.metrics.skimSuccess.percentage}%</span>
                   </div>
                 )}
               </div>
@@ -266,8 +261,7 @@ export default function ResumeDetailPage() {
             </h3>
             <ImprovementHighlights
               metrics={metrics}
-              beforeMetrics={data.metrics?.before ?? null}
-              afterMetrics={data.metrics?.after ?? null}
+              metricsSnapshot={data.metrics ?? null}
             />
           </div>
         </div>

@@ -36,6 +36,14 @@ export async function POST(req: NextRequest) {
       ? cleanJobDescription(jobDescription)
       : null;
 
+    // Normalize match_score: accept number or { before, after }
+    const matchScoreForDb =
+      typeof matchScore === "number"
+        ? { after: matchScore }
+        : matchScore && typeof matchScore === "object"
+          ? matchScore
+          : {};
+
     // Prepare insert data
     const insertData: any = {
       original_content: originalResume,
@@ -43,7 +51,7 @@ export async function POST(req: NextRequest) {
       obfuscated_content: obfuscationResult.obfuscatedResume,
       content_map: obfuscationResult.contentMap,
       job_description: cleanedJobDescription,
-      match_score: matchScore || {},
+      match_score: matchScoreForDb,
       improvement_metrics: improvementMetrics || {},
       free_reveal: obfuscationResult.freeReveal,
     };

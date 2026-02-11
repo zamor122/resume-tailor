@@ -135,6 +135,15 @@ export async function POST(req: NextRequest) {
 
     const config = getPipeline(pipelineId);
 
+    // Auth required when pipeline includes tailor step - first 3 resumes free for signed-in users
+    const hasTailorStep = config.steps.some((s) => s.internalStep === "tailor");
+    if (hasTailorStep && !userId) {
+      return NextResponse.json(
+        { error: "Sign in to tailor your resume. Your first 3 are free.", requireAuth: true },
+        { status: 401 }
+      );
+    }
+
     if (config.requiresResume && resume.trim().length < 100) {
       return NextResponse.json(
         { error: "Resume must be at least 100 characters" },

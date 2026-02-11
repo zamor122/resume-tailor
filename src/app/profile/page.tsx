@@ -6,16 +6,15 @@ import AuthModal from "@/app/components/AuthModal";
 import TierSelectionModal from "@/app/components/TierSelectionModal";
 import { hasActiveAccess, getAccessInfo } from "@/app/utils/accessManager";
 import { useRouter } from "next/navigation";
+import { downloadResumeAsPdf, downloadResumeAsMarkdown, resumeDownloadFilename } from "@/app/utils/resumeDownload";
 
 interface ResumeItem {
   id: string;
   createdAt: string;
   jobTitle: string;
-  matchScore: {
-    before: number;
-    after: number;
-  };
+  matchScore: number;
   improvementMetrics: Record<string, unknown>;
+  isUnlocked?: boolean;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -31,6 +30,8 @@ export default function ProfilePage() {
   const [openingPortal, setOpeningPortal] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
   const [accessInfo, setAccessInfo] = useState<any>(null);
+  const [downloadDropdownId, setDownloadDropdownId] = useState<string | null>(null);
+  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const router = useRouter();
 
   const fetchResumes = useCallback(async () => {
@@ -127,7 +128,8 @@ export default function ProfilePage() {
     }
   };
 
-  const handleDownload = async (resumeId: string) => {
+  const handleDownload = async (resumeId: string, format: "pdf" | "markdown") => {
+    setDownloadDropdownId(null);
     try {
       const response = await fetch("/api/resume/retrieve", {
         method: "POST",
@@ -150,32 +152,29 @@ export default function ProfilePage() {
       }
 
       const data = await response.json();
-      
-      // Check if user has access (data.isUnlocked indicates time-based access)
+
       if (!data.isUnlocked) {
         alert("You need active time-based access to download resumes. Please purchase access to continue.");
         setTierModalResumeId(resumeId);
         setShowTierModal(true);
         return;
       }
-      
-      // Get the resume title for filename
-      const resume = resumes.find(r => r.id === resumeId);
-      const filename = resume 
-        ? `${resume.jobTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-tailored.txt`
-        : `resume-${resumeId.slice(0, 8)}.txt`;
-      
-      // Create a downloadable text file
+
       const content = data.tailoredResume || data.originalResume || "";
-      const blob = new Blob([content], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const resume = resumes.find((r) => r.id === resumeId);
+      const jobTitle = data.jobTitle || resume?.jobTitle || "";
+      const baseName = resumeDownloadFilename(jobTitle || "resume");
+
+      if (format === "pdf") {
+        setPdfLoadingId(resumeId);
+        try {
+          await downloadResumeAsPdf(content, `${baseName}.pdf`);
+        } finally {
+          setPdfLoadingId(null);
+        }
+      } else {
+        downloadResumeAsMarkdown(content, `${baseName}.md`);
+      }
     } catch (error) {
       console.error("Error downloading resume:", error);
       alert("Failed to download resume. Please try again.");
@@ -289,10 +288,10 @@ export default function ProfilePage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left table-fixed">
                 <thead>
                   <tr className="border-b border-gray-700">
-                    <th className="pb-4 text-sm font-semibold text-gray-300">Job Title</th>
+                    <th className="pb-4 text-sm font-semibold text-gray-300 w-[320px]">Job Title</th>
                     <th className="pb-4 text-sm font-semibold text-gray-300">
                       <span className="inline-flex items-center gap-1.5">
                         Date Created
@@ -318,8 +317,8 @@ export default function ProfilePage() {
                 <tbody>
                   {currentResumes.map((resume) => (
                     <tr key={resume.id} className="border-b border-gray-700/50 hover:bg-gray-800/30 transition-colors">
-                      <td className="py-4 text-white font-medium">
-                        {resume.jobTitle}
+                      <td className="py-4 text-white font-medium w-[320px]" title={resume.jobTitle}>
+                        <span className="block truncate">{resume.jobTitle}</span>
                       </td>
                       <td className="py-4 text-gray-300">
                         {new Date(resume.createdAt).toLocaleDateString("en-US", {
@@ -331,15 +330,9 @@ export default function ProfilePage() {
                         })}
                       </td>
                       <td className="py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400 text-sm">
-                            {resume.matchScore.before}%
-                          </span>
-                          <span className="text-gray-500">→</span>
-                          <span className="text-green-400 font-semibold">
-                            {resume.matchScore.after}%
-                          </span>
-                        </div>
+                        <span className="text-green-400 font-semibold">
+                          {resume.matchScore}%
+                        </span>
                       </td>
                       <td className="py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -349,13 +342,37 @@ export default function ProfilePage() {
                           >
                             View
                           </button>
-                          {hasAccess ? (
-                            <button
-                              onClick={() => handleDownload(resume.id)}
-                              className="px-3 py-1.5 text-sm rounded-lg text-green-400 hover:text-green-300 hover:bg-green-500/10 transition-colors"
-                            >
-                              Download
-                            </button>
+                          {(hasAccess || resume.isUnlocked) ? (
+                            <div className="relative inline-block">
+                              <button
+                                onClick={() => setDownloadDropdownId(downloadDropdownId === resume.id ? null : resume.id)}
+                                disabled={pdfLoadingId === resume.id}
+                                className="px-3 py-1.5 text-sm rounded-lg text-green-400 hover:text-green-300 hover:bg-green-500/10 transition-colors disabled:opacity-50"
+                              >
+                                {pdfLoadingId === resume.id ? "Generating…" : "Download"}
+                              </button>
+                              {downloadDropdownId === resume.id && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={() => setDownloadDropdownId(null)} aria-hidden="true" />
+                                  <div className="absolute right-0 mt-1 py-1 w-44 rounded-lg bg-gray-800 border border-gray-600 z-20 shadow-xl">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDownload(resume.id, "pdf")}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-t-lg"
+                                    >
+                                      Download as PDF
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDownload(resume.id, "markdown")}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-b-lg"
+                                    >
+                                      Download as Markdown
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           ) : (
                             <button
                               onClick={() => {

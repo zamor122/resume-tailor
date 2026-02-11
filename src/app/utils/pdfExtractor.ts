@@ -13,11 +13,8 @@ async function getPdfjsLib() {
   }
   
   if (!pdfjsLib) {
-    pdfjsLib = await import('pdfjs-dist');
-    
-    // Use local worker file from public folder (most reliable, no CDN dependency)
-    // The worker file is copied to public/ during build
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+    // Use webpack build - bundles the correct worker from the same package (avoids version mismatch)
+    pdfjsLib = await import('pdfjs-dist/webpack.mjs');
   }
   
   return pdfjsLib;
@@ -84,6 +81,7 @@ export async function extractTextFromPDF(file: File): Promise<PDFExtractionResul
     };
   }
 }
+
 
 /**
  * Check if a file is a PDF

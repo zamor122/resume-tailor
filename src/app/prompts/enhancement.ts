@@ -33,7 +33,7 @@ ADDITIVE QUALITY RULES:
 - When adding metrics, prefer attribution (e.g., "measured by X") when plausible.
 - Do NOT introduce abstract polished phrases (e.g., "culture-focused approach," "security-first design patterns," "AI-enhanced solutions," "leveraging X to drive," "enabling/facilitating/empowering" as openers).
 - When adding, prefer concrete over abstract (e.g., "Python and Django" over "Python-based microservices").
-- Preserve critical JD keywords from base resume when adding—never remove job-critical terms in the name of refinement (ATS safety).
+- Preserve critical JD keywords from base resume when adding—never remove job-critical terms in the name of refinement.
 - Allow personal phrasing ("worked closely with," "responsible for," "ended up owning") when natural—don't over-polish into abstract leadership language.
 
 ADDITIONS ALLOWED:

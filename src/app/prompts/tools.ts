@@ -11,7 +11,7 @@
  */
 export function getKeywordAnalyzerPrompt(jobDescription: string, industry?: string): string {
   return `
-      Analyze the following job description and extract industry-specific keywords that are critical for ATS systems and recruiters.
+      Analyze the following job description and extract industry-specific keywords that are critical for recruiters and job match.
       
       CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact numbers, frequencies, and specific resume sections.
       - Require keyword frequency counts (exact number of occurrences)
@@ -80,7 +80,7 @@ export function getKeywordAnalyzerPrompt(jobDescription: string, industry?: stri
             "keyword": "<keyword>",
             "reason": "<specific reason why it's important>",
             "suggestion": "<specific action: exact section and example phrase>",
-            "expectedImpact": "<how this improves ATS match>",
+            "expectedImpact": "<how this improves job match>",
             "priority": "<critical|high|medium|low>"
           }
         ],
@@ -418,12 +418,12 @@ export function getMultiJobComparisonPrompt(resume: string, jobDescs: any[]): st
 }
 
 /**
- * ATS optimizer prompt
+ * Job match optimizer prompt
  * Used by: /api/tools/ats-optimizer/route.ts
  */
 export function getATSOptimizerPrompt(resume: string, jobDescription: string, currentScore?: number): string {
   return `
-      You are an ATS optimization expert. Analyze this resume and provide REAL-TIME, ACTIONABLE suggestions to improve its ATS compatibility score.
+      You are a resume optimization expert. Analyze this resume and provide REAL-TIME, ACTIONABLE suggestions to improve its job match score.
       
       CRITICAL: Provide SPECIFIC, ACTIONABLE data. Avoid generic advice. Include exact numbers, percentages, timeframes, and concrete examples.
       - Require specific score improvements per action (e.g., "+5 points", not "improves score")
@@ -431,7 +431,7 @@ export function getATSOptimizerPrompt(resume: string, jobDescription: string, cu
       - Include time estimates for each fix (e.g., "2 minutes", "15 minutes")
       - Calculate ROI (score gain / time invested)
       
-      Current ATS Score: ${currentScore || "Not provided"}
+      Current Job Match Score: ${currentScore || "Not provided"}
       
       ${jobDescription ? `Target Job Description:\n${jobDescription.substring(0, 3000)}\n\n` : ''}
       
@@ -453,7 +453,7 @@ export function getATSOptimizerPrompt(resume: string, jobDescription: string, cu
             "roi": <number, impact points per minute>,
             "before": "<exact current text>",
             "after": "<exact improved text>",
-            "reason": "<why this improves ATS parsing>"
+            "reason": "<why this improves job match>"
           }
         ],
         "keywordOptimization": {

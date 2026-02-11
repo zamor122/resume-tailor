@@ -2,16 +2,16 @@
  * CENTRALIZED PROMPTS - EVALUATION & VALIDATION
  * 
  * This file contains prompts for evaluating resumes, calculating scores, and validation.
- * Used by: /api/relevancy/route.ts, /api/validate-resume/route.ts, /api/ai-detection/route.ts
+ * Used by: /api/validate-resume/route.ts, /api/ai-detection/route.ts
  */
 
 /**
- * ATS relevancy scoring prompt
- * Used by: /api/relevancy/route.ts
+ * Job relevancy scoring prompt
+ * Used by: /api/validate-resume/route.ts, /api/ai-detection/route.ts
  */
 export function getRelevancyScorePrompt(jobDescription: string, resume: string): string {
   return `
-      You are an expert ATS (Applicant Tracking System) evaluator. Your task is to analyze how well a resume matches a job description.
+      You are an expert resume evaluator. Your task is to analyze how well a resume matches a job description for recruiter review.
       
       Job Description:
       """

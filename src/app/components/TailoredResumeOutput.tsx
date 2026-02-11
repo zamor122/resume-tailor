@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import CopyButton from './CopyButton';
+import ResumeDownloadButton from './ResumeDownloadButton';
 import { getProseFontSizeClass } from '@/app/utils/fontSize';
+import { deduplicateResumeSections } from '@/app/utils/resumeSectionDedupe';
 import type { FormatSpec } from '@/app/types/format';
 
 interface TailoredResumeOutputProps {
@@ -11,6 +13,10 @@ interface TailoredResumeOutputProps {
   error?: string;
   fontSize?: "small" | "medium" | "large";
   formatSpec?: FormatSpec | null;
+  /** Show PDF / Markdown download buttons (MLA-style margins). */
+  showDownload?: boolean;
+  /** Job title for download filename. */
+  downloadJobTitle?: string;
 }
 
 const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ 
@@ -20,7 +26,10 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   error,
   fontSize = "medium",
   formatSpec = null,
+  showDownload = false,
+  downloadJobTitle,
 }) => {
+  const displayResume = useMemo(() => deduplicateResumeSections(newResume), [newResume]);
   const proseFontSizeClass = getProseFontSizeClass(fontSize);
   const formatStyles = formatSpec ? {
     fontFamily: formatSpec.fontFamily,
@@ -55,11 +64,20 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
 
   return (
     <div className="resume-output-container bg-white/90 dark:bg-gray-900 backdrop-blur-lg transition-all duration-300">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
           Tailored Resume
         </h2>
-        <CopyButton text={newResume} />
+        <div className="flex items-center gap-2">
+          {showDownload && (
+            <ResumeDownloadButton
+              markdownContent={displayResume}
+              jobTitle={downloadJobTitle}
+              variant="buttons"
+            />
+          )}
+          <CopyButton text={displayResume} />
+        </div>
       </div>
       
       <div
@@ -76,7 +94,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
             li: ({ children }) => <li className="!mb-1">{children}</li>,
           }}
         >
-          {newResume}
+          {displayResume}
         </ReactMarkdown>
       </div>
     </div>

@@ -53,7 +53,7 @@ describe('Tailoring Prompts', () => {
         cleanJobDescription: 'Job',
       });
 
-      expect(prompt).toContain('ATS optimization specialist');
+      expect(prompt).toContain('expert resume-tailoring specialist');
       expect(prompt).toContain('EXACT TERMINOLOGY MATCHING');
       expect(prompt).toContain('KEYWORD DENSITY & PLACEMENT');
       expect(prompt).toContain('SKILL ALIGNMENT');
@@ -77,7 +77,7 @@ describe('Tailoring Prompts', () => {
       expect(prompt).toContain('security-first design patterns');
       expect(prompt).toContain('AI-enhanced');
       expect(prompt).toContain('PREFER CONCRETE OVER ABSTRACT');
-      expect(prompt).toContain('ATS SAFETY RULE');
+      expect(prompt).toContain('preserve job-critical');
       expect(prompt).toContain('preserve job-critical terms');
     });
   });

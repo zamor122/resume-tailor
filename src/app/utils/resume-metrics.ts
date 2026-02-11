@@ -16,13 +16,13 @@ const STOPWORDS = new Set([
 ]);
 
 /**
- * Parse resume into bullet points (lines starting with -, *, •)
+ * Parse resume into bullet points (lines starting with -, *, •, ●, ○)
  */
 function parseBullets(text: string): string[] {
   const lines = text.split(/\n/);
   return lines
-    .filter((line) => /^\s*[-*•]\s+/.test(line))
-    .map((line) => line.replace(/^\s*[-*•]\s*/, "").trim())
+    .filter((line) => /^\s*[-*•●○]\s+/.test(line))
+    .map((line) => line.replace(/^\s*[-*•●○]\s*/, "").trim())
     .filter((line) => line.length >= 15);
 }
 
@@ -50,8 +50,8 @@ export function extractRequirements(jobDescription: string): { requirements: str
   const lower = jobDescription.toLowerCase();
   const requirements: string[] = [];
 
-  // Bullet lines: - * • or 1. 2. etc.
-  const bulletRegex = /(?:^|\n)\s*[-*•]\s*(.+?)(?=\n|$)/gm;
+  // Bullet lines: - * • ● ○ or 1. 2. etc.
+  const bulletRegex = /(?:^|\n)\s*[-*•●○]\s*(.+?)(?=\n|$)/gm;
   const numberedRegex = /(?:^|\n)\s*\d+[.)]\s*(.+?)(?=\n|$)/gm;
 
   let m;

@@ -4,15 +4,26 @@
 
 This project now has comprehensive test coverage for all active functionality. The test suite uses Vitest as the test runner with React Testing Library for component testing.
 
+## Installation
+
+Dependencies are installed with `npm install`. Test-related dev dependencies include:
+
+- `vitest` - Test runner
+- `@vitejs/plugin-react` - React support for Vitest
+- `@testing-library/react` - Component testing
+- `@testing-library/jest-dom` - DOM matchers
+- `@testing-library/user-event` - User interaction simulation
+- `happy-dom` - DOM environment for tests
+
 ## Test Structure
 
 ```
 tests/
-├── setup.ts              # Test setup and global mocks
-├── utils.tsx             # Test utilities and helpers
+├── setup.tsx             # Test setup and global mocks
 ├── unit/
 │   ├── utils/            # Utility function tests
-│   └── services/         # Service function tests
+│   ├── services/         # Service function tests
+│   └── prompts/          # Prompt function tests
 ├── components/           # Component tests
 └── api/                  # API route tests
 ```
@@ -21,13 +32,10 @@ tests/
 
 ```bash
 # Run all tests
-npm test
+npm run test
 
 # Run tests in watch mode
 npm run test:watch
-
-# Run tests with UI
-npm run test:ui
 
 # Run tests with coverage
 npm run test:coverage
@@ -54,19 +62,22 @@ npm run test:coverage
 - ✅ model-fallback.ts - Model fallback logic
 
 ### Components
-- ✅ CopyButton - Copy to clipboard functionality
-- ✅ RealtimeATSScore - Real-time ATS scoring
-- ✅ ToolsPanel - Tools panel with 10 active tools
-- ✅ DiffViewer - Before/after comparison
-- ✅ Navigation - Site navigation
-- ✅ Footer - Site footer
+- ✅ AuthGate - Auth gate with tailor action copy
 - ✅ AuthModal - Authentication modal
+- ✅ CopyButton - Copy to clipboard functionality
+- ✅ Footer - Site footer
+- ✅ Navigation - Site navigation
+- ✅ PaymentGate - Payment gate with isUnlocked bypass
 
 ### API Routes
-- ✅ /api/realtime-ats - Real-time ATS scoring
-- ✅ /api/relevancy - Relevancy scoring
-- ✅ /api/tools/ats-simulator - ATS simulation
+- ✅ /api/ai-detection - AI detection
+- ✅ /api/resume/list - Resume list with isUnlocked
+- ✅ /api/resume/retrieve - Resume retrieve with free-resume logic
 - ✅ /api/resume/save - Resume saving
+- ✅ /api/tailor - Resume tailoring
+- ✅ /api/tools/ats-simulator - ATS simulation
+- ✅ /api/tools/keyword-analyzer - Keyword analysis
+- ✅ /api/validate-resume - Resume validation
 
 ## Dead Code Removed
 
@@ -115,6 +126,8 @@ describe('Component', () => {
   });
 });
 ```
+
+Tests use `@testing-library/user-event` for realistic user interactions.
 
 ### API Route Testing
 ```typescript

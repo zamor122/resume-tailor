@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
-import { createClient } from "@supabase/supabase-js";
+import { getFreeResumeIdsServer } from "@/app/utils/accessManager";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -81,25 +81,29 @@ export async function GET(req: NextRequest) {
       paymentMap.set(payment.resume_id, payment);
     });
 
+    // Get first 3 free resume IDs for user (when userId provided)
+    const freeResumeIds = userId ? await getFreeResumeIdsServer(userId) : [];
+
     // Transform to include metadata and payment status
     const resumeList = (allResumes || []).map((resume) => {
       // Use stored job_title and company_name when available; fallback to parsed job_description
       const displayTitle = buildResumeDisplayTitle(
         resume.job_title,
         resume.company_name,
-        resume.job_description,
-        resume.created_at
+        resume.job_description
       );
 
       const payment = paymentMap.get(resume.id);
+      const isUnlocked = freeResumeIds.includes(resume.id) || !!payment;
       
       return {
         id: resume.id,
         createdAt: resume.created_at,
         jobTitle: displayTitle,
-        matchScore: resume.match_score || { before: 0, after: 0 },
+        matchScore: (resume.match_score as { after?: number; before?: number })?.after ?? (resume.match_score as { after?: number; before?: number })?.before ?? 0,
         improvementMetrics: resume.improvement_metrics || {},
         isPaid: !!payment,
+        isUnlocked,
         payment: payment ? {
           amount: payment.amount_cents / 100,
           paidAt: payment.created_at
@@ -123,38 +127,32 @@ export async function GET(req: NextRequest) {
 
 /**
  * Build resume display title: use stored job_title and company_name when available,
- * otherwise fall back to extracting from job_description.
+ * otherwise fall back to extracting from job_description. No date (created date shown separately in UI).
  */
 function buildResumeDisplayTitle(
   storedJobTitle: string | null | undefined,
   storedCompanyName: string | null | undefined,
-  jobDescription: string | null | undefined,
-  createdAt: string | undefined
+  jobDescription: string | null | undefined
 ): string {
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const date = createdAt ? new Date(createdAt) : new Date();
-  const formattedDate = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
-
   // Prefer stored job_title and company_name (from company-research extraction)
   if (storedJobTitle || storedCompanyName) {
     const titlePart = storedJobTitle?.trim() || "Resume";
     const companyPart = storedCompanyName?.trim();
     if (companyPart) {
-      return `${titlePart} at ${companyPart} - ${formattedDate}`;
+      return `${titlePart} at ${companyPart}`;
     }
-    return `${titlePart} - ${formattedDate}`;
+    return titlePart;
   }
 
   // Fallback: extract from job_description for older resumes
-  if (!jobDescription) return `Resume - ${formattedDate}`;
-  return extractJobTitleFromDescription(jobDescription, formattedDate);
+  if (!jobDescription) return "Resume";
+  return extractJobTitleFromDescription(jobDescription);
 }
 
 /**
  * Extract job title and company from job description (fallback for resumes without stored metadata)
  */
-function extractJobTitleFromDescription(jobDescription: string, formattedDate: string): string {
+function extractJobTitleFromDescription(jobDescription: string): string {
   const lines = jobDescription.split('\n').slice(0, 10);
   let jobTitle = "";
   let company = "";
@@ -190,8 +188,8 @@ function extractJobTitleFromDescription(jobDescription: string, formattedDate: s
     if (jobTitle && company) break;
   }
 
-  if (jobTitle && company) return `${jobTitle} at ${company} - ${formattedDate}`;
-  if (jobTitle) return `${jobTitle} - ${formattedDate}`;
-  return `Resume - ${formattedDate}`;
+  if (jobTitle && company) return `${jobTitle} at ${company}`;
+  if (jobTitle) return jobTitle;
+  return "Resume";
 }
 

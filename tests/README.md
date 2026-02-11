@@ -37,32 +37,34 @@ All prompt functions have unit tests in `tests/unit/prompts/`:
 ## API Route Tests
 
 ### ✅ Routes with Tests
-1. **`/api/relevancy`** - `tests/api/relevancy.test.ts`
-   - Tests relevancy score calculation using `getRelevancyScorePrompt()`
-
-2. **`/api/tailor`** - `tests/api/tailor.test.ts`
+1. **`/api/tailor`** - `tests/api/tailor.test.ts`
    - Tests resume tailoring (forwards to `/api/humanize/stream` using `getTailoringPrompt`)
 
-3. **`/api/tailor/job/title`** - `tests/api/tailor/job/title.test.ts`
+2. **`/api/tailor/job/title`** - `tests/api/tailor/job/title.test.ts`
    - Tests job title extraction using `getJobTitleExtractionPrompt()`
 
-4. **`/api/validate-resume`** - `tests/api/validate-resume.test.ts`
+3. **`/api/validate-resume`** - `tests/api/validate-resume.test.ts`
    - Tests resume validation using `getResumeValidationPrompt()`
 
-5. **`/api/ai-detection`** - `tests/api/ai-detection.test.ts`
+4. **`/api/ai-detection`** - `tests/api/ai-detection.test.ts`
    - Tests AI detection using `getAIDetectionPrompt()`
 
-6. **`/api/tools/ats-simulator`** - `tests/api/tools/ats-simulator.test.ts`
+5. **`/api/tools/ats-simulator`** - `tests/api/tools/ats-simulator.test.ts`
    - Tests ATS simulation using `getATSSimulatorPrompt()`
 
-7. **`/api/tools/keyword-analyzer`** - `tests/api/tools/keyword-analyzer.test.ts`
+6. **`/api/tools/keyword-analyzer`** - `tests/api/tools/keyword-analyzer.test.ts`
    - Tests keyword analysis using `getKeywordAnalyzerPrompt()`
+
+7. **`/api/resume/retrieve`** - `tests/api/resume/retrieve.test.ts`
+   - Tests free-resume and paid access logic
+
+8. **`/api/resume/list`** - `tests/api/resume/list.test.ts`
+   - Tests isUnlocked in response for free resumes
 
 ### ⚠️ Routes Using Prompts (No Tests Yet)
 These routes use centralized prompts but don't have dedicated tests yet:
 - `/api/humanize` - Uses `getTailoringPrompt()`
 - `/api/humanize/stream` - Uses `getTailoringPrompt()`
-- `/api/humanize/diff` - Uses `getDiffExplanationPrompt()`
 - `/api/research-company` - Uses `getCompanyExtractionPrompt()`, `getCompanyResearchPrompt()`, `getJobDescriptionEnhancementPrompt()`
 - `/api/tools/skills-gap` - Uses `getSkillsGapPrompt()`
 - `/api/tools/multi-job-comparison` - Uses `getMultiJobComparisonPrompt()`
@@ -77,22 +79,22 @@ These routes use centralized prompts but don't have dedicated tests yet:
 
 ```bash
 # Run all prompt unit tests
-npm test -- tests/unit/prompts
+npm run test -- tests/unit/prompts
 
 # Run all API tests
-npm test -- tests/api
+npm run test -- tests/api
 
 # Run specific test file
-npm test -- tests/api/relevancy.test.ts
+npm run test -- tests/api/tailor.test.ts
 
 # Run all tests
-npm test
+npm run test
 ```
 
 ## Test Status
 
-✅ **All prompt unit tests passing** (30 tests)
-✅ **All existing API tests updated and passing** (19 tests)
+✅ **All prompt unit tests passing**
+✅ **All existing API tests updated and passing** (222 tests total)
 ⚠️ **Some API routes need tests** (see list above)
 
 

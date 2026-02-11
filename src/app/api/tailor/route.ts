@@ -100,8 +100,8 @@ function improvementMetricsToChanges(metrics?: Record<string, number>): Array<{ 
   }
   if (metrics.atsKeywordsMatched && metrics.atsKeywordsMatched > 0) {
     changes.push({
-      changeDescription: "ATS keywords matched",
-      changeDetails: `Incorporated ${metrics.atsKeywordsMatched} relevant keywords from the job description to improve ATS compatibility.`,
+      changeDescription: "Keywords matched",
+      changeDetails: `Incorporated ${metrics.atsKeywordsMatched} relevant keywords from the job description to improve job match.`,
     });
   }
   if (metrics.activeVoiceConversions && metrics.activeVoiceConversions > 0) {

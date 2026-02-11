@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
-import { getAccessInfoServer } from "@/app/utils/accessManager";
+import { getAccessInfoServer, isWithinFreeResumeLimitServer } from "@/app/utils/accessManager";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -70,18 +70,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify access: user must have active time-based access
+    // Verify access: paid access OR within first 3 free resumes (by created_at)
     let hasAccess = false;
     let accessInfo = null;
 
-    // Check for active time-based access grant
     if (userId) {
       accessInfo = await getAccessInfoServer(userId);
-      hasAccess = accessInfo?.hasAccess || false;
+      const paidAccess = accessInfo?.hasAccess || false;
+      const freeAccess = await isWithinFreeResumeLimitServer(resume.id, userId);
+      hasAccess = paidAccess || freeAccess;
     }
 
     // If no access, return obfuscated content
     if (!hasAccess) {
+      const ms = resume.match_score as { before?: number; after?: number; afterMetrics?: unknown } | null;
       return NextResponse.json({
         success: true,
         originalResume: resume.original_content,
@@ -89,10 +91,9 @@ export async function POST(req: NextRequest) {
         obfuscatedResume: resume.obfuscated_content,
         contentMap: resume.content_map,
         jobDescription: resume.job_description,
-        matchScore: resume.match_score,
-        metrics: resume.match_score?.beforeMetrics && resume.match_score?.afterMetrics
-          ? { before: resume.match_score.beforeMetrics, after: resume.match_score.afterMetrics }
-          : undefined,
+        jobTitle: resume.job_title ?? null,
+        matchScore: ms?.after ?? ms?.before ?? 0,
+        metrics: ms?.afterMetrics ?? undefined,
         improvementMetrics: resume.improvement_metrics,
         freeReveal: resume.free_reveal,
         formatSpec: resume.format_spec ?? null,
@@ -103,6 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Return resume data with access info (unobfuscated since user has access)
+    const ms = resume.match_score as { before?: number; after?: number; afterMetrics?: unknown } | null;
     return NextResponse.json({
       success: true,
       originalResume: resume.original_content,
@@ -110,10 +112,9 @@ export async function POST(req: NextRequest) {
       obfuscatedResume: resume.obfuscated_content,
       contentMap: resume.content_map,
       jobDescription: resume.job_description,
-      matchScore: resume.match_score,
-      metrics: resume.match_score?.beforeMetrics && resume.match_score?.afterMetrics
-        ? { before: resume.match_score.beforeMetrics, after: resume.match_score.afterMetrics }
-        : undefined,
+      jobTitle: resume.job_title ?? null,
+      matchScore: ms?.after ?? ms?.before ?? 0,
+      metrics: ms?.afterMetrics ?? undefined,
       improvementMetrics: resume.improvement_metrics,
       freeReveal: resume.free_reveal,
       formatSpec: resume.format_spec ?? null,

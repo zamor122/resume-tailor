@@ -9,12 +9,15 @@ interface PaymentGateProps {
   children: React.ReactNode;
   resumeId?: string;
   onUnlock?: () => void;
+  /** When true, skip overlay (e.g. first 3 free resumes) */
+  isUnlocked?: boolean;
 }
 
 export default function PaymentGate({
   children,
   resumeId,
   onUnlock,
+  isUnlocked = false,
 }: PaymentGateProps) {
   const { user, loading: authLoading } = useAuth();
   const [hasAccess, setHasAccess] = useState(false);
@@ -61,8 +64,8 @@ export default function PaymentGate({
     );
   }
 
-  if (hasAccess) {
-    // User has paid access, render children normally
+  if (hasAccess || isUnlocked) {
+    // User has paid access or this resume is in first 3 free, render children normally
     return <>{children}</>;
   }
 

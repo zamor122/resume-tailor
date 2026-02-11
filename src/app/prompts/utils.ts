@@ -2,7 +2,7 @@
  * CENTRALIZED PROMPTS - UTILITY FUNCTIONS
  * 
  * This file contains utility prompts for various helper operations.
- * Used by: /api/tailor/job/title/route.ts, /api/research-company/route.ts, /api/humanize/diff/route.ts
+ * Used by: /api/tailor/job/title/route.ts, /api/research-company/route.ts
  */
 
 /**

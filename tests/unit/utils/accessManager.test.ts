@@ -5,14 +5,20 @@ import {
   getAccessInfoServer,
   formatRemainingTime,
   isAccessExpired,
+  getFreeResumeIdsServer,
+  isWithinFreeResumeLimitServer,
 } from '@/app/utils/accessManager';
 import { supabase } from '@/app/lib/supabase/client';
 import { supabaseAdmin } from '@/app/lib/supabase/server';
 import { getTierConfig } from '@/app/config/pricing';
 
-// Mock dependencies
-vi.mock('@/app/lib/supabase/client');
-vi.mock('@/app/lib/supabase/server');
+// Mock dependencies - must provide factories to prevent env checks
+vi.mock('@/app/lib/supabase/client', () => ({
+  supabase: { from: vi.fn() },
+}));
+vi.mock('@/app/lib/supabase/server', () => ({
+  supabaseAdmin: { from: vi.fn() },
+}));
 vi.mock('@/app/config/pricing');
 
 describe('accessManager utilities', () => {
@@ -36,7 +42,7 @@ describe('accessManager utilities', () => {
         gt: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
+        maybeSingle: vi.fn().mockResolvedValue({
           data: { expires_at: futureDate.toISOString(), is_active: true },
           error: null,
         }),
@@ -56,7 +62,7 @@ describe('accessManager utilities', () => {
         gt: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
+        maybeSingle: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'Not found' },
         }),
@@ -73,7 +79,7 @@ describe('accessManager utilities', () => {
         gt: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        single: vi.fn().mockRejectedValue(new Error('Database error')),
+        maybeSingle: vi.fn().mockRejectedValue(new Error('Database error')),
       });
       
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -103,7 +109,7 @@ describe('accessManager utilities', () => {
         gt: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
+        maybeSingle: vi.fn().mockResolvedValue({
           data: {
             tier_purchased: '2D',
             expires_at: futureDate.toISOString(),
@@ -128,7 +134,7 @@ describe('accessManager utilities', () => {
         gt: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
+        maybeSingle: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'Not found' },
         }),
@@ -198,6 +204,84 @@ describe('accessManager utilities', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 1);
       expect(isAccessExpired(futureDate)).toBe(false);
+    });
+  });
+
+  describe('getFreeResumeIdsServer', () => {
+    it('should return empty array for empty userId', async () => {
+      const result = await getFreeResumeIdsServer('');
+      expect(result).toEqual([]);
+    });
+
+    it('should return first N resume IDs by created_at ascending', async () => {
+      (supabaseAdmin.from as any).mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({
+          data: [
+            { id: 'resume-1' },
+            { id: 'resume-2' },
+            { id: 'resume-3' },
+          ],
+          error: null,
+        }),
+      });
+
+      const result = await getFreeResumeIdsServer('user-id');
+      expect(result).toEqual(['resume-1', 'resume-2', 'resume-3']);
+    });
+
+    it('should return empty array on error', async () => {
+      (supabaseAdmin.from as any).mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'DB error' },
+        }),
+      });
+
+      const result = await getFreeResumeIdsServer('user-id');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('isWithinFreeResumeLimitServer', () => {
+    it('should return false for empty resumeId or userId', async () => {
+      expect(await isWithinFreeResumeLimitServer('', 'user-id')).toBe(false);
+      expect(await isWithinFreeResumeLimitServer('resume-1', '')).toBe(false);
+    });
+
+    it('should return true when resume is in free list', async () => {
+      (supabaseAdmin.from as any).mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({
+          data: [{ id: 'resume-1' }, { id: 'resume-2' }, { id: 'resume-3' }],
+          error: null,
+        }),
+      });
+
+      const result = await isWithinFreeResumeLimitServer('resume-2', 'user-id');
+      expect(result).toBe(true);
+    });
+
+    it('should return false when resume is not in free list', async () => {
+      (supabaseAdmin.from as any).mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({
+          data: [{ id: 'resume-1' }, { id: 'resume-2' }, { id: 'resume-3' }],
+          error: null,
+        }),
+      });
+
+      const result = await isWithinFreeResumeLimitServer('resume-99', 'user-id');
+      expect(result).toBe(false);
     });
   });
 });

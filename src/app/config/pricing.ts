@@ -4,6 +4,9 @@
  * This is NOT a subscription - users must purchase again when access expires
  */
 
+/** Number of resumes every authenticated user gets for free (view + download) - first 3 by creation date */
+export const FREE_RESUME_LIMIT = 3;
+
 export interface TimeBasedTier {
   tier: '2D' | '7D' | '30D';
   priceId: string;

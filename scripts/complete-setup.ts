@@ -74,7 +74,7 @@ async function completeSetup() {
     process.exit(1);
   }
   const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: '2025-12-15.clover',
+    apiVersion: '2026-01-28.clover',
   });
 
   console.log('🚀 Retrieving Stripe price IDs...\n');

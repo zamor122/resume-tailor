@@ -6,7 +6,7 @@
  */
 
 /**
- * Main resume tailoring prompt with aggressive ATS optimization
+ * Main resume tailoring prompt with job relevance optimization
  * Used by: /api/humanize/route.ts, /api/humanize/stream/route.ts
  */
 const STRICT_RESTRICTION = `
@@ -48,17 +48,22 @@ export function getTailoringPrompt(params: {
     ? `\n\nJOB TITLE ALIGNMENT: The job title for this role is "${jobTitle}". Align the candidate's experience titles and summary with this role. Use this exact title where appropriate (e.g., in the summary/objective).`
     : "";
 
-  return `You are an expert ATS optimization specialist. Your PRIMARY and MOST IMPORTANT goal is to increase the ATS relevancy score from ${baselineScore} to ${targetScore}+ (${targetImprovement}+ point improvement).${jobTitleInstruction}
+  return `You are an expert resume-tailoring specialist. Your PRIMARY and MOST IMPORTANT goal is to increase the job relevancy score from ${baselineScore} to ${targetScore}+ (${targetImprovement}+ point improvement). Recruiters scan resumes in seconds—tailoring helps them quickly see the match.${jobTitleInstruction}
 
-HUMAN QUALITY TIER (EQUAL PRIORITY WITH ATS SCORE):
+HUMAN QUALITY TIER (EQUAL PRIORITY WITH RELEVANCY SCORE):
 The output must read as if written by an experienced professional, not by an AI. Prioritize human quality alongside keyword optimization.
 - NEVER add an "Other Keywords" section or standalone keyword lists
 - NEVER use bold/highlighted keywords for stuffing
 - Keywords must appear inside full sentences describing real work, never as a bullet list of terms
 
+PROFESSIONAL ONLY (STRICTLY ENFORCED):
+- The resume must be strictly professional and role-focused: skills, experience, outcomes, technologies. No exceptions.
+- Do NOT include politics, sex, gender, gender-aware, gender-inclusive, "inclusive development," "personal commitment to inclusive," inclusivity (in the sense of identity/diversity statements), or any virtue-signaling or non-job-related personal beliefs.
+- No diversity statements, no identity-based or belief-based claims. Focus only on qualifications and achievements.
+
 DE-AI-IFY (REDUCE "AI SMELL"):
 AVOID POLISHED ABSTRACT PHRASES (these trigger "AI-enhanced" detection):
-- "culture-focused approach," "culture building," "inclusive culture"
+- "culture-focused approach," "culture building," "inclusive culture," "inclusive development," "personal commitment to inclusive," "gender-aware," "gender-inclusive"
 - "security-first design patterns," "security-first UI/UX"
 - "AI-enhanced solutions," "AI-enhanced data processing"
 - "modular platforms" (as standalone—use "modular architecture" in context instead)
@@ -78,8 +83,9 @@ PREFER CONCRETE OVER ABSTRACT:
 - Substitutions: "via" → "into" or "with"; "hosted on" → "running on"; "applying X to enhance" → "using them to [verb]"
 - Prefer tool/framework names: "Python and Django" over "Python-based microservices"; "Redis caching" over "caching layer"
 
-⚠️ CRITICAL: The ATS score improvement is THE PRIMARY OBJECTIVE. Everything else is secondary.
-- The tailored resume MUST score at least as high as the original on ATS structure/formatting. Never introduce formatting that breaks ATS parsing (pipes, Unicode bullets, missing headers).
+⚠️ CRITICAL: The relevancy score improvement is THE PRIMARY OBJECTIVE. Everything else is secondary.
+- The tailored resume MUST score at least as high as the original on structure/formatting. Never introduce formatting that hurts readability (pipes, Unicode bullets, missing headers).
+- CRITICAL: The Summary/Objective must NEVER name or reference the company the candidate is applying to (or its products/brands). That company name appears only in the job description—do not copy it into the resume summary.
 
 REQUIRED CONTACT BLOCK FORMAT (copy this structure):
 Name
@@ -92,34 +98,35 @@ LinkedIn/GitHub (if applicable)
 
 Each element on its own line. Never combine with pipes or commas.
 
-ATS FORMATTING (MANDATORY - NEVER VIOLATE):
+RESUME FORMATTING (MANDATORY - NEVER VIOLATE):
 - Contact: BAD: "John Doe | j@e.com | (555) 123-4567"  GOOD: Name on line 1, email on line 2, phone on line 3
 - Bullets: BAD: Unicode (○, •, ●)  GOOD: hyphen (-) or asterisk (*) only
 - Dates: BAD: "May 2017 — October 2022" (em-dash)  GOOD: "May 2017 - October 2022" (hyphen only)
 - Section headers: Use explicit "## Experience", "## Education", "## Skills", "## Summary"
+- Output each section exactly once. Do not repeat a section header (e.g. only one "## Experience"); put all content for that section under a single header.
 
 CURRENT STATUS:
-- Current ATS Match Score: ${baselineScore}/100
-- Target ATS Match Score: ${targetScore}+/100 
+- Current Job Match Score: ${baselineScore}/100
+- Target Job Match Score: ${targetScore}+/100 
 - REQUIRED Improvement: ${targetImprovement}+ points (MANDATORY - this is not optional)
 - If you fail to achieve this improvement, the resume tailoring has FAILED
 
 SCORE IMPROVEMENT STRATEGY:
-The fastest way to improve ATS scores is by adding missing keywords from the job description. Keyword matching accounts for 40-50% of ATS scoring algorithms. Adding missing keywords will have the BIGGEST impact on score improvement.
+The fastest way to improve relevancy scores is by adding missing keywords from the job description. Keyword alignment accounts for 40-50% of how recruiters assess fit. Adding missing keywords will have the BIGGEST impact on score improvement.
 
 STRATEGIC KEYWORD OPTIMIZATION (HIGHEST PRIORITY - THIS IS HOW YOU IMPROVE THE SCORE):
 1. EXACT TERMINOLOGY MATCHING (MOST IMPORTANT):
-   - Use the EXACT same words and phrases from the job description - ATS systems match exact strings
+   - Use the EXACT same words and phrases from the job description - recruiters and hiring systems match exact terminology
    - If job says "REST API", use "REST API" not "RESTful API" or "REST APIs"
    - If job says "Express", use "Express" or "Express.js" - match the exact term
    - Match job title EXACTLY (e.g., if job says "Software Engineer", use that exact phrase, not "Developer" or "Programmer")
    - Include ALL technical skills mentioned in the job description - missing even one can hurt the score significantly
-   - Match industry-specific terminology precisely - ATS systems are literal
+   - Match industry-specific terminology precisely
 
 2. KEYWORD DENSITY & PLACEMENT (CRITICAL FOR SCORE):
    - Add missing keywords from job description in MULTIPLE strategic locations (each location counts):
-     * Summary/Objective section (highest ATS visibility - keywords here are weighted more heavily)
-     * Skills section (MUST list all job-required skills - this is where ATS looks first)
+     * Summary/Objective section (highest visibility - recruiters scan here first)
+     * Skills section (MUST list all job-required skills - recruiters look here first)
      * Each relevant work experience bullet point (at least 2-3 bullets per job should contain job keywords)
      * Project descriptions (if applicable)
    - Aim for 3-5% keyword density for critical terms (if a keyword appears 3 times in job description, it should appear at least once in resume)
@@ -127,13 +134,13 @@ STRATEGIC KEYWORD OPTIMIZATION (HIGHEST PRIORITY - THIS IS HOW YOU IMPROVE THE S
    - Integrate each keyword once in a natural, contextually relevant sentence. Never list keywords separately.
 
 3. SKILL ALIGNMENT (HIGH IMPACT):
-   - Reorder skills section to prioritize job-required skills FIRST (ATS reads top-to-bottom)
+   - Reorder skills section to prioritize job-required skills FIRST (recruiters scan top-to-bottom)
    - Group related skills together as mentioned in job description
    - Add any missing critical skills from job requirements - this is MANDATORY
    - Preserve ALL existing skills - never remove, only add and reorder
    - If job mentions "Express" and resume has "Node.js", add "Express" explicitly (don't assume it's implied)
 
-ATS SAFETY RULE (NEVER VIOLATE):
+KEYWORD SAFETY RULE (NEVER VIOLATE):
 - If a keyword appears only once in the original resume and is critical to the job description (e.g., Terraform, IAM, SIEM, SDK, portal), ensure it still appears at least once after tailoring.
 - Do NOT remove a keyword entirely in the name of concreteness or humanization.
 - When de-AI-ifying, preserve job-critical terms from the original.
@@ -152,12 +159,17 @@ SENTENCE STRUCTURE VARIETY:
 - Outcome-first example: "Achieved 15% growth in active users (measured by user count before and after)."
 - Context-first example: "Led a team of 5 engineers, overseeing biweekly updates and achieving 120% increase in engagement."
 
+CONTENT BOUNDARIES (NEVER VIOLATE):
+- Do NOT mention the application company name (the company from the job description) in the Summary or anywhere in the resume unless it is the candidate's past employer listed under Work Experience. No "creating products for [Company]," "[Company]-style," "at [Company]," or that company's product/brand names in the summary.
+- Company names belong only in Work Experience where the candidate actually worked.
+
 SECTION-BY-SECTION OPTIMIZATION:
-1. SUMMARY/OBJECTIVE:
-   - Summary must read as a coherent 2-3 sentence narrative. Weave in 3-5 job-relevant keywords naturally—never as a list.
-   - First sentence should establish role and years; second should highlight top 2-3 relevant capabilities
-   - Start with job title or key role descriptor from job description
-   - Mention years of experience if relevant to job requirements
+1. SUMMARY/OBJECTIVE (refactored — follow exactly):
+   - Output a full 3–4 sentence professional overview (or 3–4 tight bullets) that summarizes the resume content extremely well. Not 2 sentences; a complete 3–4 sentence or 3–4 bullet overview.
+   - Content: Role title, years of experience, core technologies and skills (from the resume), and 1–2 concrete outcome areas. Weave in 3–5 job-relevant keywords naturally. No company name, no product names from the job posting, no "for [Company]" or "at [Company]".
+   - Tone: Declarative and factual only. No "talk to the user" or pleading language. FORBIDDEN in the summary text: "please consider", "please note", "look at", "consider my", "I would like to", "note that", "feel free to", "happy to", "excited to", "seeking to", "hoping to", "would love to", or any phrase that addresses the reader or asks for consideration. The summary must read as a standalone professional snapshot—facts about the candidate—not a letter or pitch to the reader.
+   - Anti-AI: No "passionate about", "results-driven", "detail-oriented", "proven experience", or similar fluff. Use concrete technologies, role, years, and skills. Sentence structure should vary; avoid symmetrical "Verb + adjective + noun" in every line. The result must sound like a seasoned professional's summary: dense, factual, and distinct.
+   - Format: Either a short paragraph of 3–4 sentences or 3–4 bullet points. Each sentence/bullet must add information (role, scope, technologies, outcomes). No filler.
 
 2. WORK EXPERIENCE:
    - VARY VERB PHRASING (human inconsistency): Mix "Lead" / "Led" / "Owned" / "Create" / "Created" / "Built" — real resumes are inconsistent across bullets.
@@ -203,7 +215,7 @@ PRESERVE AND ENHANCE RICHNESS:
 
 CONTENT ENHANCEMENT STRATEGIES:
 - Remove ALL generic AI fluff words: "enthusiastic", "results-driven", "detail-oriented", "passionate", "hardworking", "team player", "self-motivated", "proven experience", "proven success"
-- Remove ALL abstract polished phrases: "culture-focused approach", "culture building", "inclusive culture", "security-first design patterns", "security-first UI/UX", "AI-enhanced solutions", "AI-enhanced data processing", "modular platforms" (as standalone), "best practices", "industry standard", "cutting-edge" (unless in original), "applying X to enhance", "leveraging X to drive", "enabling", "facilitating", "empowering" as overused sentence openers
+- Remove ALL abstract polished phrases: "culture-focused approach", "culture building", "inclusive culture", "inclusive development", "personal commitment to inclusive", "gender-aware", "gender-inclusive", "security-first design patterns", "security-first UI/UX", "AI-enhanced solutions", "AI-enhanced data processing", "modular platforms" (as standalone), "best practices", "industry standard", "cutting-edge" (unless in original), "applying X to enhance", "leveraging X to drive", "enabling", "facilitating", "empowering" as overused sentence openers. Do NOT add any content about politics, sex, gender, diversity statements, or virtue signaling.
 - Replace with specific, measurable achievements and job-relevant keywords
 - Convert passive voice to active voice with strong action verbs
 - Add metrics to EVERY achievement: numbers, percentages, dollar amounts, timeframes, team sizes, scale/scope
@@ -216,7 +228,7 @@ ${metricsGuidance}
 
 MANDATORY KEYWORD ADDITION (CRITICAL FOR SCORE IMPROVEMENT):
 ${sortedMissing.length > 0 ? `
-⚠️ MISSING KEYWORDS THAT MUST BE ADDED (These are REQUIRED to improve ATS score):
+⚠️ MISSING KEYWORDS THAT MUST BE ADDED (These are REQUIRED to improve job match):
 ${sortedMissing.map((kw, idx) => `${idx + 1}. "${kw}" - MUST be added naturally in at least one location`).join('\n')}
 
 For each missing keyword above, you MUST:
@@ -236,11 +248,11 @@ FAILURE TO ADD THESE KEYWORDS WILL RESULT IN MINIMAL SCORE IMPROVEMENT.
 - Pay special attention to technical skills, frameworks, and tools mentioned in the job description
 `}
 ${keywordContext ? `- Additional keywords to incorporate: ${keywordContext}` : ''}
-${companyContext ? `- Company context: ${companyContext} - align language and values with this company` : ''}
+${companyContext ? `- Company context (industry/role alignment only): ${companyContext}. Use only for industry and role alignment; do NOT name this company or reference its products or brands anywhere in the resume.` : ''}
 
 GRAMMAR AND TONE:
 - Use professional but natural grammar. Vary sentence length.
-- Avoid overly formal or robotic phrasing. The resume should pass both ATS parsing and human "sounds like a real person" review.
+- Avoid overly formal or robotic phrasing. The resume should be readable and sound like a real person wrote it.
 
 ALLOW PERSONAL PHRASING (HUMAN VOICE):
 - Allow occasional first-hand phrasing like: "ended up owning," "responsible for," "worked closely with," "picked up ownership of"
@@ -254,15 +266,18 @@ ALLOW MINOR REDUNDANCY:
 - Slight redundancy signals a human wrote it.
 
 QUALITY REQUIREMENTS:
+- The resume must read as a professional, distinct document—factual, role- and skills-focused—not marketing copy or diversity statements. Like a seasoned professional's resume.
 - Maintain natural, human-readable flow (no keyword stuffing)
 - Ensure all additions are contextually relevant
 - Preserve the candidate's authentic experience and achievements
 - All content must be believable and professional
-- PRESERVE the original resume's ATS-friendly structure. Your output must NEVER be less parseable by ATS than the input.${STRICT_RESTRICTION}
+- PRESERVE the original resume's structure and readability. Your output must NEVER be less clear or parseable than the input.${STRICT_RESTRICTION}
+
+Before returning: Verify the Summary is 3–4 sentences (or 3–4 bullets), contains no application company name or its products/brands, and contains no "please consider", "look at", "consider my", or similar reader-addressing language. Rephrase to declarative, factual overview only if needed.
 
 Return JSON:
 {
-  "tailoredResume": "<complete resume in markdown>",
+  "tailoredResume": "<complete resume in markdown, each section header (## Experience, ## Skills, etc.) appears only once. Summary must NOT name or reference the company being applied to.>",
   "improvementMetrics": {
     "quantifiedBulletsAdded": <number>,
     "atsKeywordsMatched": <number>,

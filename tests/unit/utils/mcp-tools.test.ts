@@ -139,7 +139,7 @@ describe('mcp-tools utilities', () => {
       expect(result.a).toBe('cached-result');
     });
 
-    it('should handle errors in individual calls', async () => {
+    it('should return null for failed calls without rejecting', async () => {
       const calls = [
         { key: 'a', fn: async () => 'result-a' },
         {
@@ -151,7 +151,10 @@ describe('mcp-tools utilities', () => {
         { key: 'c', fn: async () => 'result-c' },
       ];
       
-      await expect(executeParallel(calls)).rejects.toThrow('Test error');
+      const result = await executeParallel(calls);
+      expect(result.a).toBe('result-a');
+      expect(result.b).toBeNull();
+      expect(result.c).toBe('result-c');
     });
   });
 

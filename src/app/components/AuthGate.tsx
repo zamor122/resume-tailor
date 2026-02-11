@@ -83,18 +83,21 @@ export default function AuthGate({
     return <>{children}</>;
   }
 
-  // User not authenticated, wrap children with click handler
+  const tailorCopy = action === "tailor";
+  const title = tailorCopy ? "Sign in to tailor your resume" : `Sign in to ${action}`;
+  const description = tailorCopy ? "Your first 3 resumes are free. Create a free account to get started." : `Create a free account to ${action} your tailored resume and access it anytime.`;
+
   return (
     <>
-      <div onClick={handleClick} className="cursor-pointer">
+      <div onClickCapture={handleClick} className="cursor-pointer">
         {children}
       </div>
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onSuccess={handleAuthSuccess}
-        title={`Sign in to ${action}`}
-        description={`Create a free account to ${action} your tailored resume and access it anytime.`}
+        title={title}
+        description={description}
       />
     </>
   );

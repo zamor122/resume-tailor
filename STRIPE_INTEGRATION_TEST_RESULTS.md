@@ -1,5 +1,5 @@
 # Stripe Integration Test Results
-## API Version: 2025-12-15.clover
+## API Version: 2026-01-28.clover
 
 **Test Date:** January 2025  
 **Status:** ✅ All Critical Features Verified Compatible
@@ -10,7 +10,7 @@
 
 ### ✅ Property Access Verification
 
-All properties accessed in our code are confirmed to exist and remain unchanged in API version `2025-12-15.clover`:
+All properties accessed in our code are confirmed to exist and remain unchanged in API version `2026-01-28.clover`:
 
 | Property | Usage Location | Status | Notes |
 |----------|----------------|--------|-------|
@@ -98,7 +98,7 @@ All webhook event types we handle are confirmed compatible:
 
 ## Conclusion
 
-**✅ Integration is fully compatible with API version `2025-12-15.clover`**
+**✅ Integration is fully compatible with API version `2026-01-28.clover`**
 
 All code has been reviewed, potential issues identified and fixed, and comprehensive test script created. The integration is ready for testing with Stripe test credentials and subsequent production deployment.
 

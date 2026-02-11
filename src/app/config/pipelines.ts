@@ -28,7 +28,7 @@ export const INTENT_PIPELINES: Record<PipelineId, PipelineConfig> = {
   apply_to_job: {
     id: "apply_to_job",
     name: "Apply to Job",
-    description: "Full tailor, validation, and ATS optimization",
+    description: "Full tailor, validation, and job match optimization",
     icon: "📤",
     requiresResume: true,
     requiresJobDescription: true,
@@ -39,14 +39,14 @@ export const INTENT_PIPELINES: Record<PipelineId, PipelineConfig> = {
   check_resume: {
     id: "check_resume",
     name: "Check Resume",
-    description: "Validate formatting and ATS compatibility",
+    description: "Validate formatting and structure",
     icon: "✅",
     requiresResume: true,
     requiresJobDescription: false,
     steps: [
       { id: "resume_validator", label: "Validating content", endpoint: "/api/mcp-tools/resume-validator" },
       { id: "format_validator", label: "Checking format", endpoint: "/api/tools/format-validator" },
-      { id: "ats_simulator", label: "Simulating ATS parse", endpoint: "/api/tools/ats-simulator" },
+      { id: "ats_simulator", label: "Checking parse & readability", endpoint: "/api/tools/ats-simulator" },
     ],
   },
   prepare_interview: {
@@ -64,12 +64,12 @@ export const INTENT_PIPELINES: Record<PipelineId, PipelineConfig> = {
   full_optimization: {
     id: "full_optimization",
     name: "Full Optimization",
-    description: "ATS check, skills gap, tailor, validate, interview prep",
+    description: "Format check, skills gap, tailor, validate, interview prep",
     icon: "🚀",
     requiresResume: true,
     requiresJobDescription: true,
     steps: [
-      { id: "ats_simulator", label: "Simulating ATS parse", endpoint: "/api/tools/ats-simulator" },
+      { id: "ats_simulator", label: "Checking parse & readability", endpoint: "/api/tools/ats-simulator" },
       { id: "skills_gap", label: "Analyzing skills gap", endpoint: "/api/tools/skills-gap" },
       { id: "tailor", label: "Tailoring resume", internalStep: "tailor" },
       { id: "resume_validator", label: "Validating content", endpoint: "/api/mcp-tools/resume-validator" },

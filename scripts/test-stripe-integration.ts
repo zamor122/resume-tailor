@@ -1,4 +1,4 @@
-// Test script to verify Stripe integration compatibility with API version 2025-12-15.clover
+// Test script to verify Stripe integration compatibility with API version 2026-01-28.clover
 // Usage: npx tsx scripts/test-stripe-integration.ts
 
 import Stripe from 'stripe';
@@ -34,7 +34,7 @@ const envVars = loadEnv();
 const stripeSecretKey = envVars.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || '';
 
 const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2025-12-15.clover',
+  apiVersion: '2026-01-28.clover',
 });
 
 interface TestResult {
@@ -272,7 +272,7 @@ async function testPriceIdUsage() {
 
 async function runAllTests() {
   console.log('🧪 Testing Stripe Integration Compatibility');
-  console.log('API Version: 2025-12-15.clover\n');
+  console.log('API Version: 2026-01-28.clover\n');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -314,7 +314,7 @@ async function runAllTests() {
   console.log(`\nTotal: ${results.length} tests | Passed: ${passed} | Failed: ${failed}`);
   
   if (failed === 0) {
-    console.log('\n✅ All tests passed! Your Stripe integration is compatible with API version 2025-12-15.clover');
+    console.log('\n✅ All tests passed! Your Stripe integration is compatible with API version 2026-01-28.clover');
   } else {
     console.log('\n❌ Some tests failed. Please review the errors above.');
     process.exit(1);
