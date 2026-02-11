@@ -5,7 +5,7 @@ import { getMultiJobComparisonPrompt } from "@/app/prompts";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
-export const maxDuration = 90; // Longer for multiple jobs
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {

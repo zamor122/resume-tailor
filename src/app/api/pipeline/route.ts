@@ -3,7 +3,7 @@ import { getPipeline, type PipelineId } from "@/app/config/pipelines";
 
 export const runtime = "nodejs";
 export const preferredRegion = "auto";
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 async function runHumanizeStream(
   baseUrl: string,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
 import AuthModal from "@/app/components/AuthModal";
 import TierSelectionModal from "@/app/components/TierSelectionModal";
@@ -32,6 +33,7 @@ export default function ProfilePage() {
   const [accessInfo, setAccessInfo] = useState<any>(null);
   const [downloadDropdownId, setDownloadDropdownId] = useState<string | null>(null);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
+  const downloadTriggerRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
 
   const fetchResumes = useCallback(async () => {
@@ -345,33 +347,64 @@ export default function ProfilePage() {
                           {(hasAccess || resume.isUnlocked) ? (
                             <div className="relative inline-block">
                               <button
-                                onClick={() => setDownloadDropdownId(downloadDropdownId === resume.id ? null : resume.id)}
+                                ref={(el) => {
+                                  if (downloadDropdownId === resume.id) downloadTriggerRef.current = el;
+                                }}
+                                onClick={(e) => {
+                                  if (downloadDropdownId === resume.id) {
+                                    setDownloadDropdownId(null);
+                                  } else {
+                                    downloadTriggerRef.current = e.currentTarget;
+                                    setDownloadDropdownId(resume.id);
+                                  }
+                                }}
                                 disabled={pdfLoadingId === resume.id}
                                 className="px-3 py-1.5 text-sm rounded-lg text-green-400 hover:text-green-300 hover:bg-green-500/10 transition-colors disabled:opacity-50"
                               >
                                 {pdfLoadingId === resume.id ? "Generating…" : "Download"}
                               </button>
-                              {downloadDropdownId === resume.id && (
-                                <>
-                                  <div className="fixed inset-0 z-10" onClick={() => setDownloadDropdownId(null)} aria-hidden="true" />
-                                  <div className="absolute right-0 mt-1 py-1 w-44 rounded-lg bg-gray-800 border border-gray-600 z-20 shadow-xl">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDownload(resume.id, "pdf")}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-t-lg"
+                              {downloadDropdownId === resume.id &&
+                                typeof document !== "undefined" &&
+                                createPortal(
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-[100]"
+                                      onClick={() => setDownloadDropdownId(null)}
+                                      aria-hidden="true"
+                                    />
+                                    <div
+                                      className="fixed z-[101] py-1 w-44 rounded-lg bg-gray-800 border border-gray-600 shadow-xl"
+                                      style={
+                                        downloadTriggerRef.current
+                                          ? (() => {
+                                              const rect = downloadTriggerRef.current!.getBoundingClientRect();
+                                              const w = 176;
+                                              return {
+                                                top: rect.bottom + 4,
+                                                left: Math.max(8, Math.min(rect.right - w, window.innerWidth - w - 8)),
+                                              };
+                                            })()
+                                          : undefined
+                                      }
                                     >
-                                      Download as PDF
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDownload(resume.id, "markdown")}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-b-lg"
-                                    >
-                                      Download as Markdown
-                                    </button>
-                                  </div>
-                                </>
-                              )}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDownload(resume.id, "pdf")}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-t-lg"
+                                      >
+                                        Download as PDF
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDownload(resume.id, "markdown")}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-b-lg"
+                                      >
+                                        Download as Markdown
+                                      </button>
+                                    </div>
+                                  </>,
+                                  document.body
+                                )}
                             </div>
                           ) : (
                             <button

@@ -15,7 +15,7 @@ import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
 // Changed to nodejs runtime because Cerebras SDK requires Node.js modules
 export const runtime = 'nodejs';
 export const preferredRegion = 'auto';
-export const maxDuration = 90;
+export const maxDuration = 60;
 
 /**
  * Send SSE event to client

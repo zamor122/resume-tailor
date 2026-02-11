@@ -3,7 +3,7 @@ import { isRateLimitError } from "@/app/services/ai-provider";
 
 export const runtime = "nodejs";
 export const preferredRegion = "auto";
-export const maxDuration = 90;
+export const maxDuration = 60;
 
 async function runHumanizeStream(
   baseUrl: string,
