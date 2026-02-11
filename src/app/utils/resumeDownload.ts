@@ -22,7 +22,10 @@ export async function downloadResumeAsPdf(
   const { pdf } = await import("@react-pdf/renderer");
   const blocks = markdownToResumeBlocks(markdownContent);
   const doc = React.createElement(ResumePdfDocument, { blocks });
-  const blob = await pdf(doc).toBlob();
+  // ResumePdfDocument renders <Document>; pdf() expects ReactElement<DocumentProps>.
+  // Type assertion: wrapper component renders a valid Document tree; @react-pdf types are strict.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blob = await pdf(doc as any).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
