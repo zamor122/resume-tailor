@@ -81,6 +81,50 @@ export async function trackRateLimitHitServer(data: RateLimitHitData): Promise<v
 }
 
 /**
+ * Generic server-side event tracking for API errors and other backend events
+ */
+export async function trackEventServer(
+  eventName: string,
+  data: Record<string, unknown>
+): Promise<void> {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[UmamiServer] 🚫 DEV MODE - Event logged but NOT sent:', eventName, data);
+    return;
+  }
+
+  const config = getUmamiConfig();
+  if (!config.apiKey || !config.websiteId) {
+    return;
+  }
+
+  try {
+    const endpoint = (data.endpoint as string) ?? 'unknown';
+    const eventPayload = {
+      website: config.websiteId,
+      hostname: 'api',
+      url: `/api/${endpoint}`,
+      name: eventName,
+      data: JSON.stringify(data),
+    };
+
+    const response = await fetch(`${config.apiUrl.replace('/api', '')}/api/collect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'AI-Resume-Tailor/1.0',
+      },
+      body: JSON.stringify(eventPayload),
+    });
+
+    if (!response.ok) {
+      console.error('[UmamiServer] Failed to track event:', eventName, response.status, response.statusText);
+    }
+  } catch (error) {
+    console.error('[UmamiServer] Error tracking event:', eventName, error);
+  }
+}
+
+/**
  * Track quota exceeded event
  */
 export async function trackQuotaExceededServer(

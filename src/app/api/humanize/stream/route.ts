@@ -11,6 +11,7 @@ import { cleanJobDescription as cleanJobDescriptionUtil } from "@/app/utils/jobD
 import { sanitizeResumeForATS } from "@/app/utils/atsSanitizer";
 import { looksLikeCompanyName } from "@/app/utils/companyNameValidator";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
+import { trackEventServer } from "@/app/utils/umamiServer";
 
 // Changed to nodejs runtime because Cerebras SDK requires Node.js modules
 export const runtime = 'nodejs';
@@ -532,6 +533,12 @@ export async function POST(req: NextRequest) {
           });
           controller.close();
         }
+        await trackEventServer("resume_tailor_error", {
+          endpoint: "humanize/stream",
+          error: error?.message || "Unknown error",
+          canRetry: error?.status === 429,
+          userId: userId ?? "anonymous",
+        });
       }
     },
   });

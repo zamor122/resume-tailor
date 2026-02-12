@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPipeline, type PipelineId } from "@/app/config/pipelines";
+import { trackEventServer } from "@/app/utils/umamiServer";
 
 export const runtime = "nodejs";
 export const preferredRegion = "auto";
@@ -207,10 +208,16 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[Pipeline] Error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    await trackEventServer("resume_tailor_error", {
+      endpoint: "pipeline",
+      error: message,
+      userId: "anonymous",
+    });
     return NextResponse.json(
       {
         error: "Pipeline failed",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message,
       },
       { status: 500 }
     );

@@ -20,6 +20,8 @@ import type { HumanizeResponse } from "@/app/types/humanize";
 
 export { type HumanizeResponse } from "@/app/types/humanize";
 
+const TAILOR_TIMEOUT_MS = 62_000; // Slightly over 60s maxDuration to detect timeout
+
 async function runHumanizeStream(params: {
   resume: string;
   jobDescription: string;
@@ -30,77 +32,96 @@ async function runHumanizeStream(params: {
 }): Promise<HumanizeResponse> {
   const { resume, jobDescription, sessionId, userId, jobTitle, onProgress } = params;
 
-  const response = await fetch("/api/humanize/stream", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      resume,
-      jobDescription,
-      sessionId,
-      userId: userId ?? undefined,
-      jobTitle: jobTitle ?? undefined,
-    }),
-  });
+  const controller = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(
+    () => controller.abort(),
+    TAILOR_TIMEOUT_MS
+  );
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || err.error || "Failed to tailor resume");
-  }
+  try {
+    const response = await fetch("/api/humanize/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resume,
+        jobDescription,
+        sessionId,
+        userId: userId ?? undefined,
+        jobTitle: jobTitle ?? undefined,
+      }),
+      signal: controller.signal,
+    });
 
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("No response body");
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
 
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let completeData: any = null;
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      const msg = err.message || err.error || "Failed to tailor resume";
+      const tailoredError = new Error(msg) as Error & { statusCode?: number };
+      tailoredError.statusCode = response.status;
+      throw tailoredError;
+    }
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("No response body");
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let completeData: any = null;
 
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith("data: ")) {
-        try {
-          const parsed = JSON.parse(lines[i].slice(6).trim());
-          if (parsed.stage && parsed.progress !== undefined) {
-            onProgress?.(parsed.progress, parsed.message || "");
-          }
-          if (parsed.tailoredResume) {
-            completeData = parsed;
-          }
-          if (parsed.error) {
-            throw new Error(parsed.error);
-          }
-        } catch (e) {
-          if (e instanceof Error && e.message !== "Failed to tailor resume") {
-            // JSON parse or error from server
-            if (completeData) break;
-            throw e;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith("data: ")) {
+          try {
+            const parsed = JSON.parse(lines[i].slice(6).trim());
+            if (parsed.stage && parsed.progress !== undefined) {
+              onProgress?.(parsed.progress, parsed.message || "");
+            }
+            if (parsed.tailoredResume) {
+              completeData = parsed;
+            }
+            if (parsed.error) {
+              throw new Error(parsed.error);
+            }
+          } catch (e) {
+            if (e instanceof Error && e.message !== "Failed to tailor resume") {
+              // JSON parse or error from server
+              if (completeData) break;
+              throw e;
+            }
           }
         }
       }
     }
+
+    if (!completeData) throw new Error("No result received");
+
+    return {
+      originalResume: resume,
+      tailoredResume: completeData.tailoredResume,
+      obfuscatedResume: completeData.tailoredResume,
+      contentMap: completeData.contentMap,
+      freeReveal: completeData.freeReveal,
+      improvementMetrics: completeData.improvementMetrics,
+      matchScore: completeData.matchScore,
+      metrics: completeData.metrics,
+      validationResult: completeData.validationResult,
+      resumeId: completeData.resumeId,
+      hasAccess: true,
+    };
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
-
-  if (!completeData) throw new Error("No result received");
-
-  return {
-    originalResume: resume,
-    tailoredResume: completeData.tailoredResume,
-    obfuscatedResume: completeData.tailoredResume,
-    contentMap: completeData.contentMap,
-    freeReveal: completeData.freeReveal,
-    improvementMetrics: completeData.improvementMetrics,
-    matchScore: completeData.matchScore,
-    metrics: completeData.metrics,
-    validationResult: completeData.validationResult,
-    resumeId: completeData.resumeId,
-    hasAccess: true,
-  };
 }
 
 export default function SplitScreenTailorView() {
@@ -231,12 +252,39 @@ export default function SplitScreenTailorView() {
         setResults(data);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "An error occurred";
-      setError(message);
+      const rawMessage = err instanceof Error ? err.message : "An error occurred";
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      const isNetwork =
+        err instanceof TypeError && (
+          rawMessage.includes("fetch") ||
+          rawMessage.includes("network") ||
+          rawMessage.includes("Failed to fetch")
+        );
+      const statusCode = (err as Error & { statusCode?: number }).statusCode;
+
+      let userMessage = rawMessage;
+      let errorType = "unknown";
+      if (isAbort) {
+        userMessage = "Request timed out. Please try again with a shorter resume or job description.";
+        errorType = "timeout";
+      } else if (isNetwork) {
+        userMessage = "Network error. Please check your connection and try again.";
+        errorType = "network";
+      } else if (statusCode === 504) {
+        userMessage = "Request timed out. Please try again.";
+        errorType = "timeout";
+      } else if (statusCode === 429) {
+        userMessage = rawMessage; // Keep server message for rate limit
+        errorType = "rate_limit";
+      }
+
+      setError(userMessage);
       setErrorShakeKey((k) => k + 1);
       setHasStartedTailoring(false);
       analytics.trackEvent(analytics.events.RESUME_TAILOR_ERROR, {
-        error: message,
+        error: rawMessage,
+        errorType,
+        statusCode: statusCode ?? null,
         timestamp: new Date().toISOString(),
       });
     } finally {

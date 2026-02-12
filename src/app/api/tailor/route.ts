@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isRateLimitError } from "@/app/services/ai-provider";
+import { trackEventServer } from "@/app/utils/umamiServer";
 
 export const runtime = "nodejs";
 export const preferredRegion = "auto";
@@ -192,10 +193,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
+    await trackEventServer("resume_tailor_error", {
+      endpoint: "tailor",
+      error: message,
+      userId: userId ?? "anonymous",
+    });
     return NextResponse.json(
       {
         error: "Processing Error",
-        message: error instanceof Error ? error.message : "An unknown error occurred",
+        message,
         details: error instanceof Error ? error.stack : undefined,
       },
       { status: 500 }
