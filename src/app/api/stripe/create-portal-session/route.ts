@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { getURL } from "@/app/utils/siteUrl";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2026-01-28.clover",
@@ -47,9 +48,7 @@ export async function POST(req: NextRequest) {
 
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: resolvedCustomerId,
-      return_url:
-        returnUrl ||
-        `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/profile`,
+      return_url: returnUrl || `${getURL()}profile`,
     });
 
     return NextResponse.json({ url: portalSession.url });

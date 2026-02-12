@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { getTierConfig } from "@/app/config/pricing";
+import { getURL } from "@/app/utils/siteUrl";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2026-01-28.clover",
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = getURL().replace(/\/$/, "");
 
     // Validate returnUrl is same-origin to prevent open redirect
     let cancelUrl = `${baseUrl}/`;

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { getURL } from "@/app/utils/siteUrl";
 import AuthModal from "@/app/components/AuthModal";
 import TierSelectionModal from "@/app/components/TierSelectionModal";
 import { hasActiveAccess, getAccessInfo } from "@/app/utils/accessManager";
@@ -109,7 +110,7 @@ export default function ProfilePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: user.email,
-          returnUrl: `${window.location.origin}/profile`,
+          returnUrl: `${getURL()}profile`,
         }),
       });
 
