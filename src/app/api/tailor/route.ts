@@ -1,157 +1,209 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { cookies } from "next/headers";
+import { isRateLimitError } from "@/app/services/ai-provider";
+import { trackEventServer } from "@/app/utils/umamiServer";
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not defined');
-}
+export const runtime = "nodejs";
+export const preferredRegion = "auto";
+export const maxDuration = 60;
 
-// Initialize the Google AI client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+async function runHumanizeStream(
+  baseUrl: string,
+  params: {
+    resume: string;
+    jobDescription: string;
+    sessionId?: string;
+    modelKey?: string;
+    userId?: string;
+  }
+): Promise<{
+  tailoredResume: string;
+  matchScore?: { before: number; after: number };
+  improvementMetrics?: Record<string, number>;
+  validationResult?: unknown;
+  resumeId?: string;
+  contentMap?: Record<string, string>;
+  freeReveal?: unknown;
+  formatSpec?: unknown;
+}> {
+  const response = await fetch(`${baseUrl}/api/humanize/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      resume: params.resume,
+      jobDescription: params.jobDescription,
+      sessionId: params.sessionId,
+      modelKey: params.modelKey,
+      userId: params.userId,
+    }),
+  });
 
-// Cooldown period in milliseconds (e.g., 1 minute = 60000ms)
-const COOLDOWN_PERIOD = 60000;
-const COOKIE_NAME = 'last_tailor_request';
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || err.error || "Humanize stream failed");
+  }
 
-// Environment check
-const isDevelopment = process.env.NODE_ENV === 'development';
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response body");
 
-export const runtime = 'edge';
-export const preferredRegion = 'auto';
-export const maxDuration = 60; // This sets the max duration to 60 seconds
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let completeData: Record<string, unknown> | null = null;
 
-export async function POST(req: NextRequest) {
-  try {
-    // Skip cooldown check in development mode
-    if (!isDevelopment) {
-      const cookieStore = await cookies();
-      const lastRequestCookie = cookieStore.get(COOKIE_NAME);
-      
-      if (lastRequestCookie) {
-        const lastRequestTime = parseInt(lastRequestCookie.value, 10);
-        const currentTime = Date.now();
-        const timeElapsed = currentTime - lastRequestTime;
-        
-        if (timeElapsed < COOLDOWN_PERIOD) {
-          const timeRemaining = Math.ceil((COOLDOWN_PERIOD - timeElapsed) / 1000);
-          return NextResponse.json(
-            { 
-              error: "Rate limit exceeded", 
-              message: `Please wait ${timeRemaining} seconds before making another request.`,
-              timeRemaining
-            },
-            { status: 429 }
-          );
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        try {
+          const parsed = JSON.parse(line.slice(6).trim());
+          if (parsed.tailoredResume) {
+            completeData = parsed;
+          }
+          if (parsed.error) {
+            throw new Error(parsed.error);
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message !== "Humanize stream failed") {
+            if (completeData) break;
+            throw e;
+          }
         }
       }
     }
+  }
 
-    const { resume, jobDescription } = await req.json();
+  if (!completeData) throw new Error("No result from humanize stream");
 
-    if (!resume || !jobDescription) {
+  return {
+    tailoredResume: completeData.tailoredResume as string,
+    matchScore: completeData.matchScore as { before: number; after: number } | undefined,
+    improvementMetrics: completeData.improvementMetrics as Record<string, number> | undefined,
+    validationResult: completeData.validationResult,
+    resumeId: completeData.resumeId as string | undefined,
+    contentMap: completeData.contentMap as Record<string, string> | undefined,
+    freeReveal: completeData.freeReveal,
+    formatSpec: completeData.formatSpec,
+  };
+}
+
+function improvementMetricsToChanges(metrics?: Record<string, number>): Array<{ changeDescription: string; changeDetails: string }> {
+  if (!metrics) return [];
+  const changes: Array<{ changeDescription: string; changeDetails: string }> = [];
+  if (metrics.quantifiedBulletsAdded && metrics.quantifiedBulletsAdded > 0) {
+    changes.push({
+      changeDescription: "Quantified bullet points added",
+      changeDetails: `Added ${metrics.quantifiedBulletsAdded} achievement-focused bullet points with measurable impact.`,
+    });
+  }
+  if (metrics.atsKeywordsMatched && metrics.atsKeywordsMatched > 0) {
+    changes.push({
+      changeDescription: "Keywords matched",
+      changeDetails: `Incorporated ${metrics.atsKeywordsMatched} relevant keywords from the job description to improve job match.`,
+    });
+  }
+  if (metrics.activeVoiceConversions && metrics.activeVoiceConversions > 0) {
+    changes.push({
+      changeDescription: "Active voice conversions",
+      changeDetails: `Converted ${metrics.activeVoiceConversions} passive phrases to strong, action-oriented language.`,
+    });
+  }
+  if (metrics.sectionsOptimized && metrics.sectionsOptimized > 0) {
+    changes.push({
+      changeDescription: "Sections optimized",
+      changeDetails: `Reorganized and enhanced ${metrics.sectionsOptimized} sections for better impact and clarity.`,
+    });
+  }
+  return changes;
+}
+
+export async function POST(req: NextRequest) {
+  let resume = "";
+  let jobDescription = "";
+  let sessionId: string | undefined;
+  let modelKey: string | undefined;
+  let userId: string | undefined;
+
+  try {
+    const body = await req.json();
+    resume = body.resume || "";
+    jobDescription = body.jobDescription || "";
+    sessionId = body.sessionId;
+    modelKey = body.modelKey;
+    userId = body.userId;
+  } catch (e) {
+    return NextResponse.json(
+      { error: "Invalid JSON", message: "Request body must be valid JSON" },
+      { status: 400 }
+    );
+  }
+
+  if (!resume || !jobDescription) {
+    return NextResponse.json(
+      { error: "Missing resume or job description" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const baseUrl = req.nextUrl.origin;
+    const result = await runHumanizeStream(baseUrl, {
+      resume: resume.trim(),
+      jobDescription: jobDescription.trim(),
+      sessionId,
+      modelKey,
+      userId,
+    });
+
+    const changes = improvementMetricsToChanges(result.improvementMetrics);
+
+    return NextResponse.json({
+      tailoredResume: result.tailoredResume,
+      matchScore: result.matchScore,
+      improvementMetrics: result.improvementMetrics,
+      resumeId: result.resumeId,
+      contentMap: result.contentMap,
+      freeReveal: result.freeReveal,
+      formatSpec: result.formatSpec,
+      changes,
+    });
+  } catch (error) {
+    if (isRateLimitError(error)) {
+      const apiError = error as any;
+      const retrySeconds = apiError.retryAfter || 30;
+
       return NextResponse.json(
-        { error: "Missing resume or job description" },
-        { status: 400 }
+        {
+          tailoredResume: resume || "",
+          changes: [
+            {
+              changeDescription: "⚠️ API Quota Exceeded",
+              changeDetails: `Unable to optimize resume due to API quota limits. You can retry immediately or wait ${retrySeconds} seconds for better results. Your original resume is preserved.`,
+            },
+          ],
+          quotaExceeded: true,
+          retryAfter: retrySeconds,
+          canRetryImmediately: true,
+          message: `API quota exceeded. You can retry now or wait ${retrySeconds} seconds for optimal results.`,
+        },
+        { status: 200 }
       );
     }
 
-    // Set the cookie with the current timestamp
-    const currentTime = Date.now();
-    if (!isDevelopment) {
-      const cookieStore = await cookies();
-      cookieStore.set(COOKIE_NAME, currentTime.toString(), {
-        path: '/',
-        maxAge: COOLDOWN_PERIOD / 1000, // Convert to seconds for cookie maxAge
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-      });
-    }
-
-    // Prepare the prompt
-    const prompt = `
-      You are an expert ATS optimization specialist with years of experience helping candidates pass Applicant Tracking Systems.
-      
-      Your task is to transform the provided resume to maximize its relevancy score for the given job description. 
-      Use a conversational, humanized yet professional tone, but focus primarily on:
-
-      1. KEYWORD MATCHING: Identify and incorporate ALL key terms, skills, and qualifications from the job description
-      2. QUANTIFICATION: Add specific metrics and achievements where possible
-      3. TERMINOLOGY ALIGNMENT: Use the exact same terminology as the job description
-      4. SKILL PRIORITIZATION: Reorder skills and experiences to highlight those most relevant to the job
-      5. FORMATTING OPTIMIZATION: Use clear section headers and bullet points for maximum ATS readability
-      
-      The goal is to achieve as close to 100% relevancy match as possible while maintaining authenticity.
-      
-      Do not include any extra comments regarding clarification why something was added, removed or changed.
-      Provide the tailored resume using markdown formatting (e.g., use bullet points for skills, use headers for each section, etc.).
-      
-      Additionally, please return a JSON object with the following structure:
-      {
-        "tailoredResume": "<Tailored Resume Content in Markdown Format>",
-        "changes": [
-          {
-            "changeDescription": "<Short description of the change made>",
-            "changeDetails": "<Details explaining what was changed and why>"
-          }
-        ]
-      }
-
-      The "tailoredResume" should be the formatted markdown resume.
-      The "changes" array should list all specific changes you made to the resume in a concise manner.
-      Each item in the "changes" array should contain:
-        - "changeDescription": A brief description of the change (e.g., "Added missing keywords")
-        - "changeDetails": A clear explanation of the change and why it was made
-      
-      Do not include any extra text or paragraphs—just return the data in the specified format.
-    `;
-
-    // Generate content without streaming
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-            { text: `Resume:\n${resume}` },
-            { text: `Job Description:\n${jobDescription}` }
-          ]
-        }
-      ]
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
+    await trackEventServer("resume_tailor_error", {
+      endpoint: "tailor",
+      error: message,
+      userId: userId ?? "anonymous",
     });
-
-    const response = result.response;
-    const text = response.text();
-
-    // Try to parse the response as JSON
-    try {
-      // Check if the response is already valid JSON
-      const jsonData = JSON.parse(text);
-      return NextResponse.json(jsonData);
-    } catch  {
-      // If not valid JSON, try to extract JSON from the text
-      try {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const jsonStr = jsonMatch[0];
-          const jsonData = JSON.parse(jsonStr);
-          return NextResponse.json(jsonData);
-        }
-      } catch {
-        // If extraction fails, return the raw text
-        return NextResponse.json({
-          tailoredResume: text,
-          changes: []
-        });
-      }
-    }
-  } catch (error) {
     return NextResponse.json(
       {
         error: "Processing Error",
-        message: error instanceof Error ? error.message : "An unknown error occurred",
-        details: error instanceof Error ? error.stack : undefined
+        message,
+        details: error instanceof Error ? error.stack : undefined,
       },
       { status: 500 }
     );

@@ -23,22 +23,11 @@
       "continue": true
     },
     {
-      "src": "/api/relevancy",
-      "headers": {
-        "x-vercel-edge-timeout": "60000"
-      },
-      "continue": true
-    },
-    {
       "src": "/api/tailor/job/title",
       "headers": {
         "x-vercel-edge-timeout": "60000"
       },
       "continue": true
     }
-  ],
-  "crons": [{
-    "path": "/api/email/analytics",
-    "schedule": "0 15 * * *"
-  }]
+  ]
 } 

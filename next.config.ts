@@ -4,7 +4,12 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   images: {
-    domains: ['airesumetailor.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'airesumetailor.com',
+      },
+    ],
   },
   async headers() {
     return [

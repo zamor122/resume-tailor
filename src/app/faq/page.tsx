@@ -3,111 +3,138 @@ import Link from 'next/link';
 
 export const metadata = {
   title: "Frequently Asked Questions - AI Resume Tailor",
-  description: "Get answers to common questions about AI Resume Tailor's relevancy scoring, ATS optimization, and job-specific resume tailoring features.",
+  description: "Answers about human-sounding resume tailoring, what's free, what's paid, and how we avoid robotic AI tone.",
 };
+
+const FAQ_ITEMS = [
+  {
+    section: "Product Overview",
+    qa: [
+      {
+        q: "What is AI Resume Tailor?",
+        a: "It's a tool that rewrites your resume to match a specific job posting. You paste your resume and the job description, and we tailor your experience so it speaks directly to what that employer is looking for. The big difference: the output sounds like you wrote it—not like a robot or generic AI. No keyword stuffing, no buzzword soup, no \"synergistic\" filler.",
+      },
+      {
+        q: "Who is it for?",
+        a: "Anyone applying to jobs. Whether you're early in your career, switching industries, or a seasoned pro, it saves you time tailoring each application so you don't have to manually rewrite for every role.",
+      },
+    ],
+  },
+  {
+    section: "Access & Getting Started",
+    qa: [
+      {
+        q: "How do I get started?",
+        a: "Sign in with a free account (Google or email), then paste your resume and the job description. Hit the button and you're done. Your first 3 tailored resumes are free to view and download.",
+      },
+      {
+        q: "Do I need an account?",
+        a: "Yes. You need to sign in to tailor your resume. That lets us save your tailored resumes and give you access to your first 3 for free.",
+      },
+    ],
+  },
+  {
+    section: "What's Free",
+    qa: [
+      {
+        q: "What do I get for free?",
+        a: "Your first 3 tailored resumes are completely free. You get full access to view each one and download it as PDF or Markdown. No credit card required.",
+      },
+      {
+        q: "How do the free resumes work?",
+        a: "It's the first 3 resumes you create (by creation date). Each one gets full access—view and download. After that, you can purchase time-based access to unlock more.",
+      },
+    ],
+  },
+  {
+    section: "What's Paid",
+    qa: [
+      {
+        q: "What do I get when I pay?",
+        a: "Time-based access—unlimited tailoring during your chosen period. You can view and download all your resumes, no matter how many you create. Options: 2 days ($4.95), 1 week ($10), or 1 month ($20).",
+      },
+      {
+        q: "Is it a subscription?",
+        a: "No. It's a one-time purchase for a time period. When your access expires, you can purchase again if you need more. No recurring charges.",
+      },
+    ],
+  },
+  {
+    section: "What It Does",
+    qa: [
+      {
+        q: "Does it sound human or like AI?",
+        a: "Human. This is the core of what we do. We're built to avoid the telltale AI resume: no \"leveraged\" and \"synergized\" every other word, no perfectly uniform bullet structures, no stiff corporate-speak. The result reads like a real person wrote it—because we optimize for natural phrasing and your voice, not just keyword density.",
+      },
+      {
+        q: "What does it actually do?",
+        a: "It rewrites your resume to emphasize the skills and achievements that match the job posting—while keeping your voice. It doesn't invent experience. It doesn't sprinkle buzzwords. It weaves in what recruiters look for in a way that sounds like you, not a template.",
+      },
+      {
+        q: "Does it work with ATS systems?",
+        a: "Yes. The output is clean and formatted for applicant tracking systems, but we avoid the robotic keyword stuffing that screams \"AI wrote this.\" You get a match score so you can see how well your tailored resume aligns with the job—without sacrificing readability.",
+      },
+    ],
+  },
+  {
+    section: "What It Doesn't Do",
+    qa: [
+      {
+        q: "Will it make my resume sound like every other AI resume?",
+        a: "No. That's exactly what we avoid. Generic AI resumes have a recognizable pattern: same verbs, same structure, same corporate jargon. We're tuned to keep variation, natural phrasing, and your voice. You get job-relevant content without the \"AI slop\" feel.",
+      },
+      {
+        q: "What is it not designed for?",
+        a: "It doesn't write your resume from scratch—you need to bring your own. It doesn't guarantee job offers—it improves your resume's relevance. It doesn't edit your resume forever—you get a tailored version to use for that application.",
+      },
+      {
+        q: "Does it make up experience?",
+        a: "No. It works with what you provide. It rephrases and emphasizes your real experience to fit the job. It won't add fake roles or skills.",
+      },
+      {
+        q: "Who sees my resume?",
+        a: "It's processed by our AI to generate your tailored version. We don't share your resume or job descriptions with third parties. See our privacy policy and terms for details.",
+      },
+    ],
+  },
+];
 
 export default function FAQPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold mb-8">Frequently Asked Questions</h1>
+      <h1 className="text-3xl font-bold mb-2">Frequently Asked Questions</h1>
+      <p className="text-gray-600 dark:text-gray-400 mb-10">
+        Everything you need to know about the product, what&apos;s free, what&apos;s paid, and how it works.
+      </p>
       
-      <div className="space-y-8">
-
-      <section>
-          <h2 className="text-2xl font-semibold mb-4">Using AI Resume Tailor</h2>
-          
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">Is AI Resume Tailor free to use?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                Yes, AI Resume Tailor is completely free to use with no hidden fees or subscriptions. 
-                We don&apos;t even require you to create an account.
-              </p>
+      <div className="space-y-12">
+        {FAQ_ITEMS.map(({ section, qa }) => (
+          <section key={section}>
+            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-gray-100">{section}</h2>
+            <div className="space-y-6">
+              {qa.map(({ q, a }) => (
+                <div
+                  key={q}
+                  className="bg-white dark:bg-gray-800/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700"
+                >
+                  <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">{q}</h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{a}</p>
+                </div>
+              ))}
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">Does AI Resume Tailor store my resume data?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                No, we don&apos;t store your resume or job description data. All processing happens in real-time 
-                and your information is discarded after the tailoring is complete. Your privacy is our priority.
-              </p>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">How often can I use the tool?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                To ensure fair usage for all users, there&apos;s a 60-second cooldown period between tailoring requests. 
-                This gives you time to review your tailored resume and make any additional adjustments.
-              </p>
-            </div>
-          </div>
-        </section>
-        
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">About Resume Relevancy Scoring</h2>
-          
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">How does the resume relevancy score work?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                Our AI analyzes your resume against the job description to calculate a relevancy percentage. 
-                After tailoring, you&apos;ll see both your original and new scores, showing exactly how much your 
-                resume has improved. The score considers keyword matching, skills alignment, experience relevance, 
-                and formatting optimization.
-              </p>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">How accurate is the relevancy scoring?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                Our relevancy scoring uses advanced AI to simulate how ATS systems evaluate resumes. 
-                While no system can perfectly predict every ATS, our scoring provides a reliable benchmark 
-                for improvement. Users typically see a 30-60% increase in relevancy after tailoring.
-              </p>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">What&apos;s a good relevancy score?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                A score above 70% is generally considered good, while 85%+ is excellent. 
-                However, even a 20% improvement can significantly increase your chances of getting 
-                past ATS filters and into the hands of a hiring manager.
-              </p>
-            </div>
-          </div>
-        </section>
-        
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Job-Specific Features</h2>
-          
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">How does job title detection work?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                Our AI automatically analyzes the job description to detect the most likely job title. 
-                This helps tailor your resume specifically for that role and provides more accurate 
-                relevancy scoring.
-              </p>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-medium mb-2">Can I use this for any job type?</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                Yes! AI Resume Tailor works for virtually any job type across industries. Whether you&apos;re 
-                applying for technical roles, creative positions, management jobs, or entry-level positions, 
-                our tool can help optimize your resume.
-              </p>
-            </div>
-          </div>
-        </section>
+          </section>
+        ))}
       </div>
       
-      <div className="mt-12 text-center">
-        <p className="text-lg mb-4">Ready to improve your resume&apos;s relevancy score?</p>
-        <Link href="/" className="inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-          Tailor Your Resume Now
+      <div className="mt-16 text-center">
+        <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">Ready to try it?</p>
+        <Link
+          href="/"
+          className="inline-block bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-semibold py-3 px-6 rounded-xl transition-all hover:scale-[1.02]"
+        >
+          Tailor Your Resume
         </Link>
       </div>
     </div>
   );
-} 
+}
