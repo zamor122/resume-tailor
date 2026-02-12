@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { generateWithFallback } from "@/app/services/model-fallback";
-import { getModelFromSession } from "@/app/utils/model-helper";
-import { getInterviewPrepPrompt } from "@/app/prompts";
-import { parseJSONFromText } from "@/app/utils/json-extractor";
+import {getInterviewPrepPrompt} from "@/app/prompts";
+import {generateWithFallback} from "@/app/services/model-fallback";
+import {parseJSONFromText} from "@/app/utils/json-extractor";
+import {getModelFromSession} from "@/app/utils/model-helper";
+import {NextRequest, NextResponse} from "next/server";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';

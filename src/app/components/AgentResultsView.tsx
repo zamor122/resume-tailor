@@ -1,7 +1,7 @@
 "use client";
 
-import { getAgentTool } from "@/app/config/agent-tools";
-import InterviewPrepView from "@/app/components/InterviewPrepView";
+import InterviewPrepViewComponent from "./InterviewPrepView";
+import {getAgentTool} from "@/app/config/agent-tools";
 
 interface AgentResultsViewProps {
   executedSteps: string[];
@@ -47,7 +47,7 @@ function formatValue(value: unknown): React.ReactNode {
         (Array.isArray(obj.interviewTips) && obj.interviewTips.length > 0);
       if (hasQuestions) {
         return (
-          <InterviewPrepView
+          <InterviewPrepViewComponent
             behavioral={obj.behavioral}
             technical={Array.isArray(obj.technical) ? obj.technical : []}
             situational={Array.isArray(obj.situational) ? obj.situational : []}
