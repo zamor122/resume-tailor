@@ -13,9 +13,9 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      // Check for OAuth code in URL
       const code = searchParams.get("code");
       const errorParam = searchParams.get("error");
+      const hasHash = typeof window !== "undefined" && window.location.hash.length > 0;
 
       if (errorParam) {
         setError(errorParam);
@@ -24,23 +24,30 @@ export default function AuthCallbackPage() {
       }
 
       if (code) {
-        // Exchange code for session
+        // OAuth: exchange code for session
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        
         if (exchangeError) {
           console.error("Error exchanging code for session:", exchangeError);
           setError(exchangeError.message);
           setTimeout(() => router.push("/?auth_error=true"), 2000);
           return;
         }
+        setTimeout(() => router.push("/"), 500);
+        return;
+      }
 
-        // Success - redirect will happen via auth state change
-        // Wait a moment for auth state to update
-        setTimeout(() => {
-          router.push("/");
-        }, 500);
-      } else if (!loading) {
-        // No code and not loading - check if user is already authenticated
+      // Email confirmation: Supabase redirects with hash (#access_token=...&type=signup)
+      // Client auto-processes hash; wait for session to be established
+      if (hasHash && user) {
+        router.push("/");
+        return;
+      }
+      if (hasHash && !user) {
+        // Hash present but no session yet - give client time to process
+        return;
+      }
+
+      if (!loading) {
         if (user) {
           router.push("/");
         } else {

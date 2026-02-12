@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
 import AuthModal from "@/app/components/AuthModal";
@@ -215,6 +216,14 @@ export default function ProfilePage() {
           >
             Sign In / Create Account
           </button>
+          <p className="mt-3 text-sm text-gray-400">
+            <Link
+              href="/auth/forgot-password"
+              className="text-blue-400 hover:text-blue-300 underline"
+            >
+              Forgot password?
+            </Link>
+          </p>
         </div>
         <AuthModal
           isOpen={showAuthModal}

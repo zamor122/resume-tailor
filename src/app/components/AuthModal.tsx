@@ -20,8 +20,8 @@ export default function AuthModal({
   title,
   description,
 }: AuthModalProps) {
-  const { signIn, signUp, user } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
+  const { signIn, signUp, resetPassword, user } = useAuth();
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,6 +43,25 @@ export default function AuthModal({
     setMessage(null);
     setMode(initialMode);
     onClose();
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { error } = await resetPassword(email);
+      if (error) {
+        setError(error.message);
+      } else {
+        setMessage("Check your email for a link to reset your password.");
+      }
+    } catch {
+      setError("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -113,13 +132,20 @@ export default function AuthModal({
           {/* Header */}
           <div className="mb-6">
             <h2 id="auth-modal-title" className="text-2xl font-bold text-white mb-2">
-              {title || (mode === "signup" ? "Create Account" : "Sign In")}
+              {title ||
+                (mode === "forgot"
+                  ? "Reset password"
+                  : mode === "signup"
+                    ? "Create Account"
+                    : "Sign In")}
             </h2>
             <p className="text-gray-400 text-sm">
               {description ||
-                (mode === "signup"
-                  ? "Create a free account to save your tailored resumes"
-                  : "Sign in to access your saved resumes")}
+                (mode === "forgot"
+                  ? "Enter your email and we'll send you a link to reset your password"
+                  : mode === "signup"
+                    ? "Create a free account to save your tailored resumes"
+                    : "Sign in to access your saved resumes")}
             </p>
           </div>
 
@@ -161,84 +187,147 @@ export default function AuthModal({
             </div>
           </div> */}
 
-          {/* Email/Password Form */}
-          <form onSubmit={handleEmailAuth} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
-              />
-            </div>
-
-            {error && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-                <p className="text-sm text-red-400">{error}</p>
+          {/* Forgot Password Form */}
+          {mode === "forgot" ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <label htmlFor="forgot-email" className="block text-sm font-medium text-gray-300 mb-1">
+                  Email
+                </label>
+                <input
+                  id="forgot-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="you@example.com"
+                />
               </div>
-            )}
 
-            {message && (
-              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
-                <p className="text-sm text-green-400">{message}</p>
-              </div>
-            )}
+              {error && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
+              )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Loading..." : mode === "signup" ? "Create Account" : "Sign In"}
-            </button>
-          </form>
+              {message && (
+                <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                  <p className="text-sm text-green-400">{message}</p>
+                </div>
+              )}
 
-          {/* Toggle Mode */}
-          <div className="mt-4 text-center text-sm text-gray-400">
-            {mode === "signin" ? (
-              <>
-                Don't have an account?{" "}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Sending..." : "Send reset link"}
+              </button>
+
+              <div className="text-center">
                 <button
-                  onClick={() => setMode("signup")}
-                  className="text-blue-400 hover:text-blue-300 underline"
-                >
-                  Sign up
-                </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{" "}
-                <button
+                  type="button"
                   onClick={() => setMode("signin")}
-                  className="text-blue-400 hover:text-blue-300 underline"
+                  className="text-sm text-blue-400 hover:text-blue-300 underline"
                 >
-                  Sign in
+                  Back to sign in
                 </button>
-              </>
-            )}
-          </div>
+              </div>
+            </form>
+          ) : (
+            <>
+              {/* Email/Password Form */}
+              <form onSubmit={handleEmailAuth} className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="you@example.com"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="••••••••"
+                  />
+                  {mode === "signin" && (
+                    <div className="mt-1 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setMode("forgot")}
+                        className="text-sm text-blue-400 hover:text-blue-300 underline"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {error && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                    <p className="text-sm text-red-400">{error}</p>
+                  </div>
+                )}
+
+                {message && (
+                  <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                    <p className="text-sm text-green-400">{message}</p>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? "Loading..." : mode === "signup" ? "Create Account" : "Sign In"}
+                </button>
+              </form>
+
+              {/* Toggle Mode */}
+              <div className="mt-4 text-center text-sm text-gray-400">
+                {mode === "signin" ? (
+                  <>
+                    Don't have an account?{" "}
+                    <button
+                      onClick={() => setMode("signup")}
+                      className="text-blue-400 hover:text-blue-300 underline"
+                    >
+                      Sign up
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Already have an account?{" "}
+                    <button
+                      onClick={() => setMode("signin")}
+                      className="text-blue-400 hover:text-blue-300 underline"
+                    >
+                      Sign in
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Continue as Guest */}
           <div className="mt-4 pt-4 border-t border-gray-700">
