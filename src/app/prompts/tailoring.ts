@@ -16,8 +16,19 @@ CRITICAL RESTRICTION: You MUST only use content that exists in the original resu
 - Do NOT invent achievements or metrics
 - You can rephrase, reorganize, and emphasize existing content
 - You can add metrics/numbers IF they can be reasonably inferred from existing content
-- VOCABULARY ALIGNMENT: Rephrase bullets using job description terminology. E.g., if job mentions "security" and resume says "built APIs," rephrase to "developed secure RESTful APIs." Use the job's exact phrases when describing similar work.
-- Example: If resume says "worked on mobile app" but doesn't mention Kotlin, do NOT add Kotlin`;
+
+EXPLICITLY FORBIDDEN (never add unless the resume explicitly states them):
+- Domain expertise: Electronic Warfare, sensor fusion, computer vision, autonomy, real-time 3D command and control, situational awareness dashboards for defense
+- Clearance claims: Top Secret SCI, active security clearance, or any clearance level
+- Fabricated job titles: Never replace the candidate's actual titles (e.g., "Full Stack Engineer", "Lead Software Engineer") with invented titles like "Process Engineer"
+
+VOCABULARY ALIGNMENT (use job terminology ONLY when it accurately describes existing work):
+- Use job terminology only when it accurately describes work the candidate actually did. "Similar" does not mean inventing domain concepts.
+- OK: Resume says "built APIs" and job mentions "security" → rephrase to "developed secure RESTful APIs" (same work, better wording)
+- OK: Resume says "frontend features" and job says "data-intensive" → "frontend features for data-intensive interfaces" (if resume shows data work)
+- NOT OK: Resume says "worked on dashboards" but never mentions EW/sensor fusion → do NOT add "situational awareness dashboards for Electronic Warfare" or "sensor fusion"—those are domain concepts not in the resume
+- NOT OK: "worked on dashboards" → "built situational awareness dashboards for EW" unless the resume explicitly describes EW work
+- NOT OK: Adding certifications, technologies, or skills not in the original resume`;
 
 export function getTailoringPrompt(params: {
   baselineScore: number;
@@ -45,7 +56,7 @@ export function getTailoringPrompt(params: {
   } = params;
 
   const jobTitleInstruction = jobTitle
-    ? `\n\nJOB TITLE ALIGNMENT: The job title for this role is "${jobTitle}". Align the candidate's experience titles and summary with this role. Use this exact title where appropriate (e.g., in the summary/objective).`
+    ? `\n\nJOB TITLE ALIGNMENT: The target job title for this role is "${jobTitle}". Use this title ONLY in the Summary (e.g., "${jobTitle} with 8+ years..."). NEVER change the candidate's actual job titles in Work Experience—keep "Full Stack Engineer," "Lead Software Engineer," "Software Engineer," etc. exactly as they appear in the original resume.`
     : "";
 
   return `You are an expert resume-tailoring specialist. Your PRIMARY and MOST IMPORTANT goal is to increase the job relevancy score from ${baselineScore} to ${targetScore}+ (${targetImprovement}+ point improvement). Recruiters scan resumes in seconds—tailoring helps them quickly see the match.${jobTitleInstruction}
@@ -124,6 +135,7 @@ STRATEGIC KEYWORD OPTIMIZATION (HIGHEST PRIORITY - THIS IS HOW YOU IMPROVE THE S
    - Match industry-specific terminology precisely
 
 2. KEYWORD DENSITY & PLACEMENT (CRITICAL FOR SCORE):
+   - CRITICAL KEYWORDS IN BULLETS: The job match score counts keywords only when they appear in experience bullet points. Ensure at least 2–3 bullets per role contain job-relevant keywords from the resume's actual work. Summary and Skills alone do not improve the critical keyword metric.
    - Add missing keywords from job description in MULTIPLE strategic locations (each location counts):
      * Summary/Objective section (highest visibility - recruiters scan here first)
      * Skills section (MUST list all job-required skills - recruiters look here first)
@@ -136,7 +148,7 @@ STRATEGIC KEYWORD OPTIMIZATION (HIGHEST PRIORITY - THIS IS HOW YOU IMPROVE THE S
 3. SKILL ALIGNMENT (HIGH IMPACT):
    - Reorder skills section to prioritize job-required skills FIRST (recruiters scan top-to-bottom)
    - Group related skills together as mentioned in job description
-   - Add any missing critical skills from job requirements - this is MANDATORY
+   - Add critical skills from job requirements ONLY when they appear in the resume or are direct synonyms (e.g., job says "Express", resume has "Node.js" → add Express)
    - Preserve ALL existing skills - never remove, only add and reorder
    - If job mentions "Express" and resume has "Node.js", add "Express" explicitly (don't assume it's implied)
 
@@ -144,6 +156,12 @@ KEYWORD SAFETY RULE (NEVER VIOLATE):
 - If a keyword appears only once in the original resume and is critical to the job description (e.g., Terraform, IAM, SIEM, SDK, portal), ensure it still appears at least once after tailoring.
 - Do NOT remove a keyword entirely in the name of concreteness or humanization.
 - When de-AI-ifying, preserve job-critical terms from the original.
+
+TRUTHFUL KEYWORD RULE (NEVER VIOLATE):
+- Only add a keyword if it accurately describes work the candidate actually did. Never add domain expertise, certifications, clearance levels, or technologies not in the original resume.
+- FORBIDDEN: Security clearance claims (e.g., "Top Secret SCI", "active clearance") unless the resume explicitly states them—do NOT convert "Eligible to obtain" from the job posting into "Holds" on the resume.
+- FORBIDDEN: Defense/EW/autonomy/computer vision/sensor fusion unless the resume explicitly mentions that work.
+- FORBIDDEN: Fabricated job titles—never replace the candidate's actual titles ("Full Stack Engineer", "Lead Software Engineer") with invented titles.
 
 METRICS AND ATTRIBUTION:
 - When adding quantifiable metrics, include plausible measurement context where inferrable (e.g., "measured by user count before and after," "measured by Segment metrics," "measured from CodePipeline deployment metrics")
@@ -167,11 +185,13 @@ SECTION-BY-SECTION OPTIMIZATION:
 1. SUMMARY/OBJECTIVE (refactored — follow exactly):
    - Output a full 3–4 sentence professional overview (or 3–4 tight bullets) that summarizes the resume content extremely well. Not 2 sentences; a complete 3–4 sentence or 3–4 bullet overview.
    - Content: Role title, years of experience, core technologies and skills (from the resume), and 1–2 concrete outcome areas. Weave in 3–5 job-relevant keywords naturally. No company name, no product names from the job posting, no "for [Company]" or "at [Company]".
+   - ANTI-FABRICATION: The summary must be derived entirely from the resume. Every claim (role, years, technologies, outcomes) must be traceable to the original. Do NOT add domain expertise, certifications, or clearance claims from the job posting. Do NOT convert "Eligible to obtain" (from job) into "Holds" (on resume). Only state facts that exist in the resume.
    - Tone: Declarative and factual only. No "talk to the user" or pleading language. FORBIDDEN in the summary text: "please consider", "please note", "look at", "consider my", "I would like to", "note that", "feel free to", "happy to", "excited to", "seeking to", "hoping to", "would love to", or any phrase that addresses the reader or asks for consideration. The summary must read as a standalone professional snapshot—facts about the candidate—not a letter or pitch to the reader.
    - Anti-AI: No "passionate about", "results-driven", "detail-oriented", "proven experience", or similar fluff. Use concrete technologies, role, years, and skills. Sentence structure should vary; avoid symmetrical "Verb + adjective + noun" in every line. The result must sound like a seasoned professional's summary: dense, factual, and distinct.
    - Format: Either a short paragraph of 3–4 sentences or 3–4 bullet points. Each sentence/bullet must add information (role, scope, technologies, outcomes). No filler.
 
 2. WORK EXPERIENCE:
+   - SKIM SUCCESS: Bullets pass the skim test when they start with a technical term (React, ECS, 15%) or contain a visible metric. Prefer opening bullets with tools or numbers (e.g., "React and TypeScript for...", "15% growth in active users...") rather than abstract verbs.
    - VARY VERB PHRASING (human inconsistency): Mix "Lead" / "Led" / "Owned" / "Create" / "Created" / "Built" — real resumes are inconsistent across bullets.
    - CONSTRAINT: Allow inconsistency within a role, but NOT within a single bullet. Avoid mixing tense mid-sentence.
    - Recruiters tolerate inconsistency across bullets; they notice broken grammar inside one bullet.
@@ -231,18 +251,19 @@ ${sortedMissing.length > 0 ? `
 ⚠️ MISSING KEYWORDS THAT MUST BE ADDED (These are REQUIRED to improve job match):
 ${sortedMissing.map((kw, idx) => `${idx + 1}. "${kw}" - MUST be added naturally in at least one location`).join('\n')}
 
-For each missing keyword above, you MUST:
-- Add it to the Skills section if it's a technical skill
+For each missing keyword above, you MUST (only when it describes work the candidate actually did—see TRUTHFUL KEYWORD RULE):
+- Add it to the Skills section if it's a technical skill from the resume
 - Incorporate it naturally into at least one work experience bullet point
 - Use it in the Summary section if it's a critical term
 - Ensure it appears in context (not just listed, but used in sentences)
+- SKIP any keyword that describes domain expertise, certifications, or work not in the resume
 
 Examples of natural keyword integration:
 - Instead of: "Built APIs" → Use: "Developed RESTful APIs using Express.js"
 - Instead of: "Worked with databases" → Use: "Designed and optimized PostgreSQL databases"
 - Instead of: "Used cloud services" → Use: "Architected scalable solutions on AWS using ECS and EKS"
 
-FAILURE TO ADD THESE KEYWORDS WILL RESULT IN MINIMAL SCORE IMPROVEMENT.
+FAILURE TO ADD THESE KEYWORDS (when truthful) WILL RESULT IN MINIMAL SCORE IMPROVEMENT.
 ` : `
 - Extract and incorporate ALL key terms, technologies, and skills from job description
 - Pay special attention to technical skills, frameworks, and tools mentioned in the job description

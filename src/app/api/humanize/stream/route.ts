@@ -174,56 +174,60 @@ export async function POST(req: NextRequest) {
         const cleanJobDescription = cleanJobDescriptionUtil(jobDescription, { maxLength: 8000 });
 
         // Identify missing keywords by comparing job description keywords with resume
+        // Align with relevancy-scorer: criticalKeywords drive the score, so prioritize them in sortedMissing
         const resumeLower = resume.toLowerCase();
+        const criticalKeywords = keywords.criticalKeywords || [];
         const missingKeywords: string[] = [];
         const allJobKeywords = [
           ...(keywords.keywords?.technical || []),
           ...(keywords.keywords?.industry || []),
         ];
-        
-        // Find keywords from job description that are NOT in resume
+
+        // Missing critical keywords (used by relevancy-scorer for scoring—prioritize these)
+        const missingCritical = criticalKeywords.filter((kw: string): boolean => {
+          const term = (kw || "").toLowerCase();
+          if (term.length < 3) return false;
+          const variations = [term, term.replace(/\s+/g, ""), term.replace(/\s+/g, "-"), term.replace(/\s+/g, "_")];
+          return !variations.some((v) => resumeLower.includes(v));
+        });
+
+        // Find other keywords from job description that are NOT in resume
         allJobKeywords.forEach((keyword: any) => {
-          const term = keyword.term?.toLowerCase() || '';
-          // Check if keyword or its variations exist in resume
+          const term = keyword.term?.toLowerCase() || "";
           const keywordVariations = [
             term,
-            term.replace(/\s+/g, ''),
-            term.replace(/\s+/g, '-'),
-            term.replace(/\s+/g, '_'),
+            term.replace(/\s+/g, ""),
+            term.replace(/\s+/g, "-"),
+            term.replace(/\s+/g, "_"),
           ];
-          
-          const foundInResume = keywordVariations.some(variation => 
-            resumeLower.includes(variation)
-          );
-          
+          const foundInResume = keywordVariations.some((v) => resumeLower.includes(v));
           if (!foundInResume && term.length > 2) {
             missingKeywords.push(keyword.term || term);
           }
         });
-        
-        // Sort by importance (critical/high first) and frequency
-        const sortedMissing = missingKeywords
-          .map(term => {
-            const keywordData = allJobKeywords.find((k: any) => 
-              k.term?.toLowerCase() === term.toLowerCase()
-            );
+
+        // Merge: critical keywords first (align with what relevancy-scorer uses), then rest by importance
+        const criticalSet = new Set(missingCritical.map((k: string) => k.toLowerCase()));
+        const restMissing = missingKeywords.filter((t) => !criticalSet.has(t.toLowerCase()));
+        const sortedRest = restMissing
+          .map((term) => {
+            const keywordData = allJobKeywords.find((k: any) => k.term?.toLowerCase() === term.toLowerCase());
             return {
               term,
-              importance: keywordData?.importance || 'medium',
+              importance: keywordData?.importance || "medium",
               importanceScore: keywordData?.importanceScore || 50,
               frequency: keywordData?.frequency || 1,
             };
           })
           .sort((a, b) => {
-            // Sort by importance first, then frequency
             const importanceOrder = { critical: 4, high: 3, medium: 2, low: 1 };
             const aImp = importanceOrder[a.importance as keyof typeof importanceOrder] || 2;
             const bImp = importanceOrder[b.importance as keyof typeof importanceOrder] || 2;
             if (aImp !== bImp) return bImp - aImp;
             return b.frequency - a.frequency;
           })
-          .slice(0, 20) // Top 20 most important missing keywords
-          .map(k => k.term);
+          .map((k: { term: string }) => k.term);
+        const sortedMissing = [...missingCritical, ...sortedRest].slice(0, 20);
 
         // Build concise context (don't duplicate job description)
         const keywordContext =
