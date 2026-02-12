@@ -28,11 +28,7 @@ interface RateLimitHitData {
  * Track rate limit hit event
  */
 export async function trackRateLimitHitServer(data: RateLimitHitData): Promise<void> {
-  // Skip in development mode
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[UmamiServer] 🚫 DEV MODE - Rate limit hit logged but NOT sent:', data);
-    return;
-  }
+  if (process.env.NODE_ENV === 'development') return;
   
   const config = getUmamiConfig();
   if (!config.apiKey || !config.websiteId) {
@@ -87,10 +83,7 @@ export async function trackEventServer(
   eventName: string,
   data: Record<string, unknown>
 ): Promise<void> {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[UmamiServer] 🚫 DEV MODE - Event logged but NOT sent:', eventName, data);
-    return;
-  }
+  if (process.env.NODE_ENV === 'development') return;
 
   const config = getUmamiConfig();
   if (!config.apiKey || !config.websiteId) {
@@ -133,15 +126,7 @@ export async function trackQuotaExceededServer(
   hashedIP: string,
   userId?: string
 ): Promise<void> {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[UmamiServer] 🚫 DEV MODE - Quota exceeded logged but NOT sent:', {
-      modelKey,
-      endpoint,
-      hashedIP,
-      userId,
-    });
-    return;
-  }
+  if (process.env.NODE_ENV === 'development') return;
   
   const config = getUmamiConfig();
   if (!config.apiKey || !config.websiteId) {

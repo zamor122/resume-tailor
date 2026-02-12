@@ -20,7 +20,6 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  console.log("[Webhook] POST received");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret || !webhookSecret.startsWith("whsec_")) {
     console.error("[Webhook] STRIPE_WEBHOOK_SECRET not configured");

@@ -28,12 +28,6 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
     
-    // If only one job description, provide helpful message but still process
-    if (jobDescs.length === 1) {
-      // Still process, but note it's a single job comparison
-      console.log('Multi-job comparison with single job - consider adding more for better insights');
-    }
-
     if (jobDescs.length > 10) {
       return NextResponse.json({
         error: "Invalid Input",

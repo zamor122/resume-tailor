@@ -153,11 +153,7 @@ export const trackEvent = async (
       return false;
     }
 
-    // Skip sending to Umami in development mode
-    if (isDevelopment()) {
-      console.log(`[Analytics] 🚫 DEV MODE - Event logged but NOT sent to Umami: ${name}`, data);
-      return true; // Return true to indicate the event was "handled" (logged)
-    }
+    if (isDevelopment()) return true;
 
     // Wait for Umami to be available
     const umamiReady = await waitForUmami(3000);
@@ -165,18 +161,15 @@ export const trackEvent = async (
     if (umamiReady && window.umami) {
       try {
         window.umami.track(name, data);
-        console.log(`[Analytics] ✅ Tracked event: ${name}`, data);
         return true;
       } catch (trackError) {
-        console.error(`[Analytics] ❌ Error calling umami.track:`, trackError);
+        console.error("[Analytics] Error calling umami.track:", trackError);
         return false;
       }
-    } else {
-      console.warn(`[Analytics] ⚠️ Umami not available for event: ${name}`);
-      return false;
     }
+    return false;
   } catch (error) {
-    console.error(`[Analytics] ❌ Error tracking event:`, error);
+    console.error("[Analytics] Error tracking event:", error);
     return false;
   }
 };
