@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
       const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
       const priceId = lineItems.data[0]?.price?.id || "";
       const amountTotal = session.amount_total ?? 0;
+      const amountDiscount = session.total_details?.amount_discount ?? 0;
 
       await supabaseAdmin.from("payments").insert({
         user_id: userId || null,
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
         amount_cents: amountTotal,
         currency: "usd",
         status: "completed",
-        metadata: { tier, source: "access_grant" },
+        metadata: { tier, source: "access_grant", amount_discount: amountDiscount },
       });
     } catch (err) {
       console.warn("[Webhook] Optional payments insert failed:", err);
