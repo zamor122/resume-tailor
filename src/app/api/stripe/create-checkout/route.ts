@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: paymentMethodTypes,
+      allow_promotion_codes: true,
       line_items: [
         {
           price: tierConfig.priceId,
@@ -106,6 +107,25 @@ export async function POST(req: NextRequest) {
       cancel_url: cancelUrl,
       ...(email && { customer_email: email }),
     });
+
+    // #region agent log
+    fetch("http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "create-checkout/route.ts:session-created",
+        message: "Checkout session created",
+        data: {
+          tier,
+          priceId: tierConfig.priceId,
+          sessionId: session.id,
+          allowPromotionCodes: session.allow_promotion_codes,
+          hypothesisId: "A",
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (error) {
