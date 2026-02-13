@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/contexts/AuthContext";
@@ -139,6 +139,54 @@ export default function SplitScreenTailorView() {
   const [errorShakeKey, setErrorShakeKey] = useState(0);
   const [fileDropKey, setFileDropKey] = useState(0);
   const [detectedJobTitle, setDetectedJobTitle] = useState<string | null>(null);
+
+  const ROTATING_WORDS = [
+    "hours",
+    "days",
+    "weekends",
+    "nights",
+    "energy",
+    "stress",
+    "time",
+    "effort",
+  ];
+  const [typingWordIndex, setTypingWordIndex] = useState(0);
+  const [typingCharIndex, setTypingCharIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const word = ROTATING_WORDS[typingWordIndex];
+    const delay = isDeleting ? 60 : 100;
+
+    if (isDeleting) {
+      if (typingCharIndex === 0) {
+        typingTimeoutRef.current = setTimeout(() => {
+          setIsDeleting(false);
+          setTypingWordIndex((i) => (i + 1) % ROTATING_WORDS.length);
+        }, 300);
+      } else {
+        typingTimeoutRef.current = setTimeout(
+          () => setTypingCharIndex((c) => c - 1),
+          delay
+        );
+      }
+    } else {
+      if (typingCharIndex < word.length) {
+        typingTimeoutRef.current = setTimeout(
+          () => setTypingCharIndex((c) => c + 1),
+          delay
+        );
+      } else {
+        typingTimeoutRef.current = setTimeout(() => setIsDeleting(true), 2200);
+      }
+    }
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, [typingWordIndex, typingCharIndex, isDeleting]);
+
+  const displayedWord = ROTATING_WORDS[typingWordIndex].slice(0, typingCharIndex);
 
   useEffect(() => {
     let sid = typeof window !== "undefined" ? localStorage.getItem("resume-tailor-session-id") : null;
@@ -332,10 +380,19 @@ export default function SplitScreenTailorView() {
         {/* Hero */}
         <section className="py-8 md:py-16 text-center" data-parallax="0.05">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-4 md:mb-6">
-            Make Your Resume Sound Like You—Only Better
+            Still unmistakably you—just refined.
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8">
-            We tailor your resume to each job so it reads like you wrote it—not like a robot. Natural phrasing, your voice, no AI slop or keyword stuffing.
+          <p className="text-[22px] sm:text-[24px] text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
+            Your resume tailored to each role. Reads like you spent{" "}
+            <span className="inline-block min-w-[6.5rem] text-left">
+              <span className="bg-gradient-to-r from-cyan-500 to-purple-500 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent font-medium">
+                {displayedWord}
+              </span>
+              <span className="inline-block w-[2px] h-[1em] ml-0.5 -mb-0.5 bg-cyan-500 dark:bg-cyan-400 animate-pulse" aria-hidden />
+            </span>
+            {" "}
+            <br />
+            —without the hassle.
           </p>
           <button
             onClick={() => scrollToSection("tailorResume")}
