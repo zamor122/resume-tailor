@@ -72,6 +72,8 @@ CREATE INDEX IF NOT EXISTS idx_access_grants_tier ON access_grants(tier_purchase
 CREATE INDEX IF NOT EXISTS idx_resumes_user_id ON resumes(user_id);
 CREATE INDEX IF NOT EXISTS idx_resumes_session_id ON resumes(session_id);
 CREATE INDEX IF NOT EXISTS idx_resumes_customer_email ON resumes(customer_email);
+CREATE INDEX IF NOT EXISTS idx_resumes_user_id_created_at ON resumes(user_id, created_at DESC) WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_resumes_session_id_created_at ON resumes(session_id, created_at DESC) WHERE session_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_resume_id ON payments(resume_id);
@@ -84,48 +86,58 @@ ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies (drop existing if any)
+-- auth.uid() wrapped in SELECT to evaluate once per query (initPlan) for performance
 DROP POLICY IF EXISTS "Users can view own access grants" ON access_grants;
 DROP POLICY IF EXISTS "Users can view own resumes" ON resumes;
+DROP POLICY IF EXISTS "Users can link own resumes" ON resumes;
 DROP POLICY IF EXISTS "Users can view own sessions" ON sessions;
 DROP POLICY IF EXISTS "Users can view own payments" ON payments;
 
 CREATE POLICY "Users can view own access grants" ON access_grants
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
 -- RLS Policy: Allow anonymous reads by session_id, authenticated reads by user_id
 -- This enables the teaser strategy where anonymous users can see their generated resume
 CREATE POLICY "Users can view own resumes" ON resumes
   FOR SELECT USING (
-    auth.uid() = user_id 
+    (select auth.uid()) = user_id 
     OR session_id IS NOT NULL  -- Allow anonymous access by session_id
   );
 
 -- Allow updates to link session_id resumes to user_id (for when user authenticates)
 CREATE POLICY "Users can link own resumes" ON resumes
   FOR UPDATE USING (
-    auth.uid() = user_id 
+    (select auth.uid()) = user_id 
     OR (user_id IS NULL AND session_id IS NOT NULL)  -- Allow linking anonymous resumes
   );
 
 CREATE POLICY "Users can view own sessions" ON sessions
-  FOR SELECT USING (auth.uid() = user_id OR user_id IS NULL);
+  FOR SELECT USING ((select auth.uid()) = user_id OR user_id IS NULL);
 
 CREATE POLICY "Users can view own payments" ON payments
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
--- SQL Functions
+-- SQL Functions (SET search_path = public for security - prevents search_path injection)
 CREATE OR REPLACE FUNCTION has_active_access(user_uuid UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE SQL
+SECURITY DEFINER
+SET search_path = public
+AS $$
   SELECT EXISTS (
     SELECT 1 FROM access_grants
     WHERE user_id = user_uuid
       AND is_active = true
       AND expires_at > NOW()
   );
-$$ LANGUAGE SQL SECURITY DEFINER;
+$$;
 
 CREATE OR REPLACE FUNCTION get_remaining_access_time(user_uuid UUID)
-RETURNS INTERVAL AS $$
+RETURNS INTERVAL
+LANGUAGE SQL
+SECURITY DEFINER
+SET search_path = public
+AS $$
   SELECT expires_at - NOW()
   FROM access_grants
   WHERE user_id = user_uuid
@@ -133,10 +145,14 @@ RETURNS INTERVAL AS $$
     AND expires_at > NOW()
   ORDER BY expires_at DESC
   LIMIT 1;
-$$ LANGUAGE SQL SECURITY DEFINER;
+$$;
 
 CREATE OR REPLACE FUNCTION get_current_tier(user_uuid UUID)
-RETURNS TEXT AS $$
+RETURNS TEXT
+LANGUAGE SQL
+SECURITY DEFINER
+SET search_path = public
+AS $$
   SELECT tier_purchased
   FROM access_grants
   WHERE user_id = user_uuid
@@ -144,5 +160,9 @@ RETURNS TEXT AS $$
     AND expires_at > NOW()
   ORDER BY expires_at DESC
   LIMIT 1;
-$$ LANGUAGE SQL SECURITY DEFINER;
+$$;
+
+-- blog_posts RLS (run when blog_posts table exists - see migration 20250213000000_create_blog_posts)
+-- ALTER TABLE public.blog_posts ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "Blog posts are publicly readable" ON public.blog_posts FOR SELECT USING (true);
 

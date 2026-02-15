@@ -1,7 +1,6 @@
 {
   "functions": {
-    "app/api/**/*": {"maxDuration": 60},
-    "app/api/cron/generate-blog-post/route.ts": {"maxDuration": 120}
+    "app/api/**/*": {"maxDuration": 60}
   },
   "crons": [
     {

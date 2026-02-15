@@ -237,6 +237,10 @@ export default function SplitScreenTailorView() {
   };
 
   const handleTailor = useCallback(async () => {
+    if (!user) {
+      // Defense in depth: should not reach here when unauthenticated (AuthGate uses render prop)
+      return;
+    }
     if (!resume.trim() || !jobDescription.trim()) {
       setError("Please enter both your resume and the job description.");
       return;
@@ -339,7 +343,7 @@ export default function SplitScreenTailorView() {
     } finally {
       if (!didRedirect) setLoading(false);
     }
-  }, [resume, jobDescription, sessionId, user?.id, router]);
+  }, [resume, jobDescription, sessionId, user, router]);
 
   const handleReset = useCallback(() => {
     setResume("");
@@ -492,12 +496,14 @@ export default function SplitScreenTailorView() {
 
             <div className="text-center space-y-3">
               <AuthGate action="tailor" sessionId={sessionId ?? undefined}>
-                <TailorButton
-                  loading={loading}
-                  onClick={handleTailor}
-                  disabled={!resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100}
-                  ready={resume.trim().length >= 100 && jobDescription.trim().length >= 100}
-                />
+                {(showAuthModal) => (
+                  <TailorButton
+                    loading={loading}
+                    onClick={user ? handleTailor : showAuthModal}
+                    disabled={!resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100}
+                    ready={resume.trim().length >= 100 && jobDescription.trim().length >= 100}
+                  />
+                )}
               </AuthGate>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Get a resume that sounds like you—human, not robotic

@@ -5,7 +5,7 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import AuthModal from "./AuthModal";
 
 interface AuthGateProps {
-  children: React.ReactNode;
+  children: React.ReactNode | ((showAuthModal: () => void) => React.ReactNode);
   onAuthSuccess?: () => void;
   sessionId?: string;
   resumeId?: string;
@@ -23,17 +23,7 @@ export default function AuthGate({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
 
-  const handleClick = async (e: React.MouseEvent) => {
-    if (user) {
-      // User is authenticated, allow action
-      return;
-    }
-
-    // User not authenticated, show auth modal
-    e.preventDefault();
-    e.stopPropagation();
-    setShowAuthModal(true);
-  };
+  const openAuthModal = () => setShowAuthModal(true);
 
   // Link resume when user becomes available
   useEffect(() => {
@@ -70,26 +60,44 @@ export default function AuthGate({
     onAuthSuccess?.();
   };
 
+  const tailorCopy = action === "tailor";
+  const title = tailorCopy ? "Sign in to tailor your resume" : `Sign in to ${action}`;
+  const description = tailorCopy ? "Your first 3 resumes are free. Create a free account to get started." : `Create a free account to ${action} your tailored resume and access it anytime.`;
+
   if (loading) {
     return (
       <div className="opacity-50 pointer-events-none">
-        {children}
+        {typeof children === "function" ? children(openAuthModal) : children}
       </div>
     );
   }
 
   if (user) {
     // User is authenticated, render children normally
-    return <>{children}</>;
+    return <>{typeof children === "function" ? children(openAuthModal) : children}</>;
   }
 
-  const tailorCopy = action === "tailor";
-  const title = tailorCopy ? "Sign in to tailor your resume" : `Sign in to ${action}`;
-  const description = tailorCopy ? "Your first 3 resumes are free. Create a free account to get started." : `Create a free account to ${action} your tailored resume and access it anytime.`;
+  // User not authenticated: use render prop so the button's onClick is explicitly
+  // set to openAuthModal (avoids Safari onClickCapture/stopPropagation issues)
+  if (typeof children === "function") {
+    return (
+      <>
+        {children(openAuthModal)}
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+          title={title}
+          description={description}
+        />
+      </>
+    );
+  }
 
+  // Fallback for non-function children: wrap with click handler
   return (
     <>
-      <div onClickCapture={handleClick} className="cursor-pointer">
+      <div onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); setShowAuthModal(true); }} className="cursor-pointer">
         {children}
       </div>
       <AuthModal

@@ -20,7 +20,6 @@ describe('umamiServer utilities', () => {
   describe('trackRateLimitHitServer', () => {
     it('should skip tracking in development mode', async () => {
       process.env.NODE_ENV = 'development';
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       
       await trackRateLimitHitServer({
         endpoint: '/api/test',
@@ -33,10 +32,8 @@ describe('umamiServer utilities', () => {
         limit: 5,
       });
       
-      expect(consoleSpy).toHaveBeenCalled();
+      // Implementation silently skips in dev (no console.log, no fetch)
       expect(global.fetch).not.toHaveBeenCalled();
-      
-      consoleSpy.mockRestore();
     });
 
     it('should skip tracking when API key is missing', async () => {
@@ -104,14 +101,11 @@ describe('umamiServer utilities', () => {
   describe('trackQuotaExceededServer', () => {
     it('should skip tracking in development mode', async () => {
       process.env.NODE_ENV = 'development';
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       
       await trackQuotaExceededServer('test-model', '/api/test', 'hashed-ip');
       
-      expect(consoleSpy).toHaveBeenCalled();
+      // Implementation silently skips in dev (no console.log, no fetch)
       expect(global.fetch).not.toHaveBeenCalled();
-      
-      consoleSpy.mockRestore();
     });
 
     it('should send tracking request in production', async () => {

@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { generateContentWithFallback } from "@/app/services/ai-provider";
 import { parseJSONFromText } from "@/app/utils/json-extractor";
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 function sanitizeSlug(s: string): string {
   const sanitized = s

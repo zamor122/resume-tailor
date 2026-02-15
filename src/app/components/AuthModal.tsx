@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
 
 interface AuthModalProps {
@@ -108,7 +109,9 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  return (
+  // Portal to document.body to avoid Safari clipping: position:fixed is incorrectly
+  // clipped by overflow-hidden ancestors (e.g. .input-container) in WebKit.
+  const modalContent = (
     <div
       role="dialog"
       aria-modal="true"
@@ -342,5 +345,9 @@ export default function AuthModal({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : null;
 }
 
