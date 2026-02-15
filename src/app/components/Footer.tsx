@@ -12,6 +12,30 @@ export default function Footer() {
           {/* Links */}
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             <Link 
+              href="/faq" 
+              className="text-sm text-gray-600 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors duration-200"
+            >
+              FAQ
+            </Link>
+            <Link 
+              href="/blog" 
+              className="text-sm text-gray-600 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors duration-200"
+            >
+              Blog
+            </Link>
+            <Link 
+              href="/resume-optimizer" 
+              className="text-sm text-gray-600 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors duration-200"
+            >
+              Resume Optimizer
+            </Link>
+            <Link 
+              href="/alternatives/jobscan" 
+              className="text-sm text-gray-600 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors duration-200"
+            >
+              Alternatives
+            </Link>
+            <Link 
               href="/privacy" 
               className="text-sm text-gray-600 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors duration-200"
             >

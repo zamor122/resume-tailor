@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { FAQStructuredData } from '@/app/components/StructuredData';
 
 export const metadata = {
   title: "Frequently Asked Questions - AI Resume Tailor",
@@ -100,8 +101,11 @@ const FAQ_ITEMS = [
 ];
 
 export default function FAQPage() {
+  const allFaqItems = FAQ_ITEMS.flatMap((section) => section.qa);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
+      <FAQStructuredData items={allFaqItems} />
       <h1 className="text-3xl font-bold mb-2">Frequently Asked Questions</h1>
       <p className="text-gray-600 dark:text-gray-400 mb-10">
         Everything you need to know about the product, what&apos;s free, what&apos;s paid, and how it works.
@@ -124,6 +128,37 @@ export default function FAQPage() {
             </div>
           </section>
         ))}
+      </div>
+
+      <div className="mt-12 p-6 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Related</h2>
+        <ul className="space-y-2">
+          <li>
+            <Link href="/resume-optimizer" className="text-cyan-600 dark:text-cyan-400 hover:underline">
+              Free Resume Optimizer & ATS Checker
+            </Link>
+          </li>
+          <li>
+            <Link href="/alternatives/jobscan" className="text-cyan-600 dark:text-cyan-400 hover:underline">
+              Free Alternative to Jobscan
+            </Link>
+          </li>
+          <li>
+            <Link href="/alternatives/kickresume" className="text-cyan-600 dark:text-cyan-400 hover:underline">
+              Free Alternative to Kickresume
+            </Link>
+          </li>
+          <li>
+            <Link href="/alternatives/zety" className="text-cyan-600 dark:text-cyan-400 hover:underline">
+              Free Alternative to Zety
+            </Link>
+          </li>
+          <li>
+            <Link href="/alternatives/resume-io" className="text-cyan-600 dark:text-cyan-400 hover:underline">
+              Free Alternative to Resume.io
+            </Link>
+          </li>
+        </ul>
       </div>
       
       <div className="mt-16 text-center">

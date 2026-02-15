@@ -1,33 +1,16 @@
 {
   "functions": {
-    "app/api/**/*": {
-      "maxDuration": 60
-    }
+    "app/api/**/*": {"maxDuration": 60}
   },
-  "routes": [
+  "crons": [
     {
-      "src": "/api/tailor",
-      "has": [
-        {
-          "type": "header",
-          "key": "x-vercel-edge-timeout"
-        }
-      ],
-      "continue": true
-    },
-    {
-      "src": "/api/tailor",
-      "headers": {
-        "x-vercel-edge-timeout": "60000"
-      },
-      "continue": true
-    },
-    {
-      "src": "/api/tailor/job/title",
-      "headers": {
-        "x-vercel-edge-timeout": "60000"
-      },
-      "continue": true
+      "path": "/api/cron/generate-blog-post",
+      "schedule": "0 1 * * *"
     }
+  ],
+  "routes": [
+    {"src":"/api/tailor","has":[{"type":"header","key":"x-vercel-edge-timeout"}],"continue":true},
+    {"src":"/api/tailor","headers":{"x-vercel-edge-timeout":"60000"},"continue":true},
+    {"src":"/api/tailor/job/title","headers":{"x-vercel-edge-timeout":"60000"},"continue":true}
   ]
-} 
+}

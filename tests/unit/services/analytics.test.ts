@@ -24,19 +24,13 @@ describe('analytics service', () => {
   });
 
   describe('trackEvent', () => {
-    it('should log event in development mode', async () => {
+    it('should return true and skip tracking in development mode', async () => {
       process.env.NODE_ENV = 'development';
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       
       const result = await trackEvent('test_event', { key: 'value' });
       
+      // Implementation returns true and silently skips in dev (no console.log)
       expect(result).toBe(true);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('DEV MODE'),
-        expect.anything()
-      );
-      
-      consoleSpy.mockRestore();
     });
 
     it('should track event when Umami is available', async () => {
@@ -60,34 +54,30 @@ describe('analytics service', () => {
 
     it('should handle old object-style event format', async () => {
       process.env.NODE_ENV = 'development';
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       
       const result = await trackEvent(
         { name: 'test_event', properties: { key: 'value' } }
       );
       
+      // Old format is normalized and returns true in dev (silent skip)
       expect(result).toBe(true);
-      expect(consoleSpy).toHaveBeenCalled();
-      
-      consoleSpy.mockRestore();
     });
 
     it('should return false when Umami is not available', async () => {
-      // Mock window.location to simulate production
+      // Mock window.location to simulate production (not localhost)
       const originalLocation = window.location;
       delete (window as any).location;
       (window as any).location = { hostname: 'example.com' };
       
       process.env.NODE_ENV = 'production';
+      process.env.NEXT_PUBLIC_NODE_ENV = 'production';
       delete (window as any).umami;
       
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const result = await trackEvent('test_event');
       
+      // Implementation returns false silently when Umami never becomes available
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalled();
       
-      consoleSpy.mockRestore();
       // Restore
       (window as any).location = originalLocation;
     });

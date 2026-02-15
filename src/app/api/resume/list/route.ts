@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { getFreeResumeIdsServer } from "@/app/utils/accessManager";
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const preferredRegion = 'auto';
 export const maxDuration = 30;
 
@@ -19,46 +19,18 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    let query = supabaseAdmin
-      .from('resumes')
-      .select(`
-        id, 
-        created_at, 
-        job_description, 
-        job_title,
-        company_name,
-        match_score, 
-        improvement_metrics,
-        payments!inner (
-          id,
-          status,
-          amount_cents,
-          created_at
-        )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (userId) {
-      query = query.eq('user_id', userId);
-    } else if (sessionId) {
-      query = query.eq('session_id', sessionId);
-    }
-
-    const { data: resumesWithPayments, error: resumesError } = await query;
-    
-    // Also fetch resumes without payments
-    let unpaidQuery = supabaseAdmin
+    let resumeQuery = supabaseAdmin
       .from('resumes')
       .select('id, created_at, job_description, job_title, company_name, match_score, improvement_metrics')
       .order('created_at', { ascending: false });
 
     if (userId) {
-      unpaidQuery = unpaidQuery.eq('user_id', userId);
+      resumeQuery = resumeQuery.eq('user_id', userId);
     } else if (sessionId) {
-      unpaidQuery = unpaidQuery.eq('session_id', sessionId);
+      resumeQuery = resumeQuery.eq('session_id', sessionId);
     }
 
-    const { data: allResumes, error } = await unpaidQuery;
+    const { data: allResumes, error } = await resumeQuery;
 
     if (error) {
       console.error("Error fetching resumes:", error);
