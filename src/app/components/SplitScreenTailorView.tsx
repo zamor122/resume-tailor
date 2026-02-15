@@ -13,6 +13,7 @@ import AuthGate from "./AuthGate";
 import ProgressStepper from "./ProgressStepper";
 import ResetConfirmationModal from "./ResetConfirmationModal";
 import FileDropZone from "./FileDropZone";
+import HomepageSEOSection from "./HomepageSEOSection";
 import { extractTextFromPDF } from "@/app/utils/pdfExtractor";
 import { analytics } from "@/app/services/analytics";
 import { saveResumeData, loadResumeData, clearResumeData } from "@/app/utils/dataPersistence";
@@ -380,8 +381,11 @@ export default function SplitScreenTailorView() {
         {/* Hero */}
         <section className="py-8 md:py-16 text-center" data-parallax="0.05">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-4 md:mb-6">
-            Still unmistakably you—just refined.
+            Free AI Resume Tailor: Optimize Your Resume for Any Job Posting
           </h1>
+          <p className="text-lg sm:text-xl text-gray-500 dark:text-gray-400 mb-2 italic">
+            Still unmistakably you—just refined.
+          </p>
           <p className="text-[22px] sm:text-[24px] text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
             Your resume tailored to each role. Reads like you spent{" "}
             <span className="inline-block min-w-[6.5rem] text-left">
@@ -405,7 +409,7 @@ export default function SplitScreenTailorView() {
         {/* How It Works */}
         <section id="howItWorks" className="py-6 md:py-8" data-parallax="0.08">
           <h2 className="text-xl md:text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-6 md:mb-8">
-            How It Works
+            How to Optimize Your Resume for ATS and Job Descriptions
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8">
             <div className="text-center">
@@ -420,7 +424,7 @@ export default function SplitScreenTailorView() {
             </div>
             <div className="text-center">
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold">3</div>
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Get a resume that sounds like you</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Get an ATS-Optimized Resume That Sounds Like You</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Receive a version that matches the job, sounds human, and keeps your voice</p>
             </div>
           </div>
@@ -534,6 +538,9 @@ export default function SplitScreenTailorView() {
             </p>
           </div>
         )}
+
+        {/* Below-the-fold SEO content */}
+        <HomepageSEOSection />
 
       </ParallaxContainer>
 

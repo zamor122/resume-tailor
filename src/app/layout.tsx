@@ -9,6 +9,7 @@ import { ThemeProvider } from './components/ThemeProvider'
 import { AuthProvider } from './contexts/AuthContext';
 import UmamiVerifier from './components/UmamiVerifier';
 import Script from "next/script";
+import { RootStructuredData } from './components/StructuredData';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
     default: "AI Resume Tailor - Free Job Match Optimization with Relevancy Scoring",
     template: "%s | AI Resume Tailor"
   },
-  description: "Free AI-powered resume tailoring tool with real-time relevancy scoring. Tailor your resume for each job so recruiters see the right match in seconds. Increase interview chances by up to 60%. No sign-up required, no data stored.",
+  description: "Free AI-powered resume tailoring tool with real-time relevancy scoring. Sign in for free to get started—your first 3 tailored resumes are free. Tailor your resume for each job so recruiters see the right match in seconds. No credit card required.",
   keywords: [
     "resume tailoring",
     "job match optimizer",
@@ -55,7 +56,11 @@ export const metadata: Metadata = {
     "resume checker",
     "resume score calculator",
     "job application optimizer",
-    "resume AI tool"
+    "resume AI tool",
+    "ATS resume checker",
+    "free alternative to Jobscan",
+    "resume matcher",
+    "job posting matcher"
   ],
   applicationName: "AI Resume Tailor",
   referrer: "origin-when-cross-origin",
@@ -66,7 +71,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "AI Resume Tailor - Free Job Match Optimization with Relevancy Scoring",
-    description: "Free AI resume tool that tailors your resume for each job with real-time relevancy scoring. See exactly how your resume matches job descriptions. Get more interviews with perfectly tailored applications. No sign-up needed.",
+    description: "Free AI resume tool that tailors your resume for each job with real-time relevancy scoring. Your first 3 tailored resumes are free. See exactly how your resume matches job descriptions. Get more interviews with perfectly tailored applications.",
     type: "website",
     locale: "en_US",
     alternateLocale: ["en_GB", "en_CA", "en_AU"],
@@ -85,7 +90,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "AI Resume Tailor - Free Job Match Optimization Tool",
-    description: "Free AI resume tool that tailors your resume for each job and job description. Get more interviews with perfectly tailored applications. No sign-up needed.",
+    description: "Free AI resume tool that tailors your resume for each job and job description. Your first 3 tailored resumes are free. Get more interviews with perfectly tailored applications.",
     site: "@airesumetailor",
     images: ["/og-image.jpg"],
   },
@@ -106,12 +111,10 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  verification: {
-    google: "ca-pub-5839711747501766", // AdSense publisher ID
-  },
-  other: {
-    "google-site-verification": "ca-pub-5839711747501766",
-  },
+  ...(process.env.GOOGLE_SITE_VERIFICATION && {
+    verification: { google: process.env.GOOGLE_SITE_VERIFICATION },
+    other: { "google-site-verification": process.env.GOOGLE_SITE_VERIFICATION },
+  }),
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -134,6 +137,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
+        <RootStructuredData />
         <Script 
           id="umami-analytics"
           src="https://cloud.umami.is/script.js" 

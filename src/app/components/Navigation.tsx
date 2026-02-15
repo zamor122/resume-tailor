@@ -101,6 +101,16 @@ export default function Navigation() {
             >
               FAQ
             </Link>
+            <Link 
+              href="/blog" 
+              className={`transition-colors ${
+                pathname?.startsWith('/blog') 
+                  ? 'text-green-500 font-medium' 
+                  : 'text-gray-300 hover:text-green-500'
+              }`}
+            >
+              Blog
+            </Link>
           </div>
         </div>
       </div>

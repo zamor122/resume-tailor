@@ -8,6 +8,7 @@ import ImprovementHighlights from "@/app/components/ImprovementHighlights";
 import PaymentGate from "@/app/components/PaymentGate";
 import FreeReveal from "@/app/components/FreeReveal";
 import TierSelectionModal from "@/app/components/TierSelectionModal";
+import ShareResumeCard from "@/app/components/ShareResumeCard";
 import Link from "next/link";
 import type { ResumeMetricsSnapshot } from "@/app/types/humanize";
 
@@ -264,6 +265,10 @@ export default function ResumeDetailPage() {
               metricsSnapshot={data.metrics ?? null}
             />
           </div>
+
+          {data.isUnlocked && (
+            <ShareResumeCard />
+          )}
         </div>
       </div>
 
