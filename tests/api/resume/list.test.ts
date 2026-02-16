@@ -6,9 +6,16 @@ process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
 process.env.SUPABASE_SECRET_KEY = 'test-secret-key';
 
 const mockGetFreeResumeIdsServer = vi.fn();
+const mockRequireAuth = vi.fn();
+const mockVerifyUserIdMatch = vi.fn();
 
 vi.mock('@/app/utils/accessManager', () => ({
   getFreeResumeIdsServer: (...args: unknown[]) => mockGetFreeResumeIdsServer(...args),
+}));
+
+vi.mock('@/app/utils/auth', () => ({
+  requireAuth: (...args: unknown[]) => mockRequireAuth(...args),
+  verifyUserIdMatch: (...args: unknown[]) => mockVerifyUserIdMatch(...args),
 }));
 
 const mockResumes = [
@@ -21,7 +28,9 @@ const createResumeChain = (data: typeof mockResumes) => {
     select: () => chain,
     eq: () => chain,
     order: () => chain,
-    then: (resolve: (v: { data: typeof mockResumes; error: null }) => void) => resolve({ data, error: null }),
+    range: () => chain,
+    then: (resolve: (v: { data: typeof mockResumes; error: null; count: number }) => void) =>
+      resolve({ data, error: null, count: data.length }),
   };
   return chain;
 };
@@ -50,6 +59,8 @@ describe('GET /api/resume/list', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetFreeResumeIdsServer.mockResolvedValue(['resume-1']);
+    mockRequireAuth.mockResolvedValue({ userId: 'user-1' });
+    mockVerifyUserIdMatch.mockReturnValue({ ok: true });
   });
 
   it('should return 400 when neither userId nor sessionId provided', async () => {
@@ -63,7 +74,9 @@ describe('GET /api/resume/list', () => {
   });
 
   it('should include isUnlocked for free resumes when userId provided', async () => {
-    const req = new NextRequest('http://localhost:3000/api/resume/list?userId=user-1');
+    const req = new NextRequest('http://localhost:3000/api/resume/list?userId=user-1', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
 
     const response = await GET(req);
     const data = await response.json();
@@ -74,5 +87,38 @@ describe('GET /api/resume/list', () => {
     const firstResume = data.resumes.find((r: { id: string }) => r.id === 'resume-1');
     expect(firstResume).toBeDefined();
     expect(firstResume.isUnlocked).toBe(true);
+  });
+
+  it('should return pagination fields (totalCount, page, limit)', async () => {
+    const req = new NextRequest('http://localhost:3000/api/resume/list?userId=user-1&page=1&limit=10', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
+
+    const response = await GET(req);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.totalCount).toBeDefined();
+    expect(data.page).toBe(1);
+    expect(data.limit).toBe(10);
+  });
+
+  it('should return 401 when userId provided but auth fails', async () => {
+    mockRequireAuth.mockResolvedValueOnce({
+      error: Response.json({ error: 'Authentication required. Please sign in.' }, { status: 401 }),
+    });
+
+    const req = new NextRequest('http://localhost:3000/api/resume/list?userId=user-1');
+    const response = await GET(req);
+
+    expect(response.status).toBe(401);
+  });
+
+  it('should allow sessionId without auth (anonymous list)', async () => {
+    const req = new NextRequest('http://localhost:3000/api/resume/list?sessionId=anon-session-1');
+    const response = await GET(req);
+
+    expect(response.status).toBe(200);
+    expect(mockRequireAuth).not.toHaveBeenCalled();
   });
 });

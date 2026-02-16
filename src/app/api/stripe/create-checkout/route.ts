@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
 import { getTierConfig } from "@/app/config/pricing";
+import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
 import { getURL } from "@/app/utils/siteUrl";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -10,17 +10,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
-
-async function getAuthenticatedUserId(token: string): Promise<string | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) return null;
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
-  return user.id;
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,27 +23,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const token = accessToken || req.headers.get("authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json(
-        { error: "Session required. Please sign in to purchase access." },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireAuth(req, { accessToken });
+    if ("error" in authResult) return authResult.error;
 
-    const authenticatedUserId = await getAuthenticatedUserId(token);
-    if (!authenticatedUserId) {
-      return NextResponse.json(
-        { error: "Invalid or expired session. Please sign in again." },
-        { status: 401 }
-      );
-    }
-    if (authenticatedUserId !== userId) {
-      return NextResponse.json(
-        { error: "User ID does not match authenticated session." },
-        { status: 403 }
-      );
-    }
+    const verifyResult = verifyUserIdMatch(authResult.userId, userId);
+    if ("error" in verifyResult) return verifyResult.error;
 
     if (!tier) {
       return NextResponse.json(

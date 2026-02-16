@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { getFreeResumeIdsServer } from "@/app/utils/accessManager";
+import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
 
 export const runtime = 'nodejs';
 export const preferredRegion = 'auto';
@@ -19,10 +20,25 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // When userId is provided, verify the caller is authenticated and matches
+    if (userId) {
+      const authResult = await requireAuth(req);
+      if ("error" in authResult) return authResult.error;
+      const verifyResult = verifyUserIdMatch(authResult.userId, userId);
+      if ("error" in verifyResult) return verifyResult.error;
+    }
+
+    // Pagination: default page 1, limit 50 (max 100)
+    const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') || '50', 10)), 100);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const start = (page - 1) * limit;
+    const end = start + limit - 1;
+
     let resumeQuery = supabaseAdmin
       .from('resumes')
-      .select('id, created_at, job_description, job_title, company_name, match_score, improvement_metrics')
-      .order('created_at', { ascending: false });
+      .select('id, created_at, job_description, job_title, company_name, match_score, improvement_metrics', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(start, end);
 
     if (userId) {
       resumeQuery = resumeQuery.eq('user_id', userId);
@@ -30,7 +46,7 @@ export async function GET(req: NextRequest) {
       resumeQuery = resumeQuery.eq('session_id', sessionId);
     }
 
-    const { data: allResumes, error } = await resumeQuery;
+    const { data: allResumes, error, count } = await resumeQuery;
 
     if (error) {
       console.error("Error fetching resumes:", error);
@@ -40,16 +56,22 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get payment status for each resume
-    const { data: payments } = await supabaseAdmin
-      .from('payments')
-      .select('resume_id, status, amount_cents, created_at')
-      .eq('status', 'completed')
-      .in('resume_id', (allResumes || []).map(r => r.id));
+    const resumeIds = (allResumes || []).map(r => r.id);
+
+    // Get payment status only for resumes on current page (smaller IN clause)
+    let payments: { resume_id: string; status: string; amount_cents: number; created_at: string }[] = [];
+    if (resumeIds.length > 0) {
+      const { data: paymentsData } = await supabaseAdmin
+        .from('payments')
+        .select('resume_id, status, amount_cents, created_at')
+        .eq('status', 'completed')
+        .in('resume_id', resumeIds);
+      payments = paymentsData || [];
+    }
 
     // Create a payment lookup map
     const paymentMap = new Map();
-    (payments || []).forEach(payment => {
+    payments.forEach(payment => {
       paymentMap.set(payment.resume_id, payment);
     });
 
@@ -83,7 +105,12 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ resumes: resumeList });
+    return NextResponse.json({
+      resumes: resumeList,
+      totalCount: count ?? resumeList.length,
+      page,
+      limit,
+    });
 
   } catch (error) {
     console.error("Error in resume list API:", error);

@@ -23,8 +23,9 @@ interface ResumeItem {
 const ITEMS_PER_PAGE = 10;
 
 export default function ProfilePage() {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, session, loading: authLoading, signOut } = useAuth();
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -38,14 +39,23 @@ export default function ProfilePage() {
   const downloadTriggerRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
 
-  const fetchResumes = useCallback(async () => {
-    if (!user) return;
+  const fetchResumes = useCallback(async (page: number = 1) => {
+    if (!user || !session?.access_token) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/resume/list?userId=${user.id}`);
+      const response = await fetch(
+        `/api/resume/list?userId=${user.id}&page=${page}&limit=${ITEMS_PER_PAGE}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
       if (response.ok) {
         const data = await response.json();
         setResumes(data.resumes || []);
+        setTotalCount(data.totalCount ?? 0);
+        setCurrentPage(page);
       } else {
         console.error("Failed to fetch resumes");
       }
@@ -54,7 +64,7 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, session?.access_token]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -69,11 +79,11 @@ export default function ProfilePage() {
   // Refetch when user returns to the tab (e.g. after tailoring in another tab)
   useEffect(() => {
     const onVisibilityChange = () => {
-      if (document.visibilityState === "visible" && user) fetchResumes();
+      if (document.visibilityState === "visible" && user) fetchResumes(currentPage);
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, [user, fetchResumes]);
+  }, [user, fetchResumes, currentPage]);
 
   const checkAccess = async () => {
     if (!user) {
@@ -111,6 +121,7 @@ export default function ProfilePage() {
         body: JSON.stringify({
           email: user.email,
           returnUrl: `${getURL()}profile`,
+          accessToken: session?.access_token,
         }),
       });
 
@@ -141,6 +152,7 @@ export default function ProfilePage() {
         body: JSON.stringify({
           resumeId,
           userId: user?.id,
+          accessToken: session?.access_token,
         }),
       });
 
@@ -185,13 +197,11 @@ export default function ProfilePage() {
     }
   };
 
-  const sortedResumes = [...resumes].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-  const totalPages = Math.ceil(sortedResumes.length / ITEMS_PER_PAGE);
+  // API returns current page already sorted by created_at DESC
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE) || 1;
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentResumes = sortedResumes.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + resumes.length, totalCount);
+  const currentResumes = resumes;
 
   if (authLoading || loading) {
     return (
@@ -231,7 +241,7 @@ export default function ProfilePage() {
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => {
             setShowAuthModal(false);
-            fetchResumes();
+            fetchResumes(1);
             checkAccess();
           }}
           title="Sign in to view your profile"
@@ -281,7 +291,7 @@ export default function ProfilePage() {
           <h2 className="text-2xl font-bold text-white">Resume History</h2>
           <button
             type="button"
-            onClick={() => fetchResumes()}
+            onClick={() => fetchResumes(currentPage)}
             disabled={loading}
             className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors disabled:opacity-50"
             title="Refresh list"
@@ -438,12 +448,12 @@ export default function ProfilePage() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-700">
                 <div className="text-sm text-gray-400">
-                  Showing {startIndex + 1} to {Math.min(endIndex, resumes.length)} of {resumes.length} resumes
+                  Showing {startIndex + 1} to {endIndex} of {totalCount} resumes
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
+                    onClick={() => fetchResumes(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1 || loading}
                     className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Previous
@@ -452,8 +462,8 @@ export default function ProfilePage() {
                     Page {currentPage} of {totalPages}
                   </div>
                   <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
+                    onClick={() => fetchResumes(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages || loading}
                     className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
