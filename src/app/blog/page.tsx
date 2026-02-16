@@ -2,6 +2,8 @@ import React from "react";
 import Link from "next/link";
 import { getAllPosts } from "@/app/utils/blog";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Blog - AI Resume Tailor",
   description:
