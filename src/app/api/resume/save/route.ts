@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { obfuscateResume } from "@/app/utils/resumeObfuscator";
 import { cleanJobDescription } from "@/app/utils/jobDescriptionCleaner";
+import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -9,6 +10,7 @@ export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
+    const body = await req.json();
     const {
       originalResume,
       tailoredResume,
@@ -19,13 +21,22 @@ export async function POST(req: NextRequest) {
       matchScore,
       improvementMetrics,
       validationResult,
-    } = await req.json();
+      accessToken,
+    } = body;
 
     if (!originalResume || !tailoredResume) {
       return NextResponse.json(
         { error: "Missing required fields: originalResume and tailoredResume" },
         { status: 400 }
       );
+    }
+
+    // When userId is provided, verify the caller is authenticated and matches
+    if (userId) {
+      const authResult = await requireAuth(req, { accessToken });
+      if ("error" in authResult) return authResult.error;
+      const verifyResult = verifyUserIdMatch(authResult.userId, userId);
+      if ("error" in verifyResult) return verifyResult.error;
     }
 
     // Obfuscate the tailored resume

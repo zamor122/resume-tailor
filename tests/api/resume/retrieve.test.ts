@@ -14,6 +14,11 @@ vi.mock('@/app/utils/accessManager', () => ({
   isWithinFreeResumeLimitServer: (...args: unknown[]) => mockIsWithinFreeResumeLimitServer(...args),
 }));
 
+vi.mock('@/app/utils/auth', () => ({
+  requireAuth: vi.fn().mockResolvedValue({ userId: 'user-1' }),
+  verifyUserIdMatch: vi.fn().mockReturnValue({ ok: true }),
+}));
+
 const createSupabaseChain = (resume: object | null, error: object | null = null) => ({
   select: vi.fn().mockReturnThis(),
   eq: vi.fn().mockReturnThis(),

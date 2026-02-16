@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { getAccessInfoServer, isWithinFreeResumeLimitServer } from "@/app/utils/accessManager";
+import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -8,13 +9,22 @@ export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, sessionId, resumeId, userId } = await req.json();
+    const body = await req.json();
+    const { email, sessionId, resumeId, userId, accessToken } = body;
 
     if (!resumeId && !email) {
       return NextResponse.json(
         { error: "Missing required fields: either resumeId or email must be provided" },
         { status: 400 }
       );
+    }
+
+    // When userId is provided for access check, verify the caller is authenticated and matches
+    if (userId) {
+      const authResult = await requireAuth(req, { accessToken });
+      if ("error" in authResult) return authResult.error;
+      const verifyResult = verifyUserIdMatch(authResult.userId, userId);
+      if ("error" in verifyResult) return verifyResult.error;
     }
 
     let resume: any = null;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getURL } from "@/app/utils/siteUrl";
+import { requireAuthWithEmail } from "@/app/utils/auth";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2026-01-28.clover",
@@ -11,21 +12,25 @@ export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
-    const { customerId, email, returnUrl } = await req.json();
+    const body = await req.json();
+    const { customerId, email, returnUrl, accessToken } = body;
 
-    if (!customerId && !email) {
+    const authResult = await requireAuthWithEmail(req, { accessToken });
+    if ("error" in authResult) return authResult.error;
+
+    const emailToUse = email && email === authResult.email ? email : authResult.email;
+    if (!customerId && !emailToUse) {
       return NextResponse.json(
-        { error: "customerId or email is required" },
+        { error: "Unable to resolve customer. Email is required." },
         { status: 400 }
       );
     }
 
     let resolvedCustomerId = customerId;
 
-    // If no customerId but we have an email, try to find or create a customer
-    if (!resolvedCustomerId && email) {
+    if (!resolvedCustomerId && emailToUse) {
       const existing = await stripe.customers.list({
-        email,
+        email: emailToUse,
         limit: 1,
       });
 
@@ -33,7 +38,7 @@ export async function POST(req: NextRequest) {
         resolvedCustomerId = existing.data[0].id;
       } else {
         const created = await stripe.customers.create({
-          email,
+          email: emailToUse,
         });
         resolvedCustomerId = created.id;
       }
@@ -46,9 +51,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const baseUrl = getURL().replace(/\/$/, "");
+    let safeReturnUrl = `${baseUrl}/profile`;
+    if (returnUrl && typeof returnUrl === "string") {
+      try {
+        const parsed = new URL(returnUrl);
+        const base = new URL(baseUrl);
+        if (parsed.origin === base.origin) safeReturnUrl = returnUrl;
+      } catch {
+        // Invalid URL, use default
+      }
+    }
+
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: resolvedCustomerId,
-      return_url: returnUrl || `${getURL()}profile`,
+      return_url: safeReturnUrl,
     });
 
     return NextResponse.json({ url: portalSession.url });

@@ -45,16 +45,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Link resumes created before/during login to the user (session-only resumes get user_id)
   useEffect(() => {
-    if (!user?.id || typeof window === "undefined") return;
+    if (!user?.id || !session?.access_token || typeof window === "undefined") return;
     const sessionId = localStorage.getItem("resume-tailor-session-id");
     if (!sessionId) return;
 
     fetch("/api/resume/link", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId, userId: user.id }),
+      body: JSON.stringify({
+        sessionId,
+        userId: user.id,
+        accessToken: session.access_token,
+      }),
     }).catch(() => {});
-  }, [user?.id]);
+  }, [user?.id, session?.access_token]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

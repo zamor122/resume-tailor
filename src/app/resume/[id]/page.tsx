@@ -41,7 +41,7 @@ interface ResumeData {
 
 export default function ResumeDetailPage() {
   const params = useParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const id = params?.id as string | undefined;
 
   const [data, setData] = useState<ResumeData | null>(null);
@@ -66,6 +66,7 @@ export default function ResumeDetailPage() {
           body: JSON.stringify({
             resumeId: id,
             userId: user?.id ?? undefined,
+            accessToken: session?.access_token,
           }),
         });
 

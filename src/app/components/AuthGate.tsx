@@ -19,7 +19,7 @@ export default function AuthGate({
   resumeId,
   action = "save",
 }: AuthGateProps) {
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
 
@@ -28,7 +28,7 @@ export default function AuthGate({
   // Link resume when user becomes available
   useEffect(() => {
     const linkResume = async () => {
-      if (user && (sessionId || resumeId)) {
+      if (user && session?.access_token && (sessionId || resumeId)) {
         setIsLinking(true);
         try {
           const response = await fetch("/api/resume/link", {
@@ -38,6 +38,7 @@ export default function AuthGate({
               sessionId,
               resumeId,
               userId: user.id,
+              accessToken: session?.access_token,
             }),
           });
 
@@ -53,7 +54,7 @@ export default function AuthGate({
     };
 
     linkResume();
-  }, [user, sessionId, resumeId]);
+  }, [user, session?.access_token, sessionId, resumeId]);
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);

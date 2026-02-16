@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
+import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -7,7 +8,8 @@ export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId, userId, resumeId } = await req.json();
+    const body = await req.json();
+    const { sessionId, userId, resumeId, accessToken } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -15,6 +17,11 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    const authResult = await requireAuth(req, { accessToken });
+    if ("error" in authResult) return authResult.error;
+    const verifyResult = verifyUserIdMatch(authResult.userId, userId);
+    if ("error" in verifyResult) return verifyResult.error;
 
     if (!sessionId && !resumeId) {
       return NextResponse.json(
