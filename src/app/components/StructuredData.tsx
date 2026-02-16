@@ -59,6 +59,55 @@ interface FAQItem {
   a: string;
 }
 
+export function BlogArticleStructuredData({
+  title,
+  description,
+  slug,
+  publishedAt,
+  modifiedAt,
+}: {
+  title: string;
+  description: string;
+  slug: string;
+  publishedAt: string;
+  modifiedAt?: string;
+}) {
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: title,
+    description,
+    url: `${BASE_URL}/blog/${slug}`,
+    datePublished: publishedAt,
+    dateModified: modifiedAt || publishedAt,
+    author: {
+      "@type": "Organization",
+      name: "AI Resume Tailor",
+      url: BASE_URL,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "AI Resume Tailor",
+      url: BASE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${BASE_URL}/icon-512.png`,
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${BASE_URL}/blog/${slug}`,
+    },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+    />
+  );
+}
+
 export function FAQStructuredData({ items }: { items: FAQItem[] }) {
   const faqSchema = {
     "@context": "https://schema.org",
