@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { analytics } from "../services/analytics";
 import { getInputFontSizeClass } from "@/app/utils/fontSize";
 
 const MIN_CHARS = 100;
+const PASTE_DELTA_THRESHOLD = 50;
+const CHAR_COUNT_MILESTONES = [100, 500];
 
 interface JobDescriptionInputProps {
   label: string;
@@ -26,9 +28,44 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
   fillHeight = false,
 }) => {
   const [detectedTitle, setDetectedTitle] = useState<string | null>(null);
+  const inputStartedFired = useRef(false);
+  const prevLengthRef = useRef(0);
+  const milestonesFired = useRef<Set<number>>(new Set());
   const fontSizeClass = getInputFontSizeClass(fontSize);
   const charCount = value.length;
   const isSufficient = charCount >= MIN_CHARS;
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    const newLen = newValue.length;
+
+    if (newLen >= 10 && !inputStartedFired.current) {
+      inputStartedFired.current = true;
+      analytics.trackEvent(analytics.events.JOB_DESCRIPTION_INPUT_STARTED, {
+        charCount: newLen,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    if (newLen - prevLengthRef.current >= PASTE_DELTA_THRESHOLD) {
+      analytics.trackEvent(analytics.events.JOB_DESCRIPTION_PASTED, {
+        charCount: newLen,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    CHAR_COUNT_MILESTONES.forEach((m) => {
+      if (newLen >= m && !milestonesFired.current.has(m)) {
+        milestonesFired.current.add(m);
+        analytics.trackEvent(analytics.events.JOB_DESC_CHAR_COUNT, {
+          charCount: newLen,
+          milestone: m,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+    prevLengthRef.current = newLen;
+    onChange(e);
+    if (detectedTitle && newLen < 50) setDetectedTitle(null);
+  };
 
   const handleBlur = async () => {
     if (value.length < 50) {
@@ -106,10 +143,7 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
         id="jobDescription"
         placeholder={placeholder}
         value={value}
-        onChange={(e) => {
-          onChange(e);
-          if (detectedTitle && e.target.value.length < 50) setDetectedTitle(null);
-        }}
+        onChange={handleChange}
         onBlur={handleBlur}
         className={`form-textarea ${fontSizeClass} ${fillHeight ? "flex-1 min-h-0" : ""}`}
         aria-label={label}

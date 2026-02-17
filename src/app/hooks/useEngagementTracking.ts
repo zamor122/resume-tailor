@@ -50,6 +50,13 @@ export function useEngagementTracking() {
       milestones.forEach(milestone => {
         if (scrollPercent >= milestone && !scrollDepthTracked.current[milestone]) {
           scrollDepthTracked.current[milestone] = true;
+          if (milestone >= 25 && typeof sessionStorage !== "undefined") {
+            try {
+              sessionStorage.setItem("airesumetailor_engaged", "1");
+            } catch {
+              // ignore
+            }
+          }
           analytics.trackEvent(analytics.events.SCROLL_DEPTH, {
             depth: milestone,
             scrollPercent,
@@ -67,6 +74,13 @@ export function useEngagementTracking() {
       const milestones = [10, 30, 60, 120, 300];
       milestones.forEach(milestone => {
         if (timeSpent === milestone) {
+          if (milestone >= 10 && typeof sessionStorage !== "undefined") {
+            try {
+              sessionStorage.setItem("airesumetailor_engaged", "1");
+            } catch {
+              // ignore
+            }
+          }
           analytics.trackEvent(analytics.events.TIME_ON_PAGE, {
             seconds: timeSpent,
             minutes: Math.round(timeSpent / 60 * 10) / 10,

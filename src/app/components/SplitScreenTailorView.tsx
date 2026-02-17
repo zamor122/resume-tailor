@@ -292,10 +292,27 @@ export default function SplitScreenTailorView() {
         onProgress: () => {},
       });
 
+      let timeToValueSeconds: number | undefined;
+      if (typeof window !== "undefined") {
+        try {
+          const start = sessionStorage.getItem("airesumetailor_session_start");
+          if (start) {
+            timeToValueSeconds = Math.round((Date.now() - Number(start)) / 1000);
+          }
+        } catch {
+          // ignore
+        }
+      }
       analytics.trackEvent(analytics.events.RESUME_TAILOR_SUCCESS, {
         timestamp: new Date().toISOString(),
         matchScore: data?.matchScore,
+        ...(timeToValueSeconds !== undefined && { timeToValueSeconds }),
       });
+      try {
+        if (typeof window !== "undefined") sessionStorage.setItem("airesumetailor_converted", "1");
+      } catch {
+        // ignore
+      }
 
       if (data.resumeId) {
         didRedirect = true;
@@ -499,7 +516,14 @@ export default function SplitScreenTailorView() {
                 {(showAuthModal) => (
                   <TailorButton
                     loading={loading}
-                    onClick={user ? handleTailor : showAuthModal}
+                    onClick={() => {
+                      analytics.trackEvent(analytics.events.CTA_TAILOR_CLICK, {
+                        hasUser: !!user,
+                        timestamp: new Date().toISOString(),
+                      });
+                      if (user) handleTailor();
+                      else showAuthModal();
+                    }}
                     disabled={!resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100}
                     ready={resume.trim().length >= 100 && jobDescription.trim().length >= 100}
                   />

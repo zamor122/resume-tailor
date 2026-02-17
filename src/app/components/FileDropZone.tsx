@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import { analytics } from "@/app/services/analytics";
 
 interface FileDropZoneProps {
   onFileAccepted: (text: string) => void;
@@ -24,22 +25,47 @@ export default function FileDropZone({
       if (!file) return;
       const isPdf = file.type === "application/pdf";
       const isTxt = file.type === "text/plain" || file.name.endsWith(".txt");
+      const fileType = isPdf ? "pdf" : isTxt ? "txt" : "other";
 
       if (!isPdf && !isTxt) {
+        analytics.trackEvent(analytics.events.UPLOAD_ERROR, {
+          source: "file",
+          fileType,
+          errorMessage: "Invalid file type",
+          timestamp: new Date().toISOString(),
+        });
         onError?.("Please upload a PDF or TXT file.");
         return;
       }
+
+      analytics.trackEvent(analytics.events.UPLOAD_ATTEMPT, {
+        source: "file",
+        fileType,
+        fileSize: file.size,
+        timestamp: new Date().toISOString(),
+      });
 
       setIsProcessing(true);
       setUploadedFile({ name: file.name, size: file.size });
 
       try {
         const text = await extractText(file);
+        analytics.trackEvent(analytics.events.UPLOAD_SUCCESS, {
+          source: "file",
+          charCount: text?.length ?? 0,
+          timestamp: new Date().toISOString(),
+        });
         onFileAccepted(text);
       } catch (err) {
-        onError?.(
-          err instanceof Error ? err.message : "Failed to extract text from file."
-        );
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to extract text from file.";
+        analytics.trackEvent(analytics.events.UPLOAD_ERROR, {
+          source: "file",
+          fileType,
+          errorMessage: errorMessage.slice(0, 200),
+          timestamp: new Date().toISOString(),
+        });
+        onError?.(errorMessage);
         setUploadedFile(null);
       } finally {
         setIsProcessing(false);

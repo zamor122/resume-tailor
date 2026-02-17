@@ -11,16 +11,21 @@ export default function Home() {
 
   // Track page view on mount
   useEffect(() => {
-    // Track page view with analytics
-    analytics.trackEvent(analytics.events.PAGE_VIEW, { 
-      page: 'home',
-      timestamp: new Date().toISOString()
+    const now = Date.now();
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("airesumetailor_session_start", String(now));
+      } catch {
+        // ignore
+      }
+    }
+    analytics.trackEvent(analytics.events.PAGE_VIEW, {
+      page: "home",
+      timestamp: new Date().toISOString(),
     });
-    
-    // Track session start
     analytics.trackEvent(analytics.events.SESSION_START, {
       timestamp: new Date().toISOString(),
-      referrer: typeof window !== 'undefined' ? (document.referrer || 'direct') : 'direct',
+      referrer: typeof window !== "undefined" ? (document.referrer || "direct") : "direct",
     });
   }, []);
 

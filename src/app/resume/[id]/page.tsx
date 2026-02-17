@@ -9,6 +9,7 @@ import PaymentGate from "@/app/components/PaymentGate";
 import FreeReveal from "@/app/components/FreeReveal";
 import TierSelectionModal from "@/app/components/TierSelectionModal";
 import ShareResumeCard from "@/app/components/ShareResumeCard";
+import ResumeFeedbackCard from "@/app/components/ResumeFeedbackCard";
 import Link from "next/link";
 import type { ResumeMetricsSnapshot } from "@/app/types/humanize";
 
@@ -30,6 +31,8 @@ interface ResumeData {
   freeReveal?: { section: string; originalText: string; improvedText: string } | null;
   resumeId?: string;
   isUnlocked: boolean;
+  appliedWithResume?: boolean | null;
+  feedbackComment?: string | null;
   accessInfo?: {
     tier: string;
     tierLabel: string;
@@ -48,6 +51,13 @@ export default function ResumeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTierModal, setShowTierModal] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSessionId(localStorage.getItem("resume-tailor-session-id"));
+    }
+  }, []);
 
   useEffect(() => {
     if (!id) {
@@ -94,6 +104,8 @@ export default function ResumeDetailPage() {
           resumeId: json.resumeId ?? id,
           isUnlocked: json.isUnlocked ?? false,
           accessInfo: json.accessInfo ?? null,
+          appliedWithResume: json.appliedWithResume ?? null,
+          feedbackComment: json.feedbackComment ?? null,
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load resume");
@@ -187,6 +199,7 @@ export default function ResumeDetailPage() {
                 loading={false}
                 showDownload={data.isUnlocked}
                 downloadJobTitle={data.jobTitle ?? undefined}
+                resumeId={data.resumeId}
               />
             </PaymentGate>
           </div>
@@ -268,7 +281,17 @@ export default function ResumeDetailPage() {
           </div>
 
           {data.isUnlocked && (
-            <ShareResumeCard />
+            <>
+              <ResumeFeedbackCard
+                resumeId={data.resumeId}
+                initialAppliedWithResume={data.appliedWithResume}
+                initialFeedbackComment={data.feedbackComment}
+                userId={user?.id}
+                accessToken={session?.access_token ?? undefined}
+                sessionId={sessionId ?? undefined}
+              />
+              <ShareResumeCard />
+            </>
           )}
         </div>
       </div>
