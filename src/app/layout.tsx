@@ -7,6 +7,8 @@ import Footer from './components/Footer';
 import Navigation from "./components/Navigation";
 import { ThemeProvider } from './components/ThemeProvider'
 import { AuthProvider } from './contexts/AuthContext';
+import { FeedbackProvider } from './contexts/FeedbackContext';
+import ExitSurveyProvider from './components/ExitSurveyProvider';
 import UmamiVerifier from './components/UmamiVerifier';
 import Script from "next/script";
 import { RootStructuredData } from './components/StructuredData';
@@ -152,15 +154,19 @@ export default function RootLayout({
         />
         <ThemeProvider>
           <AuthProvider>
-          <UmamiVerifier />
-          <div className="glass-background" />
-          <Navigation />
-          <main className="flex-grow pt-2 relative" role="main">
-            {children}
-          </main>
-          <Footer />
-          <Analytics />
-          <SpeedInsights />
+            <FeedbackProvider>
+              <ExitSurveyProvider>
+                <UmamiVerifier />
+                <div className="glass-background" />
+                <Navigation />
+                <main className="flex-grow pt-2 relative" role="main">
+                  {children}
+                </main>
+                <Footer />
+                <Analytics />
+                <SpeedInsights />
+              </ExitSurveyProvider>
+            </FeedbackProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

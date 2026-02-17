@@ -41,6 +41,10 @@ ALTER TABLE resumes ADD COLUMN IF NOT EXISTS format_spec JSONB;
 ALTER TABLE resumes ADD COLUMN IF NOT EXISTS job_title TEXT;
 ALTER TABLE resumes ADD COLUMN IF NOT EXISTS company_name TEXT;
 
+-- Migration: Applied-with-resume feedback (did user apply to a job using this resume?)
+ALTER TABLE resumes ADD COLUMN IF NOT EXISTS applied_with_resume BOOLEAN;
+ALTER TABLE resumes ADD COLUMN IF NOT EXISTS feedback_comment TEXT;
+
 -- Sessions table
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,

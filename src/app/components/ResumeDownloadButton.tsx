@@ -6,12 +6,15 @@ import {
   downloadResumeAsMarkdown,
   resumeDownloadFilename,
 } from "@/app/utils/resumeDownload";
+import { analytics } from "@/app/services/analytics";
+import { useFeedback } from "@/app/contexts/FeedbackContext";
 
 interface ResumeDownloadButtonProps {
   markdownContent: string;
   jobTitle?: string;
   variant?: "buttons" | "dropdown";
   className?: string;
+  resumeId?: string;
 }
 
 const ResumeDownloadButton: React.FC<ResumeDownloadButtonProps> = ({
@@ -19,15 +22,29 @@ const ResumeDownloadButton: React.FC<ResumeDownloadButtonProps> = ({
   jobTitle = "",
   variant = "buttons",
   className = "",
+  resumeId,
 }) => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const baseName = resumeDownloadFilename(jobTitle || "resume");
+  const feedback = useFeedback();
 
   const handlePdf = async () => {
     setPdfLoading(true);
     try {
       await downloadResumeAsPdf(markdownContent, `${baseName}.pdf`);
+      analytics.trackEvent(analytics.events.EXPORT_RESUME, {
+        format: "pdf",
+        ...(resumeId && { resumeId }),
+        ...(jobTitle && { jobTitle }),
+        timestamp: new Date().toISOString(),
+      });
+      try {
+        if (typeof window !== "undefined") sessionStorage.setItem("airesumetailor_converted", "1");
+      } catch {
+        // ignore
+      }
+      feedback?.showDidThisHelpPrompt("download");
     } catch (e) {
       console.error("PDF download failed:", e);
       alert("Failed to generate PDF. Please try again.");
@@ -38,6 +55,18 @@ const ResumeDownloadButton: React.FC<ResumeDownloadButtonProps> = ({
 
   const handleMarkdown = () => {
     downloadResumeAsMarkdown(markdownContent, `${baseName}.md`);
+    analytics.trackEvent(analytics.events.EXPORT_RESUME, {
+      format: "markdown",
+      ...(resumeId && { resumeId }),
+      ...(jobTitle && { jobTitle }),
+      timestamp: new Date().toISOString(),
+    });
+    try {
+      if (typeof window !== "undefined") sessionStorage.setItem("airesumetailor_converted", "1");
+    } catch {
+      // ignore
+    }
+    feedback?.showDidThisHelpPrompt("download");
     setDropdownOpen(false);
   };
 

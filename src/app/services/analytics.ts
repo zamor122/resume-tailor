@@ -11,7 +11,11 @@ export const events = {
   RESUME_INPUT_STARTED: 'resume_input_started',
   JOB_DESCRIPTION_PASTED: 'job_description_pasted',
   JOB_DESCRIPTION_INPUT_STARTED: 'job_description_input_started',
+  JOB_DESC_CHAR_COUNT: 'job_desc_char_count',
   CONTENT_CLASSIFIED: 'content_classified',
+  UPLOAD_ATTEMPT: 'upload_attempt',
+  UPLOAD_SUCCESS: 'upload_success',
+  UPLOAD_ERROR: 'upload_error',
   
   // Resume Tailoring
   RESUME_TAILOR: 'resume_tailor',
@@ -80,6 +84,14 @@ export const events = {
   MODEL_QUOTA_EXCEEDED: 'MODEL_QUOTA_EXCEEDED', // Track when API quota is exceeded
   RATE_LIMIT_BACKEND_ENFORCED: 'RATE_LIMIT_BACKEND_ENFORCED', // Track backend-enforced rate limits
   CEREBRAS_GLOBAL_LIMIT_HIT: 'CEREBRAS_GLOBAL_LIMIT_HIT', // Track when Cerebras global limit is hit
+
+  // Feedback
+  GENERATION_REJECTED: 'generation_rejected',
+  FEEDBACK_SUBMITTED: 'feedback_submitted',
+  EXIT_SURVEY_SHOWN: 'exit_survey_shown',
+  EXIT_SURVEY_DISMISSED: 'exit_survey_dismissed',
+  EXIT_SURVEY_SUBMITTED: 'exit_survey_submitted',
+  CTA_TAILOR_CLICK: 'cta_tailor_click',
 };
 
 // Add TypeScript type definition for the Umami window object

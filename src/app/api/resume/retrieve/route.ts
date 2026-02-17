@@ -110,6 +110,8 @@ export async function POST(req: NextRequest) {
         resumeId: resume.id,
         isUnlocked: false,
         accessInfo: null,
+        appliedWithResume: resume.applied_with_resume ?? null,
+        feedbackComment: resume.feedback_comment ?? null,
       });
     }
 
@@ -137,6 +139,8 @@ export async function POST(req: NextRequest) {
         remainingTime: accessInfo.remainingTime,
         isExpired: accessInfo.isExpired,
       } : null,
+      appliedWithResume: resume.applied_with_resume ?? null,
+      feedbackComment: resume.feedback_comment ?? null,
     });
 
   } catch (error) {

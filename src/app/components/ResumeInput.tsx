@@ -1,9 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import { getInputFontSizeClass } from "@/app/utils/fontSize";
+import { analytics } from "@/app/services/analytics";
 
 const MIN_CHARS = 100;
+const PASTE_DELTA_THRESHOLD = 50;
 
 interface ResumeInputProps {
   label: string;
@@ -20,9 +22,32 @@ const ResumeInput: React.FC<ResumeInputProps> = ({
   onChange,
   fontSize = "medium",
 }) => {
+  const inputStartedFired = useRef(false);
+  const prevLengthRef = useRef(0);
   const fontSizeClass = getInputFontSizeClass(fontSize);
   const charCount = value.length;
   const isSufficient = charCount >= MIN_CHARS;
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    const newLen = newValue.length;
+
+    if (newLen >= 10 && !inputStartedFired.current) {
+      inputStartedFired.current = true;
+      analytics.trackEvent(analytics.events.RESUME_INPUT_STARTED, {
+        charCount: newLen,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    if (newLen - prevLengthRef.current >= PASTE_DELTA_THRESHOLD) {
+      analytics.trackEvent(analytics.events.RESUME_PASTED, {
+        charCount: newLen,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    prevLengthRef.current = newLen;
+    onChange(e);
+  };
 
   return (
     <div className="input-container">
@@ -49,7 +74,7 @@ const ResumeInput: React.FC<ResumeInputProps> = ({
         id="resume"
         placeholder={placeholder}
         value={value}
-        onChange={onChange}
+        onChange={handleChange}
         className={`form-textarea ${fontSizeClass}`}
         aria-label={label}
       />

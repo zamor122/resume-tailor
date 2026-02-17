@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
-import ReactMarkdown from 'react-markdown';
-import CopyButton from './CopyButton';
-import ResumeDownloadButton from './ResumeDownloadButton';
-import { getProseFontSizeClass } from '@/app/utils/fontSize';
-import { deduplicateResumeSections } from '@/app/utils/resumeSectionDedupe';
-import type { FormatSpec } from '@/app/types/format';
+"use client";
+
+import React, { useMemo } from "react";
+import ReactMarkdown from "react-markdown";
+import CopyButton from "./CopyButton";
+import ResumeDownloadButton from "./ResumeDownloadButton";
+import { getProseFontSizeClass } from "@/app/utils/fontSize";
+import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
+import type { FormatSpec } from "@/app/types/format";
 
 interface TailoredResumeOutputProps {
   newResume: string;
@@ -17,6 +19,8 @@ interface TailoredResumeOutputProps {
   showDownload?: boolean;
   /** Job title for download filename. */
   downloadJobTitle?: string;
+  /** Resume ID for analytics. */
+  resumeId?: string;
 }
 
 const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({ 
@@ -28,6 +32,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   formatSpec = null,
   showDownload = false,
   downloadJobTitle,
+  resumeId,
 }) => {
   const displayResume = useMemo(() => deduplicateResumeSections(newResume), [newResume]);
   const proseFontSizeClass = getProseFontSizeClass(fontSize);
@@ -74,9 +79,10 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
               markdownContent={displayResume}
               jobTitle={downloadJobTitle}
               variant="buttons"
+              resumeId={resumeId}
             />
           )}
-          <CopyButton text={displayResume} />
+          <CopyButton text={displayResume} resumeId={resumeId} />
         </div>
       </div>
       

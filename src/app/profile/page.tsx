@@ -10,6 +10,8 @@ import TierSelectionModal from "@/app/components/TierSelectionModal";
 import { hasActiveAccess, getAccessInfo } from "@/app/utils/accessManager";
 import { useRouter } from "next/navigation";
 import { downloadResumeAsPdf, downloadResumeAsMarkdown, resumeDownloadFilename } from "@/app/utils/resumeDownload";
+import { analytics } from "@/app/services/analytics";
+import { useFeedback } from "@/app/contexts/FeedbackContext";
 
 interface ResumeItem {
   id: string;
@@ -38,6 +40,7 @@ export default function ProfilePage() {
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const downloadTriggerRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
+  const feedback = useFeedback();
 
   const fetchResumes = useCallback(async (page: number = 1) => {
     if (!user || !session?.access_token) return;
@@ -185,11 +188,35 @@ export default function ProfilePage() {
         setPdfLoadingId(resumeId);
         try {
           await downloadResumeAsPdf(content, `${baseName}.pdf`);
+          analytics.trackEvent(analytics.events.EXPORT_RESUME, {
+            format: "pdf",
+            resumeId,
+            jobTitle: jobTitle || undefined,
+            timestamp: new Date().toISOString(),
+          });
+          try {
+            if (typeof window !== "undefined") sessionStorage.setItem("airesumetailor_converted", "1");
+          } catch {
+            // ignore
+          }
+          feedback?.showDidThisHelpPrompt("download");
         } finally {
           setPdfLoadingId(null);
         }
       } else {
         downloadResumeAsMarkdown(content, `${baseName}.md`);
+        analytics.trackEvent(analytics.events.EXPORT_RESUME, {
+          format: "markdown",
+          resumeId,
+          jobTitle: jobTitle || undefined,
+          timestamp: new Date().toISOString(),
+        });
+        try {
+          if (typeof window !== "undefined") sessionStorage.setItem("airesumetailor_converted", "1");
+        } catch {
+          // ignore
+        }
+        feedback?.showDidThisHelpPrompt("download");
       }
     } catch (error) {
       console.error("Error downloading resume:", error);

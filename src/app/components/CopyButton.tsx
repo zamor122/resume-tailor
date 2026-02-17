@@ -1,18 +1,37 @@
-import React, { useState } from 'react';
+"use client";
+
+import React, { useState } from "react";
+import { analytics } from "@/app/services/analytics";
+import { useFeedback } from "@/app/contexts/FeedbackContext";
+
 interface CopyButtonProps {
   text: string;
+  context?: string;
+  resumeId?: string;
 }
 
-const CopyButton: React.FC<CopyButtonProps> = ({ text }) => {
+const CopyButton: React.FC<CopyButtonProps> = ({ text, context = "tailored_resume", resumeId }) => {
   const [copied, setCopied] = useState(false);
+  const feedback = useFeedback();
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(text);
+      analytics.trackEvent(analytics.events.COPY_RESUME, {
+        context,
+        ...(resumeId && { resumeId }),
+        timestamp: new Date().toISOString(),
+      });
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      try {
+        if (typeof window !== "undefined") sessionStorage.setItem("airesumetailor_converted", "1");
+      } catch {
+        // ignore
+      }
+      feedback?.showDidThisHelpPrompt("copy");
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      console.error("Failed to copy text: ", err);
     }
   };
 
