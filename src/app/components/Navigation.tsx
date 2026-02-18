@@ -92,6 +92,16 @@ export default function Navigation() {
               Profile
             </Link>
             <Link 
+              href="/pricing" 
+              className={`transition-colors ${
+                pathname === '/pricing' 
+                  ? 'text-green-500 font-medium' 
+                  : 'text-gray-300 hover:text-green-500'
+              }`}
+            >
+              Pricing
+            </Link>
+            <Link 
               href="/faq" 
               className={`transition-colors ${
                 pathname === '/faq' 
