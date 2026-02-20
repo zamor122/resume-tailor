@@ -12,6 +12,7 @@ import { sanitizeResumeForATS } from "@/app/utils/atsSanitizer";
 import { looksLikeCompanyName } from "@/app/utils/companyNameValidator";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
 import { trackEventServer } from "@/app/utils/umamiServer";
+import { normalizeAIPhrasing, measureAuthenticity } from "@/app/utils/qualityAssurance";
 
 // Changed to nodejs runtime because Cerebras SDK requires Node.js modules
 export const runtime = 'nodejs';
@@ -363,6 +364,9 @@ export async function POST(req: NextRequest) {
 
         tailoredResume = sanitizeResumeForATS(tailoredResume);
         tailoredResume = deduplicateResumeSections(tailoredResume);
+        const antiAiNormalization = normalizeAIPhrasing(tailoredResume);
+        tailoredResume = antiAiNormalization.text;
+        const authenticityMetrics = measureAuthenticity(tailoredResume);
 
         // Stream sections as they're processed
         const sections = tailoredResume.split(/\n(?=#|\n)/);
@@ -515,9 +519,16 @@ export async function POST(req: NextRequest) {
         // Send final completion event with resumeId
         streamClosed = !sendSSE(controller, "complete", {
           tailoredResume,
-          improvementMetrics,
+          improvementMetrics: {
+            ...improvementMetrics,
+            qualityScore: Math.max(0, 100 - authenticityMetrics.aiSmellScore),
+          },
           matchScore: afterScore,
           metrics: afterMetrics ?? undefined,
+          qualityMetrics: {
+            antiAiReplacements: antiAiNormalization.replacements,
+            authenticity: authenticityMetrics,
+          },
           validationResult,
           contentMap: obfuscationResult.contentMap,
           freeReveal: obfuscationResult.freeReveal,
