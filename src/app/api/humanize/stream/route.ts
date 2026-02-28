@@ -4,19 +4,99 @@ import { getModelFromSession } from "@/app/utils/model-helper";
 import { parseJSONFromText, extractTailoredResumeFromText } from "@/app/utils/json-extractor";
 import { executeParallel, callMCPTool, generateCacheKey } from "@/app/utils/mcp-tools";
 import { getTailoringPrompt, formatMetricsGuidance } from "@/app/prompts";
+import { getSummaryTailoringPrompt, getExperienceBulletsPrompt } from "@/app/prompts/tailoringSection";
+import { buildUserInstructions } from "@/app/prompts/tailoringPresets";
+import { reassembleResumeFromSections, buildContactFromOriginal } from "@/app/utils/resumeReassemble";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { obfuscateResume } from "@/app/utils/resumeObfuscator";
 import { checkApiRateLimit, trackRateLimitHit, estimateTokens } from "@/app/utils/apiRateLimiter";
-import { cleanJobDescription as cleanJobDescriptionUtil } from "@/app/utils/jobDescriptionCleaner";
+import { cleanJobDescription as cleanJobDescriptionUtil, trimJobDescriptionToRoleContent } from "@/app/utils/jobDescriptionCleaner";
 import { sanitizeResumeForATS } from "@/app/utils/atsSanitizer";
 import { looksLikeCompanyName } from "@/app/utils/companyNameValidator";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
+import { validateOrFixEducationBlock } from "@/app/utils/educationValidator";
+import { rewriteParentheticalKeywords } from "@/app/utils/keywordParenthesesCleaner";
+import { sanitizeContactBlock, replaceContactBlock } from "@/app/utils/contactBlockSanitizer";
 import { trackEventServer } from "@/app/utils/umamiServer";
+import type { KeywordGapSnapshot } from "@/app/types/humanize";
 
 // Changed to nodejs runtime because Cerebras SDK requires Node.js modules
 export const runtime = 'nodejs';
 export const preferredRegion = 'auto';
 export const maxDuration = 60;
+
+const FOUND_KEYWORDS_CAP = 20;
+const MISSING_KEYWORDS_CAP = 20;
+const MISSING_KEYWORD_MIN_LENGTH = 5;
+
+/** Terms that should never be suggested as "Consider adding" (EEO, application form, company/mission fluff, etc.). */
+const MISSING_KEYWORDS_BLOCKLIST = new Set([
+  "anduril", "your", "select", "military", "veteran", "disability", "clearance", "disorder",
+  "compensation", "duty", "roles", "form", "self", "requires", "external", "voluntary",
+  "identification", "protected", "federal", "government", "role", "applicant", "candidate",
+  "employment", "equal", "veterans", "confidential", "industries", "environments", "health",
+  "defense technology", "advanced technology", "defense industry", "military systems",
+  "allied military capabilities", "innovative", "transform", "bring", "changing", "defense",
+  "technology", "mission", "capabilities", "allied", "cutting-edge", "cutting edge",
+]);
+
+/**
+ * Compute keyword gap against final resume text: which JD keywords appear (found) vs missing.
+ */
+function computeKeywordGap(keywords: any, text: string): KeywordGapSnapshot {
+  const textLower = text.toLowerCase();
+  const criticalList = keywords?.criticalKeywords || [];
+  const allJobKeywords = [
+    ...(keywords?.keywords?.technical || []),
+    ...(keywords?.keywords?.industry || []),
+  ];
+  const variations = (term: string) => {
+    const t = (term || "").toLowerCase();
+    return [t, t.replace(/\s+/g, ""), t.replace(/\s+/g, "-"), t.replace(/\s+/g, "_")];
+  };
+  const appearsIn = (term: string) => variations(term).some((v) => v.length >= 3 && textLower.includes(v));
+
+  const found: string[] = [];
+  const missing: string[] = [];
+  const seenLower = new Set<string>();
+
+  for (const kw of criticalList) {
+    const term = (typeof kw === "string" ? kw : (kw as any)?.term ?? "").trim();
+    if (term.length < 3) continue;
+    const key = term.toLowerCase();
+    if (seenLower.has(key)) continue;
+    seenLower.add(key);
+    if (appearsIn(term)) found.push(term);
+    else missing.push(term);
+  }
+
+  const importanceOrder: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+  const sorted = [...allJobKeywords].sort((a: any, b: any) => {
+    const aImp = importanceOrder[a?.importance] ?? 2;
+    const bImp = importanceOrder[b?.importance] ?? 2;
+    if (bImp !== aImp) return bImp - aImp;
+    return (b?.frequency ?? 1) - (a?.frequency ?? 1);
+  });
+  for (const k of sorted) {
+    const term = (k?.term ?? "").trim();
+    if (term.length < 3) continue;
+    const key = term.toLowerCase();
+    if (seenLower.has(key)) continue;
+    seenLower.add(key);
+    if (appearsIn(term)) found.push(term);
+    else missing.push(term);
+  }
+
+  const filteredMissing = missing.filter(
+    (term) =>
+      term.length >= MISSING_KEYWORD_MIN_LENGTH && !MISSING_KEYWORDS_BLOCKLIST.has(term.toLowerCase())
+  );
+
+  return {
+    foundInResume: found.slice(0, FOUND_KEYWORDS_CAP),
+    missingKeywords: filteredMissing.slice(0, MISSING_KEYWORDS_CAP),
+  };
+}
 
 /**
  * Send SSE event to client
@@ -37,7 +117,19 @@ function sendSSE(controller: ReadableStreamDefaultController, event: string, dat
  * Stream resume tailoring process with progressive updates
  */
 export async function POST(req: NextRequest) {
-  const { resume, jobDescription, sessionId, modelKey, userId, quickDraft = false, jobTitle: clientJobTitle } = await req.json();
+  const {
+    resume,
+    jobDescription,
+    sessionId,
+    modelKey,
+    userId,
+    quickDraft = false,
+    jobTitle: clientJobTitle,
+    parentResumeId,
+    customInstructions,
+    keywordsToWeave,
+    promptPresetIds,
+  } = await req.json();
 
   if (!resume || !jobDescription) {
     return new Response(
@@ -121,6 +213,9 @@ export async function POST(req: NextRequest) {
         let companyResearch: any = null;
         let metricsContext: any = null;
 
+        const jobDescriptionForKeywords = trimJobDescriptionToRoleContent(
+          cleanJobDescriptionUtil(jobDescription, { maxLength: 12000 })
+        );
         try {
           streamClosed = !sendSSE(controller, "status", {
             stage: "preprocessing",
@@ -134,7 +229,7 @@ export async function POST(req: NextRequest) {
               key: "keywords",
               fn: () =>
                 callMCPTool(baseUrl, "/api/mcp-tools/keyword-extractor", {
-                  jobDescription,
+                  jobDescription: jobDescriptionForKeywords,
                   resume,
                 }),
             },
@@ -282,36 +377,145 @@ export async function POST(req: NextRequest) {
         const targetImprovement = scoreGap > 20 ? 20 : (scoreGap > 15 ? 15 : Math.max(15, scoreGap));
         const targetScore = Math.min(100, baselineScore + targetImprovement);
 
-        // Use centralized prompt (strict base tailor only)
         const metricsGuidance = formatMetricsGuidance(metricsContext);
-        const prompt = getTailoringPrompt({
-          baselineScore,
-          targetScore,
-          targetImprovement,
-          sortedMissing,
-          keywordContext,
-          companyContext,
-          jobTitle,
-          metricsGuidance,
-          resume,
-          cleanJobDescription,
-        });
-
-
-        // Generate tailored resume
-        streamClosed = !sendSSE(controller, "status", {
-          stage: "generating",
-          message: "Optimizing content...",
-          progress: 60,
-        });
-        if (streamClosed) return;
-
-        const result = await generateWithFallback(
-          prompt,
-          selectedModel,
-          undefined,
-          sessionApiKeys
+        const userInstructions = buildUserInstructions(
+          Array.isArray(promptPresetIds) ? promptPresetIds : undefined,
+          typeof customInstructions === "string" ? customInstructions.trim() : undefined
         );
+        const userRequestedKeywords = Array.isArray(keywordsToWeave)
+          ? keywordsToWeave.filter((k): k is string => typeof k === "string").slice(0, 30)
+          : [];
+        let tailoredResume: string | undefined;
+        let improvementMetrics: {
+          quantifiedBulletsAdded: number;
+          atsKeywordsMatched: number;
+          activeVoiceConversions: number;
+          sectionsOptimized: number;
+        } = {
+          quantifiedBulletsAdded: 0,
+          atsKeywordsMatched: 0,
+          activeVoiceConversions: 0,
+          sectionsOptimized: 0,
+        };
+
+        const experience = parsedResume?.experience ?? [];
+        const useSectionBased =
+          experience.length >= 1 &&
+          !!parsedResume?.contactInfo &&
+          !!parsedResume?.summary;
+
+        if (useSectionBased) {
+          streamClosed = !sendSSE(controller, "status", {
+            stage: "generating",
+            message: "Tailoring by section...",
+            progress: 55,
+          });
+          if (streamClosed) return;
+          try {
+            const summaryPrompt = getSummaryTailoringPrompt({
+              resume,
+              jobDescription: cleanJobDescription,
+              jobTitle: jobTitle ?? undefined,
+              userInstructions: userInstructions || undefined,
+              userRequestedKeywords: userRequestedKeywords.length > 0 ? userRequestedKeywords : undefined,
+            });
+            const summaryRes = await generateWithFallback(
+              summaryPrompt,
+              selectedModel,
+              undefined,
+              sessionApiKeys
+            );
+            const expPrompts = experience.map((exp: { title: string; company: string; dates: string | null; description: string }) =>
+              getExperienceBulletsPrompt({
+                jobTitle: exp.title,
+                company: exp.company,
+                dates: exp.dates,
+                bulletsText: exp.description,
+                jobDescription: cleanJobDescription,
+                resumeContext: resume,
+                userInstructions: userInstructions || undefined,
+                userRequestedKeywords: userRequestedKeywords.length > 0 ? userRequestedKeywords : undefined,
+              })
+            );
+            const expResults = await Promise.all(
+              expPrompts.map((p: string) =>
+                generateWithFallback(p, selectedModel, undefined, sessionApiKeys)
+              )
+            );
+            const tailoredSummary = summaryRes.text.trim();
+            const tailoredBulletsByJob = expResults.map((r: { text: string }) => r.text.trim());
+            tailoredResume = reassembleResumeFromSections({
+              parsed: parsedResume as Parameters<typeof reassembleResumeFromSections>[0]["parsed"],
+              tailoredSummary,
+              tailoredBulletsByJob,
+              originalResume: resume,
+            });
+          } catch (sectionErr) {
+            console.warn("[Stream] Section-based tailor failed, falling back to single-doc:", sectionErr);
+          }
+        }
+
+        if (!tailoredResume) {
+          const prompt = getTailoringPrompt({
+            baselineScore,
+            targetScore,
+            targetImprovement,
+            sortedMissing,
+            keywordContext,
+            companyContext,
+            jobTitle,
+            metricsGuidance,
+            resume,
+            cleanJobDescription,
+            userInstructions: userInstructions || undefined,
+            userRequestedKeywords: userRequestedKeywords.length > 0 ? userRequestedKeywords : undefined,
+          });
+          streamClosed = !sendSSE(controller, "status", {
+            stage: "generating",
+            message: "Optimizing content...",
+            progress: 60,
+          });
+          if (streamClosed) return;
+
+          const result = await generateWithFallback(
+            prompt,
+            selectedModel,
+            undefined,
+            sessionApiKeys
+          );
+
+          streamClosed = !sendSSE(controller, "status", {
+            stage: "processing",
+            message: "Processing results...",
+            progress: 80,
+          });
+          if (streamClosed) return;
+
+          const jsonData = parseJSONFromText<{
+            tailoredResume?: string;
+            improvementMetrics?: {
+              quantifiedBulletsAdded?: number;
+              atsKeywordsMatched?: number;
+              activeVoiceConversions?: number;
+              sectionsOptimized?: number;
+            };
+          }>(result.text);
+
+          if (jsonData && jsonData.tailoredResume) {
+            tailoredResume = jsonData.tailoredResume;
+            improvementMetrics = {
+              quantifiedBulletsAdded: jsonData.improvementMetrics?.quantifiedBulletsAdded ?? 0,
+              atsKeywordsMatched: jsonData.improvementMetrics?.atsKeywordsMatched ?? 0,
+              activeVoiceConversions: jsonData.improvementMetrics?.activeVoiceConversions ?? 0,
+              sectionsOptimized: jsonData.improvementMetrics?.sectionsOptimized ?? 0,
+            };
+          } else {
+            const extracted = extractTailoredResumeFromText(result.text);
+            tailoredResume =
+              extracted ??
+              (result.text.includes("improvementMetrics") ? resume : result.text);
+          }
+        }
 
         streamClosed = !sendSSE(controller, "status", {
           stage: "processing",
@@ -320,49 +524,18 @@ export async function POST(req: NextRequest) {
         });
         if (streamClosed) return;
 
-        // Extract JSON from response
-        const jsonData = parseJSONFromText<{
-          tailoredResume?: string;
-          improvementMetrics?: {
-            quantifiedBulletsAdded?: number;
-            atsKeywordsMatched?: number;
-            activeVoiceConversions?: number;
-            sectionsOptimized?: number;
-          };
-        }>(result.text);
-
-        let tailoredResume: string;
-        let improvementMetrics: {
-          quantifiedBulletsAdded: number;
-          atsKeywordsMatched: number;
-          activeVoiceConversions: number;
-          sectionsOptimized: number;
-        };
-
-        if (jsonData && jsonData.tailoredResume) {
-          tailoredResume = jsonData.tailoredResume;
-          improvementMetrics = {
-            quantifiedBulletsAdded: jsonData.improvementMetrics?.quantifiedBulletsAdded ?? 0,
-            atsKeywordsMatched: jsonData.improvementMetrics?.atsKeywordsMatched ?? 0,
-            activeVoiceConversions: jsonData.improvementMetrics?.activeVoiceConversions ?? 0,
-            sectionsOptimized: jsonData.improvementMetrics?.sectionsOptimized ?? 0,
-          };
-        } else {
-          // Fallback: extract tailoredResume from malformed JSON to avoid passing raw JSON to obfuscation
-          const extracted = extractTailoredResumeFromText(result.text);
-          tailoredResume =
-            extracted ??
-            (result.text.includes("improvementMetrics") ? resume : result.text);
-          improvementMetrics = {
-            quantifiedBulletsAdded: 0,
-            atsKeywordsMatched: 0,
-            activeVoiceConversions: 0,
-            sectionsOptimized: 0,
-          };
+        tailoredResume = sanitizeResumeForATS(tailoredResume ?? resume);
+        tailoredResume = deduplicateResumeSections(tailoredResume);
+        tailoredResume = rewriteParentheticalKeywords(tailoredResume);
+        tailoredResume = validateOrFixEducationBlock(tailoredResume);
+        tailoredResume = sanitizeContactBlock(tailoredResume, parsedResume);
+        const contactFromOriginal = buildContactFromOriginal(resume, parsedResume);
+        if (contactFromOriginal) {
+          tailoredResume = replaceContactBlock(tailoredResume, contactFromOriginal);
+          tailoredResume = sanitizeContactBlock(tailoredResume, parsedResume);
         }
 
-        tailoredResume = sanitizeResumeForATS(tailoredResume);
-        tailoredResume = deduplicateResumeSections(tailoredResume);
+        const keywordGap = computeKeywordGap(keywords, tailoredResume);
 
         // Stream sections as they're processed
         const sections = tailoredResume.split(/\n(?=#|\n)/);
@@ -469,23 +642,47 @@ export async function POST(req: NextRequest) {
         // Store resume data in Supabase immediately
         let storedResumeId: string | null = null;
         try {
+          let versionNumber = 1;
+          let parentResumeIdVal: string | null = null;
+          let rootResumeIdVal: string | null = null;
+          let originalContent = resume;
+          let jobDescriptionForInsert = cleanJobDescription;
+
+          if (parentResumeId) {
+            const { data: parentRow } = await supabaseAdmin
+              .from('resumes')
+              .select('id, version_number, root_resume_id, original_content, job_description')
+              .eq('id', parentResumeId)
+              .single();
+            if (parentRow) {
+              parentResumeIdVal = parentResumeId;
+              versionNumber = (parentRow.version_number ?? 1) + 1;
+              rootResumeIdVal = parentRow.root_resume_id ?? parentRow.id;
+              originalContent = parentRow.original_content ?? resume;
+              jobDescriptionForInsert = parentRow.job_description ?? cleanJobDescription;
+            }
+          }
+
           const insertData: any = {
-            original_content: resume,
+            original_content: originalContent,
             tailored_content: tailoredResume,
             obfuscated_content: obfuscationResult.obfuscatedResume,
             content_map: obfuscationResult.contentMap,
-            job_description: cleanJobDescription,
+            job_description: jobDescriptionForInsert,
             match_score: {
               before: beforeScore,
               after: afterScore,
               beforeMetrics: beforeMetrics ?? undefined,
               afterMetrics: afterMetrics ?? undefined,
+              keywordGap,
             },
             improvement_metrics: improvementMetrics,
             free_reveal: obfuscationResult.freeReveal,
-            // format_spec omitted from insert until column exists (run: ALTER TABLE resumes ADD COLUMN IF NOT EXISTS format_spec JSONB)
             job_title: (clientJobTitle?.trim() || companyResearch?.jobTitle) || null,
             company_name: (companyResearch?.companyName?.trim() && companyResearch.companyName !== "Unknown Company") ? companyResearch.companyName.trim() : null,
+            parent_resume_id: parentResumeIdVal,
+            version_number: versionNumber,
+            root_resume_id: rootResumeIdVal,
           };
 
           if (sessionId) {
@@ -495,7 +692,6 @@ export async function POST(req: NextRequest) {
             insertData.user_id = userId;
           }
 
-          // Every completed tailor gets a new row (job completed, job stored)
           const { data: resumeData, error: resumeError } = await supabaseAdmin
             .from('resumes')
             .insert(insertData)
@@ -506,6 +702,12 @@ export async function POST(req: NextRequest) {
             console.error("[Stream] Error storing resume:", resumeError);
           } else if (resumeData) {
             storedResumeId = resumeData.id;
+            if (!parentResumeIdVal && !rootResumeIdVal) {
+              await supabaseAdmin
+                .from('resumes')
+                .update({ root_resume_id: storedResumeId })
+                .eq('id', storedResumeId);
+            }
           }
         } catch (error) {
           console.error("[Stream] Error saving resume to DB:", error);
@@ -518,6 +720,7 @@ export async function POST(req: NextRequest) {
           improvementMetrics,
           matchScore: afterScore,
           metrics: afterMetrics ?? undefined,
+          keywordGap,
           validationResult,
           contentMap: obfuscationResult.contentMap,
           freeReveal: obfuscationResult.freeReveal,

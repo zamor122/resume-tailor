@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
+import useSWR from "swr";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchResumeList } from "@/app/lib/swr-fetchers";
 import { getURL } from "@/app/utils/siteUrl";
 import AuthModal from "@/app/components/AuthModal";
 import TierSelectionModal from "@/app/components/TierSelectionModal";
+import PdfTemplateSelectModal from "@/app/components/PdfTemplateSelectModal";
 import { hasActiveAccess, getAccessInfo } from "@/app/utils/accessManager";
 import { useRouter } from "next/navigation";
-import { downloadResumeAsPdf, downloadResumeAsMarkdown, resumeDownloadFilename } from "@/app/utils/resumeDownload";
+import { downloadResumeAsPdf, downloadResumeAsMarkdown, resumeDownloadFilename, resumeDownloadFilenamePdf } from "@/app/utils/resumeDownload";
 import { analytics } from "@/app/services/analytics";
 import { useFeedback } from "@/app/contexts/FeedbackContext";
 
@@ -20,15 +23,14 @@ interface ResumeItem {
   matchScore: number;
   improvementMetrics: Record<string, unknown>;
   isUnlocked?: boolean;
+  versionCount?: number;
+  bestMatchScore?: number;
 }
 
 const ITEMS_PER_PAGE = 10;
 
 export default function ProfilePage() {
   const { user, session, loading: authLoading, signOut } = useAuth();
-  const [resumes, setResumes] = useState<ResumeItem[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showTierModal, setShowTierModal] = useState(false);
@@ -38,55 +40,41 @@ export default function ProfilePage() {
   const [accessInfo, setAccessInfo] = useState<any>(null);
   const [downloadDropdownId, setDownloadDropdownId] = useState<string | null>(null);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
+  const [showPdfTemplateModal, setShowPdfTemplateModal] = useState(false);
+  const [pendingPdfContext, setPendingPdfContext] = useState<{
+    content: string;
+    baseName: string;
+    resumeId: string;
+    jobTitle: string;
+  } | null>(null);
   const downloadTriggerRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
   const feedback = useFeedback();
 
-  const fetchResumes = useCallback(async (page: number = 1) => {
-    if (!user || !session?.access_token) return;
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `/api/resume/list?userId=${user.id}&page=${page}&limit=${ITEMS_PER_PAGE}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setResumes(data.resumes || []);
-        setTotalCount(data.totalCount ?? 0);
-        setCurrentPage(page);
-      } else {
-        console.error("Failed to fetch resumes");
-      }
-    } catch (error) {
-      console.error("Error fetching resumes:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, session?.access_token]);
+  const listSwrKey =
+    user && session?.access_token && !authLoading
+      ? (["resume-list", user.id, currentPage] as const)
+      : null;
+  const listFetcher = useCallback(
+    ([, userId, page]: readonly [string, string, number]) =>
+      fetchResumeList(userId, page, ITEMS_PER_PAGE, session!.access_token!),
+    [session?.access_token]
+  );
+  const { data: listData, isLoading: listLoading, mutate: mutateList } = useSWR(listSwrKey, listFetcher, {
+    revalidateOnFocus: true,
+  });
+
+  const resumes = listData?.resumes ?? [];
+  const totalCount = listData?.totalCount ?? 0;
+  const loading = !!(user && !authLoading && !listData && listLoading);
 
   useEffect(() => {
     if (!authLoading && user) {
-      fetchResumes();
       checkAccess();
     } else if (!authLoading && !user) {
-      setLoading(false);
       setHasAccess(false);
     }
-  }, [user, authLoading, fetchResumes]);
-
-  // Refetch when user returns to the tab (e.g. after tailoring in another tab)
-  useEffect(() => {
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible" && user) fetchResumes(currentPage);
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, [user, fetchResumes, currentPage]);
+  }, [user, authLoading]);
 
   const checkAccess = async () => {
     if (!user) {
@@ -185,31 +173,13 @@ export default function ProfilePage() {
       const baseName = resumeDownloadFilename(jobTitle || "resume");
 
       if (format === "pdf") {
-        setPdfLoadingId(resumeId);
-        try {
-          await downloadResumeAsPdf(content, `${baseName}.pdf`);
-          analytics.trackEvent(analytics.events.EXPORT_RESUME, {
-            format: "pdf",
-            resumeId,
-            jobTitle: jobTitle || undefined,
-            timestamp: new Date().toISOString(),
-          });
-          try {
-            if (typeof window !== "undefined") sessionStorage.setItem("airesumetailor_converted", "1");
-          } catch {
-            // ignore
-          }
-          feedback?.showDidThisHelpPrompt("download");
-        } finally {
-          setPdfLoadingId(null);
-        }
+        setPendingPdfContext({ content, baseName, resumeId, jobTitle });
+        setShowPdfTemplateModal(true);
       } else {
         downloadResumeAsMarkdown(content, `${baseName}.md`);
         analytics.trackEvent(analytics.events.EXPORT_RESUME, {
+          ...analytics.getTrackingContext({ section: "resume_table", element: "download_markdown", source: "profile", resumeId, jobTitle: jobTitle || undefined }),
           format: "markdown",
-          resumeId,
-          jobTitle: jobTitle || undefined,
-          timestamp: new Date().toISOString(),
         });
         try {
           if (typeof window !== "undefined") sessionStorage.setItem("airesumetailor_converted", "1");
@@ -268,7 +238,7 @@ export default function ProfilePage() {
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => {
             setShowAuthModal(false);
-            fetchResumes(1);
+            setCurrentPage(1);
             checkAccess();
           }}
           title="Sign in to view your profile"
@@ -318,7 +288,7 @@ export default function ProfilePage() {
           <h2 className="text-2xl font-bold text-white">Resume History</h2>
           <button
             type="button"
-            onClick={() => fetchResumes(currentPage)}
+            onClick={() => mutateList()}
             disabled={loading}
             className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors disabled:opacity-50"
             title="Refresh list"
@@ -382,11 +352,34 @@ export default function ProfilePage() {
                         <span className="text-green-400 font-semibold">
                           {resume.matchScore}%
                         </span>
+                        {(resume.versionCount != null && resume.versionCount > 1) || resume.bestMatchScore != null ? (
+                          <span className="block text-xs text-gray-400 mt-0.5">
+                            {resume.versionCount != null && resume.versionCount > 1 && `${resume.versionCount} versions`}
+                            {resume.versionCount != null && resume.versionCount > 1 && resume.bestMatchScore != null && " · "}
+                            {resume.bestMatchScore != null && `Best match ${resume.bestMatchScore}%`}
+                          </span>
+                        ) : null}
                       </td>
                       <td className="py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/?prefillResumeId=${resume.id}`}
+                            className="px-3 py-1.5 text-sm rounded-lg text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors"
+                            onClick={() => {
+                              analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
+                                ...analytics.getTrackingContext({ section: "resume_table", element: "link", label: "Tailor for another job", resumeId: resume.id, source: "profile" }),
+                              });
+                            }}
+                          >
+                            Tailor for another job
+                          </Link>
                           <button
-                            onClick={() => router.push(`/resume/${resume.id}`)}
+                            onClick={() => {
+                              analytics.trackEvent(analytics.events.VIEW_RESUME_CLICK, {
+                                ...analytics.getTrackingContext({ section: "resume_table", element: "view_resume", resumeId: resume.id, jobTitle: resume.jobTitle?.slice(0, 80) }),
+                              });
+                              router.push(`/resume/${resume.id}`);
+                            }}
                             className="px-3 py-1.5 text-sm rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
                           >
                             View
@@ -479,7 +472,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => fetchResumes(Math.max(1, currentPage - 1))}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1 || loading}
                     className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
@@ -489,7 +482,7 @@ export default function ProfilePage() {
                     Page {currentPage} of {totalPages}
                   </div>
                   <button
-                    onClick={() => fetchResumes(Math.min(totalPages, currentPage + 1))}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages || loading}
                     className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
@@ -514,6 +507,39 @@ export default function ProfilePage() {
         // Tier selection is handled by the modal
       }}
       resumeId={tierModalResumeId}
+    />
+    <PdfTemplateSelectModal
+      isOpen={showPdfTemplateModal}
+      onClose={() => {
+        setShowPdfTemplateModal(false);
+        setPendingPdfContext(null);
+      }}
+      onSelect={async (templateId) => {
+        if (!pendingPdfContext) return;
+        const { content, baseName, resumeId: rid, jobTitle: jt } = pendingPdfContext;
+        setShowPdfTemplateModal(false);
+        setPendingPdfContext(null);
+        setPdfLoadingId(rid);
+        try {
+          const pdfFilename = resumeDownloadFilenamePdf(baseName, templateId);
+          await downloadResumeAsPdf(content, pdfFilename, templateId);
+          analytics.trackEvent(analytics.events.EXPORT_RESUME, {
+            ...analytics.getTrackingContext({ section: "resume_table", element: "download_pdf", source: "profile", resumeId: rid, jobTitle: jt || undefined }),
+            format: "pdf",
+          });
+          try {
+            if (typeof window !== "undefined") sessionStorage.setItem("airesumetailor_converted", "1");
+          } catch {
+            // ignore
+          }
+          feedback?.showDidThisHelpPrompt("download");
+        } catch (e) {
+          console.error("PDF download failed:", e);
+          alert("Failed to generate PDF. Please try again.");
+        } finally {
+          setPdfLoadingId(null);
+        }
+      }}
     />
     </>
   );

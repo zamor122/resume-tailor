@@ -28,17 +28,14 @@ export async function GET(req: NextRequest) {
       if ("error" in verifyResult) return verifyResult.error;
     }
 
-    // Pagination: default page 1, limit 50 (max 100)
     const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') || '50', 10)), 100);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const start = (page - 1) * limit;
-    const end = start + limit - 1;
 
     let resumeQuery = supabaseAdmin
       .from('resumes')
-      .select('id, created_at, job_description, job_title, company_name, match_score, improvement_metrics', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(start, end);
+      .select('id, created_at, job_description, job_title, company_name, match_score, improvement_metrics, root_resume_id, version_number')
+      .order('created_at', { ascending: false });
 
     if (userId) {
       resumeQuery = resumeQuery.eq('user_id', userId);
@@ -46,7 +43,7 @@ export async function GET(req: NextRequest) {
       resumeQuery = resumeQuery.eq('session_id', sessionId);
     }
 
-    const { data: allResumes, error, count } = await resumeQuery;
+    const { data: allRows, error } = await resumeQuery.limit(2000);
 
     if (error) {
       console.error("Error fetching resumes:", error);
@@ -56,7 +53,35 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const resumeIds = (allResumes || []).map(r => r.id);
+    const rows = allRows || [];
+    const byRoot = new Map<string, typeof rows>();
+    for (const r of rows) {
+      const rootKey = r.root_resume_id ?? r.id;
+      if (!byRoot.has(rootKey)) byRoot.set(rootKey, []);
+      byRoot.get(rootKey)!.push(r);
+    }
+
+    const applications = Array.from(byRoot.entries()).map(([rootKey, group]) => {
+      const latest = group.reduce((a, b) => ((a.version_number ?? 1) >= (b.version_number ?? 1) ? a : b));
+      const score = (m: unknown) => (m as { after?: number; before?: number })?.after ?? (m as { after?: number; before?: number })?.before ?? 0;
+      const bestMatchScore = Math.max(...group.map((g) => score(g.match_score)));
+      return {
+        id: latest.id,
+        created_at: latest.created_at,
+        job_description: latest.job_description,
+        job_title: latest.job_title,
+        company_name: latest.company_name,
+        match_score: latest.match_score,
+        improvement_metrics: latest.improvement_metrics,
+        versionCount: group.length,
+        bestMatchScore,
+      };
+    });
+
+    applications.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const totalCount = applications.length;
+    const pageApplications = applications.slice(start, start + limit);
+    const resumeIds = pageApplications.map((r) => r.id);
 
     // Get payment status only for resumes on current page (smaller IN clause)
     let payments: { resume_id: string; status: string; amount_cents: number; created_at: string }[] = [];
@@ -78,18 +103,14 @@ export async function GET(req: NextRequest) {
     // Get first 3 free resume IDs for user (when userId provided)
     const freeResumeIds = userId ? await getFreeResumeIdsServer(userId) : [];
 
-    // Transform to include metadata and payment status
-    const resumeList = (allResumes || []).map((resume) => {
-      // Use stored job_title and company_name when available; fallback to parsed job_description
+    const resumeList = pageApplications.map((resume) => {
       const displayTitle = buildResumeDisplayTitle(
         resume.job_title,
         resume.company_name,
         resume.job_description
       );
-
       const payment = paymentMap.get(resume.id);
       const isUnlocked = freeResumeIds.includes(resume.id) || !!payment;
-      
       return {
         id: resume.id,
         createdAt: resume.created_at,
@@ -102,12 +123,14 @@ export async function GET(req: NextRequest) {
           amount: payment.amount_cents / 100,
           paidAt: payment.created_at
         } : null,
+        versionCount: resume.versionCount,
+        bestMatchScore: resume.bestMatchScore,
       };
     });
 
     return NextResponse.json({
       resumes: resumeList,
-      totalCount: count ?? resumeList.length,
+      totalCount,
       page,
       limit,
     });

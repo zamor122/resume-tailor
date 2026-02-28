@@ -80,9 +80,11 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
               jobTitle={downloadJobTitle}
               variant="buttons"
               resumeId={resumeId}
+              source="resume_detail"
+              section="output"
             />
           )}
-          <CopyButton text={displayResume} resumeId={resumeId} />
+          <CopyButton text={displayResume} resumeId={resumeId} source="resume_detail" section="output" />
         </div>
       </div>
       

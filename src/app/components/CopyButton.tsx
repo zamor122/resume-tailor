@@ -8,9 +8,13 @@ interface CopyButtonProps {
   text: string;
   context?: string;
   resumeId?: string;
+  /** Where copy was triggered: resume_detail, profile, or inline */
+  source?: "resume_detail" | "profile" | "inline";
+  /** UI section for analytics */
+  section?: string;
 }
 
-const CopyButton: React.FC<CopyButtonProps> = ({ text, context = "tailored_resume", resumeId }) => {
+const CopyButton: React.FC<CopyButtonProps> = ({ text, context = "tailored_resume", resumeId, source = "resume_detail", section }) => {
   const [copied, setCopied] = useState(false);
   const feedback = useFeedback();
 
@@ -18,9 +22,10 @@ const CopyButton: React.FC<CopyButtonProps> = ({ text, context = "tailored_resum
     try {
       await navigator.clipboard.writeText(text);
       analytics.trackEvent(analytics.events.COPY_RESUME, {
+        ...analytics.getTrackingContext({ section, resumeId }),
+        element: "copy_resume",
         context,
-        ...(resumeId && { resumeId }),
-        timestamp: new Date().toISOString(),
+        source,
       });
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

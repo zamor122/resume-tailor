@@ -1,3 +1,9 @@
+/** Keyword gap for sidebar: JD keywords found vs missing in the tailored resume */
+export interface KeywordGapSnapshot {
+  missingKeywords: string[];
+  foundInResume: string[];
+}
+
 /** Snapshot of resume metrics (defensible, rule-based) */
 export interface ResumeMetricsSnapshot {
   jdCoverage?: { addressed: number; total: number; percentage: number };

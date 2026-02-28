@@ -39,30 +39,66 @@ interface ParsedResume {
 
 function parseResume(resumeText: string): ParsedResume {
   const lines = resumeText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  
-  // Extract contact info
-  const emailMatch = resumeText.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
-  const phoneMatch = resumeText.match(/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\d{10}/);
+
+  // First block (before any ##) for contact parsing
+  let firstBlockEnd = lines.length;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^#+\s+/.test(lines[i])) {
+      firstBlockEnd = i;
+      break;
+    }
+  }
+  const firstBlockLines = lines.slice(0, firstBlockEnd);
+  const firstBlockText = firstBlockLines.join("\n");
+
+  // Extract contact info (whole-doc patterns first)
+  const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+  let emailMatch = resumeText.match(emailRegex);
+  if (!emailMatch && /email:\s*|e-mail:\s*/i.test(firstBlockText)) {
+    const prefixed = firstBlockText.match(/(?:email|e-mail):\s*([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})/i);
+    if (prefixed) emailMatch = [prefixed[1]];
+  }
+  const phonePatterns = [
+    /(?:ph\.?|tel\.?|phone):\s*((?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/i,
+    /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/,
+    /\d{10}/,
+  ];
+  let phoneMatch: RegExpMatchArray | null = null;
+  for (const p of phonePatterns) {
+    phoneMatch = resumeText.match(p);
+    if (phoneMatch) break;
+  }
   const linkedinMatch = resumeText.match(/linkedin\.com\/in\/[\w-]+/i);
   const portfolioMatch = resumeText.match(/(https?:\/\/)?(www\.)?[\w-]+\.(com|io|dev|net|org)/gi);
-  
-  // Extract name (usually first line or before email)
+
+  // Extract name: first line that looks like a name, or line before "Email:" / "Ph:"
   let name: string | null = null;
-  const firstLines = lines.slice(0, 5);
-  for (const line of firstLines) {
+  for (let i = 0; i < Math.min(5, firstBlockLines.length); i++) {
+    const line = firstBlockLines[i];
     if (line.length > 5 && line.length < 50 && !emailMatch?.includes(line) && !phoneMatch?.includes(line)) {
-      // Check if it looks like a name (2-4 words, capitalized)
       const words = line.split(/\s+/);
       if (words.length >= 2 && words.length <= 4) {
-        const allCapitalized = words.every(w => w[0] === w[0].toUpperCase());
-        if (allCapitalized) {
+        const allCapitalized = words.every(w => w.length > 0 && w[0] === w[0].toUpperCase());
+        if (allCapitalized && !/^https?:\/\//i.test(line) && !/@/.test(line)) {
           name = line;
           break;
         }
       }
     }
   }
-  
+  if (!name) {
+    for (let i = 0; i < firstBlockLines.length; i++) {
+      const line = firstBlockLines[i];
+      if (/^(email|e-mail|ph\.?|tel\.?|phone):/i.test(line) && i > 0) {
+        const prev = firstBlockLines[i - 1].trim();
+        if (prev.length >= 4 && prev.length <= 50 && !/@/.test(prev) && !/^\d/.test(prev)) {
+          name = prev;
+          break;
+        }
+      }
+    }
+  }
+
   // Extract location (common patterns)
   const locationPatterns = [
     /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),\s*([A-Z]{2})\b/, // City, State
@@ -216,11 +252,12 @@ function parseResume(resumeText: string): ParsedResume {
     }
   }
   
+  const phoneValue = phoneMatch ? (phoneMatch[1] ?? phoneMatch[0]) : null;
   return {
     contactInfo: {
       name,
       email: emailMatch?.[0] || null,
-      phone: phoneMatch?.[0] || null,
+      phone: phoneValue || null,
       location,
       linkedin: linkedinMatch?.[0] || null,
       portfolio: portfolioMatch?.[0] || null,

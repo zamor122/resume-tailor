@@ -19,13 +19,22 @@ export default function Home() {
         // ignore
       }
     }
+    const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    const referrer = typeof window !== "undefined" ? (document.referrer || "direct") : "direct";
+    const hasPrefillResumeId = typeof search === "string" && search.includes("prefillResumeId");
     analytics.trackEvent(analytics.events.PAGE_VIEW, {
-      page: "home",
-      timestamp: new Date().toISOString(),
+      ...analytics.getTrackingContext(),
+      pathname,
+      search: search || undefined,
+      referrer,
+      ...(hasPrefillResumeId && { hasPrefillResumeId: true }),
     });
     analytics.trackEvent(analytics.events.SESSION_START, {
-      timestamp: new Date().toISOString(),
-      referrer: typeof window !== "undefined" ? (document.referrer || "direct") : "direct",
+      ...analytics.getTrackingContext(),
+      pathname,
+      search: search || undefined,
+      referrer,
     });
   }, []);
 

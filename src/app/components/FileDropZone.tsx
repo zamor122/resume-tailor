@@ -29,20 +29,20 @@ export default function FileDropZone({
 
       if (!isPdf && !isTxt) {
         analytics.trackEvent(analytics.events.UPLOAD_ERROR, {
+          ...analytics.getTrackingContext({ section: "tailorResume", element: "file_drop" }),
           source: "file",
           fileType,
           errorMessage: "Invalid file type",
-          timestamp: new Date().toISOString(),
         });
         onError?.("Please upload a PDF or TXT file.");
         return;
       }
 
       analytics.trackEvent(analytics.events.UPLOAD_ATTEMPT, {
+        ...analytics.getTrackingContext({ section: "tailorResume", element: "file_drop" }),
         source: "file",
         fileType,
         fileSize: file.size,
-        timestamp: new Date().toISOString(),
       });
 
       setIsProcessing(true);
@@ -51,19 +51,22 @@ export default function FileDropZone({
       try {
         const text = await extractText(file);
         analytics.trackEvent(analytics.events.UPLOAD_SUCCESS, {
+          ...analytics.getTrackingContext({ section: "tailorResume", element: "file_drop" }),
           source: "file",
+          fileType,
+          fileSize: file.size,
           charCount: text?.length ?? 0,
-          timestamp: new Date().toISOString(),
         });
         onFileAccepted(text);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to extract text from file.";
         analytics.trackEvent(analytics.events.UPLOAD_ERROR, {
+          ...analytics.getTrackingContext({ section: "tailorResume", element: "file_drop" }),
           source: "file",
           fileType,
+          fileSize: file.size,
           errorMessage: errorMessage.slice(0, 200),
-          timestamp: new Date().toISOString(),
         });
         onError?.(errorMessage);
         setUploadedFile(null);

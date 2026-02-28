@@ -41,6 +41,8 @@ export function getTailoringPrompt(params: {
   metricsGuidance?: string;
   resume: string;
   cleanJobDescription: string;
+  userInstructions?: string;
+  userRequestedKeywords?: string[];
 }): string {
   const {
     baselineScore,
@@ -53,19 +55,30 @@ export function getTailoringPrompt(params: {
     metricsGuidance,
     resume,
     cleanJobDescription,
+    userInstructions,
+    userRequestedKeywords,
   } = params;
 
   const jobTitleInstruction = jobTitle
     ? `\n\nJOB TITLE ALIGNMENT: The target job title for this role is "${jobTitle}". Use this title ONLY in the Summary (e.g., "${jobTitle} with 8+ years..."). NEVER change the candidate's actual job titles in Work Experience—keep "Full Stack Engineer," "Lead Software Engineer," "Software Engineer," etc. exactly as they appear in the original resume.`
     : "";
 
-  return `You are an expert resume-tailoring specialist. Your PRIMARY and MOST IMPORTANT goal is to increase the job relevancy score from ${baselineScore} to ${targetScore}+ (${targetImprovement}+ point improvement). Recruiters scan resumes in seconds—tailoring helps them quickly see the match.${jobTitleInstruction}
+  const hasUserRequests = !!(userInstructions || (userRequestedKeywords && userRequestedKeywords.length > 0));
+  const earlyUserBlock = hasUserRequests
+    ? `
+
+HIGHEST PRIORITY – USER REQUESTS (follow these first; they override other style rules when conflicting):
+${userInstructions ? `Instructions:\n${userInstructions}\n\n` : ""}${(userRequestedKeywords && userRequestedKeywords.length > 0) ? `Keywords to weave in (use wherever the resume supports them; prefer these over other optional wording):\n${userRequestedKeywords.map((kw) => `- ${kw}`).join("\n")}\n` : ""}`
+    : "";
+
+  return `You are an expert resume-tailoring specialist. Your PRIMARY and MOST IMPORTANT goal is to increase the job relevancy score from ${baselineScore} to ${targetScore}+ (${targetImprovement}+ point improvement). Recruiters scan resumes in seconds—tailoring helps them quickly see the match.${jobTitleInstruction}${earlyUserBlock}
 
 HUMAN QUALITY TIER (EQUAL PRIORITY WITH RELEVANCY SCORE):
 The output must read as if written by an experienced professional, not by an AI. Prioritize human quality alongside keyword optimization.
 - NEVER add an "Other Keywords" section or standalone keyword lists
 - NEVER use bold/highlighted keywords for stuffing
 - Keywords must appear inside full sentences describing real work, never as a bullet list of terms
+- Never put keywords or skill lists in parentheses. Do not write (keyword1, keyword2). Use each term inside a full sentence (e.g. "Built services in Python and Django" not "(Python, Django)").
 
 PROFESSIONAL ONLY (STRICTLY ENFORCED):
 - The resume must be strictly professional and role-focused: skills, experience, outcomes, technologies. No exceptions.
@@ -98,23 +111,35 @@ PREFER CONCRETE OVER ABSTRACT:
 - The tailored resume MUST score at least as high as the original on structure/formatting. Never introduce formatting that hurts readability (pipes, Unicode bullets, missing headers).
 - CRITICAL: The Summary/Objective must NEVER name or reference the company the candidate is applying to (or its products/brands). That company name appears only in the job description—do not copy it into the resume summary.
 
-REQUIRED CONTACT BLOCK FORMAT (copy this structure):
-Name
-City, State
-Phone
-Email
-Degree
-University
-LinkedIn/GitHub (if applicable)
+NO-INVENTION (NEVER VIOLATE):
+- Location: Do NOT add city, state, country, or any location to the resume or Contact block unless the original resume explicitly includes it.
+- Role-specific claims: Do NOT add domain-specific concepts (e.g. gamification, endgame flows, situational awareness, sensor fusion, EW) unless the original resume explicitly describes that work. Rephrase only what is there; do not infer or invent context.
 
-Each element on its own line. Never combine with pipes or commas.
+CONTACT BLOCK:
+- Include ONLY fields that appear in the original resume. Use this order when present: Name, then Location (only if in original), then Phone, then Email, then Degree and University (only if in original and NOT already listed in ## Education). Then LinkedIn/GitHub only if in original.
+- Do not add City, State, or Country if the original has no location. Do not duplicate Education section content in the Contact block.
+- ATS: Place contact at top. Use at most TWO lines total (e.g. Line 1: Name, Location if present, Phone. Line 2: Email, LinkedIn/GitHub if present). No pipes; use commas or spaces. Clean and compact.
 
 RESUME FORMATTING (MANDATORY - NEVER VIOLATE):
-- Contact: BAD: "John Doe | j@e.com | (555) 123-4567"  GOOD: Name on line 1, email on line 2, phone on line 3
+- Contact: BAD: "John Doe | j@e.com | (555) 123-4567"  GOOD: compact 2-line header (see CONTACT BLOCK above).
 - Bullets: BAD: Unicode (○, •, ●)  GOOD: hyphen (-) or asterisk (*) only
 - Dates: BAD: "May 2017 — October 2022" (em-dash)  GOOD: "May 2017 - October 2022" (hyphen only)
 - Section headers: Use explicit "## Experience", "## Education", "## Skills", "## Summary"
 - Output each section exactly once. Do not repeat a section header (e.g. only one "## Experience"); put all content for that section under a single header.
+- Do not use tables, horizontal bars, decorative logos, or colored text. Use minimal blank lines between sections.
+
+ATS BEST PRACTICES (technology resume standard):
+- Experience block: For each job use exactly two lines before bullets: Line 1: "Company Name, Location" (omit location if not in original). Line 2: "Job Title – Duration" (e.g. "Software Engineer – January 2020 - Present"). If multiple roles at same company, list company and location once; then each title and duration on its own line before that role's bullets.
+- First bullet per job: The FIRST bullet under each job title must be an overview of the role: responsibilities, team size, tech stack, type of product (e.g. dashboard, data viz, business system), methodology (e.g. Agile), and scope or distribution. Save impact for later bullets.
+- Bullet composition: Each bullet (except the first overview bullet) = Action (strong past-tense verb) → Ingredients (technologies, tools, methods, metrics) → Impact (result: e.g. 50% decrease, major improvement). Example: "Built real-time dashboard with React and D3, reducing support tickets by 30%."
+- Bullet length: Every experience bullet must be 2 lines when possible. Do not use single-line or 3+ line bullets. Fill the two lines with concrete detail (technologies, numbers, scope). Bullets left-justified under the job block.
+- Resume speak: Omit articles (a, the, an). Use present participles instead of infinitives (e.g. ", improving..." or ", reducing..." not "to improve" or "to reduce"). Concise and professional.
+- Weave job description keywords into experience bullets; integration into bullets is critical for ATS.
+- Curate keywords: Prefer recent, relevant experience. Remove or de-emphasize skills from 10+ years ago or surface-level only. Do not list every technology ever touched; focus on what is relevant to the target job and the candidate's depth.
+- Education: Place Education section at the bottom (after Experience and Skills). Each degree or certificate on one line if possible, or at most two lines. Do not list incomplete degrees—omit them.
+- Prior Experience: If the candidate has roles older than 7–10 years from today, create a section "Prior Experience" immediately after "Professional Experience". In Prior Experience list each role on one line only: "Company Name – Job Title – Duration". No bullet points. Include full work history chronologically; write bullet points only for roles within the last 7–10 years.
+- Additional sections (passion projects, freelance, side work): Place AFTER Education. Use same format as Professional Experience (company/title/dates, then bullets in Action → Ingredients → Impact, 2 lines per bullet).
+- Skills: Categorized lists; within each category list skills horizontally (comma-separated), not long vertical lists. Space-efficient; one line per category if possible, two lines max.
 
 CURRENT STATUS:
 - Current Job Match Score: ${baselineScore}/100
@@ -178,6 +203,7 @@ SENTENCE STRUCTURE VARIETY:
 - Context-first example: "Led a team of 5 engineers, overseeing biweekly updates and achieving 120% increase in engagement."
 
 CONTENT BOUNDARIES (NEVER VIOLATE):
+- Every sentence in Experience and Contact must be traceable to the original resume text; rephrase or reorder only—do not invent.
 - Do NOT mention the application company name (the company from the job description) in the Summary or anywhere in the resume unless it is the candidate's past employer listed under Work Experience. No "creating products for [Company]," "[Company]-style," "at [Company]," or that company's product/brand names in the summary.
 - Company names belong only in Work Experience where the candidate actually worked.
 
@@ -203,7 +229,7 @@ SECTION-BY-SECTION OPTIMIZATION:
    - Use job description terminology to describe similar responsibilities
    - Prioritize bullets that match job requirements - move them to the top
    - Do not shorten or remove detail from the original. Preserve URLs, project names, and specific context.
-   - BULLET LENGTH VARIETY: Do NOT trim all bullets to similar length. Some bullets 1 line; others 2–3 lines with specifics. "Managed a team of 5 engineers" (short) alongside "Developed a custom file upload algorithm using frontend utilities and AWS S3, enabling seamless processing of files up to 10GB" (long, specific). Unevenness = credibility.
+   - BULLET LENGTH: Aim for 2 lines per bullet (ATS standard). Fill with concrete detail; avoid single-line or 3+ line bullets.
    - STRATEGIC BULLET SELECTION: When the original has bullets with very specific implementation details (ECS images, ETL via webhooks, Redis, file upload algorithm, greenfield environment), prioritize preserving or featuring them. Prefer 1–2 "hands-on proof" bullets per role over 5 generic optimized bullets.
 
 3. SKILLS SECTION:
@@ -270,6 +296,9 @@ FAILURE TO ADD THESE KEYWORDS (when truthful) WILL RESULT IN MINIMAL SCORE IMPRO
 `}
 ${keywordContext ? `- Additional keywords to incorporate: ${keywordContext}` : ''}
 ${companyContext ? `- Company context (industry/role alignment only): ${companyContext}. Use only for industry and role alignment; do NOT name this company or reference its products or brands anywhere in the resume.` : ''}
+${hasUserRequests ? `
+Reminder: Follow the USER REQUESTS (instructions + keywords to weave) given at the top of this prompt.
+` : ""}
 
 GRAMMAR AND TONE:
 - Use professional but natural grammar. Vary sentence length.
@@ -293,6 +322,9 @@ QUALITY REQUIREMENTS:
 - Preserve the candidate's authentic experience and achievements
 - All content must be believable and professional
 - PRESERVE the original resume's structure and readability. Your output must NEVER be less clear or parseable than the input.${STRICT_RESTRICTION}
+${hasUserRequests ? `
+Apply the user's instructions and requested keywords where truthful, then verify the following.
+` : ""}
 
 Before returning: Verify the Summary is 3–4 sentences (or 3–4 bullets), contains no application company name or its products/brands, and contains no "please consider", "look at", "consider my", or similar reader-addressing language. Rephrase to declarative, factual overview only if needed.
 

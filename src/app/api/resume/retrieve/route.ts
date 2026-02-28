@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
 
     // If no access, return obfuscated content
     if (!hasAccess) {
-      const ms = resume.match_score as { before?: number; after?: number; afterMetrics?: unknown } | null;
+      const ms = resume.match_score as { before?: number; after?: number; afterMetrics?: unknown; keywordGap?: { missingKeywords: string[]; foundInResume: string[] } } | null;
       return NextResponse.json({
         success: true,
         originalResume: resume.original_content,
@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
         jobTitle: resume.job_title ?? null,
         matchScore: ms?.after ?? ms?.before ?? 0,
         metrics: ms?.afterMetrics ?? undefined,
+        keywordGap: ms?.keywordGap ?? undefined,
         improvementMetrics: resume.improvement_metrics,
         freeReveal: resume.free_reveal,
         formatSpec: resume.format_spec ?? null,
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Return resume data with access info (unobfuscated since user has access)
-    const ms = resume.match_score as { before?: number; after?: number; afterMetrics?: unknown } | null;
+    const ms = resume.match_score as { before?: number; after?: number; afterMetrics?: unknown; keywordGap?: { missingKeywords: string[]; foundInResume: string[] } } | null;
     return NextResponse.json({
       success: true,
       originalResume: resume.original_content,
@@ -127,6 +128,7 @@ export async function POST(req: NextRequest) {
       jobTitle: resume.job_title ?? null,
       matchScore: ms?.after ?? ms?.before ?? 0,
       metrics: ms?.afterMetrics ?? undefined,
+      keywordGap: ms?.keywordGap ?? undefined,
       improvementMetrics: resume.improvement_metrics,
       freeReveal: resume.free_reveal,
       formatSpec: resume.format_spec ?? null,

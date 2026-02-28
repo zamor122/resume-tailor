@@ -18,8 +18,8 @@ export function useEngagementTracking() {
     const trackEngagement = () => {
       if (!engagementTracked.current) {
         analytics.trackEvent(analytics.events.ENGAGEMENT, {
+          ...analytics.getTrackingContext(),
           type: 'initial',
-          timestamp: new Date().toISOString(),
         });
         engagementTracked.current = true;
       }
@@ -32,8 +32,8 @@ export function useEngagementTracking() {
       
       // Track interaction event
       analytics.trackEvent(analytics.events.INTERACTION, {
+        ...analytics.getTrackingContext(),
         count: interactionCount.current,
-        timestamp: new Date().toISOString(),
       });
     };
 
@@ -58,9 +58,9 @@ export function useEngagementTracking() {
             }
           }
           analytics.trackEvent(analytics.events.SCROLL_DEPTH, {
+            ...analytics.getTrackingContext(),
             depth: milestone,
             scrollPercent,
-            timestamp: new Date().toISOString(),
           });
         }
       });
@@ -82,9 +82,9 @@ export function useEngagementTracking() {
             }
           }
           analytics.trackEvent(analytics.events.TIME_ON_PAGE, {
+            ...analytics.getTrackingContext(),
             seconds: timeSpent,
             minutes: Math.round(timeSpent / 60 * 10) / 10,
-            timestamp: new Date().toISOString(),
           });
         }
       });
@@ -121,9 +121,9 @@ export function useEngagementTracking() {
       // Track session end
       const totalTime = Math.round((Date.now() - startTime.current) / 1000);
       analytics.trackEvent(analytics.events.SESSION_END, {
+        ...analytics.getTrackingContext(),
         duration: totalTime,
         interactions: interactionCount.current,
-        timestamp: new Date().toISOString(),
       });
     };
   }, []);

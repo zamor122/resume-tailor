@@ -31,10 +31,11 @@ export default function ExitSurveyModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reason) return;
+    const comment = reason === "other" ? otherComment.trim().slice(0, 500) : undefined;
     analytics.trackEvent(analytics.events.EXIT_SURVEY_SUBMITTED, {
+      ...analytics.getTrackingContext(),
       reason,
-      ...(reason === "other" && otherComment.trim() && { comment: otherComment.trim().slice(0, 500) }),
-      timestamp: new Date().toISOString(),
+      ...(comment && { commentLength: comment.length }),
     });
     onSubmitted(reason, reason === "other" ? otherComment.trim() : undefined);
     setReason("");
@@ -44,7 +45,7 @@ export default function ExitSurveyModal({
 
   const handleSkip = () => {
     analytics.trackEvent(analytics.events.EXIT_SURVEY_DISMISSED, {
-      timestamp: new Date().toISOString(),
+      ...analytics.getTrackingContext(),
     });
     onClose();
   };

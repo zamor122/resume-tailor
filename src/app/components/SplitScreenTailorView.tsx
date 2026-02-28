@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import useSWR from "swr";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchResumeById } from "@/app/lib/swr-fetchers";
+import { useJobTitle } from "@/app/hooks/useJobTitle";
 import ParallaxBackground from "./ParallaxBackground";
 import ParallaxContainer from "./ParallaxContainer";
 import ResumeInput from "./ResumeInput";
@@ -17,6 +20,7 @@ import HomepageSEOSection from "./HomepageSEOSection";
 import { extractTextFromPDF } from "@/app/utils/pdfExtractor";
 import { analytics } from "@/app/services/analytics";
 import { saveResumeData, loadResumeData, clearResumeData } from "@/app/utils/dataPersistence";
+import { TAILORING_PRESET_LABELS } from "@/app/prompts/tailoringPresets";
 import type { HumanizeResponse } from "@/app/types/humanize";
 
 export { type HumanizeResponse } from "@/app/types/humanize";
@@ -30,8 +34,23 @@ async function runHumanizeStream(params: {
   userId: string | null;
   jobTitle?: string;
   onProgress?: (progress: number, message: string) => void;
+  parentResumeId?: string;
+  customInstructions?: string;
+  keywordsToWeave?: string[];
+  promptPresetIds?: string[];
 }): Promise<HumanizeResponse> {
-  const { resume, jobDescription, sessionId, userId, jobTitle, onProgress } = params;
+  const {
+    resume,
+    jobDescription,
+    sessionId,
+    userId,
+    jobTitle,
+    onProgress,
+    parentResumeId,
+    customInstructions,
+    keywordsToWeave,
+    promptPresetIds,
+  } = params;
 
   const controller = new AbortController();
   let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(
@@ -49,6 +68,10 @@ async function runHumanizeStream(params: {
         sessionId,
         userId: userId ?? undefined,
         jobTitle: jobTitle ?? undefined,
+        parentResumeId: parentResumeId ?? undefined,
+        customInstructions: customInstructions ?? undefined,
+        keywordsToWeave: keywordsToWeave?.length ? keywordsToWeave : undefined,
+        promptPresetIds: promptPresetIds?.length ? promptPresetIds : undefined,
       }),
       signal: controller.signal,
     });
@@ -127,7 +150,10 @@ async function runHumanizeStream(params: {
 
 export default function SplitScreenTailorView() {
   const router = useRouter();
-  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const prefillResumeId = searchParams.get("prefillResumeId");
+  const prefillVersion = searchParams.get("prefillVersion");
+  const { user, session } = useAuth();
   const [resume, setResume] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -140,6 +166,72 @@ export default function SplitScreenTailorView() {
   const [errorShakeKey, setErrorShakeKey] = useState(0);
   const [fileDropKey, setFileDropKey] = useState(0);
   const [detectedJobTitle, setDetectedJobTitle] = useState<string | null>(null);
+  const [parentResumeId, setParentResumeId] = useState<string | undefined>(undefined);
+  const [customInstructions, setCustomInstructions] = useState("");
+  const [keywordsToWeave, setKeywordsToWeave] = useState<string[]>([]);
+  const [keywordInput, setKeywordInput] = useState("");
+  const [promptPresetIds, setPromptPresetIds] = useState<string[]>([]);
+  const [tailoringOptionsOpen, setTailoringOptionsOpen] = useState(false);
+  const prefillSyncedForRef = useRef<string | null>(null);
+
+  const keywordsToWeaveParam = searchParams.get("keywordsToWeave");
+  const prefillId = prefillVersion ?? prefillResumeId;
+  const prefillSwrKey =
+    prefillId && user?.id && session?.access_token
+      ? (["resume", prefillId, user.id] as const)
+      : null;
+  const prefillFetcher = useCallback(
+    ([, resumeId, userId]: readonly [string, string, string]) =>
+      fetchResumeById(resumeId, userId, session?.access_token ?? undefined),
+    [session?.access_token]
+  );
+  const { data: prefillData } = useSWR(prefillSwrKey, prefillFetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 5000,
+  });
+
+  const { jobTitle: jobTitleFromHook } = useJobTitle(jobDescription, { enabled: true });
+
+  useEffect(() => {
+    if (!prefillId) {
+      prefillSyncedForRef.current = null;
+      return;
+    }
+    if (!prefillData?.originalResume) return;
+    if (prefillSyncedForRef.current === prefillId) return;
+    prefillSyncedForRef.current = prefillId;
+    setError(null);
+    if (prefillVersion) {
+      setResume(String(prefillData.tailoredResume ?? prefillData.originalResume ?? ""));
+      setJobDescription(String(prefillData.jobDescription ?? ""));
+      setParentResumeId(prefillVersion);
+      if (keywordsToWeaveParam) {
+        try {
+          const decoded = decodeURIComponent(keywordsToWeaveParam);
+          const keywords = decoded.split(",").map((s) => s.trim()).filter(Boolean);
+          if (keywords.length > 0) {
+            setKeywordsToWeave(keywords);
+            setTailoringOptionsOpen(true);
+          }
+        } catch {
+          // ignore invalid param
+        }
+      }
+    } else {
+      setResume(String(prefillData.originalResume ?? ""));
+      setJobDescription("");
+      setParentResumeId(undefined);
+      analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
+        ...analytics.getTrackingContext({
+          section: "tailorResume",
+          element: "link",
+          label: "prefill",
+          resumeId: prefillResumeId,
+          source: "prefill",
+        }),
+      });
+    }
+  }, [prefillId, prefillVersion, prefillResumeId, prefillData, keywordsToWeaveParam]);
 
   const ROTATING_WORDS = [
     "hours",
@@ -259,30 +351,22 @@ export default function SplitScreenTailorView() {
     setResults(null);
     setHasStartedTailoring(true);
 
+    const source = prefillResumeId ? "prefill" : (resume.trim().length > 0 ? "return_visit" : "blank");
     analytics.trackEvent(analytics.events.RESUME_TAILOR, {
-      timestamp: new Date().toISOString(),
-      hasResume: !!resume,
-      hasJobDescription: !!jobDescription,
+      ...analytics.getTrackingContext({
+        section: "tailorResume",
+        element: "tailor_button",
+        hasResume: !!resume.trim(),
+        hasJobDescription: !!jobDescription.trim(),
+        resumeCharCount: resume.trim().length,
+        jobDescCharCount: jobDescription.trim().length,
+        source,
+      }),
     });
 
     let didRedirect = false;
     try {
-      let jobTitleToUse = detectedJobTitle ?? undefined;
-      if (!jobTitleToUse && jobDescription.trim().length >= 100) {
-        try {
-          const titleRes = await fetch("/api/tailor/job/title", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ jobDescription: jobDescription.trim() }),
-          });
-          if (titleRes.ok) {
-            const titleData = await titleRes.json();
-            if (titleData?.jobTitle) jobTitleToUse = titleData.jobTitle;
-          }
-        } catch {
-          // use undefined and let backend fallback
-        }
-      }
+      const jobTitleToUse = detectedJobTitle ?? jobTitleFromHook ?? undefined;
       const data = await runHumanizeStream({
         resume: resume.trim(),
         jobDescription: jobDescription.trim(),
@@ -290,6 +374,10 @@ export default function SplitScreenTailorView() {
         userId: user?.id ?? null,
         jobTitle: jobTitleToUse,
         onProgress: () => {},
+        parentResumeId,
+        customInstructions: customInstructions.trim() || undefined,
+        keywordsToWeave: keywordsToWeave.length ? keywordsToWeave : undefined,
+        promptPresetIds: promptPresetIds.length ? promptPresetIds : undefined,
       });
 
       let timeToValueSeconds: number | undefined;
@@ -304,7 +392,11 @@ export default function SplitScreenTailorView() {
         }
       }
       analytics.trackEvent(analytics.events.RESUME_TAILOR_SUCCESS, {
-        timestamp: new Date().toISOString(),
+        ...analytics.getTrackingContext({
+          section: "tailorResume",
+          element: "tailor_button",
+          resumeId: data?.resumeId ?? undefined,
+        }),
         matchScore: data?.matchScore,
         ...(timeToValueSeconds !== undefined && { timeToValueSeconds }),
       });
@@ -352,15 +444,20 @@ export default function SplitScreenTailorView() {
       setErrorShakeKey((k) => k + 1);
       setHasStartedTailoring(false);
       analytics.trackEvent(analytics.events.RESUME_TAILOR_ERROR, {
+        ...analytics.getTrackingContext({
+          section: "tailorResume",
+          element: "tailor_button",
+          resumeCharCount: resume.trim().length,
+          jobDescCharCount: jobDescription.trim().length,
+        }),
         error: rawMessage,
         errorType,
         statusCode: statusCode ?? null,
-        timestamp: new Date().toISOString(),
       });
     } finally {
       if (!didRedirect) setLoading(false);
     }
-  }, [resume, jobDescription, sessionId, user, router]);
+  }, [resume, jobDescription, sessionId, user, router, prefillResumeId, detectedJobTitle, jobTitleFromHook, parentResumeId, customInstructions, keywordsToWeave, promptPresetIds]);
 
   const handleReset = useCallback(() => {
     setResume("");
@@ -369,6 +466,11 @@ export default function SplitScreenTailorView() {
     setError(null);
     setHasStartedTailoring(false);
     setFileDropKey((k) => k + 1);
+    setParentResumeId(undefined);
+    setCustomInstructions("");
+    setKeywordsToWeave([]);
+    setKeywordInput("");
+    setPromptPresetIds([]);
     clearResumeData();
     setShowResetModal(false);
   }, []);
@@ -420,7 +522,13 @@ export default function SplitScreenTailorView() {
             —without the hassle.
           </p>
           <button
-            onClick={() => scrollToSection("tailorResume")}
+            onClick={() => {
+              analytics.trackEvent(analytics.events.CLICK, {
+                ...analytics.getTrackingContext({ section: "hero", element: "hero_cta", label: "Get Started" }),
+                destination: "#tailorResume",
+              });
+              scrollToSection("tailorResume");
+            }}
             className="px-6 py-3 md:px-8 md:py-3.5 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-cyan-500/20"
           >
             Get Started
@@ -511,6 +619,120 @@ export default function SplitScreenTailorView() {
               Resume (min 100 chars) and Job Description (min 100 chars) required
             </p>
 
+            {/* Tailoring options: presets, keywords, custom instructions */}
+            <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setTailoringOptionsOpen((o) => !o)}
+                className="w-full px-4 py-3 flex items-center justify-between text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <span>Customize how we tailor</span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${tailoringOptionsOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {tailoringOptionsOpen && (
+                <div className="px-4 pb-4 pt-0 space-y-4 border-t border-gray-200 dark:border-gray-700">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Presets</label>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(TAILORING_PRESET_LABELS).map(([id, label]) => {
+                        const selected = promptPresetIds.includes(id);
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() =>
+                              setPromptPresetIds((prev) =>
+                                selected ? prev.filter((x) => x !== id) : [...prev, id]
+                              )
+                            }
+                            className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                              selected
+                                ? "bg-cyan-500 text-white dark:bg-cyan-600"
+                                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Keywords to weave in</label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {keywordsToWeave.map((kw) => (
+                        <span
+                          key={kw}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-100 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-200 text-sm"
+                        >
+                          {kw}
+                          <button
+                            type="button"
+                            onClick={() => setKeywordsToWeave((prev) => prev.filter((x) => x !== kw))}
+                            className="ml-0.5 rounded-full hover:bg-cyan-200 dark:hover:bg-cyan-800 p-0.5"
+                            aria-label={`Remove ${kw}`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={keywordInput}
+                        onChange={(e) => setKeywordInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const v = keywordInput.trim();
+                            if (v && !keywordsToWeave.includes(v)) {
+                              setKeywordsToWeave((prev) => [...prev, v]);
+                              setKeywordInput("");
+                            }
+                          }
+                        }}
+                        placeholder="Add keyword"
+                        className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 dark:focus:ring-cyan-500 dark:focus:border-cyan-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const v = keywordInput.trim();
+                          if (v && !keywordsToWeave.includes(v)) {
+                            setKeywordsToWeave((prev) => [...prev, v]);
+                            setKeywordInput("");
+                          }
+                        }}
+                        className="px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Specific instructions (optional)</label>
+                    <textarea
+                      value={customInstructions}
+                      onChange={(e) => setCustomInstructions(e.target.value)}
+                      placeholder="e.g. Highlight my customer service experience or specific skills from the job"
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 dark:focus:ring-cyan-500 dark:focus:border-cyan-500 resize-y"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="text-center space-y-3">
               <AuthGate action="tailor" sessionId={sessionId ?? undefined}>
                 {(showAuthModal) => (
@@ -518,8 +740,15 @@ export default function SplitScreenTailorView() {
                     loading={loading}
                     onClick={() => {
                       analytics.trackEvent(analytics.events.CTA_TAILOR_CLICK, {
+                        ...analytics.getTrackingContext({
+                          section: "tailorResume",
+                          element: "tailor_button",
+                          hasResume: !!resume.trim(),
+                          hasJobDescription: !!jobDescription.trim(),
+                          resumeCharCount: resume.trim().length,
+                          jobDescCharCount: jobDescription.trim().length,
+                        }),
                         hasUser: !!user,
-                        timestamp: new Date().toISOString(),
                       });
                       if (user) handleTailor();
                       else showAuthModal();
@@ -549,7 +778,15 @@ export default function SplitScreenTailorView() {
           <div className="flex justify-center">
             <button
               type="button"
-              onClick={() => setShowResetModal(true)}
+              onClick={() => {
+                analytics.trackEvent(analytics.events.RESET_CLICK, {
+                  ...analytics.getTrackingContext({ section: "tailorResume", element: "reset", label: "Start over" }),
+                  hadResults: !!results,
+                  hadResume: !!resume.trim(),
+                  hadJobDescription: !!jobDescription.trim(),
+                });
+                setShowResetModal(true);
+              }}
               className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
             >
               Start over
@@ -564,7 +801,20 @@ export default function SplitScreenTailorView() {
           <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 p-4 text-center text-emerald-800 dark:text-emerald-200" data-parallax="0.05">
             <p className="font-medium">Resume saved.</p>
             <p className="text-sm mt-1">
-              <Link href="/profile" className="underline hover:no-underline">View it in your profile</Link>.
+              <Link
+                href="/profile"
+                className="underline hover:no-underline"
+                onClick={() => {
+                  analytics.trackEvent(analytics.events.LINK_CLICK, {
+                    ...analytics.getTrackingContext({ section: "results", element: "link", label: "View it in your profile" }),
+                    href: "/profile",
+                    ...(results && typeof (results as { resumeId?: string }).resumeId === "string" && { resumeId: (results as { resumeId: string }).resumeId }),
+                  });
+                }}
+              >
+                View it in your profile
+              </Link>
+              .
             </p>
           </div>
         )}
