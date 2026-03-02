@@ -84,10 +84,10 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     (response: "yes" | "no") => {
       if (prompt) {
         analytics.trackEvent(analytics.events.FEEDBACK_SUBMITTED, {
+          ...analytics.getTrackingContext({ element: "did_this_help" }),
           feedbackType: "did_this_help",
           response,
           trigger: prompt.trigger,
-          timestamp: new Date().toISOString(),
         });
       }
       try {

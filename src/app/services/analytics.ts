@@ -92,7 +92,68 @@ export const events = {
   EXIT_SURVEY_DISMISSED: 'exit_survey_dismissed',
   EXIT_SURVEY_SUBMITTED: 'exit_survey_submitted',
   CTA_TAILOR_CLICK: 'cta_tailor_click',
+  TAILOR_ANOTHER_JOB_CLICK: 'tailor_another_job_click',
+
+  // Rich interaction events (what + why)
+  CLICK: 'click',
+  LINK_CLICK: 'link_click',
+  VIEW_MODE_CHANGED: 'view_mode_changed',
+  MODAL_OPENED: 'modal_opened',
+  AUTH_PROMPT_SHOWN: 'auth_prompt_shown',
+  RESET_CLICK: 'reset_click',
+  VIEW_RESUME_CLICK: 'view_resume_click',
+  INPUT_FOCUS: 'input_focus',
 };
+
+/** Overrides merged into base tracking context (page, sessionId, timestamp). */
+export interface TrackingContextOverrides {
+  section?: string;
+  hasResume?: boolean;
+  hasJobDescription?: boolean;
+  resumeCharCount?: number;
+  jobDescCharCount?: number;
+  resumeId?: string;
+  jobTitle?: string;
+  source?: string;
+  element?: string;
+  label?: string;
+}
+
+/**
+ * Base payload for events: page, sessionId, timestamp. Merge with event-specific props.
+ * Call from client only (uses window and localStorage).
+ */
+export function getTrackingContext(overrides?: TrackingContextOverrides): Record<string, unknown> {
+  if (typeof window === 'undefined') {
+    return { timestamp: new Date().toISOString(), ...overrides };
+  }
+  const pathname = window.location?.pathname ?? '/';
+  const search = window.location?.search ?? '';
+  const sessionId = localStorage.getItem('resume-tailor-session-id');
+  const base: Record<string, unknown> = {
+    timestamp: new Date().toISOString(),
+    page: pathname,
+    ...(search && { search }),
+    ...(sessionId && { sessionId }),
+  };
+  if (overrides) {
+    Object.assign(base, overrides);
+  }
+  return base;
+}
+
+/**
+ * Track a click with standard context. Merges getTrackingContext(overrides) with element, label, and extra.
+ */
+export function trackClick(
+  eventName: string,
+  element: string,
+  label: string,
+  extra?: Record<string, unknown>
+): Promise<boolean> {
+  const context = getTrackingContext({ element, label, ...extra });
+  return trackEvent(eventName, context);
+}
 
 // Add TypeScript type definition for the Umami window object
 declare global {
@@ -189,5 +250,7 @@ export const trackEvent = async (
 // Export a simplified analytics service
 export const analytics = {
   events,
-  trackEvent
+  trackEvent,
+  getTrackingContext,
+  trackClick,
 }; 

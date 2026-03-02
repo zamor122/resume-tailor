@@ -45,6 +45,11 @@ ALTER TABLE resumes ADD COLUMN IF NOT EXISTS company_name TEXT;
 ALTER TABLE resumes ADD COLUMN IF NOT EXISTS applied_with_resume BOOLEAN;
 ALTER TABLE resumes ADD COLUMN IF NOT EXISTS feedback_comment TEXT;
 
+-- Migration: Versioning (chain re-tailors for same application)
+ALTER TABLE resumes ADD COLUMN IF NOT EXISTS parent_resume_id UUID REFERENCES resumes(id) ON DELETE SET NULL;
+ALTER TABLE resumes ADD COLUMN IF NOT EXISTS version_number INT;
+ALTER TABLE resumes ADD COLUMN IF NOT EXISTS root_resume_id UUID REFERENCES resumes(id) ON DELETE SET NULL;
+
 -- Sessions table
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,

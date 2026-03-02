@@ -70,19 +70,17 @@ export default function ResumeFeedbackCard({
     setThumbsVote(response);
     if (response === "yes") {
       analytics.trackEvent(analytics.events.FEEDBACK_SUBMITTED, {
+        ...analytics.getTrackingContext({ section: "output", element: "thumbs", resumeId }),
         feedbackType: "thumbs",
         response: "yes",
-        ...(resumeId && { resumeId }),
-        timestamp: new Date().toISOString(),
       });
       await saveFeedback(true);
     } else {
       setShowThumbsComment(true);
       analytics.trackEvent(analytics.events.GENERATION_REJECTED, {
+        ...analytics.getTrackingContext({ section: "output", element: "thumbs", resumeId }),
         feedbackType: "thumbs",
         response: "no",
-        ...(resumeId && { resumeId }),
-        timestamp: new Date().toISOString(),
       });
       await saveFeedback(false);
     }
@@ -92,11 +90,10 @@ export default function ResumeFeedbackCard({
     const comment = thumbsDownComment.trim().slice(0, 500);
     if (comment) {
       analytics.trackEvent(analytics.events.FEEDBACK_SUBMITTED, {
+        ...analytics.getTrackingContext({ section: "output", element: "thumbs", resumeId }),
         feedbackType: "thumbs",
         response: "no",
-        comment,
-        ...(resumeId && { resumeId }),
-        timestamp: new Date().toISOString(),
+        commentLength: comment.length,
       });
     }
     await saveFeedback(false, comment || undefined);

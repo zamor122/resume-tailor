@@ -240,7 +240,7 @@ export function normalizeKeywordResponse(raw: unknown): KeywordResult {
   };
 }
 
-/** Common English stopwords only - no domain-specific lists */
+/** Common English stopwords and application/EEO/benefits vocabulary (excluded from frequency-based keyword extraction). */
 const STOPWORDS = new Set([
   "the", "and", "or", "but", "for", "with", "from", "that", "this", "these", "those",
   "have", "has", "had", "will", "would", "could", "should", "may", "might", "must",
@@ -250,6 +250,13 @@ const STOPWORDS = new Set([
   "most", "other", "some", "such", "only", "own", "same", "than", "too", "very",
   "just", "also", "now", "about", "what", "which", "who", "whom", "their", "them",
   "remote", "people", "opportunity", "benefits", "life",
+  "your", "select", "role", "roles", "form", "required", "requires", "self", "duty",
+  "external", "internal", "applicant", "candidate", "employment", "equal", "veteran",
+  "veterans", "military", "disability", "disorder", "health", "compensation", "confidential",
+  "voluntary", "identification", "protected", "government", "federal", "industries",
+  "environments", "clearance",
+  "defense", "technology", "innovative", "transform", "changing", "bring", "allied",
+  "capabilities", "mission", "industry", "advanced",
 ]);
 
 /**

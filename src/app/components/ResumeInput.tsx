@@ -35,14 +35,15 @@ const ResumeInput: React.FC<ResumeInputProps> = ({
     if (newLen >= 10 && !inputStartedFired.current) {
       inputStartedFired.current = true;
       analytics.trackEvent(analytics.events.RESUME_INPUT_STARTED, {
+        ...analytics.getTrackingContext({ section: "tailorResume", element: "resume_textarea" }),
         charCount: newLen,
-        timestamp: new Date().toISOString(),
       });
     }
     if (newLen - prevLengthRef.current >= PASTE_DELTA_THRESHOLD) {
       analytics.trackEvent(analytics.events.RESUME_PASTED, {
+        ...analytics.getTrackingContext({ section: "tailorResume", element: "resume_textarea" }),
         charCount: newLen,
-        timestamp: new Date().toISOString(),
+        inputMethod: "paste",
       });
     }
     prevLengthRef.current = newLen;

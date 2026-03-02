@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { analytics } from "../services/analytics";
 import { getInputFontSizeClass } from "@/app/utils/fontSize";
+import { useJobTitle } from "@/app/hooks/useJobTitle";
 
 const MIN_CHARS = 100;
 const PASTE_DELTA_THRESHOLD = 50;
@@ -28,12 +29,34 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
   fillHeight = false,
 }) => {
   const [detectedTitle, setDetectedTitle] = useState<string | null>(null);
+  const [hasBlurred, setHasBlurred] = useState(false);
   const inputStartedFired = useRef(false);
   const prevLengthRef = useRef(0);
   const milestonesFired = useRef<Set<number>>(new Set());
   const fontSizeClass = getInputFontSizeClass(fontSize);
   const charCount = value.length;
   const isSufficient = charCount >= MIN_CHARS;
+
+  const { jobTitle, confidence, isLoading: jobTitleLoading, error: jobTitleError } = useJobTitle(value, {
+    enabled: hasBlurred && value.trim().length >= 100,
+  });
+
+  useEffect(() => {
+    if (jobTitle) {
+      setDetectedTitle(jobTitle);
+      onTitleDetected?.(jobTitle, confidence);
+      analytics.trackEvent(analytics.events.JOB_DESCRIPTION_ANALYSIS, {
+        success: true,
+        titleSearched: jobTitle,
+      });
+    } else if (hasBlurred && !jobTitleLoading && jobTitleError) {
+      setDetectedTitle(null);
+      analytics.trackEvent(analytics.events.JOB_DESCRIPTION_ANALYSIS, {
+        success: false,
+        error: jobTitleError instanceof Error ? jobTitleError.message : jobTitleError,
+      });
+    }
+  }, [jobTitle, confidence, jobTitleLoading, jobTitleError, hasBlurred, onTitleDetected]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -42,23 +65,24 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
     if (newLen >= 10 && !inputStartedFired.current) {
       inputStartedFired.current = true;
       analytics.trackEvent(analytics.events.JOB_DESCRIPTION_INPUT_STARTED, {
+        ...analytics.getTrackingContext({ section: "tailorResume", element: "job_description_textarea" }),
         charCount: newLen,
-        timestamp: new Date().toISOString(),
       });
     }
     if (newLen - prevLengthRef.current >= PASTE_DELTA_THRESHOLD) {
       analytics.trackEvent(analytics.events.JOB_DESCRIPTION_PASTED, {
+        ...analytics.getTrackingContext({ section: "tailorResume", element: "job_description_textarea" }),
         charCount: newLen,
-        timestamp: new Date().toISOString(),
+        inputMethod: "paste",
       });
     }
     CHAR_COUNT_MILESTONES.forEach((m) => {
       if (newLen >= m && !milestonesFired.current.has(m)) {
         milestonesFired.current.add(m);
         analytics.trackEvent(analytics.events.JOB_DESC_CHAR_COUNT, {
+          ...analytics.getTrackingContext({ section: "tailorResume", element: "job_description_textarea" }),
           charCount: newLen,
           milestone: m,
-          timestamp: new Date().toISOString(),
         });
       }
     });
@@ -67,45 +91,12 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
     if (detectedTitle && newLen < 50) setDetectedTitle(null);
   };
 
-  const handleBlur = async () => {
+  const handleBlur = () => {
     if (value.length < 50) {
       setDetectedTitle(null);
       return;
     }
-
-    try {
-      const response = await fetch("/api/tailor/job/title", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobDescription: value }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.warn("Job title extraction failed:", errorData);
-        setDetectedTitle(null);
-        return;
-      }
-
-      const data = await response.json();
-      if (data.jobTitle) {
-        setDetectedTitle(data.jobTitle);
-        onTitleDetected?.(data.jobTitle, data.confidence ?? 0);
-        analytics.trackEvent(analytics.events.JOB_DESCRIPTION_ANALYSIS, {
-          success: true,
-          titleSearched: data.jobTitle,
-        });
-      } else {
-        setDetectedTitle(null);
-      }
-    } catch (error) {
-      analytics.trackEvent(analytics.events.JOB_DESCRIPTION_ANALYSIS, {
-        success: false,
-        error: error instanceof Error ? error.message : error,
-      });
-      console.warn("Error analyzing job description:", error);
-      setDetectedTitle(null);
-    }
+    setHasBlurred(true);
   };
 
   return (

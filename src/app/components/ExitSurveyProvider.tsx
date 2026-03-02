@@ -36,7 +36,7 @@ export default function ExitSurveyProvider({ children }: { children: React.React
     if (!isEligible()) return;
     markSurveyShown();
     analytics.trackEvent(analytics.events.EXIT_SURVEY_SHOWN, {
-      timestamp: new Date().toISOString(),
+      ...analytics.getTrackingContext(),
     });
     setShowModal(true);
   }, []);

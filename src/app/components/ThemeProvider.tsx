@@ -53,7 +53,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     // Intentionally disabled (dark-mode only)
     // Track attempt in analytics to understand user demand
-    analytics.trackEvent(analytics.events.TOGGLE_THEME, { theme: 'dark' })
+    analytics.trackEvent(analytics.events.TOGGLE_THEME, {
+      ...analytics.getTrackingContext({ element: "theme_toggle" }),
+      theme: "dark",
+    });
   }
 
   // Return null during SSR to prevent hydration issues

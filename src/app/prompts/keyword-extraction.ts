@@ -32,6 +32,9 @@ Extract and categorize:
 5. actionVerbs: verbs like developed, implemented, led
 6. powerWords: high-impact terms (senior, scalable, enterprise)
 
+Extract only: Programming languages, frameworks, tools, platforms, methodologies, certifications, and concrete qualifications (e.g. React, TypeScript, Go, Kubernetes, CI/CD, data visualization, AWS, 5+ years).
+Do NOT extract: Company or mission marketing language, e.g. "transform," "innovative," "defense technology," "advanced technology," "military systems," "allied military capabilities," "changing," "bring," or generic pitch phrases. Focus on terms a candidate would realistically add to their resume (skills and tech), not company taglines.
+
 For each keyword provide: term, importance (critical|high|medium|low), importanceScore (0-100), frequency (count in JD).
 For technical: add synonyms[] and recommendedSections[].
 ${resume ? "Mark keywords missing from resume as critical or high importance." : ""}

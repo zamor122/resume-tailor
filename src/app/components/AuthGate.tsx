@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { analytics } from "@/app/services/analytics";
 import AuthModal from "./AuthModal";
 
 interface AuthGateProps {
@@ -23,7 +24,13 @@ export default function AuthGate({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
 
-  const openAuthModal = () => setShowAuthModal(true);
+  const openAuthModal = () => {
+    analytics.trackEvent(analytics.events.AUTH_PROMPT_SHOWN, {
+      ...analytics.getTrackingContext({ element: "auth_modal", section: "tailorResume" }),
+      trigger: action,
+    });
+    setShowAuthModal(true);
+  };
 
   // Link resume when user becomes available
   useEffect(() => {
@@ -98,7 +105,18 @@ export default function AuthGate({
   // Fallback for non-function children: wrap with click handler
   return (
     <>
-      <div onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); setShowAuthModal(true); }} className="cursor-pointer">
+      <div
+        onClickCapture={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          analytics.trackEvent(analytics.events.AUTH_PROMPT_SHOWN, {
+            ...analytics.getTrackingContext({ element: "auth_modal", section: "tailorResume" }),
+            trigger: action,
+          });
+          setShowAuthModal(true);
+        }}
+        className="cursor-pointer"
+      >
         {children}
       </div>
       <AuthModal
