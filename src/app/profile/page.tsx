@@ -48,6 +48,7 @@ export default function ProfilePage() {
     jobTitle: string;
   } | null>(null);
   const downloadTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const [addVersionTooltipRect, setAddVersionTooltipRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const router = useRouter();
   const feedback = useFeedback();
 
@@ -259,14 +260,14 @@ export default function ProfilePage() {
   return (
     <>
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Profile</h1>
-          <p className="text-gray-300">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
+        <div className="text-center md:text-left">
+          <h1 className="text-2xl md:text-4xl font-bold text-white mb-2">Profile</h1>
+          <p className="text-gray-300 text-sm md:text-base break-all">
             Signed in as <span className="font-medium text-white">{user.email}</span>
           </p>
         </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch md:items-center gap-2 md:gap-3">
             <button
               onClick={handleViewReceipts}
               disabled={openingPortal}
@@ -283,20 +284,22 @@ export default function ProfilePage() {
           </div>
       </div>
 
-      <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">Resume History</h2>
-          <button
-            type="button"
-            onClick={() => mutateList()}
-            disabled={loading}
-            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors disabled:opacity-50"
-            title="Refresh list"
-          >
+      <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-6 max-w-lg md:max-w-none mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <h2 className="text-xl md:text-2xl font-bold text-white text-center sm:text-left">Resume History</h2>
+          <div className="flex justify-center sm:justify-end">
+            <button
+              type="button"
+              onClick={() => mutateList()}
+              disabled={loading}
+              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors disabled:opacity-50"
+              title="Refresh list"
+            >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-          </button>
+            </button>
+          </div>
         </div>
         
         {resumes.length === 0 ? (
@@ -306,7 +309,148 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Mobile: card list */}
+            <div className="md:hidden space-y-4">
+              {currentResumes.map((resume) => (
+                <div
+                  key={resume.id}
+                  className="rounded-xl border border-gray-600 bg-gray-800/30 p-4 space-y-3"
+                >
+                  <div>
+                    <p className="font-medium text-white truncate" title={resume.jobTitle}>
+                      {resume.jobTitle}
+                    </p>
+                    <p className="text-sm text-gray-400 mt-0.5">
+                      {new Date(resume.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                    <p className="text-sm mt-1">
+                      <span className="text-green-400 font-semibold">{resume.matchScore}%</span>
+                      {(resume.versionCount != null && resume.versionCount > 1) || resume.bestMatchScore != null ? (
+                        <span className="text-gray-400 ml-2">
+                          {resume.versionCount != null && resume.versionCount > 1 && `${resume.versionCount} versions`}
+                          {resume.versionCount != null && resume.versionCount > 1 && resume.bestMatchScore != null && " · "}
+                          {resume.bestMatchScore != null && `Best ${resume.bestMatchScore}%`}
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      onClick={() => {
+                        analytics.trackEvent(analytics.events.VIEW_RESUME_CLICK, {
+                          ...analytics.getTrackingContext({ section: "resume_table", element: "view_resume", resumeId: resume.id, jobTitle: resume.jobTitle?.slice(0, 80) }),
+                        });
+                        router.push(`/resume/${resume.id}`);
+                      }}
+                      className="flex-1 min-w-[80px] px-3 py-2 text-sm font-medium rounded-lg text-white bg-cyan-600 hover:bg-cyan-500 transition-colors"
+                    >
+                      View
+                    </button>
+                    <span className="flex-1 min-w-[80px] flex items-center justify-center gap-1">
+                      <Link
+                        href={`/?prefillVersion=${resume.id}`}
+                        className="text-sm font-medium text-cyan-400 border border-cyan-500/50 hover:bg-cyan-500/10 rounded-lg px-3 py-2 inline-flex items-center gap-1.5 transition-colors"
+                        onClick={() => {
+                          analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
+                            ...analytics.getTrackingContext({ section: "resume_table", element: "link", label: "Add version", resumeId: resume.id, source: "profile" }),
+                          });
+                        }}
+                      >
+                        Add version
+                      </Link>
+                      <span className="relative flex-shrink-0 group/info" aria-label="Get another tailored resume for this job. Job description stays filled in; you can change it or run again. Every result is saved in your history.">
+                        <svg className="w-4 h-4 text-gray-400 hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-6 py-6 text-xs font-normal text-white bg-gray-800 rounded shadow-lg opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity z-10 min-w-[320px] max-w-[440px] min-h-[100px] text-left leading-relaxed text-sm">
+                          Get another tailored resume for this job. The job description stays filled in so you can run again—tweak it or leave it as is. Every result is saved in your history.
+                        </span>
+                      </span>
+                    </span>
+                    {(hasAccess || resume.isUnlocked) ? (
+                      <div className="relative w-full sm:w-auto">
+                        <button
+                          ref={(el) => {
+                            if (downloadDropdownId === resume.id) downloadTriggerRef.current = el;
+                          }}
+                          onClick={(e) => {
+                            if (downloadDropdownId === resume.id) {
+                              setDownloadDropdownId(null);
+                            } else {
+                              downloadTriggerRef.current = e.currentTarget;
+                              setDownloadDropdownId(resume.id);
+                            }
+                          }}
+                          disabled={pdfLoadingId === resume.id}
+                          className="w-full sm:w-auto px-3 py-2 text-sm font-medium rounded-lg text-green-400 border border-green-500/50 hover:bg-green-500/10 transition-colors disabled:opacity-50"
+                        >
+                          {pdfLoadingId === resume.id ? "Generating…" : "Download"}
+                        </button>
+                        {downloadDropdownId === resume.id &&
+                          typeof document !== "undefined" &&
+                          createPortal(
+                            <>
+                              <div
+                                className="fixed inset-0 z-[100]"
+                                onClick={() => setDownloadDropdownId(null)}
+                                aria-hidden="true"
+                              />
+                              <div
+                                className="fixed z-[101] py-1 w-44 rounded-lg bg-gray-800 border border-gray-600 shadow-xl"
+                                style={
+                                  downloadTriggerRef.current
+                                    ? (() => {
+                                        const rect = downloadTriggerRef.current!.getBoundingClientRect();
+                                        const w = 176;
+                                        return {
+                                          top: rect.bottom + 4,
+                                          left: Math.max(8, Math.min(rect.right - w, window.innerWidth - w - 8)),
+                                        };
+                                      })()
+                                    : undefined
+                                }
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownload(resume.id, "pdf")}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-t-lg"
+                                >
+                                  Download as PDF
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownload(resume.id, "markdown")}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-b-lg"
+                                >
+                                  Download as Markdown
+                                </button>
+                              </div>
+                            </>,
+                            document.body
+                          )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setTierModalResumeId(resume.id);
+                          setShowTierModal(true);
+                        }}
+                        className="w-full sm:w-auto px-3 py-2 text-sm font-medium rounded-lg text-orange-400 border border-orange-500/50 hover:bg-orange-500/10 transition-colors"
+                      >
+                        Get Access
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left table-fixed">
                 <thead>
                   <tr className="border-b border-gray-700">
@@ -362,17 +506,32 @@ export default function ProfilePage() {
                       </td>
                       <td className="py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Link
-                            href={`/?prefillResumeId=${resume.id}`}
-                            className="px-3 py-1.5 text-sm rounded-lg text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors"
-                            onClick={() => {
-                              analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
-                                ...analytics.getTrackingContext({ section: "resume_table", element: "link", label: "Tailor for another job", resumeId: resume.id, source: "profile" }),
-                              });
-                            }}
-                          >
-                            Tailor for another job
-                          </Link>
+                          <span className="inline-flex items-center gap-1">
+                            <Link
+                              href={`/?prefillVersion=${resume.id}`}
+                              className="px-3 py-1.5 text-sm rounded-lg text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors"
+                              onClick={() => {
+                                analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
+                                  ...analytics.getTrackingContext({ section: "resume_table", element: "link", label: "Add version", resumeId: resume.id, source: "profile" }),
+                                });
+                              }}
+                            >
+                              Add version
+                            </Link>
+                            <span
+                              className="relative flex-shrink-0 group/info"
+                              aria-label="Get another tailored resume for this job. Job description stays filled in; you can change it or run again. Every result is saved in your history."
+                              onMouseEnter={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setAddVersionTooltipRect({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+                              }}
+                              onMouseLeave={() => setAddVersionTooltipRect(null)}
+                            >
+                              <svg className="w-4 h-4 text-gray-400 hover:text-gray-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </span>
+                          </span>
                           <button
                             onClick={() => {
                               analytics.trackEvent(analytics.events.VIEW_RESUME_CLICK, {
@@ -466,11 +625,11 @@ export default function ProfilePage() {
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-700">
-                <div className="text-sm text-gray-400">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-6 pt-6 border-t border-gray-700">
+                <div className="text-sm text-gray-400 order-2 sm:order-1">
                   Showing {startIndex + 1} to {endIndex} of {totalCount} resumes
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 order-1 sm:order-2">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1 || loading}
@@ -495,7 +654,29 @@ export default function ProfilePage() {
         )}
       </div>
     </div>
-    
+
+    {/* Add version tooltip portal - renders above table overflow so text is never clipped */}
+    {addVersionTooltipRect && typeof document !== "undefined" &&
+      createPortal(
+        <div
+          className="fixed z-[200] px-6 py-6 text-sm font-normal text-white bg-gray-800 rounded-lg shadow-xl text-left leading-relaxed w-[400px] box-border"
+          style={{
+            left: (() => {
+              const center = addVersionTooltipRect.left + addVersionTooltipRect.width / 2;
+              const w = 400;
+              const minLeft = 12;
+              const maxLeft = typeof window !== "undefined" ? window.innerWidth - w - 12 : 9999;
+              return Math.min(maxLeft, Math.max(minLeft, center - w / 2));
+            })(),
+            top: addVersionTooltipRect.top - 8,
+            transform: "translateY(-100%)",
+          }}
+        >
+          Get another tailored resume for this job. The job description stays filled in so you can run again—tweak it or leave it as is. Every result is saved in your history.
+        </div>,
+        document.body
+      )}
+
     {/* Tier Selection Modal - rendered outside container for proper z-index */}
     <TierSelectionModal
       isOpen={showTierModal}

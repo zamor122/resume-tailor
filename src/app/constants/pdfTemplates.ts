@@ -17,6 +17,53 @@ export interface PdfTemplate {
   previewLabel?: string;
 }
 
+/** Optional per-template config for PDF output (bullet limits, clusters, etc.). */
+export interface PdfTemplateConfig {
+  /** clean-chronological: max bullets for first two roles */
+  cleanChronologicalMaxBulletsFirst?: number;
+  /** clean-chronological: max bullets for next two roles */
+  cleanChronologicalMaxBulletsMid?: number;
+  /** clean-chronological: max bullets for older roles */
+  cleanChronologicalMaxBulletsOld?: number;
+  /** modern-hybrid: max key achievement bullets */
+  modernHybridKeyAchievementsCount?: number;
+  /** modern-hybrid: max bullets for oldest role */
+  modernHybridOldestRoleMaxBullets?: number;
+  /** one-pager: max bullets per role (except oldest) */
+  onePagerMaxBulletsPerRole?: number;
+  /** one-pager: whether oldest role is single line only */
+  onePagerOldestRoleSingleLine?: boolean;
+  /** functional: keyword lists per cluster (cloud, frontend, api) */
+  functionalClusterKeywords?: {
+    cloud?: string[];
+    frontend?: string[];
+    api?: string[];
+  };
+}
+
+const DEFAULT_TEMPLATE_CONFIG: PdfTemplateConfig = {
+  cleanChronologicalMaxBulletsFirst: 5,
+  cleanChronologicalMaxBulletsMid: 4,
+  cleanChronologicalMaxBulletsOld: 3,
+  modernHybridKeyAchievementsCount: 4,
+  modernHybridOldestRoleMaxBullets: 2,
+  onePagerMaxBulletsPerRole: 3,
+  onePagerOldestRoleSingleLine: true,
+  functionalClusterKeywords: {
+    cloud: ["kubernetes", "eks", "ci/cd", "circleci", "terraform", "aws", "deployment", "devops", "docker", "infrastructure", "cloud"],
+    frontend: ["react", "typescript", "i18n", "ui", "frontend", "redux", "next.js", "nextjs", "spa", "component"],
+    api: ["rest", "graphql", "api", "backend", "microservices", "server", "node", "express"],
+  },
+};
+
+/** Override defaults per template if needed. Keys are template ids. */
+const TEMPLATE_CONFIG_OVERRIDES: Partial<Record<PdfTemplateId, Partial<PdfTemplateConfig>>> = {};
+
+export function getPdfTemplateConfig(templateId: PdfTemplateId): PdfTemplateConfig {
+  const overrides = TEMPLATE_CONFIG_OVERRIDES[templateId] ?? {};
+  return { ...DEFAULT_TEMPLATE_CONFIG, ...overrides };
+}
+
 export const PDF_TEMPLATES: PdfTemplate[] = [
   {
     id: "modern-hybrid",

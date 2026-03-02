@@ -70,6 +70,44 @@
 }
 
 @layer components {
+  /* Resume diff: GitHub Desktop style – muted transparent backgrounds, text inherits for readability */
+  .resume-diff ins {
+    text-decoration: none;
+    color: inherit;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.125rem;
+  }
+  .resume-diff del {
+    text-decoration: line-through;
+    color: inherit;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.125rem;
+  }
+  /* Light mode: subtle green/red tint */
+  .resume-diff ins {
+    background: rgba(46, 160, 67, 0.2);
+  }
+  .resume-diff del {
+    background: rgba(248, 81, 73, 0.2);
+  }
+  /* Dark mode: darker, more transparent (GitHub Desktop–like) */
+  .dark .resume-diff ins {
+    background: rgba(46, 160, 67, 0.2);
+    color: inherit;
+  }
+  .dark .resume-diff del {
+    background: rgba(248, 81, 73, 0.2);
+    color: inherit;
+  }
+
+  /* Legend swatches (match diff backgrounds) */
+  .resume-diff-legend-add {
+    background: rgba(46, 160, 67, 0.35);
+  }
+  .resume-diff-legend-del {
+    background: rgba(248, 81, 73, 0.35);
+  }
+
   /* Glass morphism effect */
   .glass {
     background: var(--glass-bg);

@@ -4,12 +4,15 @@
  */
 
 import React from "react";
-import { markdownToResumeBlocks } from "./resumePdfStructure";
+import { markdownToResumeBlocks, parseResumeSections } from "./resumePdfStructure";
+import { buildBlocksForTemplate } from "./resumePdfTransforms";
 import ResumePdfDocument from "@/app/components/ResumePdfDocument";
+import type { PdfTemplateId } from "@/app/constants/pdfTemplates";
 
 /**
  * Download resume as PDF using @react-pdf/renderer. Produces a native PDF with
  * selectable text and professional typography. Optional templateId selects layout variant.
+ * When parseResumeSections succeeds, template-specific transforms are applied (e.g. Key Achievements, clusters).
  */
 export async function downloadResumeAsPdf(
   markdownContent: string,
@@ -20,11 +23,28 @@ export async function downloadResumeAsPdf(
     throw new Error("downloadResumeAsPdf is only available in the browser");
   }
 
+  const tid = (templateId ?? "modern-hybrid") as PdfTemplateId;
+  const sections = parseResumeSections(markdownContent);
+  let blocks = markdownToResumeBlocks(markdownContent);
+  let keyAchievements: string[] | undefined;
+  let clusters: { title: string; bullets: string[] }[] | undefined;
+  let workHistoryFooter: { company: string; title: string; dates: string }[] | undefined;
+
+  if (sections && sections.experience.length > 0) {
+    const result = buildBlocksForTemplate(sections, tid);
+    blocks = result.blocks;
+    keyAchievements = result.keyAchievements;
+    clusters = result.clusters;
+    workHistoryFooter = result.workHistoryFooter;
+  }
+
   const { pdf } = await import("@react-pdf/renderer");
-  const blocks = markdownToResumeBlocks(markdownContent);
   const doc = React.createElement(ResumePdfDocument, {
     blocks,
-    templateId: templateId ?? "modern-hybrid",
+    templateId: tid,
+    keyAchievements,
+    clusters,
+    workHistoryFooter,
   });
   // ResumePdfDocument renders <Document>; pdf() expects ReactElement<DocumentProps>.
   // Type assertion: wrapper component renders a valid Document tree; @react-pdf types are strict.

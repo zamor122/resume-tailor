@@ -227,17 +227,27 @@ export default function ResumeDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <Link
-            href={`/?prefillResumeId=${data.resumeId}`}
-            className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400"
-            onClick={() => {
-              analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
-                ...analytics.getTrackingContext({ section: "header", element: "link", label: "Tailor this resume for another job", resumeId: data.resumeId }),
-              });
-            }}
-          >
-            Tailor this resume for another job
-          </Link>
+          <span className="inline-flex items-center gap-1">
+            <Link
+              href={`/?prefillVersion=${data.resumeId}`}
+              className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400"
+              onClick={() => {
+                analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
+                  ...analytics.getTrackingContext({ section: "header", element: "link", label: "Add version", resumeId: data.resumeId }),
+                });
+              }}
+            >
+              Add version
+            </Link>
+            <span className="relative flex-shrink-0 group/info" aria-label="Get another tailored resume for this job. Job description stays filled in; you can change it or run again. Every result is saved in your history.">
+              <svg className="w-4 h-4 text-gray-400 hover:text-gray-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-6 py-6 text-xs font-normal text-white dark:bg-gray-800 bg-gray-900 rounded shadow-lg opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity z-10 min-w-[320px] max-w-[440px] min-h-[100px] text-left leading-relaxed text-sm text-gray-100">
+                Get another tailored resume for this job. The job description stays filled in so you can run again—tweak it or leave it as is. Every result is saved in your history.
+              </span>
+            </span>
+          </span>
           <Link
             href={`/?prefillVersion=${data.resumeId}`}
             className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
@@ -251,63 +261,6 @@ export default function ResumeDetailPage() {
           </Link>
         </div>
       </div>
-
-      {versions.length > 1 && (
-        <div className="mb-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-            You have {versions.length} versions for this job. Compare any two.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            {versions.map((v) => (
-              <Link
-                key={v.id}
-                href={`/resume/${v.id}`}
-                className={`px-2.5 py-1 text-sm rounded-md transition-colors ${
-                  v.id === id
-                    ? "bg-cyan-500 text-white"
-                    : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                }`}
-              >
-                Version {v.version_number}
-              </Link>
-            ))}
-          </div>
-          <div className="mt-2 flex items-center gap-2">
-            {versions.findIndex((v) => v.id === id) > 0 && (
-              <Link
-                href={`/resume/${versions[versions.findIndex((v) => v.id === id) - 1].id}`}
-                className="text-sm text-gray-600 dark:text-gray-400 hover:text-cyan-500"
-              >
-                ← Previous
-              </Link>
-            )}
-            {versions.findIndex((v) => v.id === id) >= 0 && versions.findIndex((v) => v.id === id) < versions.length - 1 && (
-              <Link
-                href={`/resume/${versions[versions.findIndex((v) => v.id === id) + 1].id}`}
-                className="text-sm text-gray-600 dark:text-gray-400 hover:text-cyan-500"
-              >
-                Next →
-              </Link>
-            )}
-            <select
-              value={compareWithVersionId ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCompareWithVersionId(val || null);
-                setViewMode(val ? "compare" : "resume");
-              }}
-              className="ml-auto text-sm border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-            >
-              <option value="">Compare with...</option>
-              {versions.filter((v) => v.id !== id).map((v) => (
-                <option key={v.id} value={v.id}>
-                  Version {v.version_number}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
 
       {versions.length > 1 && matchScore < 90 && (
         <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
@@ -407,24 +360,34 @@ export default function ResumeDetailPage() {
                     ))}
                   </div>
                   {data.resumeId && (
-                    <Link
-                      href={`/?prefillVersion=${encodeURIComponent(data.resumeId)}&keywordsToWeave=${encodeURIComponent(data.keywordGap.missingKeywords.join(","))}`}
-                      className="relative w-full flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-lg font-semibold min-h-[52px] bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white shadow-lg shadow-cyan-500/20 hover:shadow-xl hover:shadow-cyan-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out whitespace-nowrap"
-                      onClick={() => {
-                        analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
-                          ...analytics.getTrackingContext({
-                            section: "output",
-                            element: "link",
-                            label: "Retailor with these keywords",
-                            resumeId: data.resumeId,
-                          }),
-                          source: "resume_detail",
-                          keywordsCount: data.keywordGap?.missingKeywords?.length ?? 0,
-                        });
-                      }}
-                    >
-                      Retailor with these keywords
-                    </Link>
+                    <span className="relative w-full flex flex-col items-center gap-1">
+                      <Link
+                        href={`/?prefillVersion=${encodeURIComponent(data.resumeId)}&keywordsToWeave=${encodeURIComponent(data.keywordGap.missingKeywords.join(","))}`}
+                        className="relative w-full flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-lg font-semibold min-h-[52px] bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white shadow-lg shadow-cyan-500/20 hover:shadow-xl hover:shadow-cyan-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out whitespace-nowrap"
+                        onClick={() => {
+                          analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
+                            ...analytics.getTrackingContext({
+                              section: "output",
+                              element: "link",
+                              label: "Add version with these keywords",
+                              resumeId: data.resumeId,
+                            }),
+                            source: "resume_detail",
+                            keywordsCount: data.keywordGap?.missingKeywords?.length ?? 0,
+                          });
+                        }}
+                      >
+                        Add version with these keywords
+                        <span className="inline-flex flex-shrink-0 group/info" aria-label="Opens the tailor page with this job and these keywords already filled in. Edit if you want, then run to get a new tailored resume. Results are saved in your history.">
+                          <svg className="w-5 h-5 text-white/80 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-6 py-6 text-xs font-normal text-white bg-gray-800 rounded shadow-lg opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity z-10 min-w-[320px] max-w-[440px] min-h-[100px] text-left leading-relaxed text-sm">
+                            Opens the tailor page with this job and these keywords already filled in. You can edit anything, then run to get a new tailored resume. Results are saved in your history.
+                          </span>
+                        </span>
+                      </Link>
+                    </span>
                   )}
                 </div>
               )}
@@ -570,20 +533,88 @@ export default function ResumeDetailPage() {
                       originalText={data.originalResume}
                       tailoredText={displayResume}
                       className="min-h-[320px]"
+                      addedLabel="Added in your tailored resume"
+                      removedLabel="Removed from your original"
                     />
                   )}
                   {viewMode === "compare" && (
                     <>
+                      <div className="mb-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
+                          You have {versions.length} versions for this job. Compare any two.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          {versions.map((v) => (
+                            <Link
+                              key={v.id}
+                              href={`/resume/${v.id}`}
+                              className={`px-2.5 py-1 text-sm rounded-md transition-colors ${
+                                v.id === id
+                                  ? "bg-cyan-500 text-white"
+                                  : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              }`}
+                            >
+                              Version {v.version_number}
+                            </Link>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {versions.findIndex((v) => v.id === id) > 0 && (
+                            <Link
+                              href={`/resume/${versions[versions.findIndex((v) => v.id === id) - 1].id}`}
+                              className="text-sm text-gray-600 dark:text-gray-400 hover:text-cyan-500"
+                            >
+                              ← Previous
+                            </Link>
+                          )}
+                          {versions.findIndex((v) => v.id === id) >= 0 && versions.findIndex((v) => v.id === id) < versions.length - 1 && (
+                            <Link
+                              href={`/resume/${versions[versions.findIndex((v) => v.id === id) + 1].id}`}
+                              className="text-sm text-gray-600 dark:text-gray-400 hover:text-cyan-500"
+                            >
+                              Next →
+                            </Link>
+                          )}
+                          <select
+                            value={compareWithVersionId ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCompareWithVersionId(val || null);
+                              if (val) setViewMode("compare");
+                            }}
+                            className="ml-auto text-sm border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                          >
+                            <option value="">Compare with...</option>
+                            {versions.filter((v) => v.id !== id).map((v) => (
+                              <option key={v.id} value={v.id}>
+                                Version {v.version_number}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                       {compareData ? (
                         <ResumeDiffView
                           originalText={displayResume}
                           tailoredText={compareData.tailoredResume}
                           className="min-h-[320px]"
+                          addedLabel={
+                            (() => {
+                              const sel = versions.find((v) => v.id === compareWithVersionId);
+                              return sel ? `Added in Version ${sel.version_number}` : "Added in selected version";
+                            })()
+                          }
+                          removedLabel={
+                            (() => {
+                              const cur = versions.find((v) => v.id === id);
+                              return cur ? `Removed from Version ${cur.version_number} (current)` : "Removed from current version";
+                            })()
+                          }
                         />
                       ) : compareWithVersionId ? (
                         <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Loading version to compare...</p>
                       ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Select a version from the dropdown above to compare.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Select a version above to compare.</p>
                       )}
                     </>
                   )}
@@ -670,20 +701,88 @@ export default function ResumeDetailPage() {
                   originalText={data.originalResume}
                   tailoredText={displayResume}
                   className="min-h-[320px]"
+                  addedLabel="Added in your tailored resume"
+                  removedLabel="Removed from your original"
                 />
               )}
               {viewMode === "compare" && (
                 <>
+                  <div className="mb-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
+                      You have {versions.length} versions for this job. Compare any two.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      {versions.map((v) => (
+                        <Link
+                          key={v.id}
+                          href={`/resume/${v.id}`}
+                          className={`px-2.5 py-1 text-sm rounded-md transition-colors ${
+                            v.id === id
+                              ? "bg-cyan-500 text-white"
+                              : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          Version {v.version_number}
+                        </Link>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {versions.findIndex((v) => v.id === id) > 0 && (
+                        <Link
+                          href={`/resume/${versions[versions.findIndex((v) => v.id === id) - 1].id}`}
+                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-cyan-500"
+                        >
+                          ← Previous
+                        </Link>
+                      )}
+                      {versions.findIndex((v) => v.id === id) >= 0 && versions.findIndex((v) => v.id === id) < versions.length - 1 && (
+                        <Link
+                          href={`/resume/${versions[versions.findIndex((v) => v.id === id) + 1].id}`}
+                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-cyan-500"
+                        >
+                          Next →
+                        </Link>
+                      )}
+                      <select
+                        value={compareWithVersionId ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCompareWithVersionId(val || null);
+                          if (val) setViewMode("compare");
+                        }}
+                        className="ml-auto text-sm border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                      >
+                        <option value="">Compare with...</option>
+                        {versions.filter((v) => v.id !== id).map((v) => (
+                          <option key={v.id} value={v.id}>
+                            Version {v.version_number}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                   {compareData ? (
                     <ResumeDiffView
                       originalText={displayResume}
                       tailoredText={compareData.tailoredResume}
                       className="min-h-[320px]"
+                      addedLabel={
+                        (() => {
+                          const sel = versions.find((v) => v.id === compareWithVersionId);
+                          return sel ? `Added in Version ${sel.version_number}` : "Added in selected version";
+                        })()
+                      }
+                      removedLabel={
+                        (() => {
+                          const cur = versions.find((v) => v.id === id);
+                          return cur ? `Removed from Version ${cur.version_number} (current)` : "Removed from current version";
+                        })()
+                      }
                     />
                   ) : compareWithVersionId ? (
                     <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Loading version to compare...</p>
                   ) : (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Select a version from the dropdown above to compare.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Select a version above to compare.</p>
                   )}
                 </>
               )}

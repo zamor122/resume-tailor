@@ -161,12 +161,26 @@ function isSkillsSection(title: string): boolean {
   return lower === "skills" || lower === "technical skills" || lower === "core competencies" || lower === "technical competencies";
 }
 
+function isExperienceSection(title: string): boolean {
+  const lower = title.toLowerCase();
+  return lower === "experience" || lower === "work experience" || lower === "professional experience" || lower === "employment";
+}
+
 interface ResumePdfDocumentProps {
   blocks: ResumeBlock[];
   templateId?: PdfTemplateId;
+  keyAchievements?: string[];
+  clusters?: { title: string; bullets: string[] }[];
+  workHistoryFooter?: { company: string; title: string; dates: string }[];
 }
 
-export default function ResumePdfDocument({ blocks, templateId = "modern-hybrid" }: ResumePdfDocumentProps) {
+export default function ResumePdfDocument({
+  blocks,
+  templateId = "modern-hybrid",
+  keyAchievements,
+  clusters,
+  workHistoryFooter,
+}: ResumePdfDocumentProps) {
   const isCreativeStartup = templateId === "creative-startup";
   const isOnePager = templateId === "one-pager";
   const styles: StandardPdfStyles | typeof stylesCreativeStartup | typeof stylesOnePager =
@@ -338,10 +352,32 @@ export default function ResumePdfDocument({ blocks, templateId = "modern-hybrid"
   }
 
   const pageStyles = styles as StandardPdfStyles | typeof stylesOnePager;
+  const isFunctionalWithFooter = templateId === "functional" && workHistoryFooter && workHistoryFooter.length > 0;
+
   return (
     <Document>
       <Page size="A4" style={pageStyles.page}>
         {blocks.map((block, i) => {
+          if (templateId === "modern-hybrid" && keyAchievements && keyAchievements.length > 0 && block.type === "section" && isExperienceSection(block.text)) {
+            return (
+              <React.Fragment key={i}>
+                <View style={pageStyles.sectionRow} wrap={false}>
+                  <View style={pageStyles.sectionAccentBar} />
+                  <View style={pageStyles.sectionContent}>
+                    <Text style={pageStyles.section} break={false}>Key Achievements</Text>
+                    <View style={pageStyles.sectionRule} />
+                  </View>
+                </View>
+                {keyAchievements.map((bullet, bi) => (
+                  <View key={bi} style={pageStyles.bulletWrap}>
+                    <Text style={pageStyles.bulletMark}>•</Text>
+                    <Text style={pageStyles.bulletText}>{bullet}</Text>
+                  </View>
+                ))}
+                {renderBlock(block, i, styles)}
+              </React.Fragment>
+            );
+          }
           if (useSkillsGrid && block.type === "section" && isSkillsSection(block.text)) {
             lastSection = block.text;
             const bullets: ResumeBlock[] = [];
@@ -370,6 +406,23 @@ export default function ResumePdfDocument({ blocks, templateId = "modern-hybrid"
           if (useSkillsGrid && block.type === "bullet" && i > skillsSectionStart && i < skillsSectionEnd) return null;
           return renderBlock(block, i, styles);
         })}
+        {isFunctionalWithFooter && (
+          <>
+            <View style={pageStyles.sectionRow} wrap={false}>
+              <View style={pageStyles.sectionAccentBar} />
+              <View style={pageStyles.sectionContent}>
+                <Text style={pageStyles.section} break={false}>Work History</Text>
+                <View style={pageStyles.sectionRule} />
+              </View>
+            </View>
+            {workHistoryFooter!.map((e, idx) => (
+              <View key={idx} style={pageStyles.priorExperienceLine}>
+                <Text style={pageStyles.priorExperienceLeft}>{e.company} – {e.title}</Text>
+                <Text style={pageStyles.priorExperienceRight}>{e.dates}</Text>
+              </View>
+            ))}
+          </>
+        )}
         <View fixed style={pageStyles.footer}>
           <Text render={({ pageNumber, totalPages }) => (totalPages > 1 ? `${pageNumber} / ${totalPages}` : "")} style={pageStyles.footerText} />
         </View>
