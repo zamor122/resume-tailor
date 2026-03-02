@@ -18,6 +18,7 @@ import { validateOrFixEducationBlock } from "@/app/utils/educationValidator";
 import { rewriteParentheticalKeywords } from "@/app/utils/keywordParenthesesCleaner";
 import { sanitizeContactBlock, replaceContactBlock } from "@/app/utils/contactBlockSanitizer";
 import { trackEventServer } from "@/app/utils/umamiServer";
+import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
 import type { KeywordGapSnapshot } from "@/app/types/humanize";
 
 // Changed to nodejs runtime because Cerebras SDK requires Node.js modules
@@ -123,6 +124,7 @@ export async function POST(req: NextRequest) {
     sessionId,
     modelKey,
     userId,
+    accessToken,
     quickDraft = false,
     jobTitle: clientJobTitle,
     parentResumeId,
@@ -152,6 +154,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const authResult = await requireAuth(req, { accessToken });
+  if ("error" in authResult) {
+    return new Response(
+      JSON.stringify({ error: "Sign in to tailor your resume. Your first 3 are free.", requireAuth: true }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+  const verifyResult = verifyUserIdMatch(authResult.userId, userId);
+  if ("error" in verifyResult) return verifyResult.error;
+  const authenticatedUserId = authResult.userId;
+
   // Check rate limits before processing
   const estimatedTokens = estimateTokens(resume + jobDescription);
   const modelToUse = modelKey || undefined;
@@ -165,7 +178,7 @@ export async function POST(req: NextRequest) {
   
   if (!rateLimitCheck.allowed) {
     // Track rate limit hit
-    await trackRateLimitHit(req, 'humanize-stream', rateLimitCheck, selectedModel, userId);
+    await trackRateLimitHit(req, 'humanize-stream', rateLimitCheck, selectedModel, authenticatedUserId);
     
     return new Response(
       JSON.stringify({
@@ -651,15 +664,17 @@ export async function POST(req: NextRequest) {
           if (parentResumeId) {
             const { data: parentRow } = await supabaseAdmin
               .from('resumes')
-              .select('id, version_number, root_resume_id, original_content, job_description')
+              .select('id, user_id, version_number, root_resume_id, original_content, job_description')
               .eq('id', parentResumeId)
               .single();
-            if (parentRow) {
+            if (parentRow && parentRow.user_id === authenticatedUserId) {
               parentResumeIdVal = parentResumeId;
               versionNumber = (parentRow.version_number ?? 1) + 1;
               rootResumeIdVal = parentRow.root_resume_id ?? parentRow.id;
               originalContent = parentRow.original_content ?? resume;
               jobDescriptionForInsert = parentRow.job_description ?? cleanJobDescription;
+            } else if (parentRow && parentRow.user_id !== authenticatedUserId) {
+              console.warn("[Stream] parentResumeId does not belong to authenticated user, ignoring");
             }
           }
 
@@ -688,8 +703,8 @@ export async function POST(req: NextRequest) {
           if (sessionId) {
             insertData.session_id = sessionId;
           }
-          if (userId) {
-            insertData.user_id = userId;
+          if (authenticatedUserId) {
+            insertData.user_id = authenticatedUserId;
           }
 
           const { data: resumeData, error: resumeError } = await supabaseAdmin
@@ -744,7 +759,7 @@ export async function POST(req: NextRequest) {
           endpoint: "humanize/stream",
           error: error?.message || "Unknown error",
           canRetry: error?.status === 429,
-          userId: userId ?? "anonymous",
+          userId: authenticatedUserId ?? "anonymous",
         });
       }
     },

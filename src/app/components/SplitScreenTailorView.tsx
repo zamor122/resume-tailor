@@ -32,6 +32,7 @@ async function runHumanizeStream(params: {
   jobDescription: string;
   sessionId: string | null;
   userId: string | null;
+  accessToken?: string;
   jobTitle?: string;
   onProgress?: (progress: number, message: string) => void;
   parentResumeId?: string;
@@ -44,6 +45,7 @@ async function runHumanizeStream(params: {
     jobDescription,
     sessionId,
     userId,
+    accessToken,
     jobTitle,
     onProgress,
     parentResumeId,
@@ -67,6 +69,7 @@ async function runHumanizeStream(params: {
         jobDescription,
         sessionId,
         userId: userId ?? undefined,
+        accessToken: accessToken ?? undefined,
         jobTitle: jobTitle ?? undefined,
         parentResumeId: parentResumeId ?? undefined,
         customInstructions: customInstructions ?? undefined,
@@ -226,7 +229,7 @@ export default function SplitScreenTailorView() {
           section: "tailorResume",
           element: "link",
           label: "prefill",
-          resumeId: prefillResumeId,
+          resumeId: prefillResumeId ?? undefined,
           source: "prefill",
         }),
       });
@@ -372,6 +375,7 @@ export default function SplitScreenTailorView() {
         jobDescription: jobDescription.trim(),
         sessionId,
         userId: user?.id ?? null,
+        accessToken: session?.access_token ?? undefined,
         jobTitle: jobTitleToUse,
         onProgress: () => {},
         parentResumeId,
@@ -457,7 +461,7 @@ export default function SplitScreenTailorView() {
     } finally {
       if (!didRedirect) setLoading(false);
     }
-  }, [resume, jobDescription, sessionId, user, router, prefillResumeId, detectedJobTitle, jobTitleFromHook, parentResumeId, customInstructions, keywordsToWeave, promptPresetIds]);
+  }, [resume, jobDescription, sessionId, user, session, router, prefillResumeId, detectedJobTitle, jobTitleFromHook, parentResumeId, customInstructions, keywordsToWeave, promptPresetIds]);
 
   const handleReset = useCallback(() => {
     setResume("");
