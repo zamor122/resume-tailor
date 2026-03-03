@@ -563,6 +563,19 @@ export default function SplitScreenTailorView() {
           </div>
         </section>
 
+        {parentResumeId && prefillData && (
+          <div className="flex items-center gap-2 rounded-lg border border-cyan-200 dark:border-cyan-800 bg-cyan-50/80 dark:bg-cyan-950/40 px-4 py-3 text-sm text-cyan-800 dark:text-cyan-200">
+            <svg className="w-5 h-5 shrink-0 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+              {prefillData.jobTitle?.trim()
+                ? `You're creating a new version from your tailored resume for ${prefillData.jobTitle.trim()}.`
+                : "You're creating a new version from your last tailored resume."}
+            </span>
+          </div>
+        )}
+
         {/* Input Section */}
         <div id="tailorResume" className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 md:items-stretch">
           <div className="space-y-4 flex flex-col">

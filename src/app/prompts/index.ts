@@ -27,6 +27,8 @@ export {
 
 // Keyword extraction (MCP tool)
 export { getKeywordExtractorPrompt } from './keyword-extraction';
+// JD interpreter (single LLM: cleaned JD + keywords)
+export { getJDInterpreterPrompt } from './jd-interpreter';
 
 // Tool prompts
 export {
