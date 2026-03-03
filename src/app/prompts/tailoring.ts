@@ -43,6 +43,8 @@ export function getTailoringPrompt(params: {
   cleanJobDescription: string;
   userInstructions?: string;
   userRequestedKeywords?: string[];
+  /** Role-misaligned terms; do not add or emphasize these. Not shown to user. */
+  avoidTerms?: string[];
 }): string {
   const {
     baselineScore,
@@ -57,6 +59,7 @@ export function getTailoringPrompt(params: {
     cleanJobDescription,
     userInstructions,
     userRequestedKeywords,
+    avoidTerms,
   } = params;
 
   const jobTitleInstruction = jobTitle
@@ -114,6 +117,10 @@ PREFER CONCRETE OVER ABSTRACT:
 NO-INVENTION (NEVER VIOLATE):
 - Location: Do NOT add city, state, country, or any location to the resume or Contact block unless the original resume explicitly includes it.
 - Role-specific claims: Do NOT add domain-specific concepts (e.g. gamification, endgame flows, situational awareness, sensor fusion, EW) unless the original resume explicitly describes that work. Rephrase only what is there; do not infer or invent context.
+${avoidTerms && avoidTerms.length > 0 ? `
+DO NOT USE THESE TERMS OR CONCEPTS (role-misaligned):
+- Do not add or emphasize the following in the resume; they are misaligned with this role or would reduce fit: ${avoidTerms.join(", ")}. Use job-aligned language instead.
+` : ""}
 
 CONTACT BLOCK:
 - Include ONLY fields that appear in the original resume. Use this order when present: Name, then Location (only if in original), then Phone, then Email, then Degree and University (only if in original and NOT already listed in ## Education). Then LinkedIn/GitHub only if in original.

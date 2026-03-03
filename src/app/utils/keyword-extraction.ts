@@ -3,8 +3,23 @@
  * Used by keyword-extractor MCP tool and keyword-analyzer.
  */
 
+import { cleanJobDescription as cleanJobDescriptionUtil } from "@/app/utils/jobDescriptionCleaner";
+
+/** Ideal candidate profile extracted from the JD (field-agnostic); used for validation and tailoring tone. */
+export interface IdealCandidateProfile {
+  responsibilities?: string[];
+  mustHaves?: string[];
+  preferred?: string[];
+  experienceLevel?: string;
+  coreCompetencies?: string[];
+}
+
 export interface KeywordResult {
   criticalKeywords?: string[];
+  /** Optional; from enhanced extractor. Never shown in UI; used for tailoring tone only. */
+  idealCandidateProfile?: IdealCandidateProfile;
+  /** Optional; terms/concepts to avoid in resume. Never shown in UI; passed only to tailoring prompt. */
+  avoidTerms?: string[];
   keywords: {
     technical: Array<{
       term: string;
@@ -44,6 +59,44 @@ export interface KeywordResult {
     criticalKeywords: number;
     averageFrequency: number;
     mostFrequent: Array<{ keyword: string; count: number }>;
+  };
+}
+
+/** Result of JD interpreter: KeywordResult plus cleaned JD and inferred job title. */
+export interface JDInterpreterResult extends KeywordResult {
+  cleanedJobDescription: string;
+  jobTitle?: string;
+}
+
+const CLEANED_JD_MAX_LENGTH = 8000;
+
+/**
+ * Normalize raw LLM output from the JD interpreter (cleaned JD + keywords).
+ * If cleanedJobDescription is missing or empty, falls back to cleanJobDescriptionUtil(original, 8000).
+ * Caps cleanedJobDescription at CLEANED_JD_MAX_LENGTH.
+ */
+export function normalizeJDInterpreterResponse(
+  raw: unknown,
+  originalJobDescription: string
+): JDInterpreterResult {
+  const base = normalizeKeywordResponse(raw);
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  let cleanedJobDescription = typeof o.cleanedJobDescription === "string" ? o.cleanedJobDescription.trim() : "";
+  if (!cleanedJobDescription) {
+    cleanedJobDescription = cleanJobDescriptionUtil(originalJobDescription, { maxLength: CLEANED_JD_MAX_LENGTH });
+  }
+  if (cleanedJobDescription.length > CLEANED_JD_MAX_LENGTH) {
+    cleanedJobDescription = cleanedJobDescription.substring(0, CLEANED_JD_MAX_LENGTH) + "...";
+  }
+  const jobTitle = typeof o.jobTitle === "string" ? o.jobTitle.trim() || undefined : undefined;
+  // #region agent log
+  const ROLE_NOT_FOUND = "Role description not found in the provided text.";
+  fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'keyword-extraction.ts:normalizeJDInterpreterResponse',message:'cleanedJobDescription from interpreter',data:{len:cleanedJobDescription.length,isSentinel:cleanedJobDescription===ROLE_NOT_FOUND},hypothesisId:'H5',timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  return {
+    ...base,
+    cleanedJobDescription,
+    ...(jobTitle ? { jobTitle } : {}),
   };
 }
 
@@ -193,7 +246,12 @@ export function normalizeKeywordResponse(raw: unknown): KeywordResult {
   const totalFreq = allKeywords.reduce((sum, k) => sum + (k.frequency ?? 1), 0);
 
   let criticalKeywords: string[] = [];
-  if (Array.isArray(o.criticalKeywords)) {
+  if (Array.isArray(o.validatedCriticalKeywords) && o.validatedCriticalKeywords.length > 0) {
+    criticalKeywords = (o.validatedCriticalKeywords as unknown[])
+      .map((s: unknown) => String(s).trim())
+      .filter(Boolean);
+  }
+  if (criticalKeywords.length === 0 && Array.isArray(o.criticalKeywords)) {
     criticalKeywords = o.criticalKeywords
       .map((s: unknown) => String(s).trim())
       .filter(Boolean);
@@ -204,6 +262,23 @@ export function normalizeKeywordResponse(raw: unknown): KeywordResult {
       ...industry.filter((k) => k.importance === "critical" || k.importance === "high").map((k) => k.term),
     ];
     criticalKeywords = [...new Set(criticalKeywords)];
+  }
+
+  let idealCandidateProfile: IdealCandidateProfile | undefined;
+  if (o.idealCandidateProfile && typeof o.idealCandidateProfile === "object") {
+    const p = o.idealCandidateProfile as Record<string, unknown>;
+    idealCandidateProfile = {
+      responsibilities: Array.isArray(p.responsibilities) ? p.responsibilities.map((s: unknown) => String(s).trim()).filter(Boolean) : [],
+      mustHaves: Array.isArray(p.mustHaves) ? p.mustHaves.map((s: unknown) => String(s).trim()).filter(Boolean) : [],
+      preferred: Array.isArray(p.preferred) ? p.preferred.map((s: unknown) => String(s).trim()).filter(Boolean) : [],
+      experienceLevel: typeof p.experienceLevel === "string" ? p.experienceLevel.trim() : undefined,
+      coreCompetencies: Array.isArray(p.coreCompetencies) ? p.coreCompetencies.map((s: unknown) => String(s).trim()).filter(Boolean) : [],
+    };
+  }
+
+  let avoidTerms: string[] = [];
+  if (Array.isArray(o.avoidTerms)) {
+    avoidTerms = [...new Set((o.avoidTerms as unknown[]).map((s: unknown) => String(s).trim()).filter(Boolean))];
   }
 
   const mostFrequent = Array.isArray(density.mostFrequent)
@@ -222,6 +297,8 @@ export function normalizeKeywordResponse(raw: unknown): KeywordResult {
 
   return {
     criticalKeywords,
+    ...(idealCandidateProfile ? { idealCandidateProfile } : {}),
+    ...(avoidTerms.length > 0 ? { avoidTerms } : {}),
     keywords: {
       technical,
       soft,
@@ -257,6 +334,7 @@ const STOPWORDS = new Set([
   "environments", "clearance",
   "defense", "technology", "innovative", "transform", "changing", "bring", "allied",
   "capabilities", "mission", "industry", "advanced",
+  "experience", "design", "building", "team", "including", "strong", "technical",
 ]);
 
 /**
@@ -288,6 +366,8 @@ export function extractKeywordsFrequencyBased(jobDescription: string): KeywordRe
 
   return {
     criticalKeywords,
+    idealCandidateProfile: undefined,
+    avoidTerms: [],
     keywords: {
       technical,
       soft: [],

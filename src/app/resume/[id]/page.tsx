@@ -13,6 +13,7 @@ import TierSelectionModal from "@/app/components/TierSelectionModal";
 import ShareResumeCard from "@/app/components/ShareResumeCard";
 import ResumeFeedbackCard from "@/app/components/ResumeFeedbackCard";
 import ResumeDiffView from "@/app/components/ResumeDiffView";
+import AddVersionInfoPopover from "@/app/components/AddVersionInfoPopover";
 import Link from "next/link";
 import { analytics } from "@/app/services/analytics";
 import type { ResumeMetricsSnapshot, KeywordGapSnapshot } from "@/app/types/humanize";
@@ -361,32 +362,31 @@ export default function ResumeDetailPage() {
                   </div>
                   {data.resumeId && (
                     <span className="relative w-full flex flex-col items-center gap-1">
-                      <Link
-                        href={`/?prefillVersion=${encodeURIComponent(data.resumeId)}&keywordsToWeave=${encodeURIComponent(data.keywordGap.missingKeywords.join(","))}`}
-                        className="relative w-full flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-lg font-semibold min-h-[52px] bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white shadow-lg shadow-cyan-500/20 hover:shadow-xl hover:shadow-cyan-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out whitespace-nowrap"
-                        onClick={() => {
-                          analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
-                            ...analytics.getTrackingContext({
-                              section: "output",
-                              element: "link",
-                              label: "Add version with these keywords",
-                              resumeId: data.resumeId,
-                            }),
-                            source: "resume_detail",
-                            keywordsCount: data.keywordGap?.missingKeywords?.length ?? 0,
-                          });
-                        }}
-                      >
-                        Add version with these keywords
-                        <span className="inline-flex flex-shrink-0 group/info" aria-label="Opens the tailor page with this job and these keywords already filled in. Edit if you want, then run to get a new tailored resume. Results are saved in your history.">
-                          <svg className="w-5 h-5 text-white/80 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-6 py-6 text-xs font-normal text-white bg-gray-800 rounded shadow-lg opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity z-10 min-w-[320px] max-w-[440px] min-h-[100px] text-left leading-relaxed text-sm">
-                            Opens the tailor page with this job and these keywords already filled in. You can edit anything, then run to get a new tailored resume. Results are saved in your history.
-                          </span>
-                        </span>
-                      </Link>
+                      <span className="inline-flex items-center justify-center gap-2 w-full">
+                        <Link
+                          href={`/?prefillVersion=${encodeURIComponent(data.resumeId)}&keywordsToWeave=${encodeURIComponent(data.keywordGap.missingKeywords.join(","))}`}
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                          onClick={() => {
+                            analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
+                              ...analytics.getTrackingContext({
+                                section: "output",
+                                element: "link",
+                                label: "Add version with these keywords",
+                                resumeId: data.resumeId,
+                              }),
+                              source: "resume_detail",
+                              keywordsCount: data.keywordGap?.missingKeywords?.length ?? 0,
+                            });
+                          }}
+                        >
+                          Add version with these keywords
+                        </Link>
+                        <AddVersionInfoPopover
+                          content="Opens the tailor page with this job and these keywords already filled in. You can edit anything, then run to get a new tailored resume. Results are saved in your history."
+                          iconClassName="text-white/80 hover:text-white"
+                          ariaLabel="Opens the tailor page with this job and these keywords already filled in. Edit if you want, then run to get a new tailored resume. Results are saved in your history."
+                        />
+                      </span>
                     </span>
                   )}
                 </div>

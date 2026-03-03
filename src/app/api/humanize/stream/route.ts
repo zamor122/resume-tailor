@@ -10,7 +10,7 @@ import { reassembleResumeFromSections, buildContactFromOriginal } from "@/app/ut
 import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { obfuscateResume } from "@/app/utils/resumeObfuscator";
 import { checkApiRateLimit, trackRateLimitHit, estimateTokens } from "@/app/utils/apiRateLimiter";
-import { cleanJobDescription as cleanJobDescriptionUtil, trimJobDescriptionToRoleContent } from "@/app/utils/jobDescriptionCleaner";
+import { cleanJobDescription as cleanJobDescriptionUtil } from "@/app/utils/jobDescriptionCleaner";
 import { sanitizeResumeForATS } from "@/app/utils/atsSanitizer";
 import { looksLikeCompanyName } from "@/app/utils/companyNameValidator";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
@@ -226,9 +226,6 @@ export async function POST(req: NextRequest) {
         let companyResearch: any = null;
         let metricsContext: any = null;
 
-        const jobDescriptionForKeywords = trimJobDescriptionToRoleContent(
-          cleanJobDescriptionUtil(jobDescription, { maxLength: 12000 })
-        );
         try {
           streamClosed = !sendSSE(controller, "status", {
             stage: "preprocessing",
@@ -242,8 +239,9 @@ export async function POST(req: NextRequest) {
               key: "keywords",
               fn: () =>
                 callMCPTool(baseUrl, "/api/mcp-tools/keyword-extractor", {
-                  jobDescription: jobDescriptionForKeywords,
+                  jobDescription,
                   resume,
+                  jobTitle: clientJobTitle?.trim() || undefined,
                 }),
             },
             {
@@ -278,8 +276,15 @@ export async function POST(req: NextRequest) {
           console.warn("[Stream] MCP tools failed, continuing without enhanced context:", error);
         }
 
-        // Strip HTML/CSS from job description (common when pasting from web pages)
-        const cleanJobDescription = cleanJobDescriptionUtil(jobDescription, { maxLength: 8000 });
+        // Use interpreter's cleaned JD when available; otherwise fallback to HTML/whitespace-only clean
+        const cleanJobDescription =
+          (keywords as { cleanedJobDescription?: string }).cleanedJobDescription ??
+          cleanJobDescriptionUtil(jobDescription, { maxLength: 8000 });
+
+        // #region agent log
+        const ROLE_NOT_FOUND = "Role description not found in the provided text.";
+        fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stream/route.ts:cleanJobDescription',message:'cleanJobDescription set',data:{len:cleanJobDescription?.length??0,isSentinel:cleanJobDescription?.trim()===ROLE_NOT_FOUND,prefix:(cleanJobDescription||'').substring(0,120)},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
 
         // Identify missing keywords by comparing job description keywords with resume
         // Align with relevancy-scorer: criticalKeywords drive the score, so prioritize them in sortedMissing
@@ -345,7 +350,12 @@ export async function POST(req: NextRequest) {
               ? `${companyResearch.companyName.trim()} (${companyResearch.companyInfo.industry})`
               : companyResearch.companyInfo.industry || "")
           : "";
-        const jobTitle = clientJobTitle?.trim() || companyResearch?.jobTitle || undefined;
+        const jobTitle =
+          (keywords as { jobTitle?: string }).jobTitle ??
+          clientJobTitle?.trim() ??
+          companyResearch?.jobTitle ??
+          undefined;
+        const avoidTerms = keywords.avoidTerms || [];
 
         // Calculate baseline ATS score before generation
         streamClosed = !sendSSE(controller, "status", {
@@ -463,6 +473,9 @@ export async function POST(req: NextRequest) {
               tailoredBulletsByJob,
               originalResume: resume,
             });
+            // #region agent log
+            fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stream/route.ts:sectionPath',message:'section-based tailoredResume set',data:{path:'section',tailoredSummaryLen:tailoredSummary.length,bulletsLens:tailoredBulletsByJob.map(b=>b.length),reassembledLen:tailoredResume?.length??0,reassembledPrefix:(tailoredResume||'').substring(0,200)},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
           } catch (sectionErr) {
             console.warn("[Stream] Section-based tailor failed, falling back to single-doc:", sectionErr);
           }
@@ -482,6 +495,7 @@ export async function POST(req: NextRequest) {
             cleanJobDescription,
             userInstructions: userInstructions || undefined,
             userRequestedKeywords: userRequestedKeywords.length > 0 ? userRequestedKeywords : undefined,
+            avoidTerms: avoidTerms.length > 0 ? avoidTerms : undefined,
           });
           streamClosed = !sendSSE(controller, "status", {
             stage: "generating",
@@ -522,11 +536,17 @@ export async function POST(req: NextRequest) {
               activeVoiceConversions: jsonData.improvementMetrics?.activeVoiceConversions ?? 0,
               sectionsOptimized: jsonData.improvementMetrics?.sectionsOptimized ?? 0,
             };
+            // #region agent log
+            fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stream/route.ts:singlePath',message:'single-doc tailoredResume from JSON',data:{path:'single',source:'json',tailoredResumeLen:tailoredResume?.length??0,prefix:(tailoredResume||'').substring(0,200)},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
           } else {
             const extracted = extractTailoredResumeFromText(result.text);
             tailoredResume =
               extracted ??
               (result.text.includes("improvementMetrics") ? resume : result.text);
+            // #region agent log
+            fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stream/route.ts:singlePath',message:'single-doc tailoredResume fallback',data:{path:'single',source:'extractOrFallback',extractedLen:extracted?.length??null,resultTextLen:result.text?.length??0,tailoredResumeLen:tailoredResume?.length??0,prefix:(tailoredResume||'').substring(0,200)},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
           }
         }
 
@@ -548,10 +568,14 @@ export async function POST(req: NextRequest) {
           tailoredResume = sanitizeContactBlock(tailoredResume, parsedResume);
         }
 
+        // #region agent log
+        const sections = tailoredResume.split(/\n(?=#|\n)/);
+        fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stream/route.ts:beforeStream',message:'tailoredResume after all sanitize',data:{finalLen:tailoredResume?.length??0,sectionCount:sections.length,sectionsNonEmpty:sections.filter(s=>s.trim()).length},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
         const keywordGap = computeKeywordGap(keywords, tailoredResume);
 
         // Stream sections as they're processed
-        const sections = tailoredResume.split(/\n(?=#|\n)/);
         sections.forEach((section, index) => {
           if (section.trim()) {
             if (streamClosed) return;

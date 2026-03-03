@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback } from "@/app/services/model-fallback";
-import { getKeywordExtractorPrompt } from "@/app/prompts";
+import { getJDInterpreterPrompt } from "@/app/prompts";
 import { parseJSONFromText } from "@/app/utils/json-extractor";
 import {
-  normalizeKeywordResponse,
+  normalizeJDInterpreterResponse,
   extractKeywordsFrequencyBased,
-  type KeywordResult,
+  type JDInterpreterResult,
 } from "@/app/utils/keyword-extraction";
+import { cleanJobDescription } from "@/app/utils/jobDescriptionCleaner";
 import { generateCacheKey, getCached, setCache } from "@/app/utils/mcp-tools";
 
 export const runtime = "nodejs";
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
       "keywords",
       `${jobDescription}:${resume || ""}:${jobTitle || ""}`
     );
-    const cached = getCached<KeywordResult & { timestamp: string }>(cacheKey);
+    const cached = getCached<JDInterpreterResult & { timestamp: string }>(cacheKey);
     if (cached) {
       return NextResponse.json({
         ...cached,
@@ -39,9 +40,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    let result: KeywordResult;
+    let result: JDInterpreterResult;
     try {
-      const prompt = getKeywordExtractorPrompt(
+      const prompt = getJDInterpreterPrompt(
         jobDescription,
         resume || undefined,
         jobTitle || undefined
@@ -51,13 +52,23 @@ export async function POST(req: NextRequest) {
 
       const parsed = parseJSONFromText<Record<string, unknown>>(text);
       if (parsed) {
-        result = normalizeKeywordResponse(parsed);
+        result = normalizeJDInterpreterResponse(parsed, jobDescription);
       } else {
-        result = extractKeywordsFrequencyBased(jobDescription);
+        const fallbackKeywords = extractKeywordsFrequencyBased(jobDescription);
+        result = {
+          ...fallbackKeywords,
+          cleanedJobDescription: cleanJobDescription(jobDescription, { maxLength: 8000 }),
+          jobTitle: undefined,
+        };
       }
     } catch (llmError) {
       console.warn("[keyword-extractor] LLM failed, using frequency fallback:", llmError);
-      result = extractKeywordsFrequencyBased(jobDescription);
+      const fallbackKeywords = extractKeywordsFrequencyBased(jobDescription);
+      result = {
+        ...fallbackKeywords,
+        cleanedJobDescription: cleanJobDescription(jobDescription, { maxLength: 8000 }),
+        jobTitle: undefined,
+      };
     }
 
     setCache(cacheKey, result, 5 * 60 * 1000);

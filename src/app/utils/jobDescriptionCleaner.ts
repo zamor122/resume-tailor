@@ -77,6 +77,8 @@ const ROLE_CONTENT_END_SENTINELS = [
  * Trim job description to role content only. First tries to keep from the first "role"
  * section (e.g. ABOUT THE ROLE, Key Responsibilities) onward, dropping company intro.
  * If no role-start sentinel is found, trims at end sentinels (salary, application, EEO).
+ * @deprecated Prefer the JD interpreter API (/api/mcp-tools/keyword-extractor) which returns
+ *   cleanedJobDescription via LLM for better role-only content. Kept for backward compatibility.
  */
 export function trimJobDescriptionToRoleContent(jobDescription: string): string {
   const lower = jobDescription.toLowerCase();

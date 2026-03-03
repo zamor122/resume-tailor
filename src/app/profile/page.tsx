@@ -8,6 +8,7 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import { fetchResumeList } from "@/app/lib/swr-fetchers";
 import { getURL } from "@/app/utils/siteUrl";
 import AuthModal from "@/app/components/AuthModal";
+import AddVersionInfoPopover from "@/app/components/AddVersionInfoPopover";
 import TierSelectionModal from "@/app/components/TierSelectionModal";
 import PdfTemplateSelectModal from "@/app/components/PdfTemplateSelectModal";
 import { hasActiveAccess, getAccessInfo } from "@/app/utils/accessManager";
@@ -48,7 +49,6 @@ export default function ProfilePage() {
     jobTitle: string;
   } | null>(null);
   const downloadTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const [addVersionTooltipRect, setAddVersionTooltipRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const router = useRouter();
   const feedback = useFeedback();
 
@@ -518,19 +518,10 @@ export default function ProfilePage() {
                             >
                               Add version
                             </Link>
-                            <span
-                              className="relative flex-shrink-0 group/info"
-                              aria-label="Get another tailored resume for this job. Job description stays filled in; you can change it or run again. Every result is saved in your history."
-                              onMouseEnter={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setAddVersionTooltipRect({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
-                              }}
-                              onMouseLeave={() => setAddVersionTooltipRect(null)}
-                            >
-                              <svg className="w-4 h-4 text-gray-400 hover:text-gray-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </span>
+                            <AddVersionInfoPopover
+                              content="Get another tailored resume for this job. The job description stays filled in so you can run again—tweak it or leave it as is. Every result is saved in your history."
+                              ariaLabel="Get another tailored resume for this job. Job description stays filled in; you can change it or run again. Every result is saved in your history."
+                            />
                           </span>
                           <button
                             onClick={() => {
@@ -654,28 +645,6 @@ export default function ProfilePage() {
         )}
       </div>
     </div>
-
-    {/* Add version tooltip portal - renders above table overflow so text is never clipped */}
-    {addVersionTooltipRect && typeof document !== "undefined" &&
-      createPortal(
-        <div
-          className="fixed z-[200] px-6 py-6 text-sm font-normal text-white bg-gray-800 rounded-lg shadow-xl text-left leading-relaxed w-[400px] box-border"
-          style={{
-            left: (() => {
-              const center = addVersionTooltipRect.left + addVersionTooltipRect.width / 2;
-              const w = 400;
-              const minLeft = 12;
-              const maxLeft = typeof window !== "undefined" ? window.innerWidth - w - 12 : 9999;
-              return Math.min(maxLeft, Math.max(minLeft, center - w / 2));
-            })(),
-            top: addVersionTooltipRect.top - 8,
-            transform: "translateY(-100%)",
-          }}
-        >
-          Get another tailored resume for this job. The job description stays filled in so you can run again—tweak it or leave it as is. Every result is saved in your history.
-        </div>,
-        document.body
-      )}
 
     {/* Tier Selection Modal - rendered outside container for proper z-index */}
     <TierSelectionModal
