@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Technology check: look for obviously wrong tech claims.
     const techMentions = tail.match(/\b(?:React|Angular|Vue|Node|Python|Java|AWS|Azure|GCP|SQL|NoSQL|TypeScript|JavaScript|GraphQL|REST|Docker|Kubernetes|Terraform|CI\/CD)\b/gi) || [];
-    const origTech = new Set((orig.match(/\b(?:React|Angular|Vue|Node|Python|Java|AWS|Azure|GCP|SQL|NoSQL|TTypeScript|JavaScript|GraphQL|REST|Docker|Kubernetes|Terraform|CI\/CD)\b/gi) || []);
+    const origTech = new Set((orig.match(/\b(?:React|Angular|Vue|Node|Python|Java|AWS|Azure|GCP|SQL|NoSQL|TypeScript|JavaScript|GraphQL|REST|Docker|Kubernetes|Terraform|CI\/CD)\b/gi) || []);
 
     for (const t of new Set(techMentions)) {
       if (!origTech.has(t)) {

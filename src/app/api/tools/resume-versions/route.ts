@@ -96,9 +96,7 @@ export async function POST(req: NextRequest) {
       const similarity = 1 - (dmp.diff_levenshtein(diffs) / Math.max(v1.content.length, v2.content.length));
 
       // Deterministic diff analysis (no LLM).
-      const aiAnalysis = null;          console.error("AI analysis failed:", e);
-        }
-      }
+      const aiAnalysis = null;
 
       return NextResponse.json({
         similarity: Math.round(similarity * 100),
