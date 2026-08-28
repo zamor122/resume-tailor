@@ -1,0 +1,128 @@
+openapi: "3.0.3"
+info:
+  title: "Resume Tailor — preserved external contracts (agentic step-runtime refactor)"
+  version: "1.0.0"
+  description: >
+    Frozen contracts that MUST remain byte-compatible across the step-runtime refactor.
+    Each operation carries its EARS id (see spec.md). The 17 reclassified routes keep
+    their existing JSON contracts; full response-schema enumeration for all routes is
+    captured by contract tests enumerated in tasks.md (post entrance-gate).
+servers:
+  - url: https://your-domain.example
+    description: production
+paths:
+  /api/humanize/stream:
+    post:
+      operationId: humanizeStream
+      tags: ["@EARS-3", "@EARS-5"]
+      summary: "Stream-resume tailoring (SSE). Runs the apply_to_job recipe internally."
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resume, jobDescription]
+              properties:
+                resume: { type: string, minLength: 100 }
+                jobDescription: { type: string, minLength: 100 }
+                sessionId: { type: string }
+                modelKey: { type: string }
+                userId: { type: string }
+                accessToken: { type: string }
+                quickDraft: { type: boolean }
+                jobTitle: { type: string }
+                parentResumeId: { type: string }
+                customInstructions: { type: string }
+                keywordsToWeave: { type: array, items: { type: string } }
+                promptPresetIds: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: >
+            Server-Sent Events stream with `status`, `complete`, and `error` events
+            (text/event-stream). Schema preserved exactly.
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                properties:
+                  status:
+                    description: "@EARS-3 stage event"
+                    type: object
+                    required: [stage, message, progress]
+                    properties:
+                      stage: { type: string, example: "preprocessing" }
+                      message: { type: string }
+                      progress: { type: integer, minimum: 0, maximum: 100 }
+                  complete:
+                    description: "@EARS-3 final event"
+                    type: object
+                    required: [tailoredResume, improvementMetrics, matchScore, keywordGap, progress]
+                    properties:
+                      tailoredResume: { type: string }
+                      improvementMetrics: { type: object }
+                      matchScore: { type: object }
+                      metrics: { type: object }
+                      keywordGap: { type: object }
+                      validationResult: { type: object }
+                      contentMap: { type: object }
+                      freeReveal: {}
+                      formatSpec: {}
+                      resumeId: { type: string }
+                      progress: { type: integer, example: 100 }
+                  error:
+                    description: "@EARS-3 error event"
+                    type: object
+                    required: [error]
+                    properties:
+                      error: { type: string }
+                      canRetry: { type: boolean }
+        "400": { description: "Missing resume or jobDescription" }
+        "401":
+          description: "Signed-in: auth required (first 3 free). Anonymous: 1/IP/24h allowance exhausted."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  requireAuth: { type: boolean }
+  /api/pipeline:
+    post:
+      operationId: runPipeline
+      tags: ["@EARS-5"]
+      summary: "Run a named recipe (pipeline). Payload/response preserved."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pipelineId, resume]
+              properties:
+                pipelineId: { enum: [apply_to_job, check_resume, prepare_interview, full_optimization] }
+                resume: { type: string }
+                jobDescription: { type: string }
+                sessionId: { type: string }
+                userId: { type: string }
+      responses:
+        "200":
+          description: "Pipeline results map; tailoredResume present when a tailor step ran."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  pipelineId: { type: string }
+                  results: { type: object }
+                  tailoredResume: { type: string }
+  /api/tailor:
+    post:
+      operationId: tailor
+      tags: ["@EARS-5"]
+      summary: "Recipe facade; payload/response preserved."
+      responses:
+        "200": { description: "Preserved tailor JSON contract." }
+# @EARS-6 bucket-A routes keep their existing JSON shapes; enumerated in tasks.md contract tests.

@@ -277,10 +277,8 @@ export const DEFAULT_MODEL =
     'gemini:gemini-2.5-flash-lite') as string;
 
 export const FALLBACK_MODELS = [
+  'cerebras:gpt-oss-120b',
   'gemini:gemini-2.5-flash-lite',
-  'openai:gpt-4o-mini',
-  'anthropic:claude-3-5-haiku-20241022',
-  'deepseek:deepseek-chat',
   'groq:llama-3.3-70b-versatile',
 ];
 

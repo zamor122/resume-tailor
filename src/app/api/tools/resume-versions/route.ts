@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateWithFallback } from "@/app/services/model-fallback";
-import { getModelFromSession } from "@/app/utils/model-helper";
 import DiffMatchPatch from "diff-match-patch";
-import {
-  getResumeVersionAnalysisPrompt,
-  getResumeVersionComparisonPrompt,
-} from "@/app/prompts";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -55,39 +49,9 @@ export async function POST(req: NextRequest) {
         timestamp: new Date().toISOString(),
       };
 
-      // Analyze the version (with quota error handling)
-      const analysisPrompt = getResumeVersionAnalysisPrompt(currentResume);
-
-      try {
-        // Get session preferences for model selection
-        const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
-          sessionId,
-          modelKey,
-          req.nextUrl.origin
-        );
-        const result = await generateWithFallback(
-          analysisPrompt,
-          selectedModel,
-          undefined,
-          sessionApiKeys
-        );
-        const text = result.text.trim();
-        const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
-        const analysis = JSON.parse(cleanedText);
-        newVersion.jobTitle = analysis.jobTitle;
-        newVersion.relevancyScore = analysis.estimatedRelevancy;
-      } catch (e: any) {
-        // Handle quota errors gracefully
-        if (e?.status === 429 || e?.message?.includes('429') || e?.message?.includes('quota')) {
-          console.warn('API quota exceeded for version analysis, continuing without analysis');
-        } else {
-          console.error('Version analysis failed:', e);
-        }
-        // Continue without analysis - extract basic info
-        newVersion.jobTitle = currentResume.match(/(?:title|position|role):\s*(.+)/i)?.[1] || undefined;
-        newVersion.relevancyScore = undefined;
-      }
-
+      // Deterministic version analysis (no LLM).
+      newVersion.jobTitle = currentResume.match(/(?:title|position|role):\s*(.+)/i)?.[1] || undefined;
+      newVersion.relevancyScore = undefined;
       // Save to storage
       sessionVersions.push(newVersion);
       versionStore.set(storageKey, sessionVersions);
@@ -131,31 +95,8 @@ export async function POST(req: NextRequest) {
 
       const similarity = 1 - (dmp.diff_levenshtein(diffs) / Math.max(v1.content.length, v2.content.length));
 
-      // AI analysis of changes
-      const analysisPrompt = getResumeVersionComparisonPrompt(v1, v2);
-
-      let aiAnalysis = null;
-      try {
-        // Get session preferences for model selection
-        const { modelKey: selectedModel, sessionApiKeys } = await getModelFromSession(
-          sessionId,
-          modelKey,
-          req.nextUrl.origin
-        );
-        const result = await generateWithFallback(
-          analysisPrompt,
-          selectedModel,
-          undefined,
-          sessionApiKeys
-        );
-        const text = result.text.trim();
-        const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
-        aiAnalysis = JSON.parse(cleanedText);
-      } catch (e: any) {
-        if (e?.status === 429 || e?.message?.includes('429') || e?.message?.includes('quota')) {
-          console.warn("AI analysis skipped due to quota limits");
-        } else {
-          console.error("AI analysis failed:", e);
+      // Deterministic diff analysis (no LLM).
+      const aiAnalysis = null;          console.error("AI analysis failed:", e);
         }
       }
 

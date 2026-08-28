@@ -19,6 +19,8 @@ import { rewriteParentheticalKeywords } from "@/app/utils/keywordParenthesesClea
 import { sanitizeContactBlock, replaceContactBlock } from "@/app/utils/contactBlockSanitizer";
 import { trackEventServer } from "@/app/utils/umamiServer";
 import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
+import { checkAndRecordAnonymousTailor } from "@/app/utils/anonymousTailorAllowance";
+import { executeRecipe, RECIPES, type RecipeConfig, type StepFn, type StepId } from "@/app/runtime";
 import type { KeywordGapSnapshot } from "@/app/types/humanize";
 
 // Changed to nodejs runtime because Cerebras SDK requires Node.js modules
@@ -143,27 +145,34 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Auth required before tailoring - first 3 resumes free for signed-in users
-  if (!userId) {
-    return new Response(
-      JSON.stringify({ error: "Sign in to tailor your resume. Your first 3 are free.", requireAuth: true }),
-      {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-  }
+  let authenticatedUserId: string | null = null;
 
-  const authResult = await requireAuth(req, { accessToken });
-  if ("error" in authResult) {
-    return new Response(
-      JSON.stringify({ error: "Sign in to tailor your resume. Your first 3 are free.", requireAuth: true }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
+  if (userId) {
+    // Signed-in: require auth and use their userId
+    const authResult = await requireAuth(req, { accessToken });
+    if ("error" in authResult) {
+      return new Response(
+        JSON.stringify({ error: "Sign in to tailor your resume. Your first 3 are free.", requireAuth: true }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const verifyResult = verifyUserIdMatch(authResult.userId, userId);
+    if ("error" in verifyResult) return verifyResult.error;
+    authenticatedUserId = authResult.userId;
+  } else {
+    // Anonymous: one free tailor per IP per 24h
+    const { allowed } = await checkAndRecordAnonymousTailor(req);
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({
+          error: "You've used your free preview. Create a free account to get 3 full tailors.",
+          requireAuth: true,
+          anonymousLimitExceeded: true,
+        }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
   }
-  const verifyResult = verifyUserIdMatch(authResult.userId, userId);
-  if ("error" in verifyResult) return verifyResult.error;
-  const authenticatedUserId = authResult.userId;
 
   // Check rate limits before processing
   const estimatedTokens = estimateTokens(resume + jobDescription);
@@ -192,6 +201,50 @@ export async function POST(req: NextRequest) {
       }
     );
   }
+
+  // ── Step-runtime path (behind feature flag; safe default = false for production) ──
+  if (process.env.STEP_RUNTIME === 'true') {
+    const recipe = RECIPES.apply_to_job;
+    const runtimeConfig = {
+      recipe,
+      costPolicy: 'free' as const,
+      userApiKeys: undefined,
+      maxMs: 55_000, // under Vercel 60s limit
+      useLegacy: false,
+    };
+    const runtimeStream = new ReadableStream({
+      async start(ctrl) {
+        let closed = false;
+        const sse = (event: string, data: Record<string, unknown>) => {
+          if (closed) return;
+          try {
+            ctrl.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          } catch { closed = true; }
+        };
+        try {
+          sse('status', { stage: 'preprocessing', message: 'Starting runtime pipeline…', progress: 5 });
+          const { results } = await executeRecipe(
+            // Minimal fn-map: we only need the recipe to run as a DAG.
+            // Real implementations wired in later (MR-4/5) — for now DAG execution +
+            // cost guard + budget enforcement is the deliverable.
+            new Map<StepId, StepFn>(),
+            runtimeConfig,
+            { resume, jobDescription, sessionId, userId: authenticatedUserId },
+          );
+          let allOk = true;
+          for (const [, r] of results) { if (!r.ok) { allOk = false; break; } }
+          sse('status', { stage: 'generating', message: 'Recipe executed.', progress: 95 });
+          sse('complete', { tailoredResume: resume, improvementMetrics: {}, matchScore: 0, progress: 100 });
+        } catch (err: any) {
+          sse('error', { error: err?.message ?? 'Runtime error', canRetry: false });
+        }
+      },
+    });
+    return new Response(runtimeStream, {
+      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+    });
+  }
+  // ── End step-runtime path ──
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -280,11 +333,6 @@ export async function POST(req: NextRequest) {
         const cleanJobDescription =
           (keywords as { cleanedJobDescription?: string }).cleanedJobDescription ??
           cleanJobDescriptionUtil(jobDescription, { maxLength: 8000 });
-
-        // #region agent log
-        const ROLE_NOT_FOUND = "Role description not found in the provided text.";
-        fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stream/route.ts:cleanJobDescription',message:'cleanJobDescription set',data:{len:cleanJobDescription?.length??0,isSentinel:cleanJobDescription?.trim()===ROLE_NOT_FOUND,prefix:(cleanJobDescription||'').substring(0,120)},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
 
         // Identify missing keywords by comparing job description keywords with resume
         // Align with relevancy-scorer: criticalKeywords drive the score, so prioritize them in sortedMissing
@@ -473,9 +521,6 @@ export async function POST(req: NextRequest) {
               tailoredBulletsByJob,
               originalResume: resume,
             });
-            // #region agent log
-            fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stream/route.ts:sectionPath',message:'section-based tailoredResume set',data:{path:'section',tailoredSummaryLen:tailoredSummary.length,bulletsLens:tailoredBulletsByJob.map(b=>b.length),reassembledLen:tailoredResume?.length??0,reassembledPrefix:(tailoredResume||'').substring(0,200)},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
           } catch (sectionErr) {
             console.warn("[Stream] Section-based tailor failed, falling back to single-doc:", sectionErr);
           }
@@ -536,17 +581,11 @@ export async function POST(req: NextRequest) {
               activeVoiceConversions: jsonData.improvementMetrics?.activeVoiceConversions ?? 0,
               sectionsOptimized: jsonData.improvementMetrics?.sectionsOptimized ?? 0,
             };
-            // #region agent log
-            fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stream/route.ts:singlePath',message:'single-doc tailoredResume from JSON',data:{path:'single',source:'json',tailoredResumeLen:tailoredResume?.length??0,prefix:(tailoredResume||'').substring(0,200)},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
           } else {
             const extracted = extractTailoredResumeFromText(result.text);
             tailoredResume =
               extracted ??
               (result.text.includes("improvementMetrics") ? resume : result.text);
-            // #region agent log
-            fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stream/route.ts:singlePath',message:'single-doc tailoredResume fallback',data:{path:'single',source:'extractOrFallback',extractedLen:extracted?.length??null,resultTextLen:result.text?.length??0,tailoredResumeLen:tailoredResume?.length??0,prefix:(tailoredResume||'').substring(0,200)},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
           }
         }
 
@@ -568,10 +607,7 @@ export async function POST(req: NextRequest) {
           tailoredResume = sanitizeContactBlock(tailoredResume, parsedResume);
         }
 
-        // #region agent log
         const sections = tailoredResume.split(/\n(?=#|\n)/);
-        fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stream/route.ts:beforeStream',message:'tailoredResume after all sanitize',data:{finalLen:tailoredResume?.length??0,sectionCount:sections.length,sectionsNonEmpty:sections.filter(s=>s.trim()).length},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
 
         const keywordGap = computeKeywordGap(keywords, tailoredResume);
 
@@ -676,10 +712,11 @@ export async function POST(req: NextRequest) {
         // Obfuscate the tailored resume
         const obfuscationResult = obfuscateResume(resume, tailoredResume);
 
-        // Store resume data in Supabase immediately
+        // Store resume data in Supabase immediately (skip for anonymous)
         let storedResumeId: string | null = null;
-        try {
-          let versionNumber = 1;
+        if (authenticatedUserId) {
+          try {
+            let versionNumber = 1;
           let parentResumeIdVal: string | null = null;
           let rootResumeIdVal: string | null = null;
           let originalContent = resume;
@@ -724,14 +761,12 @@ export async function POST(req: NextRequest) {
             root_resume_id: rootResumeIdVal,
           };
 
-          if (sessionId) {
-            insertData.session_id = sessionId;
-          }
-          if (authenticatedUserId) {
+            if (sessionId) {
+              insertData.session_id = sessionId;
+            }
             insertData.user_id = authenticatedUserId;
-          }
 
-          const { data: resumeData, error: resumeError } = await supabaseAdmin
+            const { data: resumeData, error: resumeError } = await supabaseAdmin
             .from('resumes')
             .insert(insertData)
             .select('id')
@@ -748,9 +783,10 @@ export async function POST(req: NextRequest) {
                 .eq('id', storedResumeId);
             }
           }
-        } catch (error) {
-          console.error("[Stream] Error saving resume to DB:", error);
-          // Continue - resume will be saved later via save endpoint or checkout
+          } catch (error) {
+            console.error("[Stream] Error saving resume:", error);
+            // Continue - resume will be saved later via save endpoint or checkout
+          }
         }
 
         // Send final completion event with resumeId
@@ -797,4 +833,3 @@ export async function POST(req: NextRequest) {
     },
   });
 }
-
