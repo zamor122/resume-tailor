@@ -762,7 +762,7 @@ export default function SplitScreenTailorView() {
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 p-6 md:p-8 space-y-6" data-parallax="0.05">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Your tailored resume</h2>
             <TailoredResumeOutput
-              newResume={results.tailoredResume}
+              newResume={results.tailoredResume ?? ""}
               loading={false}
               showDownload={false}
             />
