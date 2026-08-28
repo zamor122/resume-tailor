@@ -70,7 +70,7 @@ export default function AuthGate({
 
   const tailorCopy = action === "tailor";
   const title = tailorCopy ? "Sign in to tailor your resume" : `Sign in to ${action}`;
-  const description = tailorCopy ? "Your first 3 resumes are free. Create a free account to get started." : `Create a free account to ${action} your tailored resume and access it anytime.`;
+  const description = tailorCopy ? "Your first 3 resumes are free. No credit card required. Create a free account to get started." : `Create a free account to ${action} your tailored resume and access it anytime. No credit card required.`;
 
   if (loading) {
     return (

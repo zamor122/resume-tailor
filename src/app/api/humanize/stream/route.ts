@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
   
   if (!rateLimitCheck.allowed) {
     // Track rate limit hit
-    await trackRateLimitHit(req, 'humanize-stream', rateLimitCheck, selectedModel, authenticatedUserId);
+    await trackRateLimitHit(req, 'humanize-stream', rateLimitCheck, selectedModel, authenticatedUserId ?? undefined);
     
     return new Response(
       JSON.stringify({

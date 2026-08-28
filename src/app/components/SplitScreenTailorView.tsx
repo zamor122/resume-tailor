@@ -13,14 +13,17 @@ import ResumeInput from "./ResumeInput";
 import JobDescriptionInput from "./JobDescriptionInput";
 import TailorButton from "./TailorButton";
 import AuthGate from "./AuthGate";
+import AuthModal from "./AuthModal";
 import ProgressStepper from "./ProgressStepper";
 import ResetConfirmationModal from "./ResetConfirmationModal";
 import FileDropZone from "./FileDropZone";
 import HomepageSEOSection from "./HomepageSEOSection";
+import TailoredResumeOutput from "./TailoredResumeOutput";
 import { extractTextFromPDF } from "@/app/utils/pdfExtractor";
 import { analytics } from "@/app/services/analytics";
 import { saveResumeData, loadResumeData, clearResumeData } from "@/app/utils/dataPersistence";
 import { TAILORING_PRESET_LABELS } from "@/app/prompts/tailoringPresets";
+import { FREE_RESUME_LIMIT } from "@/app/config/pricing";
 import type { HumanizeResponse } from "@/app/types/humanize";
 
 export { type HumanizeResponse } from "@/app/types/humanize";
@@ -85,10 +88,11 @@ async function runHumanizeStream(params: {
     }
 
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      const msg = err.message || err.error || "Failed to tailor resume";
-      const tailoredError = new Error(msg) as Error & { statusCode?: number };
+      const body = await response.json().catch(() => ({}));
+      const msg = body.message || body.error || "Failed to tailor resume";
+      const tailoredError = new Error(msg) as Error & { statusCode?: number; anonymousLimitExceeded?: boolean };
       tailoredError.statusCode = response.status;
+      if (body.anonymousLimitExceeded) tailoredError.anonymousLimitExceeded = true;
       throw tailoredError;
     }
 
@@ -175,6 +179,7 @@ export default function SplitScreenTailorView() {
   const [keywordInput, setKeywordInput] = useState("");
   const [promptPresetIds, setPromptPresetIds] = useState<string[]>([]);
   const [tailoringOptionsOpen, setTailoringOptionsOpen] = useState(false);
+  const [showAuthModalMode, setShowAuthModalMode] = useState<"signup" | "signin" | null>(null);
   const prefillSyncedForRef = useRef<string | null>(null);
 
   const keywordsToWeaveParam = searchParams.get("keywordsToWeave");
@@ -236,54 +241,6 @@ export default function SplitScreenTailorView() {
     }
   }, [prefillId, prefillVersion, prefillResumeId, prefillData, keywordsToWeaveParam]);
 
-  const ROTATING_WORDS = [
-    "hours",
-    "days",
-    "weekends",
-    "nights",
-    "energy",
-    "stress",
-    "time",
-    "effort",
-  ];
-  const [typingWordIndex, setTypingWordIndex] = useState(0);
-  const [typingCharIndex, setTypingCharIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const word = ROTATING_WORDS[typingWordIndex];
-    const delay = isDeleting ? 60 : 100;
-
-    if (isDeleting) {
-      if (typingCharIndex === 0) {
-        typingTimeoutRef.current = setTimeout(() => {
-          setIsDeleting(false);
-          setTypingWordIndex((i) => (i + 1) % ROTATING_WORDS.length);
-        }, 300);
-      } else {
-        typingTimeoutRef.current = setTimeout(
-          () => setTypingCharIndex((c) => c - 1),
-          delay
-        );
-      }
-    } else {
-      if (typingCharIndex < word.length) {
-        typingTimeoutRef.current = setTimeout(
-          () => setTypingCharIndex((c) => c + 1),
-          delay
-        );
-      } else {
-        typingTimeoutRef.current = setTimeout(() => setIsDeleting(true), 2200);
-      }
-    }
-    return () => {
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    };
-  }, [typingWordIndex, typingCharIndex, isDeleting]);
-
-  const displayedWord = ROTATING_WORDS[typingWordIndex].slice(0, typingCharIndex);
-
   useEffect(() => {
     let sid = typeof window !== "undefined" ? localStorage.getItem("resume-tailor-session-id") : null;
     if (!sid) {
@@ -332,10 +289,6 @@ export default function SplitScreenTailorView() {
   };
 
   const handleTailor = useCallback(async () => {
-    if (!user) {
-      // Defense in depth: should not reach here when unauthenticated (AuthGate uses render prop)
-      return;
-    }
     if (!resume.trim() || !jobDescription.trim()) {
       setError("Please enter both your resume and the job description.");
       return;
@@ -427,10 +380,15 @@ export default function SplitScreenTailorView() {
           rawMessage.includes("Failed to fetch")
         );
       const statusCode = (err as Error & { statusCode?: number }).statusCode;
+      const anonymousLimitExceeded = (err as Error & { anonymousLimitExceeded?: boolean }).anonymousLimitExceeded;
 
       let userMessage = rawMessage;
       let errorType = "unknown";
-      if (isAbort) {
+      if (statusCode === 401 && anonymousLimitExceeded) {
+        userMessage = "You've used your free preview. Create a free account to get 3 full tailors.";
+        errorType = "anonymous_limit";
+        setShowAuthModalMode("signup");
+      } else if (isAbort) {
         userMessage = "Request timed out. Please try again with a shorter resume or job description.";
         errorType = "timeout";
       } else if (isNetwork) {
@@ -506,24 +464,15 @@ export default function SplitScreenTailorView() {
       <ParallaxBackground />
       <ParallaxContainer className="container mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10 max-w-6xl space-y-8 md:space-y-12">
         {/* Hero */}
-        <section className="py-8 md:py-16 text-center" data-parallax="0.05">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-4 md:mb-6">
+        <section className="py-8 md:py-12 text-center" data-parallax="0.05">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-3 md:mb-4">
             Free AI Resume Tailor: Optimize Your Resume for Any Job Posting
           </h1>
-          <p className="text-lg sm:text-xl text-gray-500 dark:text-gray-400 mb-2 italic">
-            Still unmistakably you—just refined.
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6">
+            Tailor your resume to each job in seconds. Still you—just refined.
           </p>
-          <p className="text-[22px] sm:text-[24px] text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-            Your resume tailored to each role. Reads like you spent{" "}
-            <span className="inline-block min-w-[6.5rem] text-left">
-              <span className="bg-gradient-to-r from-cyan-500 to-purple-500 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent font-medium">
-                {displayedWord}
-              </span>
-              <span className="inline-block w-[2px] h-[1em] ml-0.5 -mb-0.5 bg-cyan-500 dark:bg-cyan-400 animate-pulse" aria-hidden />
-            </span>
-            {" "}
-            <br />
-            —without the hassle.
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            First {FREE_RESUME_LIMIT} free — no credit card required.
           </p>
           <button
             onClick={() => {
@@ -537,30 +486,6 @@ export default function SplitScreenTailorView() {
           >
             Get Started
           </button>
-        </section>
-
-        {/* How It Works */}
-        <section id="howItWorks" className="py-6 md:py-8" data-parallax="0.08">
-          <h2 className="text-xl md:text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-6 md:mb-8">
-            How to Optimize Your Resume for ATS and Job Descriptions
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8">
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400 font-bold">1</div>
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Add your resume</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Upload a PDF or paste your resume</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 font-bold">2</div>
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Paste the job posting</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Copy the job description you&apos;re applying for</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold">3</div>
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Get an ATS-Optimized Resume That Sounds Like You</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Receive a version that matches the job, sounds human, and keeps your voice</p>
-            </div>
-          </div>
         </section>
 
         {parentResumeId && prefillData && (
@@ -751,36 +676,55 @@ export default function SplitScreenTailorView() {
             </div>
 
             <div className="text-center space-y-3">
-              <AuthGate action="tailor" sessionId={sessionId ?? undefined}>
-                {(showAuthModal) => (
-                  <TailorButton
-                    loading={loading}
-                    onClick={() => {
-                      analytics.trackEvent(analytics.events.CTA_TAILOR_CLICK, {
-                        ...analytics.getTrackingContext({
-                          section: "tailorResume",
-                          element: "tailor_button",
-                          hasResume: !!resume.trim(),
-                          hasJobDescription: !!jobDescription.trim(),
-                          resumeCharCount: resume.trim().length,
-                          jobDescCharCount: jobDescription.trim().length,
-                        }),
-                        hasUser: !!user,
-                      });
-                      if (user) handleTailor();
-                      else showAuthModal();
-                    }}
-                    disabled={!resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100}
-                    ready={resume.trim().length >= 100 && jobDescription.trim().length >= 100}
-                  />
-                )}
-              </AuthGate>
+              <TailorButton
+                loading={loading}
+                onClick={() => {
+                  analytics.trackEvent(analytics.events.CTA_TAILOR_CLICK, {
+                    ...analytics.getTrackingContext({
+                      section: "tailorResume",
+                      element: "tailor_button",
+                      hasResume: !!resume.trim(),
+                      hasJobDescription: !!jobDescription.trim(),
+                      resumeCharCount: resume.trim().length,
+                      jobDescCharCount: jobDescription.trim().length,
+                    }),
+                    hasUser: !!user,
+                  });
+                  handleTailor();
+                }}
+                disabled={!resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100}
+                ready={resume.trim().length >= 100 && jobDescription.trim().length >= 100}
+              />
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Get a resume that sounds like you—human, not robotic
               </p>
             </div>
           </div>
         </div>
+
+        {/* How It Works - below the form */}
+        <section id="howItWorks" className="py-6 md:py-8" data-parallax="0.08">
+          <h2 className="text-xl md:text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-6 md:mb-8">
+            How to Optimize Your Resume for ATS and Job Descriptions
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400 font-bold">1</div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Add your resume</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Upload a PDF or paste your resume</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 font-bold">2</div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Paste the job posting</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Copy the job description you&apos;re applying for</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold">3</div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Get an ATS-Optimized Resume That Sounds Like You</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Receive a version that matches the job, sounds human, and keeps your voice</p>
+            </div>
+          </div>
+        </section>
 
         {error && (
           <div
@@ -813,8 +757,44 @@ export default function SplitScreenTailorView() {
 
         {(loading || redirecting) && <ProgressStepper isActive={true} />}
 
-        {/* Results only on /resume/[id]. If no resumeId, show profile link. */}
-        {hasStartedTailoring && results && !results.resumeId && !loading && (
+        {/* Anonymous result: show tailored resume inline and CTA to sign up to save */}
+        {!user && hasStartedTailoring && results && !results.resumeId && !loading && (
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 p-6 md:p-8 space-y-6" data-parallax="0.05">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Your tailored resume</h2>
+            <TailoredResumeOutput
+              newResume={results.tailoredResume}
+              loading={false}
+              showDownload={false}
+            />
+            {results.matchScore != null && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Match score: <span className="font-medium text-cyan-600 dark:text-cyan-400">{results.matchScore}</span>
+              </p>
+            )}
+            <div className="flex flex-col items-center gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowAuthModalMode("signup")}
+                className="px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-400 hover:to-purple-400 transition-all hover:scale-[1.02]"
+              >
+                Create free account to save this resume and get 2 more free
+              </button>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowAuthModalMode("signin")}
+                  className="text-cyan-600 dark:text-cyan-400 hover:underline font-medium"
+                >
+                  Sign in to save it
+                </button>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Logged-in: results without resumeId (edge case) — show profile link */}
+        {user && hasStartedTailoring && results && !results.resumeId && !loading && (
           <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 p-4 text-center text-emerald-800 dark:text-emerald-200" data-parallax="0.05">
             <p className="font-medium">Resume saved.</p>
             <p className="text-sm mt-1">
@@ -840,6 +820,16 @@ export default function SplitScreenTailorView() {
         <HomepageSEOSection />
 
       </ParallaxContainer>
+
+      <AuthModal
+        key={showAuthModalMode ?? "auth"}
+        isOpen={showAuthModalMode !== null}
+        onClose={() => setShowAuthModalMode(null)}
+        onSuccess={() => setShowAuthModalMode(null)}
+        mode={showAuthModalMode ?? "signup"}
+        title={showAuthModalMode === "signin" ? "Sign in to save your resume" : "Create account"}
+        description="Your first 3 resumes are free. No credit card required."
+      />
 
       <ResetConfirmationModal
         isOpen={showResetModal}

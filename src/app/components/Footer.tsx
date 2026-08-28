@@ -63,7 +63,7 @@ export default function Footer() {
 
           {/* Disclaimer and Copyright combined */}
           <div className="text-xs text-center text-gray-500 dark:text-gray-400">
-            <p className="inline">No data stored. Review results before use.</p>
+            <p className="inline">We store your tailored resumes only when you create an account.</p>
             <span className="mx-2">•</span>
             <p className="inline">© {currentYear} AI Resume Tailor</p>
           </div>

@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     if (hasBullets) { issues.push({ type: "formatting", severity: "info", description: "Uses Unicode bullets", location: "Bullet points", fix: "Replace with dashes or asterisks" }); }
 
     // Keyword / content richness
-    const kwDensity = words.length > 0 ? words.filter(w => w.length > 3).length / words.length : 0;
+    const kwDensity = words.length > 0 ? words.filter((w: string) => w.length > 3).length / words.length : 0;
     if (kwDensity < 0.6 && words.length > 50) { issues.push({ type: "content", severity: "warning", description: "Low keyword density", location: "Throughout", fix: "Include more industry-specific terms" }); baseScore -= 5; }
 
     // Section analysis (what ATS would detect)

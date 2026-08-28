@@ -21,7 +21,7 @@ export default function AuthModal({
   title,
   description,
 }: AuthModalProps) {
-  const { signIn, signUp, resetPassword, user } = useAuth();
+  const { signIn, signUp, signInWithOAuth, resetPassword, user } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -94,18 +94,17 @@ export default function AuthModal({
     }
   };
 
-  // Google OAuth - temporarily disabled for review
-  // const handleOAuth = async (provider: "google") => {
-  //   setLoading(true);
-  //   setError(null);
-  //   try {
-  //     await signInWithOAuth(provider);
-  //     // OAuth redirects away, so we don't need to handle success here
-  //   } catch (err) {
-  //     setError("Failed to initiate OAuth sign-in");
-  //     setLoading(false);
-  //   }
-  // };
+  const handleOAuth = async (provider: "google") => {
+    setLoading(true);
+    setError(null);
+    try {
+      await signInWithOAuth(provider);
+      // OAuth redirects away, so we don't need to handle success here
+    } catch (err) {
+      setError("Failed to initiate OAuth sign-in");
+      setLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -147,14 +146,14 @@ export default function AuthModal({
                 (mode === "forgot"
                   ? "Enter your email and we'll send you a link to reset your password"
                   : mode === "signup"
-                    ? "Create a free account to save your tailored resumes"
+                    ? "Your first 3 tailors are free. No credit card required."
                     : "Sign in to access your saved resumes")}
             </p>
           </div>
 
-          {/* Google OAuth - temporarily disabled for review */}
-          {/* <div className="space-y-3 mb-6">
+          <div className="space-y-3 mb-6">
             <button
+              type="button"
               onClick={() => handleOAuth("google")}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-white text-gray-900 font-medium hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -188,7 +187,7 @@ export default function AuthModal({
             <div className="relative flex justify-center text-sm">
               <span className="px-2 bg-gray-900 text-gray-400">Or continue with email</span>
             </div>
-          </div> */}
+          </div>
 
           {/* Forgot Password Form */}
           {mode === "forgot" ? (

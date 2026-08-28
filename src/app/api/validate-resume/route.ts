@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
     // Flag numbers that changed by >50% (possible fabricated metrics).
     const origNums = (orig.match(/\d+/g) || []).map(Number);
     const tailNums = (tail.match(/\d+/g) || []).map(Number);
-    const origAvg = origNums.length ? origNums.reduce((a,b)=>a+b,0)/origNums.length : 0;
-    const tailAvg = tailNums.length ? tailNums.reduce((a,b)=>a+b,0)/tailNums.length : 0;
+    const origAvg = origNums.length ? origNums.reduce((a: number, b: number) =>a+b,0)/origNums.length : 0;
+    const tailAvg = tailNums.length ? tailNums.reduce((a: number, b: number) =>a+b,0)/tailNums.length : 0;
 
     if (origAvg > 0 && tailAvg > 0 && Math.abs(tailAvg - origAvg) / origAvg > 0.5) {
       flagged.push({
@@ -49,8 +49,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Technology check: look for obviously wrong tech claims.
-    const techMentions = tail.match(/\b(?:React|Angular|Vue|Node|Python|Java|AWS|Azure|GCP|SQL|NoSQL|TypeScript|JavaScript|GraphQL|REST|Docker|Kubernetes|Terraform|CI\/CD)\b/gi) || [];
-    const origTech = new Set((orig.match(/\b(?:React|Angular|Vue|Node|Python|Java|AWS|Azure|GCP|SQL|NoSQL|TypeScript|JavaScript|GraphQL|REST|Docker|Kubernetes|Terraform|CI\/CD)\b/gi) || []);
+    const TECH_PATTERN = /\b(?:React|Angular|Vue|Node|Python|Java|AWS|Azure|GCP|SQL|NoSQL|TypeScript|JavaScript|GraphQL|REST|Docker|Kubernetes|Terraform|CI\/CD)\b/gi;
+    const techMentions = tail.match(TECH_PATTERN) || [];
+    const origTechMatches = orig.match(TECH_PATTERN) || [];
+    const origTech = new Set(origTechMatches);
 
     for (const t of new Set(techMentions)) {
       if (!origTech.has(t)) {
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
     // 3. Company names that differ significantly.
     const origCompanies = orig.match(/\b(?:at|for|with)\s+([A-Z][a-zA-Z&. ]{3,30})\b/g) || [];
     const tailCompanies = tail.match(/\b(?:at|for|with)\s+([A-Z][a-zA-Z&. ]{3,30})\b/g) || [];
-    const newCompanies = tailCompanies.filter(tc => !origCompanies.some(oc => 
+    const newCompanies = tailCompanies.filter((tc: string) => !origCompanies.some((oc: string) => 
       oc.toLowerCase().replace(/\s+/g,'') === tc.toLowerCase().replace(/\s+/g,''))
     );
     if (newCompanies.length > 2) {

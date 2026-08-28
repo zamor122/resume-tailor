@@ -51,6 +51,7 @@ const navLinks = [
 
 export default function Navigation() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -62,7 +63,7 @@ export default function Navigation() {
     setMenuOpen(false);
   }, [pathname]);
 
-  const navBackground = 'backdrop-blur-md bg-gray-900/30 border-gray-800';
+  const navBackground = 'backdrop-blur-md bg-white/90 dark:bg-gray-900/30 border-gray-200 dark:border-gray-800';
 
   if (!mounted) {
     return <nav className="h-16 backdrop-blur-md bg-transparent"></nav>;
@@ -89,7 +90,7 @@ export default function Navigation() {
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className="md:hidden p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-700/50 transition-colors"
+              className="md:hidden p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
               aria-expanded={menuOpen}
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             >
@@ -110,20 +111,28 @@ export default function Navigation() {
                   href={href}
                   className={`transition-colors ${
                     (href === '/' ? pathname === '/' : pathname?.startsWith(href))
-                      ? 'text-green-500 font-medium'
-                      : 'text-gray-300 hover:text-green-500'
+                      ? 'text-green-600 dark:text-green-500 font-medium'
+                      : 'text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-500'
                   }`}
                 >
                   {label}
                 </Link>
               ))}
+              {!user && (
+                <Link
+                  href="/#tailorResume"
+                  className="px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-400 hover:to-purple-400 transition-all hover:scale-[1.02]"
+                >
+                  Get started
+                </Link>
+              )}
             </div>
           </div>
         </div>
 
         {/* Mobile dropdown menu */}
         {menuOpen && (
-          <div className="md:hidden mt-3 pt-3 border-t border-gray-700">
+          <div className="md:hidden mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
             <Link
               href="/"
               onClick={() => setMenuOpen(false)}
@@ -136,15 +145,25 @@ export default function Navigation() {
                 <Link
                   key={href}
                   href={href}
+                  onClick={() => setMenuOpen(false)}
                   className={`px-3 py-2 rounded-lg transition-colors ${
                     (href === '/' ? pathname === '/' : pathname?.startsWith(href))
-                      ? 'text-green-500 font-medium bg-gray-800/50'
-                      : 'text-gray-300 hover:text-green-500 hover:bg-gray-800/50'
+                      ? 'text-green-600 dark:text-green-500 font-medium bg-gray-100 dark:bg-gray-800/50'
+                      : 'text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-500 hover:bg-gray-100 dark:hover:bg-gray-800/50'
                   }`}
                 >
                   {label}
                 </Link>
               ))}
+              {!user && (
+                <Link
+                  href="/#tailorResume"
+                  onClick={() => setMenuOpen(false)}
+                  className="mx-3 mt-2 py-3 rounded-xl font-semibold text-center bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-400 hover:to-purple-400 transition-all"
+                >
+                  Get started
+                </Link>
+              )}
             </div>
           </div>
         )}

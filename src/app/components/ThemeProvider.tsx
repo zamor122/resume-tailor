@@ -6,7 +6,7 @@ import { analytics } from '../services/analytics'
 type Theme = 'light' | 'dark'
 
 const ThemeContext = createContext({
-  theme: 'dark' as Theme,
+  theme: 'light' as Theme,
   toggleTheme: () => {}
 })
 
@@ -42,8 +42,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    // Dark-mode only: always force dark theme
-    const initialTheme: Theme = 'dark'
+    // Default to light theme
+    const initialTheme: Theme = 'light'
     setTheme(initialTheme)
     applyTheme(initialTheme)
     
@@ -51,11 +51,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const toggleTheme = () => {
-    // Intentionally disabled (dark-mode only)
-    // Track attempt in analytics to understand user demand
+    // Reserved for future theme toggle
     analytics.trackEvent(analytics.events.TOGGLE_THEME, {
       ...analytics.getTrackingContext({ element: "theme_toggle" }),
-      theme: "dark",
+      theme: theme || "light",
     });
   }
 
@@ -65,7 +64,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme: theme || 'dark', toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: theme || 'light', toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   )
