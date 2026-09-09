@@ -30,6 +30,9 @@ VOCABULARY ALIGNMENT (use job terminology ONLY when it accurately describes exis
 - NOT OK: "worked on dashboards" → "built situational awareness dashboards for EW" unless the resume explicitly describes EW work
 - NOT OK: Adding certifications, technologies, or skills not in the original resume`;
 
+import type { TailoringPreferences } from '@/app/types/tailoringPreferences';
+import { buildLeverInstructions } from './tailoringPresets';
+
 export function getTailoringPrompt(params: {
   baselineScore: number;
   targetScore: number;
@@ -45,6 +48,7 @@ export function getTailoringPrompt(params: {
   userRequestedKeywords?: string[];
   /** Role-misaligned terms; do not add or emphasize these. Not shown to user. */
   avoidTerms?: string[];
+  preferences?: TailoringPreferences;
 }): string {
   const {
     baselineScore,
@@ -60,18 +64,20 @@ export function getTailoringPrompt(params: {
     userInstructions,
     userRequestedKeywords,
     avoidTerms,
+    preferences,
   } = params;
 
   const jobTitleInstruction = jobTitle
     ? `\n\nJOB TITLE ALIGNMENT: The target job title for this role is "${jobTitle}". Use this title ONLY in the Summary (e.g., "${jobTitle} with 8+ years..."). NEVER change the candidate's actual job titles in Work Experience—keep "Full Stack Engineer," "Lead Software Engineer," "Software Engineer," etc. exactly as they appear in the original resume.`
     : "";
 
-  const hasUserRequests = !!(userInstructions || (userRequestedKeywords && userRequestedKeywords.length > 0));
+  const leverBlock = preferences ? `\n${buildLeverInstructions(preferences)}\n` : "";
+  const hasUserRequests = !!(userInstructions || (userRequestedKeywords && userRequestedKeywords.length > 0) || preferences);
   const earlyUserBlock = hasUserRequests
     ? `
 
-HIGHEST PRIORITY – USER REQUESTS (follow these first; they override other style rules when conflicting):
-${userInstructions ? `Instructions:\n${userInstructions}\n\n` : ""}${(userRequestedKeywords && userRequestedKeywords.length > 0) ? `Keywords to weave in (use wherever the resume supports them; prefer these over other optional wording):\n${userRequestedKeywords.map((kw) => `- ${kw}`).join("\n")}\n` : ""}`
+HIGHEST PRIORITY – USER PREFERENCES & CONTROLS (follow these first; they override other style rules when conflicting):
+${leverBlock}${userInstructions ? `Instructions:\n${userInstructions}\n\n` : ""}${(userRequestedKeywords && userRequestedKeywords.length > 0) ? `Keywords to weave in (use wherever the resume supports them; prefer these over other optional wording):\n${userRequestedKeywords.map((kw) => `- ${kw}`).join("\n")}\n` : ""}`
     : "";
 
   return `You are an expert resume-tailoring specialist. Your PRIMARY and MOST IMPORTANT goal is to increase the job relevancy score from ${baselineScore} to ${targetScore}+ (${targetImprovement}+ point improvement). Recruiters scan resumes in seconds—tailoring helps them quickly see the match.${jobTitleInstruction}${earlyUserBlock}

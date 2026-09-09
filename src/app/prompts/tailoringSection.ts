@@ -2,6 +2,8 @@
  * Section-level tailoring prompts for summary and experience bullets only.
  * Used when section-based tailoring is enabled: title/company/dates are copy-pasted; only bullets and summary are AI-tailored.
  */
+import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
+import { buildLeverInstructions } from "./tailoringPresets";
 
 /**
  * Prompt to tailor only the Summary section. No contact, no experience structure—just the summary prose.
@@ -12,8 +14,9 @@ export function getSummaryTailoringPrompt(params: {
   jobTitle?: string;
   userInstructions?: string;
   userRequestedKeywords?: string[];
+  preferences?: TailoringPreferences;
 }): string {
-  const { resume, jobDescription, jobTitle, userInstructions, userRequestedKeywords } = params;
+  const { resume, jobDescription, jobTitle, userInstructions, userRequestedKeywords, preferences } = params;
   const jobTitleLine = jobTitle ? `\nTarget job title for the summary: "${jobTitle}". Use only in the summary (e.g. "${jobTitle} with X years...").` : "";
   const userBlock = userInstructions
     ? `\nUSER-SPECIFIC INSTRUCTIONS (follow these):\n${userInstructions}\n`
@@ -22,12 +25,13 @@ export function getSummaryTailoringPrompt(params: {
     userRequestedKeywords && userRequestedKeywords.length > 0
       ? `\nUSER-REQUESTED KEYWORDS TO WEAVE: ${userRequestedKeywords.join(", ")}\n`
       : "";
-  const hasUserRequests = !!(userInstructions || (userRequestedKeywords && userRequestedKeywords.length > 0));
+  const leverBlock = preferences ? `\n${buildLeverInstructions(preferences)}\n` : "";
+  const hasUserRequests = !!(userInstructions || (userRequestedKeywords && userRequestedKeywords.length > 0) || preferences);
   const topUserBlock = hasUserRequests
     ? `
 
-HIGHEST PRIORITY – USER REQUESTS (follow these first):
-${userBlock}${keywordsBlock}`
+HIGHEST PRIORITY – USER PREFERENCES & CONTROLS (follow these first):
+${leverBlock}${userBlock}${keywordsBlock}`
     : "";
   return `You are an expert resume writer. Tailor ONLY the Summary/Objective section for the job below.${topUserBlock}
 
@@ -63,8 +67,9 @@ export function getExperienceBulletsPrompt(params: {
   resumeContext: string;
   userInstructions?: string;
   userRequestedKeywords?: string[];
+  preferences?: TailoringPreferences;
 }): string {
-  const { jobTitle, company, dates, bulletsText, jobDescription, resumeContext, userInstructions, userRequestedKeywords } = params;
+  const { jobTitle, company, dates, bulletsText, jobDescription, resumeContext, userInstructions, userRequestedKeywords, preferences } = params;
   const userBlock = userInstructions
     ? `\nUSER-SPECIFIC INSTRUCTIONS (follow these):\n${userInstructions}\n`
     : "";
@@ -72,12 +77,13 @@ export function getExperienceBulletsPrompt(params: {
     userRequestedKeywords && userRequestedKeywords.length > 0
       ? `\nUSER-REQUESTED KEYWORDS TO WEAVE: ${userRequestedKeywords.join(", ")}\n`
       : "";
-  const hasUserRequests = !!(userInstructions || (userRequestedKeywords && userRequestedKeywords.length > 0));
+  const leverBlock = preferences ? `\n${buildLeverInstructions(preferences)}\n` : "";
+  const hasUserRequests = !!(userInstructions || (userRequestedKeywords && userRequestedKeywords.length > 0) || preferences);
   const topUserBlock = hasUserRequests
     ? `
 
-HIGHEST PRIORITY – USER REQUESTS (follow these first):
-${userBlock}${keywordsBlock}`
+HIGHEST PRIORITY – USER PREFERENCES & CONTROLS (follow these first):
+${leverBlock}${userBlock}${keywordsBlock}`
     : "";
   return `You are an expert resume writer. Tailor ONLY the bullet points for this job. Do NOT output the job title, company name, or dates—those are fixed.${topUserBlock}
 

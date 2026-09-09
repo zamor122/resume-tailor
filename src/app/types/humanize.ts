@@ -1,3 +1,6 @@
+import type { TailoringPreferences } from "./tailoringPreferences";
+import type { DiscoveredJob } from "@/app/agent/state";
+
 /** Keyword gap for sidebar: JD keywords found vs missing in the tailored resume */
 export interface KeywordGapSnapshot {
   missingKeywords: string[];
@@ -28,10 +31,16 @@ export interface HumanizeResponse {
     activeVoiceConversions?: number;
     sectionsOptimized?: number;
     qualityScore?: number;
+    bulletsRewritten?: number;
+    keywordsAdded?: number;
+    scoreImprovement?: number;
+    intensityApplied?: string;
+    metricsInjected?: number;
   };
-  /** Job match score (optimized resume) - we no longer display before scores */
+  /** Job match score (optimized resume) */
   matchScore?: number;
-  /** Metrics for the optimized resume - we no longer display before metrics */
+  beforeScore?: number;
+  /** Metrics for the optimized resume */
   metrics?: ResumeMetricsSnapshot;
   qualityMetrics?: Record<string, unknown>;
   validationResult?: unknown;
@@ -39,4 +48,9 @@ export interface HumanizeResponse {
   resumeId?: string | null;
   hasAccess?: boolean;
   accessInfo?: unknown;
+  /** Agent specific data */
+  tailoringPreferences?: TailoringPreferences;
+  agentSteps?: string[];
+  discoveredJobs?: DiscoveredJob[];
+  formatSpec?: unknown;
 }

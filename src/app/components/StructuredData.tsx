@@ -20,18 +20,19 @@ const softwareApplicationSchema = {
   operatingSystem: "Web",
   url: BASE_URL,
   description:
-    "Free AI-powered resume tailoring tool with real-time relevancy scoring. Tailor your resume for each job so recruiters see the right match in seconds. Your first 3 tailored resumes are free.",
+    "Free AI-powered resume tailoring tool with LangGraph agent intelligence and real-time relevancy scoring. Tailor your resume for each job in under 4 seconds. Your first 3 tailored resumes are free.",
   offers: {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
   },
   featureList: [
-    "AI resume tailoring",
-    "Job description matcher",
-    "ATS resume optimization",
-    "Relevancy scoring",
-    "Human-sounding output",
+    "LangGraph AI resume tailoring agent",
+    "Job description matcher & live job discovery",
+    "Controlling levers: Minimal polish to complete experience overhaul",
+    "Smart metrics and impact placeholder generator",
+    "Free ATS resume checker & score scanner",
+    "Human-sounding output with zero formatting drift",
   ],
 };
 
@@ -127,6 +128,38 @@ export function FAQStructuredData({ items }: { items: FAQItem[] }) {
       type="application/ld+json"
       dangerouslySetInnerHTML={{
         __html: JSON.stringify(faqSchema),
+      }}
+    />
+  );
+}
+
+export function HowToStructuredData({
+  name,
+  description,
+  steps,
+}: {
+  name: string;
+  description: string;
+  steps: Array<{ name: string; text: string }>;
+}) {
+  const howToSchema = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name,
+    description,
+    step: steps.map((step, idx) => ({
+      "@type": "HowToStep",
+      position: idx + 1,
+      name: step.name,
+      text: step.text,
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(howToSchema),
       }}
     />
   );

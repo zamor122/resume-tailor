@@ -1,5 +1,6 @@
-import { MetadataRoute } from 'next'
-import { getAllSlugs } from '@/app/utils/blog'
+import { MetadataRoute } from 'next';
+import { getAllSlugs } from '@/app/utils/blog';
+import { ROLE_PAGES } from '@/app/keywords/data/roles';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://airesumetailor.com';
@@ -19,6 +20,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  const roleEntries = ROLE_PAGES.map((role) => ({
+    url: `${baseUrl}/keywords/${role.slug}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }));
+
   return [
     {
       url: baseUrl,
@@ -27,16 +35,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/privacy`,
+      url: `${baseUrl}/resume-checker`,
       lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.5,
+      changeFrequency: 'weekly',
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/pricing`,
@@ -57,13 +59,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/alternatives/jobscan`,
+      url: `${baseUrl}/alternatives/rezi`,
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.7,
     },
     {
       url: `${baseUrl}/alternatives/teal`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/alternatives/jobscan`,
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.7,
@@ -92,12 +100,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.8,
     },
+    ...roleEntries,
     ...blogEntries,
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
     {
       url: `${baseUrl}/profile`,
       lastModified: now,
       changeFrequency: 'monthly',
       priority: 0.3,
     },
-  ]
-} 
+  ];
+}

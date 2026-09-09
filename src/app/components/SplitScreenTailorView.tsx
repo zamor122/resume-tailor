@@ -19,6 +19,9 @@ import ResetConfirmationModal from "./ResetConfirmationModal";
 import FileDropZone from "./FileDropZone";
 import HomepageSEOSection from "./HomepageSEOSection";
 import TailoredResumeOutput from "./TailoredResumeOutput";
+import TailoringControlsPanel from "./TailoringControlsPanel";
+import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
+import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
 import { extractTextFromPDF } from "@/app/utils/pdfExtractor";
 import { analytics } from "@/app/services/analytics";
 import { saveResumeData, loadResumeData, clearResumeData } from "@/app/utils/dataPersistence";
@@ -42,6 +45,7 @@ async function runHumanizeStream(params: {
   customInstructions?: string;
   keywordsToWeave?: string[];
   promptPresetIds?: string[];
+  preferences?: TailoringPreferences;
 }): Promise<HumanizeResponse> {
   const {
     resume,
@@ -55,6 +59,7 @@ async function runHumanizeStream(params: {
     customInstructions,
     keywordsToWeave,
     promptPresetIds,
+    preferences,
   } = params;
 
   const controller = new AbortController();
@@ -78,6 +83,7 @@ async function runHumanizeStream(params: {
         customInstructions: customInstructions ?? undefined,
         keywordsToWeave: keywordsToWeave?.length ? keywordsToWeave : undefined,
         promptPresetIds: promptPresetIds?.length ? promptPresetIds : undefined,
+        preferences,
       }),
       signal: controller.signal,
     });
@@ -115,7 +121,7 @@ async function runHumanizeStream(params: {
         if (lines[i].startsWith("data: ")) {
           try {
             const parsed = JSON.parse(lines[i].slice(6).trim());
-            if (parsed.stage && parsed.progress !== undefined) {
+            if (parsed.progress !== undefined) {
               onProgress?.(parsed.progress, parsed.message || "");
             }
             if (parsed.tailoredResume) {
@@ -180,6 +186,9 @@ export default function SplitScreenTailorView() {
   const [promptPresetIds, setPromptPresetIds] = useState<string[]>([]);
   const [tailoringOptionsOpen, setTailoringOptionsOpen] = useState(false);
   const [showAuthModalMode, setShowAuthModalMode] = useState<"signup" | "signin" | null>(null);
+  const [preferences, setPreferences] = useState<TailoringPreferences>(DEFAULT_PREFERENCES);
+  const [agentMessage, setAgentMessage] = useState<string>("");
+  const [agentProgress, setAgentProgress] = useState<number | undefined>(undefined);
   const prefillSyncedForRef = useRef<string | null>(null);
 
   const keywordsToWeaveParam = searchParams.get("keywordsToWeave");
@@ -306,6 +315,8 @@ export default function SplitScreenTailorView() {
     setError(null);
     setResults(null);
     setHasStartedTailoring(true);
+    setAgentMessage("Initializing LangGraph agent...");
+    setAgentProgress(10);
 
     const source = prefillResumeId ? "prefill" : (resume.trim().length > 0 ? "return_visit" : "blank");
     analytics.trackEvent(analytics.events.RESUME_TAILOR, {
@@ -330,11 +341,15 @@ export default function SplitScreenTailorView() {
         userId: user?.id ?? null,
         accessToken: session?.access_token ?? undefined,
         jobTitle: jobTitleToUse,
-        onProgress: () => {},
+        onProgress: (progress, message) => {
+          setAgentProgress(progress);
+          if (message) setAgentMessage(message);
+        },
         parentResumeId,
         customInstructions: customInstructions.trim() || undefined,
         keywordsToWeave: keywordsToWeave.length ? keywordsToWeave : undefined,
         promptPresetIds: promptPresetIds.length ? promptPresetIds : undefined,
+        preferences,
       });
 
       let timeToValueSeconds: number | undefined;
@@ -561,6 +576,13 @@ export default function SplitScreenTailorView() {
               Resume (min 100 chars) and Job Description (min 100 chars) required
             </p>
 
+            {/* Agent Transformation Controlling Levers */}
+            <TailoringControlsPanel
+              preferences={preferences}
+              onChange={setPreferences}
+              disabled={loading}
+            />
+
             {/* Tailoring options: presets, keywords, custom instructions */}
             <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 overflow-hidden">
               <button
@@ -755,7 +777,13 @@ export default function SplitScreenTailorView() {
           </div>
         )}
 
-        {(loading || redirecting) && <ProgressStepper isActive={true} />}
+        {(loading || redirecting) && (
+          <ProgressStepper
+            isActive={true}
+            agentMessage={agentMessage}
+            agentProgress={agentProgress}
+          />
+        )}
 
         {/* Anonymous result: show tailored resume inline and CTA to sign up to save */}
         {!user && hasStartedTailoring && results && !results.resumeId && !loading && (
