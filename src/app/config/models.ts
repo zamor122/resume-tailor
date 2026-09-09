@@ -274,12 +274,14 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
 export const DEFAULT_MODEL =
   (process.env.NEXT_PUBLIC_DEFAULT_MODEL_KEY ||
     process.env.DEFAULT_MODEL_KEY ||
-    'gemini:gemini-2.5-flash-lite') as string;
+    'groq:llama-3.3-70b-versatile') as string;
 
 export const FALLBACK_MODELS = [
-  'cerebras:gpt-oss-120b',
-  'gemini:gemini-2.5-flash-lite',
   'groq:llama-3.3-70b-versatile',
+  'gemini:gemini-2.5-flash-lite',
+  'openai:gpt-4o-mini',
+  'deepseek:deepseek-chat',
+  'cerebras:llama-3.3-70b',
 ];
 
 export function getModelConfig(modelKey: string): ModelConfig | undefined {

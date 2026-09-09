@@ -84,7 +84,6 @@ export async function keywordAnalyzerNode(
     baselineScore,
     jobTitle: keywordResult.jobTitle || state.jobTitle || state.candidateProfile?.primaryTitle,
     logs: [
-      ...(state.logs || []),
       `[keywordAnalyzer] Baseline match score: ${baselineScore}%, ${allMissing.length} missing keywords identified`,
     ],
   };

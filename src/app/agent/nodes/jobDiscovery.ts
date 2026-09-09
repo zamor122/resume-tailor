@@ -6,7 +6,7 @@ export async function jobDiscoveryNode(
   if (state.rawJobDescription && state.rawJobDescription.trim().length > 30) {
     return {
       selectedJobDescription: state.rawJobDescription.trim(),
-      logs: [...(state.logs || []), "[jobDiscovery] User-provided job description used"],
+      logs: ["[jobDiscovery] User-provided job description used"],
     };
   }
 
@@ -65,7 +65,6 @@ export async function jobDiscoveryNode(
     selectedJobDescription,
     jobTitle: primaryJob?.title || state.jobTitle || profile?.primaryTitle,
     logs: [
-      ...(state.logs || []),
       `[jobDiscovery] Found ${jobs.length} matching live job openings`,
     ],
   };

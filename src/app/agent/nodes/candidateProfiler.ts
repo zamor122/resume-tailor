@@ -42,7 +42,6 @@ export async function candidateProfilerNode(
       },
       jobTitle: profile?.primaryTitle || state.jobTitle,
       logs: [
-        ...(state.logs || []),
         `[candidateProfiler] Profile extracted: ${profile?.primaryTitle || "Professional"} (${profile?.seniorityLevel || "mid"})`,
       ],
     };
@@ -56,7 +55,7 @@ export async function candidateProfilerNode(
         domain: "General",
         searchQuery: "professional job opening",
       },
-      errors: [...(state.errors || []), `[candidateProfiler] Fallback used: ${errMsg}`],
+      errors: [`[candidateProfiler] Fallback used: ${errMsg}`],
     };
   }
 }

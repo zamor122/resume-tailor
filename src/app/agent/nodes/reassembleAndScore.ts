@@ -88,7 +88,6 @@ export async function reassembleAndScoreNode(
     keywordGap,
     improvementMetrics,
     logs: [
-      ...(state.logs || []),
       `[reassembleAndScore] Reassembled resume | Match score: ${baselineScore}% -> ${afterScore}% (+${afterScore - baselineScore}%)`,
     ],
   };

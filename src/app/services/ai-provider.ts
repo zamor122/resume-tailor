@@ -89,21 +89,30 @@ export async function generateContentWithFallback(
     modelKey,
     DEFAULT_MODEL,
     ...(fallbackModels || []),
+    'groq:llama-3.3-70b-versatile',
+    'gemini:gemini-2.5-flash-lite',
+    'openai:gpt-4o-mini',
+    'deepseek:deepseek-chat',
   ].filter(Boolean) as string[];
+
+  // Deduplicate while preserving priority order
+  const uniqueModels = Array.from(new Set(modelsToTry));
 
   let lastError: unknown = null;
 
-  for (const model of modelsToTry) {
+  for (const model of uniqueModels) {
     try {
       const provider = await getModelProvider(model, sessionApiKeys);
+      if (!provider.isAvailable()) {
+        continue;
+      }
       return await provider.generateContent(prompt, options);
     } catch (err) {
+      console.warn(`[AIProvider] Model ${model} failed, falling back to next provider:`, err instanceof Error ? err.message : err);
       lastError = err;
-      if (checkRateLimit(err)) {
-        throw err;
-      }
+      // Continue loop to attempt next provider
     }
   }
 
-  throw lastError || new Error('All models failed');
+  throw lastError || new Error('All configured AI models failed to respond.');
 }

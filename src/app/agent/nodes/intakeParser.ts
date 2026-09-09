@@ -24,12 +24,12 @@ export async function intakeParserNode(
         },
         summary: resumeAST.summary,
       },
-      logs: [...(state.logs || []), "[intakeParser] Resume parsed into AST"],
+      logs: ["[intakeParser] Resume parsed into AST"],
     };
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     return {
-      errors: [...(state.errors || []), `[intakeParser] Failed: ${errMsg}`],
+      errors: [`[intakeParser] Failed: ${errMsg}`],
     };
   }
 }

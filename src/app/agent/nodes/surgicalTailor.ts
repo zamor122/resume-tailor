@@ -94,7 +94,6 @@ export async function surgicalTailorNode(
     tailoredSummary,
     tailoredBulletsByJob,
     logs: [
-      ...(state.logs || []),
       `[surgicalTailor] Completed ${results.length} surgical tailoring tasks in parallel (${preferences.intensity.toUpperCase()})`,
     ],
   };

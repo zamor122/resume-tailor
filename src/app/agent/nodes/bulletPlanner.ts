@@ -42,7 +42,6 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
   return {
     bulletPlan,
     logs: [
-      ...(state.logs || []),
       `[bulletPlanner] Intensity: ${intensity.toUpperCase()} -> Plan: ${bulletPlan.summaryChange ? "Summary + " : ""}${totalBulletsToModify > 50 ? "All experience bullets" : `${totalBulletsToModify} experience bullets`}`,
     ],
   };

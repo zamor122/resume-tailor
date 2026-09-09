@@ -52,11 +52,11 @@ export const AgentStateAnnotation = Annotation.Root({
   improvementMetrics: Annotation<ImprovementMetrics | undefined>(),
 
   logs: Annotation<string[]>({
-    reducer: (curr, update) => (update ? [...(curr || []), ...update] : curr || []),
+    reducer: (curr, update) => (update ? Array.from(new Set([...(curr || []), ...update])) : curr || []),
     default: () => [],
   }),
   errors: Annotation<string[]>({
-    reducer: (curr, update) => (update ? [...(curr || []), ...update] : curr || []),
+    reducer: (curr, update) => (update ? Array.from(new Set([...(curr || []), ...update])) : curr || []),
     default: () => [],
   }),
 });
