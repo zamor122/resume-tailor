@@ -140,7 +140,7 @@ export function parseResume(resumeText: string): ParsedResume {
     const line = lines[i];
     
     // Detect experience section
-    if (/^(experience|work experience|employment)/i.test(line)) {
+    if (/^(?:#+\s*)?(experience|work experience|employment)/i.test(line)) {
       inExperienceSection = true;
       continue;
     }
@@ -176,7 +176,7 @@ export function parseResume(resumeText: string): ParsedResume {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     
-    if (/^(education|academic)/i.test(line)) {
+    if (/^(?:#+\s*)?(education|academic)/i.test(line)) {
       inEducationSection = true;
       continue;
     }
@@ -210,7 +210,7 @@ export function parseResume(resumeText: string): ParsedResume {
   const softKeywords = ['leadership', 'communication', 'teamwork', 'problem solving', 'collaboration'];
   
   for (const line of lines) {
-    if (/^(skills|technical skills)/i.test(line)) {
+    if (/^(?:#+\s*)?(skills|technical skills)/i.test(line)) {
       inSkillsSection = true;
       continue;
     }
@@ -233,12 +233,13 @@ export function parseResume(resumeText: string): ParsedResume {
     }
   }
   
-  // Extract summary (usually first paragraph after name)
+  // Extract summary (usually first paragraph under summary header or after contact)
   let summary: string | null = null;
   for (let i = 0; i < Math.min(10, lines.length); i++) {
     const line = lines[i];
-    if (line.length > 50 && line.length < 500 && !emailMatch?.includes(line) && !phoneMatch?.includes(line)) {
-      if (/^(summary|profile|objective)/i.test(lines[i - 1] || '') || i < 3) {
+    const isContactLine = emailRegex.test(line) || /\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/.test(line);
+    if (line.length > 30 && line.length < 500 && !isContactLine) {
+      if (/^(?:#+\s*)?(summary|profile|objective|about)/i.test(lines[i - 1] || '') || (i < 4 && !/^(?:#+\s*)/.test(line))) {
         summary = line;
         break;
       }

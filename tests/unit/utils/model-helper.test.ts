@@ -7,14 +7,14 @@ global.fetch = vi.fn();
 describe('model-helper utilities', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.DEFAULT_MODEL_KEY = 'cerebras:gpt-oss-120b';
+    process.env.DEFAULT_MODEL_KEY = 'gemini:gemini-2.5-flash';
   });
 
   describe('getModelFromSession', () => {
     it('should return default model when no modelKey or sessionId provided', async () => {
       const result = await getModelFromSession(undefined, undefined, 'http://localhost:3000');
       
-      expect(result.modelKey).toBe('cerebras:gpt-oss-120b');
+      expect(result.modelKey).toBe('gemini:gemini-2.5-flash');
     });
 
     it('should use provided modelKey', async () => {
@@ -41,7 +41,7 @@ describe('model-helper utilities', () => {
       
       const result = await getModelFromSession('test-session-id', undefined, 'http://localhost:3000');
       
-      expect(result.modelKey).toBe('cerebras:gpt-oss-120b');
+      expect(result.modelKey).toBe('gemini:gemini-2.5-flash');
       expect(result.sessionApiKeys).toEqual({ openai: 'test-key' });
       expect(global.fetch).toHaveBeenCalledWith(
         'http://localhost:3000/api/mcp/session-manager',
@@ -58,7 +58,7 @@ describe('model-helper utilities', () => {
       
       const result = await getModelFromSession('test-session-id', undefined, 'http://localhost:3000');
       
-      expect(result.modelKey).toBe('cerebras:gpt-oss-120b');
+      expect(result.modelKey).toBe('gemini:gemini-2.5-flash');
       expect(consoleSpy).toHaveBeenCalled();
       
       consoleSpy.mockRestore();
@@ -72,7 +72,7 @@ describe('model-helper utilities', () => {
       
       const result = await getModelFromSession('test-session-id', undefined, 'http://localhost:3000');
       
-      expect(result.modelKey).toBe('cerebras:gpt-oss-120b');
+      expect(result.modelKey).toBe('gemini:gemini-2.5-flash');
     });
   });
 });

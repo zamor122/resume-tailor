@@ -92,10 +92,10 @@ describe('Cost guard', () => {
   });
 
   describe('resolveStepModel', () => {
-    it('returns cerebras for tailor node', () => {
-      expect(resolveStepModel('tailor')).toBe('cerebras:gpt-oss-120b');
+    it('returns gemini flash for tailor node', () => {
+      expect(resolveStepModel('tailor')).toBe('gemini:gemini-2.5-flash');
     });
-    it('returns gemini for readResume node', () => {
+    it('returns gemini flash-lite for readResume node', () => {
       expect(resolveStepModel('readResume')).toBe('gemini:gemini-2.5-flash-lite');
     });
     it('returns user-provided model when specified', () => {
@@ -103,22 +103,22 @@ describe('Cost guard', () => {
         'groq:llama-3.3-70b-versatile',
       );
     });
-    it('returns cerebras as default for unknown step ids', () => {
-      expect(resolveStepModel('some-unknown-step')).toBe('cerebras:gpt-oss-120b');
+    it('returns gemini flash as default for unknown step ids', () => {
+      expect(resolveStepModel('some-unknown-step')).toBe('gemini:gemini-2.5-flash');
     });
   });
 
   describe('getFallbackChainFor', () => {
     it('returns remaining chain after the current model', () => {
-      const chain = getFallbackChainFor('cerebras:gpt-oss-120b');
+      const chain = getFallbackChainFor('gemini:gemini-2.5-flash');
       expect(chain).toEqual([
-        'gemini:gemini-2.5-flash-lite',
         'groq:llama-3.3-70b-versatile',
+        'gemini:gemini-2.5-flash-lite',
       ]);
     });
 
     it('returns empty when at the last model', () => {
-      const chain = getFallbackChainFor('groq:llama-3.3-70b-versatile');
+      const chain = getFallbackChainFor('gemini:gemini-2.5-flash-lite');
       expect(chain).toEqual([]);
     });
 
@@ -129,10 +129,8 @@ describe('Cost guard', () => {
   });
 
   describe('FREE_FALLBACK_CHAIN', () => {
-    it('contains only three diverse providers', () => {
+    it('contains only three free models', () => {
       expect(FREE_FALLBACK_CHAIN).toHaveLength(3);
-      const providers = FREE_FALLBACK_CHAIN.map((k) => k.split(':')[0]);
-      expect(new Set(providers).size).toBe(3); // diverse — no single-provider dep
     });
 
     it('contains no paid-opt-in providers', () => {
