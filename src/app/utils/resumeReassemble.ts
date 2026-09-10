@@ -320,16 +320,7 @@ export function reassembleResumeFromSections(params: {
     parts.push(certificationsSection.trim());
   }
 
-  // Absolute fallback: if regex matching failed to find sections, do a surgical string replacement of summary
-  if (parts.length <= 2 && originalResume.trim().length > 100) {
-    if (summaryText) {
-      // Find summary in original resume and replace, or prepend
-      const originalSummaryMatch = originalResume.match(/(?:##\s*Summary|Summary:?)([\s\S]*?)(?=\n##|\n[A-Z][a-z]+:|$)/i);
-      if (originalSummaryMatch) {
-        return originalResume.replace(originalSummaryMatch[0], `## Summary\n\n${summaryText}`);
-      }
-      return `${contactBlock}\n\n## Summary\n\n${summaryText}\n\n${originalResume.replace(contactBlock, "").trim()}`;
-    }
+  if (parts.length === 0) {
     return originalResume;
   }
 

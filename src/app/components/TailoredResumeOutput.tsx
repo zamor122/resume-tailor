@@ -95,11 +95,41 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       >
         <ReactMarkdown
           components={{
-            h1: ({ children }) => <h1 className="!mt-0 !mb-1">{children}</h1>,
-            h2: ({ children }) => <h2>{children}</h2>,
-            p: ({ children }) => <p className="!my-2">{children}</p>,
-            ul: ({ children }) => <ul className="!my-3 !pl-5 space-y-2">{children}</ul>,
-            li: ({ children }) => <li className="!mb-1">{children}</li>,
+            h1: ({ children }) => (
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 text-center !mt-0 !mb-2 tracking-tight">
+                {children}
+              </h1>
+            ),
+            h2: ({ children }) => (
+              <h2 className="text-sm sm:text-base font-bold uppercase tracking-wider text-gray-900 dark:text-gray-100 border-b border-gray-300 dark:border-gray-700 !mt-5 !mb-2 pb-1">
+                {children}
+              </h2>
+            ),
+            h3: ({ children }) => (
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 !mt-2.5 !mb-0.5">
+                {children}
+              </h3>
+            ),
+            p: ({ children }) => (
+              <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 !my-1.5">
+                {children}
+              </p>
+            ),
+            ul: ({ children }) => (
+              <ul className="list-disc !pl-5 space-y-1.5 !my-2 text-sm text-gray-700 dark:text-gray-300">
+                {children}
+              </ul>
+            ),
+            li: ({ children }) => (
+              <li className="leading-relaxed pl-0.5">
+                {children}
+              </li>
+            ),
+            strong: ({ children }) => (
+              <strong className="font-semibold text-gray-900 dark:text-gray-100">
+                {children}
+              </strong>
+            ),
           }}
         >
           {displayResume}
