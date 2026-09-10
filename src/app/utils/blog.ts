@@ -12,41 +12,56 @@ export interface BlogPost {
 }
 
 export async function getAllPosts(): Promise<BlogPost[]> {
-  const { data, error } = await supabaseAdmin
-    .from("blog_posts")
-    .select("id, slug, title, description, summary, body, published_at, created_at")
-    .order("published_at", { ascending: false });
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("blog_posts")
+      .select("id, slug, title, description, summary, body, published_at, created_at")
+      .order("published_at", { ascending: false });
 
-  if (error) {
-    console.error("[blog] getAllPosts error:", error);
+    if (error) {
+      console.error("[blog] getAllPosts error:", error);
+      return [];
+    }
+    return (data || []) as BlogPost[];
+  } catch (err) {
+    console.error("[blog] getAllPosts error:", err);
     return [];
   }
-  return (data || []) as BlogPost[];
 }
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
-  const { data, error } = await supabaseAdmin
-    .from("blog_posts")
-    .select("id, slug, title, description, summary, body, published_at, created_at")
-    .eq("slug", slug)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("blog_posts")
+      .select("id, slug, title, description, summary, body, published_at, created_at")
+      .eq("slug", slug)
+      .maybeSingle();
 
-  if (error) {
-    console.error("[blog] getPostBySlug error:", error);
+    if (error) {
+      console.error("[blog] getPostBySlug error:", error);
+      return null;
+    }
+    return data as BlogPost | null;
+  } catch (err) {
+    console.error("[blog] getPostBySlug error:", err);
     return null;
   }
-  return data as BlogPost | null;
 }
 
 export async function getAllSlugs(): Promise<string[]> {
-  const { data, error } = await supabaseAdmin
-    .from("blog_posts")
-    .select("slug")
-    .order("published_at", { ascending: false });
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("blog_posts")
+      .select("slug")
+      .order("published_at", { ascending: false });
 
-  if (error) {
-    console.error("[blog] getAllSlugs error:", error);
+    if (error) {
+      console.error("[blog] getAllSlugs error:", error);
+      return [];
+    }
+    return (data || []).map((r) => r.slug);
+  } catch (err) {
+    console.error("[blog] getAllSlugs error:", err);
     return [];
   }
-  return (data || []).map((r) => r.slug);
 }

@@ -26,17 +26,23 @@ export function extractAuthToken(req: NextRequest, body?: { accessToken?: string
  * Returns null if token is missing, invalid, or expired.
  */
 export async function getAuthenticatedUser(token: string): Promise<{ id: string; email?: string } | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) return null;
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "").trim();
+  if (!rawUrl || !supabaseAnonKey || (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://"))) {
+    return null;
+  }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
-  return { id: user.id, email: user.email ?? undefined };
+  try {
+    const supabase = createClient(rawUrl, supabaseAnonKey);
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
+    return { id: user.id, email: user.email ?? undefined };
+  } catch {
+    return null;
+  }
 }
 
 /**

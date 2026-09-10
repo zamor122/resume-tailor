@@ -1,7 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder_key';
+function getValidSupabaseUrl(url?: string): string {
+  if (!url) return 'https://placeholder.supabase.co';
+  const trimmed = url.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return trimmed;
+    }
+  } catch {
+    // fallback
+  }
+  return 'https://placeholder.supabase.co';
+}
+
+function getValidKey(key?: string): string {
+  if (!key || !key.trim()) return 'placeholder_key';
+  return key.trim();
+}
+
+const supabaseUrl = getValidSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const supabasePublishableKey = getValidKey(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 
 /**
  * Client-side Supabase client
