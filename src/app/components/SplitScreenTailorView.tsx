@@ -583,13 +583,15 @@ export default function SplitScreenTailorView() {
           <div className={`flex flex-col min-h-[320px] md:min-h-[400px] md:h-full ${activeMobileTab === "job" || "hidden md:flex"}`}>
             <JobDescriptionInput
               label="Job Description"
-              placeholder="Paste the job posting you're applying for..."
+              placeholder="Paste the job posting or a job listing URL..."
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
+              onValueChange={(newValue) => setJobDescription(newValue)}
               onTitleDetected={(title) => setDetectedJobTitle(title || null)}
               fillHeight
             />
           </div>
+
         </div>
 
         {/* Tailor Action & Options Container */}
