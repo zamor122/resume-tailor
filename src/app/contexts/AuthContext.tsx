@@ -24,23 +24,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let subscription: { unsubscribe: () => void } | null = null;
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    try {
+      supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.warn("[AuthContext] getSession error:", err);
+          setLoading(false);
+        });
+    } catch (err) {
+      console.warn("[AuthContext] getSession sync error:", err);
       setLoading(false);
-    });
+    }
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    try {
+      const {
+        data: { subscription: sub },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      });
+      subscription = sub;
+    } catch (err) {
+      console.warn("[AuthContext] onAuthStateChange error:", err);
       setLoading(false);
-    });
+    }
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   // Link resumes created before/during login to the user (session-only resumes get user_id)
