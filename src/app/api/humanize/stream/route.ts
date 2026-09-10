@@ -117,6 +117,15 @@ export async function POST(req: NextRequest) {
       });
 
       try {
+        console.log(`[Stream API] ▶ Starting tailoring pipeline`, {
+          model: selectedModel,
+          resumeLength: resume.length,
+          jobDescLength: jobDescription?.length || 0,
+          intensity: preferences.intensity,
+          userId: authenticatedUserId || "anonymous",
+          jobTitle: clientJobTitle,
+        });
+
         // Step 1: Initial event
         streamClosed = !sendSSE(controller, "status", {
           stage: "preprocessing",
@@ -126,6 +135,7 @@ export async function POST(req: NextRequest) {
         if (streamClosed) return;
 
         // Build and execute LangGraph Agent
+        const startTime = Date.now();
         const graph = buildResumeAgentGraph();
 
         streamClosed = !sendSSE(controller, "agent_step", {
@@ -146,6 +156,15 @@ export async function POST(req: NextRequest) {
           modelKey: selectedModel,
           sessionApiKeys,
           jobTitle: clientJobTitle,
+        });
+
+        const elapsedMs = Date.now() - startTime;
+        console.log(`[Stream API] ✔ Agent graph completed in ${elapsedMs}ms`, {
+          scoreBefore: agentResult.beforeScore,
+          scoreAfter: agentResult.afterScore,
+          outputLength: agentResult.finalResumeText?.length,
+          agentSteps: agentResult.logs?.length || 0,
+          errors: agentResult.errors?.length ? agentResult.errors : undefined,
         });
 
         // Check if jobs were discovered and emit
@@ -246,9 +265,16 @@ export async function POST(req: NextRequest) {
               }
             }
           } catch (err) {
-            console.error("[Stream] Error storing resume in Supabase:", err);
+            console.error("[Stream API] Error storing resume in Supabase:", err);
           }
         }
+
+        console.log(`[Stream API] 📦 Emitting final completion payload`, {
+          storedResumeId,
+          tailoredLength: tailoredResume.length,
+          contentMapEntries: obfuscationResult.contentMap?.length || 0,
+          hasFreeReveal: !!obfuscationResult.freeReveal,
+        });
 
         // Final completion event
         streamClosed = !sendSSE(controller, "complete", {
@@ -270,7 +296,11 @@ export async function POST(req: NextRequest) {
         if (streamClosed) return;
         controller.close();
       } catch (error: any) {
-        console.error("[Stream] Agent Graph Error:", error);
+        console.error("[Stream API] ❌ Agent Graph Execution Error:", {
+          message: error?.message,
+          status: error?.status,
+          stack: error?.stack,
+        });
         if (!streamClosed) {
           sendSSE(controller, "error", {
             error: error.message || "An error occurred during agent execution",

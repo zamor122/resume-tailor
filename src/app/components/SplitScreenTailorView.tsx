@@ -121,13 +121,25 @@ async function runHumanizeStream(params: {
         if (lines[i].startsWith("data: ")) {
           try {
             const parsed = JSON.parse(lines[i].slice(6).trim());
+            if (parsed.stage || parsed.step || parsed.message) {
+              console.log(`[Tailor Stream] ⚡ Progress: ${parsed.progress}% - ${parsed.message || parsed.step}`);
+            }
             if (parsed.progress !== undefined) {
               onProgress?.(parsed.progress, parsed.message || "");
             }
             if (parsed.tailoredResume) {
+              console.log(`[Tailor Stream] ✅ Received complete payload:`, {
+                tailoredLength: parsed.tailoredResume.length,
+                beforeScore: parsed.beforeScore,
+                matchScore: parsed.matchScore,
+                improvementMetrics: parsed.improvementMetrics,
+                agentSteps: parsed.agentSteps,
+                resumeId: parsed.resumeId,
+              });
               completeData = parsed;
             }
             if (parsed.error) {
+              console.error(`[Tailor Stream] ❌ Server returned error:`, parsed.error);
               throw new Error(parsed.error);
             }
           } catch (e) {
@@ -141,7 +153,7 @@ async function runHumanizeStream(params: {
       }
     }
 
-    if (!completeData) throw new Error("No result received");
+    if (!completeData) throw new Error("No result received from tailoring stream");
 
     return {
       originalResume: resume,
