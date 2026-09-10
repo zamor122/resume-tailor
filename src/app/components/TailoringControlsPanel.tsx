@@ -12,42 +12,58 @@ import {
   METRICS_DESCRIPTIONS,
   SENIORITY_DESCRIPTIONS,
   INTENSITY_CHANGE_ESTIMATE,
+  DEFAULT_PREFERENCES,
 } from "@/app/types/tailoringPreferences";
 
 interface TailoringControlsPanelProps {
-  preferences: TailoringPreferences;
+  preferences?: TailoringPreferences;
   onChange: (prefs: TailoringPreferences) => void;
   disabled?: boolean;
 }
 
 export default function TailoringControlsPanel({
-  preferences,
+  preferences = DEFAULT_PREFERENCES,
   onChange,
   disabled = false,
 }: TailoringControlsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const activePrefs: TailoringPreferences = {
+    intensity: preferences?.intensity || DEFAULT_PREFERENCES.intensity,
+    metricsMode: preferences?.metricsMode || DEFAULT_PREFERENCES.metricsMode,
+    seniorityLevel: preferences?.seniorityLevel || DEFAULT_PREFERENCES.seniorityLevel,
+    sectionsToModify: {
+      summary: preferences?.sectionsToModify?.summary ?? true,
+      experience: preferences?.sectionsToModify?.experience ?? true,
+      skills: preferences?.sectionsToModify?.skills ?? true,
+    },
+  };
+
   const setIntensity = (intensity: IntensityLevel) => {
-    onChange({ ...preferences, intensity });
+    onChange({ ...activePrefs, intensity });
   };
 
   const setMetricsMode = (metricsMode: MetricsMode) => {
-    onChange({ ...preferences, metricsMode });
+    onChange({ ...activePrefs, metricsMode });
   };
 
   const setSeniority = (seniorityLevel: SeniorityLevel) => {
-    onChange({ ...preferences, seniorityLevel });
+    onChange({ ...activePrefs, seniorityLevel });
   };
 
   const toggleSection = (key: keyof TailoringPreferences["sectionsToModify"]) => {
     onChange({
-      ...preferences,
+      ...activePrefs,
       sectionsToModify: {
-        ...preferences.sectionsToModify,
-        [key]: !preferences.sectionsToModify[key],
+        ...activePrefs.sectionsToModify,
+        [key]: !activePrefs.sectionsToModify[key],
       },
     });
   };
+
+  const intensityDesc = INTENSITY_DESCRIPTIONS[activePrefs.intensity] || INTENSITY_DESCRIPTIONS.targeted;
+  const metricsDesc = METRICS_DESCRIPTIONS[activePrefs.metricsMode] || METRICS_DESCRIPTIONS.placeholders;
+  const changeEstimate = INTENSITY_CHANGE_ESTIMATE[activePrefs.intensity] || "~40–60%";
 
   return (
     <div className="w-full mb-4 rounded-xl border border-gray-200/80 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md shadow-sm transition-all">
@@ -66,10 +82,10 @@ export default function TailoringControlsPanel({
           </span>
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium">
             <span className="px-2 py-0.5 rounded-md bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 border border-cyan-200/60 dark:border-cyan-800/60">
-              {INTENSITY_DESCRIPTIONS[preferences.intensity].title} ({INTENSITY_CHANGE_ESTIMATE[preferences.intensity]})
+              {intensityDesc.title} ({changeEstimate})
             </span>
             <span className="hidden sm:inline px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/60">
-              {METRICS_DESCRIPTIONS[preferences.metricsMode].title}
+              {metricsDesc.title}
             </span>
           </div>
         </div>
@@ -97,12 +113,13 @@ export default function TailoringControlsPanel({
                 1. Transformation Intensity
               </label>
               <span className="text-xs text-cyan-600 dark:text-cyan-400 font-medium">
-                Est. Alterations: {INTENSITY_CHANGE_ESTIMATE[preferences.intensity]}
+                Est. Alterations: {changeEstimate}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {(["minimal", "targeted", "overhaul"] as IntensityLevel[]).map((level) => {
-                const isSelected = preferences.intensity === level;
+                const isSelected = activePrefs.intensity === level;
+                const desc = INTENSITY_DESCRIPTIONS[level];
                 return (
                   <button
                     key={level}
@@ -116,11 +133,11 @@ export default function TailoringControlsPanel({
                     }`}
                   >
                     <div className="font-semibold flex items-center justify-between">
-                      <span>{INTENSITY_DESCRIPTIONS[level].title}</span>
+                      <span>{desc?.title || level}</span>
                       {isSelected && <span className="text-cyan-500">●</span>}
                     </div>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
-                      {INTENSITY_DESCRIPTIONS[level].subtitle}
+                      {desc?.subtitle}
                     </p>
                   </button>
                 );
@@ -135,7 +152,8 @@ export default function TailoringControlsPanel({
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {(["strict", "placeholders", "benchmarks"] as MetricsMode[]).map((mode) => {
-                const isSelected = preferences.metricsMode === mode;
+                const isSelected = activePrefs.metricsMode === mode;
+                const desc = METRICS_DESCRIPTIONS[mode];
                 return (
                   <button
                     key={mode}
@@ -149,11 +167,11 @@ export default function TailoringControlsPanel({
                     }`}
                   >
                     <div className="font-semibold flex items-center justify-between">
-                      <span>{METRICS_DESCRIPTIONS[mode].title}</span>
+                      <span>{desc?.title || mode}</span>
                       {isSelected && <span className="text-purple-500">●</span>}
                     </div>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
-                      {METRICS_DESCRIPTIONS[mode].subtitle}
+                      {desc?.subtitle}
                     </p>
                   </button>
                 );
@@ -170,7 +188,8 @@ export default function TailoringControlsPanel({
               </label>
               <div className="grid grid-cols-3 gap-1.5">
                 {(["mid", "senior", "executive"] as SeniorityLevel[]).map((s) => {
-                  const isSelected = preferences.seniorityLevel === s;
+                  const isSelected = activePrefs.seniorityLevel === s;
+                  const desc = SENIORITY_DESCRIPTIONS[s];
                   return (
                     <button
                       key={s}
@@ -183,7 +202,7 @@ export default function TailoringControlsPanel({
                           : "border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400"
                       }`}
                     >
-                      {SENIORITY_DESCRIPTIONS[s].title}
+                      {desc?.title || s}
                     </button>
                   );
                 })}
@@ -199,7 +218,7 @@ export default function TailoringControlsPanel({
                 <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
                   <input
                     type="checkbox"
-                    checked={preferences.sectionsToModify.summary}
+                    checked={activePrefs.sectionsToModify.summary}
                     onChange={() => toggleSection("summary")}
                     disabled={disabled}
                     className="rounded text-cyan-600 focus:ring-cyan-500"
@@ -209,7 +228,7 @@ export default function TailoringControlsPanel({
                 <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
                   <input
                     type="checkbox"
-                    checked={preferences.sectionsToModify.experience}
+                    checked={activePrefs.sectionsToModify.experience}
                     onChange={() => toggleSection("experience")}
                     disabled={disabled}
                     className="rounded text-cyan-600 focus:ring-cyan-500"
@@ -219,7 +238,7 @@ export default function TailoringControlsPanel({
                 <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
                   <input
                     type="checkbox"
-                    checked={preferences.sectionsToModify.skills}
+                    checked={activePrefs.sectionsToModify.skills}
                     onChange={() => toggleSection("skills")}
                     disabled={disabled}
                     className="rounded text-cyan-600 focus:ring-cyan-500"

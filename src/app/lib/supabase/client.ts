@@ -1,34 +1,16 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
-let supabaseClientInstance: SupabaseClient | null = null;
-
-/**
- * Get or create the client-side Supabase client.
- * Lazy-loaded to prevent build-time crashes when env vars are missing.
- */
-export function getSupabaseClient(): SupabaseClient {
-  if (supabaseClientInstance) {
-    return supabaseClientInstance;
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-  const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder-key';
-
-  supabaseClientInstance = createClient(supabaseUrl, supabasePublishableKey);
-  return supabaseClientInstance;
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder_key';
 
 /**
- * Client-side Supabase client proxy
- * Uses the publishable key - safe for client-side use with RLS policies
+ * Client-side Supabase client
+ * Direct concrete instance with fallback to prevent build-time and runtime hydration crashes.
  */
-export const supabase = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    const client = getSupabaseClient();
-    const value = (client as any)[prop];
-    if (typeof value === 'function') {
-      return value.bind(client);
-    }
-    return value;
+export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
   },
 });
