@@ -117,4 +117,57 @@ Must have experience in:
     expect(scored.afterScore).toBeGreaterThanOrEqual(scored.beforeScore ?? 0);
     expect(scored.improvementMetrics?.scoreImprovement).toBeGreaterThanOrEqual(0);
   });
+
+  it("Preserves full experience, skills, and education on unstructured plain-text resumes", async () => {
+    const plainResume = `Shayne Zamora
+Orange County, CA | (714) 625-2593 | shaynezamora@sbcglobal.net
+
+Summary
+Professional with 11+ years of software engineering leadership, architecting and scaling web applications.
+
+Experience
+Lead Software Architect at Enterprise Inc (2018 - Present)
+• Led engineering team of 15 developers across 3 microservice squads
+• Architected cloud-native distributed platform processing 10M+ daily events
+
+Senior Software Engineer at Tech Start (2014 - 2018)
+• Built core billing and monetization engine
+
+Skills
+TypeScript, React, Node.js, Next.js, PostgreSQL, AWS, Docker, Kubernetes
+
+Education
+B.S. in Computer Science, University of California (2014)
+`;
+
+    const state: AgentState = {
+      rawResume: plainResume,
+      rawJobDescription: sampleJob,
+      preferences: DEFAULT_PREFERENCES,
+      resumeAST: {
+        summary: "Professional with 11+ years of software engineering leadership",
+        experience: [],
+        education: [],
+        skills: { technical: [], soft: [] },
+        sections: ["Summary", "Experience", "Skills", "Education"],
+      },
+      tailoredSummary: "Accomplished Software Architect with 11+ years leading high-growth teams and distributed cloud platforms.",
+      tailoredBulletsByJob: [],
+      baselineScore: 70,
+      logs: [],
+      errors: [],
+    };
+
+    const scored = await reassembleAndScoreNode(state);
+    expect(scored.finalResumeText).toBeDefined();
+    // Must preserve tailored summary
+    expect(scored.finalResumeText).toContain("Accomplished Software Architect");
+    // MUST preserve original Experience details
+    expect(scored.finalResumeText).toContain("Lead Software Architect at Enterprise Inc");
+    expect(scored.finalResumeText).toContain("processing 10M+ daily events");
+    // MUST preserve original Skills
+    expect(scored.finalResumeText).toContain("TypeScript, React, Node.js");
+    // MUST preserve original Education
+    expect(scored.finalResumeText).toContain("University of California");
+  });
 });

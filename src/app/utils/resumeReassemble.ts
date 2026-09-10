@@ -80,38 +80,157 @@ export function buildContactFromOriginal(
   return asLines.slice(0, 2).join("\n");
 }
 
+const ALL_SECTION_HEADERS = [
+  "Summary",
+  "Profile",
+  "Professional Summary",
+  "About",
+  "About Me",
+  "Executive Summary",
+  "Objective",
+  "Career Objective",
+  "Experience",
+  "Work Experience",
+  "Professional Experience",
+  "Employment History",
+  "Employment",
+  "Work History",
+  "Relevant Experience",
+  "Prior Experience",
+  "Additional Experience",
+  "Earlier Experience",
+  "Skills",
+  "Technical Skills",
+  "Core Competencies",
+  "Skills & Technologies",
+  "Skills and Technologies",
+  "Key Skills",
+  "Technical Expertise",
+  "Areas of Expertise",
+  "Technologies",
+  "Core Skills",
+  "Education",
+  "Education & Certifications",
+  "Education and Certifications",
+  "Academic Background",
+  "Academic",
+  "Education and Training",
+  "Degrees",
+  "Projects",
+  "Key Projects",
+  "Personal Projects",
+  "Technical Projects",
+  "Portfolio",
+  "Certifications",
+  "Certificates",
+  "Licenses & Certifications",
+  "Awards",
+  "Honors",
+  "Publications",
+  "Volunteering",
+  "Volunteer Experience",
+];
+
 /**
- * Extract a section (e.g. ## Education) from full resume markdown.
- * Returns the section header line + content until the next ## or end.
+ * Extract a section (e.g. Education, Skills, Experience) from full resume text.
+ * Captures all lines from the header until the next recognizable section header or EOF.
  */
 export function extractSection(resume: string, sectionHeader: string): string | null {
-  const normalized = sectionHeader.replace(/^#+\s*/i, "").trim();
-  const regex = new RegExp(`(##\\s+${normalized.replace(/\s+/g, "\\s+")}[^\\n]*)([\\s\\S]*?)(?=\\n##\\s|$)`, "i");
-  const match = resume.match(regex);
-  if (!match) return null;
-  return (match[1] + match[2]).trim();
+  const normalized = sectionHeader.replace(/^[#*_\s]+|[#*_\s:]+$/g, "").trim().toLowerCase();
+  if (!normalized) return null;
+
+  const lines = resume.split(/\r?\n/);
+  let startIndex = -1;
+  let matchedHeaderName = "";
+
+  // Helper to check if a line is a section header
+  const getSectionHeaderName = (line: string): string | null => {
+    const clean = line.replace(/^[#*_\s]+|[#*_\s:]+$/g, "").trim();
+    if (!clean || clean.length > 40) return null;
+    const lower = clean.toLowerCase();
+    for (const h of ALL_SECTION_HEADERS) {
+      if (h.toLowerCase() === lower) return clean;
+    }
+    return null;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const headerName = getSectionHeaderName(lines[i]);
+    if (headerName && headerName.toLowerCase() === normalized) {
+      startIndex = i;
+      matchedHeaderName = headerName;
+      break;
+    }
+  }
+
+  if (startIndex === -1) return null;
+
+  const contentLines: string[] = [];
+  for (let i = startIndex + 1; i < lines.length; i++) {
+    const nextHeader = getSectionHeaderName(lines[i]);
+    if (nextHeader && nextHeader.toLowerCase() !== normalized) {
+      break;
+    }
+    contentLines.push(lines[i]);
+  }
+
+  const body = contentLines.join("\n").trim();
+  if (!body) return null;
+
+  return `## ${matchedHeaderName}\n\n${body}`;
 }
+
+const EXPERIENCE_HEADER_VARIANTS = [
+  "Experience",
+  "Work Experience",
+  "Professional Experience",
+  "Employment History",
+  "Employment",
+  "Work History",
+  "Relevant Experience",
+];
 
 const SKILLS_HEADER_VARIANTS = [
   "Skills",
   "Technical Skills",
   "Core Competencies",
   "Skills & Technologies",
+  "Skills and Technologies",
   "Key Skills",
   "Technical Expertise",
+  "Areas of Expertise",
+  "Technologies",
 ];
 
 const EDUCATION_HEADER_VARIANTS = [
   "Education",
   "Education & Certifications",
+  "Education and Certifications",
+  "Academic Background",
   "Academic",
   "Education and Training",
+  "Degrees",
 ];
 
 const PRIOR_EXPERIENCE_VARIANTS = [
   "Prior Experience",
   "Additional Experience",
   "Earlier Experience",
+  "Other Experience",
+];
+
+const PROJECTS_HEADER_VARIANTS = [
+  "Projects",
+  "Key Projects",
+  "Personal Projects",
+  "Technical Projects",
+];
+
+const CERTIFICATIONS_HEADER_VARIANTS = [
+  "Certifications",
+  "Licenses & Certifications",
+  "Certifications and Licenses",
+  "Certificates",
 ];
 
 /**
@@ -120,14 +239,14 @@ const PRIOR_EXPERIENCE_VARIANTS = [
 export function extractSectionWithVariants(resume: string, variants: readonly string[]): string | null {
   for (const v of variants) {
     const section = extractSection(resume, v);
-    if (section) return section;
+    if (section && section.trim().length > 15) return section;
   }
   return null;
 }
 
 /**
- * Reassemble full resume markdown from parsed resume, tailored summary, tailored bullets per job, and original resume (for Skills/Education/Prior Experience sections).
- * Order: Contact, Summary, Experience (fixed title/company/dates + tailored bullets), Prior Experience (if present), Skills, Education.
+ * Reassemble full resume markdown preserving all original content with surgical improvements.
+ * Order: Contact -> Summary (tailored) -> Experience (tailored or preserved) -> Skills -> Education -> Projects -> Certifications.
  */
 export function reassembleResumeFromSections(params: {
   parsed: ParsedResumeForReassemble;
@@ -136,26 +255,90 @@ export function reassembleResumeFromSections(params: {
   originalResume: string;
 }): string {
   const { parsed, tailoredSummary, tailoredBulletsByJob, originalResume } = params;
-  const contactBlock = buildContactFromParsed(parsed);
+
+  // 1. Contact block: preserve original top contact lines
+  const contactBlock = buildContactFromOriginal(originalResume, parsed) || buildContactFromParsed(parsed);
+
+  // 2. Experience Section:
   const experience = parsed.experience || [];
-  const experienceBlocks: string[] = [];
-  for (let i = 0; i < experience.length; i++) {
-    const exp = experience[i];
-    const bullets = tailoredBulletsByJob[i] ?? exp.description;
-    const line1 = exp.location?.trim() ? `${exp.company}, ${exp.location}` : exp.company;
-    const line2 = exp.dates?.trim() ? `${exp.title} – ${exp.dates}` : exp.title;
-    experienceBlocks.push(`${line1}\n${line2}\n${bullets}`);
+  let experienceSection: string | null = null;
+
+  if (experience.length > 0 && tailoredBulletsByJob.some(Boolean)) {
+    const experienceBlocks: string[] = [];
+    for (let i = 0; i < experience.length; i++) {
+      const exp = experience[i];
+      const bullets = (tailoredBulletsByJob[i] || exp.description || "").trim();
+      const line1 = exp.location?.trim() ? `${exp.company}, ${exp.location}` : exp.company;
+      const line2 = exp.dates?.trim() ? `${exp.title} – ${exp.dates}` : exp.title;
+      if (line1 || line2 || bullets) {
+        experienceBlocks.push([line1, line2, bullets].filter(Boolean).join("\n"));
+      }
+    }
+    if (experienceBlocks.length > 0) {
+      experienceSection = "## Experience\n\n" + experienceBlocks.join("\n\n");
+    }
   }
-  const experienceSection = "## Experience\n\n" + experienceBlocks.join("\n\n");
+
+  // Fallback: If AST had no experience or was incomplete, preserve the original experience section verbatim
+  if (!experienceSection) {
+    experienceSection = extractSectionWithVariants(originalResume, EXPERIENCE_HEADER_VARIANTS);
+  }
+
+  // 3. Other sections (preserved directly from original resume so nothing is ever dropped)
   const priorExperienceSection = extractSectionWithVariants(originalResume, PRIOR_EXPERIENCE_VARIANTS);
-  const skillsSection = extractSectionWithVariants(originalResume, SKILLS_HEADER_VARIANTS) || "## Skills\n\n";
-  const educationSection = extractSectionWithVariants(originalResume, EDUCATION_HEADER_VARIANTS) || "## Education\n\n";
+  const skillsSection = extractSectionWithVariants(originalResume, SKILLS_HEADER_VARIANTS);
+  const educationSection = extractSectionWithVariants(originalResume, EDUCATION_HEADER_VARIANTS);
+  const projectsSection = extractSectionWithVariants(originalResume, PROJECTS_HEADER_VARIANTS);
+  const certificationsSection = extractSectionWithVariants(originalResume, CERTIFICATIONS_HEADER_VARIANTS);
+
+  // 4. Assemble final document
   const parts: string[] = [];
-  if (contactBlock) parts.push(contactBlock);
-  parts.push("## Summary\n\n" + tailoredSummary.trim());
-  parts.push(experienceSection);
-  if (priorExperienceSection?.trim()) parts.push(priorExperienceSection.trim());
-  if (skillsSection.trim()) parts.push(skillsSection.trim());
-  if (educationSection.trim()) parts.push(educationSection.trim());
+
+  if (contactBlock?.trim()) {
+    parts.push(contactBlock.trim());
+  }
+
+  const summaryText = (tailoredSummary || parsed.summary || "").trim();
+  if (summaryText) {
+    parts.push("## Summary\n\n" + summaryText);
+  }
+
+  if (experienceSection?.trim()) {
+    parts.push(experienceSection.trim());
+  }
+
+  if (priorExperienceSection?.trim()) {
+    parts.push(priorExperienceSection.trim());
+  }
+
+  if (skillsSection?.trim()) {
+    parts.push(skillsSection.trim());
+  }
+
+  if (educationSection?.trim()) {
+    parts.push(educationSection.trim());
+  }
+
+  if (projectsSection?.trim()) {
+    parts.push(projectsSection.trim());
+  }
+
+  if (certificationsSection?.trim()) {
+    parts.push(certificationsSection.trim());
+  }
+
+  // Absolute fallback: if regex matching failed to find sections, do a surgical string replacement of summary
+  if (parts.length <= 2 && originalResume.trim().length > 100) {
+    if (summaryText) {
+      // Find summary in original resume and replace, or prepend
+      const originalSummaryMatch = originalResume.match(/(?:##\s*Summary|Summary:?)([\s\S]*?)(?=\n##|\n[A-Z][a-z]+:|$)/i);
+      if (originalSummaryMatch) {
+        return originalResume.replace(originalSummaryMatch[0], `## Summary\n\n${summaryText}`);
+      }
+      return `${contactBlock}\n\n## Summary\n\n${summaryText}\n\n${originalResume.replace(contactBlock, "").trim()}`;
+    }
+    return originalResume;
+  }
+
   return parts.join("\n\n");
 }
