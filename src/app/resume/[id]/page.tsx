@@ -65,7 +65,7 @@ export default function ResumeDetailPage() {
   const [viewMode, setViewMode] = useState<"resume" | "diff" | "compare">("resume");
   const [compareWithVersionId, setCompareWithVersionId] = useState<string | null>(null);
   const [compareData, setCompareData] = useState<{ tailoredResume: string } | null>(null);
-  const [mobileResumeOpen, setMobileResumeOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"resume" | "stats">("resume");
 
   const resumeSwrKey =
     id && !authLoading
@@ -269,371 +269,45 @@ export default function ResumeDetailPage() {
         </p>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Stats sidebar: first on mobile (order-1), right column on desktop */}
-        <div className="order-1 md:order-none md:col-span-4 space-y-6">
-          <div className="output-container p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Job Match Strength
-            </h3>
-            <div className="flex items-center gap-4">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Job Match</p>
-                <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {matchScore}%
-                </p>
-              </div>
-            </div>
-            {data.metrics && (
-              <div className="mt-4 space-y-2 text-sm">
-                {data.metrics.jdCoverage && data.metrics.jdCoverage.total > 0 && (
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>JD coverage</span>
-                    <span>{data.metrics.jdCoverage.percentage}%</span>
-                  </div>
-                )}
-                {data.metrics.criticalKeywords && data.metrics.criticalKeywords.total > 0 && (
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>Critical keywords</span>
-                    <span>{data.metrics.criticalKeywords.matched}/{data.metrics.criticalKeywords.total}</span>
-                  </div>
-                )}
-                {data.metrics.concreteEvidence && (
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>Concrete evidence</span>
-                    <span>{data.metrics.concreteEvidence.percentage}%</span>
-                  </div>
-                )}
-                {typeof data.metrics.platformOwnership === "number" && (
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>Platform signals</span>
-                    <span>{data.metrics.platformOwnership}</span>
-                  </div>
-                )}
-                {data.metrics.skimSuccess && (
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>Skim success</span>
-                    <span>{data.metrics.skimSuccess.percentage}%</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+      {/* Mobile Tab Switcher (md:hidden) */}
+      <div className="md:hidden flex items-center justify-between p-1 mb-6 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700/80 shadow-inner">
+        <button
+          type="button"
+          onClick={() => setMobileTab("resume")}
+          className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+            mobileTab === "resume"
+              ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
+              : "text-gray-600 dark:text-gray-400"
+          }`}
+        >
+          <span>📄 Tailored Resume</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab("stats")}
+          className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+            mobileTab === "stats"
+              ? "bg-white dark:bg-gray-900 text-purple-600 dark:text-purple-400 shadow-sm"
+              : "text-gray-600 dark:text-gray-400"
+          }`}
+        >
+          <span>📊 Match ({matchScore}%) & Keywords</span>
+        </button>
+      </div>
 
-          {(data.keywordGap || (data.metrics?.criticalKeywords && data.metrics.criticalKeywords.total > 0)) && (
-            <div className="output-container p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                Keyword match
-              </h3>
-              {data.metrics?.criticalKeywords && data.metrics.criticalKeywords.total > 0 && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  You have {data.metrics.criticalKeywords.matched} of {data.metrics.criticalKeywords.total} top skills for this job.
-                </p>
-              )}
-              {data.keywordGap?.foundInResume && data.keywordGap.foundInResume.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Found in your resume</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {data.keywordGap.foundInResume.map((kw) => (
-                      <span
-                        key={kw}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200"
-                      >
-                        {kw}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {data.keywordGap?.missingKeywords && data.keywordGap.missingKeywords.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    Retailor your resume and include these keywords next time if they&apos;re important to you.
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {data.keywordGap.missingKeywords.map((kw) => (
-                      <span
-                        key={kw}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
-                      >
-                        {kw}
-                      </span>
-                    ))}
-                  </div>
-                  {data.resumeId && (
-                    <span className="relative w-full flex flex-col items-center gap-1">
-                      <span className="inline-flex items-center justify-center gap-2 w-full">
-                        <Link
-                          href={`/?prefillVersion=${encodeURIComponent(data.resumeId)}&keywordsToWeave=${encodeURIComponent(data.keywordGap.missingKeywords.join(","))}`}
-                          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white shadow-md hover:shadow-lg transition-all duration-200"
-                          onClick={() => {
-                            analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
-                              ...analytics.getTrackingContext({
-                                section: "output",
-                                element: "link",
-                                label: "Add version with these keywords",
-                                resumeId: data.resumeId,
-                              }),
-                              source: "resume_detail",
-                              keywordsCount: data.keywordGap?.missingKeywords?.length ?? 0,
-                            });
-                          }}
-                        >
-                          Add version with these keywords
-                        </Link>
-                        <AddVersionInfoPopover
-                          content="Opens the tailor page with this job and these keywords already filled in. You can edit anything, then run to get a new tailored resume. Results are saved in your history."
-                          iconClassName="text-white/80 hover:text-white"
-                          ariaLabel="Opens the tailor page with this job and these keywords already filled in. Edit if you want, then run to get a new tailored resume. Results are saved in your history."
-                        />
-                      </span>
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {!data.isUnlocked && (
-            <div className="output-container p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Unlock your tailored resume
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Choose an access plan to view and download your optimized resume.
-              </p>
-              <button
-                onClick={() => setShowTierModal(true)}
-                className="w-full py-2 px-4 rounded-lg font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-colors"
-              >
-                Choose Access Plan
-              </button>
-            </div>
-          )}
-
-          <div className="improvement-container">
-            <h3 className="text-lg font-semibold mb-3 text-amber-600 dark:text-amber-400">
-              Improvement Summary
-            </h3>
-            <ImprovementHighlights
-              metrics={metrics}
-              metricsSnapshot={data.metrics ?? null}
-            />
-          </div>
-
-          {data.isUnlocked && (
-            <>
-              <ResumeFeedbackCard
-                resumeId={data.resumeId}
-                initialAppliedWithResume={data.appliedWithResume}
-                initialFeedbackComment={data.feedbackComment}
-                userId={user?.id}
-                accessToken={session?.access_token ?? undefined}
-                sessionId={sessionId ?? undefined}
-              />
-              <ShareResumeCard />
-            </>
-          )}
-        </div>
-
-        {/* Resume content: second on mobile (order-2), accordion on mobile */}
-        <div className="order-2 md:order-none md:col-span-8 space-y-6 min-w-0">
-          {/* Mobile: accordion so stats are visible first */}
-          <div className="md:hidden">
-            <button
-              type="button"
-              onClick={() => setMobileResumeOpen((o) => !o)}
-              className="w-full output-container flex items-center justify-between gap-3 p-4 text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"
-              aria-expanded={mobileResumeOpen}
-            >
-              <span className="font-semibold text-gray-900 dark:text-gray-100">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+        {/* Main Resume Column (Left on desktop, active tab on mobile) */}
+        <div className={`md:col-span-8 space-y-6 min-w-0 ${mobileTab === "resume" ? "block" : "hidden md:block"}`}>
+          <div className="output-container p-4 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-5 border-b border-gray-100 dark:border-gray-800 pb-4">
+              <h2 className="text-xl sm:text-2xl font-bold gradient-text-emerald">
                 {viewMode === "resume"
                   ? "Your Tailored Resume"
                   : viewMode === "compare"
-                    ? "Compare two versions"
-                    : "See what we changed"}
-              </span>
-              <svg
-                className={`w-5 h-5 text-gray-500 transition-transform ${mobileResumeOpen ? "rotate-180" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {mobileResumeOpen && (
-              <div className="mt-2 output-container">
-                <div className="flex flex-wrap items-center justify-center gap-2 mb-4 md:justify-between">
-                  <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewMode("resume");
-                        analytics.trackEvent(analytics.events.VIEW_MODE_CHANGED, {
-                          ...analytics.getTrackingContext({ section: "output", element: "view_toggle", resumeId: data.resumeId }),
-                          mode: "resume",
-                        });
-                      }}
-                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${viewMode === "resume" ? "bg-cyan-500 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
-                    >
-                      View
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewMode("diff");
-                        analytics.trackEvent(analytics.events.VIEW_MODE_CHANGED, {
-                          ...analytics.getTrackingContext({ section: "output", element: "view_toggle", resumeId: data.resumeId }),
-                          mode: "diff",
-                        });
-                      }}
-                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${viewMode === "diff" ? "bg-cyan-500 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
-                    >
-                      See what we changed
-                    </button>
-                    {versions.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setViewMode("compare");
-                          if (!compareWithVersionId && versions[0].id !== id) setCompareWithVersionId(versions[0].id);
-                          else if (!compareWithVersionId && versions.length > 1) setCompareWithVersionId(versions[1].id);
-                          analytics.trackEvent(analytics.events.VIEW_MODE_CHANGED, {
-                            ...analytics.getTrackingContext({ section: "output", element: "view_toggle", resumeId: data.resumeId }),
-                            mode: "compare",
-                          });
-                        }}
-                        className={`px-3 py-1.5 text-sm rounded-md transition-colors ${viewMode === "compare" ? "bg-cyan-500 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
-                      >
-                        Compare versions
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <PaymentGate resumeId={data.resumeId} onUnlock={() => {}} isUnlocked={data.isUnlocked}>
-                  {data.freeReveal && !data.isUnlocked && viewMode === "resume" && (
-                    <FreeReveal
-                      section={data.freeReveal.section}
-                      originalText={data.freeReveal.originalText}
-                      improvedText={data.freeReveal.improvedText}
-                    />
-                  )}
-                  {viewMode === "resume" && (
-                    <TailoredResumeOutput
-                      newResume={displayResume}
-                      loading={false}
-                      showDownload={data.isUnlocked}
-                      downloadJobTitle={data.jobTitle ?? undefined}
-                      resumeId={data.resumeId}
-                    />
-                  )}
-                  {viewMode === "diff" && (
-                    <ResumeDiffView
-                      originalText={data.originalResume}
-                      tailoredText={displayResume}
-                      className="min-h-[320px]"
-                      addedLabel="Added in your tailored resume"
-                      removedLabel="Removed from your original"
-                    />
-                  )}
-                  {viewMode === "compare" && (
-                    <>
-                      <div className="mb-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
-                          You have {versions.length} versions for this job. Compare any two.
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          {versions.map((v) => (
-                            <Link
-                              key={v.id}
-                              href={`/resume/${v.id}`}
-                              className={`px-2.5 py-1 text-sm rounded-md transition-colors ${
-                                v.id === id
-                                  ? "bg-cyan-500 text-white"
-                                  : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                              }`}
-                            >
-                              Version {v.version_number}
-                            </Link>
-                          ))}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {versions.findIndex((v) => v.id === id) > 0 && (
-                            <Link
-                              href={`/resume/${versions[versions.findIndex((v) => v.id === id) - 1].id}`}
-                              className="text-sm text-gray-600 dark:text-gray-400 hover:text-cyan-500"
-                            >
-                              ← Previous
-                            </Link>
-                          )}
-                          {versions.findIndex((v) => v.id === id) >= 0 && versions.findIndex((v) => v.id === id) < versions.length - 1 && (
-                            <Link
-                              href={`/resume/${versions[versions.findIndex((v) => v.id === id) + 1].id}`}
-                              className="text-sm text-gray-600 dark:text-gray-400 hover:text-cyan-500"
-                            >
-                              Next →
-                            </Link>
-                          )}
-                          <select
-                            value={compareWithVersionId ?? ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCompareWithVersionId(val || null);
-                              if (val) setViewMode("compare");
-                            }}
-                            className="ml-auto text-sm border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                          >
-                            <option value="">Compare with...</option>
-                            {versions.filter((v) => v.id !== id).map((v) => (
-                              <option key={v.id} value={v.id}>
-                                Version {v.version_number}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      {compareData ? (
-                        <ResumeDiffView
-                          originalText={displayResume}
-                          tailoredText={compareData.tailoredResume}
-                          className="min-h-[320px]"
-                          addedLabel={
-                            (() => {
-                              const sel = versions.find((v) => v.id === compareWithVersionId);
-                              return sel ? `Added in Version ${sel.version_number}` : "Added in selected version";
-                            })()
-                          }
-                          removedLabel={
-                            (() => {
-                              const cur = versions.find((v) => v.id === id);
-                              return cur ? `Removed from Version ${cur.version_number} (current)` : "Removed from current version";
-                            })()
-                          }
-                        />
-                      ) : compareWithVersionId ? (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Loading version to compare...</p>
-                      ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Select a version above to compare.</p>
-                      )}
-                    </>
-                  )}
-                </PaymentGate>
-              </div>
-            )}
-          </div>
-
-          {/* Desktop: always visible */}
-          <div className="hidden md:block output-container">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <h2 className="text-2xl font-semibold gradient-text-emerald">
-                {viewMode === "resume"
-                  ? "Your Tailored Resume"
-                  : viewMode === "compare"
-                    ? "Compare two versions"
-                    : "See what we changed"}
+                    ? "Compare Versions"
+                    : "See What We Changed"}
               </h2>
-              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
+              <div className="flex rounded-xl border border-gray-200 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-800/50 p-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -643,7 +317,11 @@ export default function ResumeDetailPage() {
                       mode: "resume",
                     });
                   }}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${viewMode === "resume" ? "bg-cyan-500 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                  className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                    viewMode === "resume"
+                      ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
+                  }`}
                 >
                   View
                 </button>
@@ -656,9 +334,13 @@ export default function ResumeDetailPage() {
                       mode: "diff",
                     });
                   }}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${viewMode === "diff" ? "bg-cyan-500 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                  className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                    viewMode === "diff"
+                      ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
+                  }`}
                 >
-                  See what we changed
+                  Diff Changes
                 </button>
                 {versions.length > 1 && (
                   <button
@@ -672,13 +354,18 @@ export default function ResumeDetailPage() {
                         mode: "compare",
                       });
                     }}
-                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${viewMode === "compare" ? "bg-cyan-500 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                    className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                      viewMode === "compare"
+                        ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
+                    }`}
                   >
-                    Compare versions
+                    Compare
                   </button>
                 )}
               </div>
             </div>
+
             <PaymentGate resumeId={data.resumeId} onUnlock={() => {}} isUnlocked={data.isUnlocked}>
               {data.freeReveal && !data.isUnlocked && viewMode === "resume" && (
                 <FreeReveal
@@ -707,18 +394,18 @@ export default function ResumeDetailPage() {
               )}
               {viewMode === "compare" && (
                 <>
-                  <div className="mb-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
-                      You have {versions.length} versions for this job. Compare any two.
+                  <div className="mb-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/60">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
+                      You have {versions.length} versions for this job. Compare any two:
                     </p>
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       {versions.map((v) => (
                         <Link
                           key={v.id}
                           href={`/resume/${v.id}`}
-                          className={`px-2.5 py-1 text-sm rounded-md transition-colors ${
+                          className={`px-2.5 py-1 text-xs sm:text-sm rounded-lg transition-colors ${
                             v.id === id
-                              ? "bg-cyan-500 text-white"
+                              ? "bg-cyan-500 text-white font-medium shadow-sm"
                               : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           }`}
                         >
@@ -726,23 +413,7 @@ export default function ResumeDetailPage() {
                         </Link>
                       ))}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {versions.findIndex((v) => v.id === id) > 0 && (
-                        <Link
-                          href={`/resume/${versions[versions.findIndex((v) => v.id === id) - 1].id}`}
-                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-cyan-500"
-                        >
-                          ← Previous
-                        </Link>
-                      )}
-                      {versions.findIndex((v) => v.id === id) >= 0 && versions.findIndex((v) => v.id === id) < versions.length - 1 && (
-                        <Link
-                          href={`/resume/${versions[versions.findIndex((v) => v.id === id) + 1].id}`}
-                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-cyan-500"
-                        >
-                          Next →
-                        </Link>
-                      )}
+                    <div className="flex flex-wrap items-center gap-2 pt-2">
                       <select
                         value={compareWithVersionId ?? ""}
                         onChange={(e) => {
@@ -750,9 +421,9 @@ export default function ResumeDetailPage() {
                           setCompareWithVersionId(val || null);
                           if (val) setViewMode("compare");
                         }}
-                        className="ml-auto text-sm border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                        className="text-xs sm:text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                       >
-                        <option value="">Compare with...</option>
+                        <option value="">Select version to compare...</option>
                         {versions.filter((v) => v.id !== id).map((v) => (
                           <option key={v.id} value={v.id}>
                             Version {v.version_number}
@@ -780,14 +451,139 @@ export default function ResumeDetailPage() {
                       }
                     />
                   ) : compareWithVersionId ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Loading version to compare...</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">Loading version to compare...</p>
                   ) : (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Select a version above to compare.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">Select a version above to compare.</p>
                   )}
                 </>
               )}
             </PaymentGate>
           </div>
+        </div>
+
+        {/* Stats & Insights Column (Right on desktop, active tab on mobile) */}
+        <div className={`md:col-span-4 space-y-6 ${mobileTab === "stats" ? "block" : "hidden md:block"}`}>
+          {/* Match Strength Card */}
+          <div className="output-container p-5 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center justify-between">
+              <span>Job Match Strength</span>
+              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {matchScore}%
+              </span>
+            </h3>
+            {data.metrics && (
+              <div className="space-y-2 text-xs sm:text-sm pt-2 border-t border-gray-100 dark:border-gray-800">
+                {data.metrics.jdCoverage && data.metrics.jdCoverage.total > 0 && (
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>JD Requirements Coverage</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-200">{data.metrics.jdCoverage.percentage}%</span>
+                  </div>
+                )}
+                {data.metrics.criticalKeywords && data.metrics.criticalKeywords.total > 0 && (
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Critical Keywords</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-200">{data.metrics.criticalKeywords.matched}/{data.metrics.criticalKeywords.total}</span>
+                  </div>
+                )}
+                {data.metrics.concreteEvidence && (
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Concrete Metrics & Evidence</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-200">{data.metrics.concreteEvidence.percentage}%</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Keyword Match Card */}
+          {(data.keywordGap || (data.metrics?.criticalKeywords && data.metrics.criticalKeywords.total > 0)) && (
+            <div className="output-container p-5 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                Target Keyword Match
+              </h3>
+              {data.keywordGap?.foundInResume && data.keywordGap.foundInResume.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">Matched in Your Resume:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.keywordGap.foundInResume.map((kw) => (
+                      <span
+                        key={kw}
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60"
+                      >
+                        ✓ {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {data.keywordGap?.missingKeywords && data.keywordGap.missingKeywords.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2">
+                    Missing Keywords to Consider:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {data.keywordGap.missingKeywords.map((kw) => (
+                      <span
+                        key={kw}
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60"
+                      >
+                        + {kw}
+                      </span>
+                    ))}
+                  </div>
+                  {data.resumeId && (
+                    <Link
+                      href={`/?prefillVersion=${encodeURIComponent(data.resumeId)}&keywordsToWeave=${encodeURIComponent(data.keywordGap.missingKeywords.join(","))}`}
+                      className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white shadow-sm transition-all"
+                    >
+                      Re-tailor with missing keywords
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!data.isUnlocked && (
+            <div className="output-container p-5 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Unlock Your Full Resume
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Get full access to copy, export to PDF/Word, and save all tailored versions.
+              </p>
+              <button
+                onClick={() => setShowTierModal(true)}
+                className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs sm:text-sm text-white bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 shadow-md transition-all"
+              >
+                Choose Access Plan
+              </button>
+            </div>
+          )}
+
+          <div className="improvement-container p-5 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold mb-3 text-amber-600 dark:text-amber-400">
+              Improvement Highlights
+            </h3>
+            <ImprovementHighlights
+              metrics={metrics}
+              metricsSnapshot={data.metrics ?? null}
+            />
+          </div>
+
+          {data.isUnlocked && (
+            <>
+              <ResumeFeedbackCard
+                resumeId={data.resumeId}
+                initialAppliedWithResume={data.appliedWithResume}
+                initialFeedbackComment={data.feedbackComment}
+                userId={user?.id}
+                accessToken={session?.access_token ?? undefined}
+                sessionId={sessionId ?? undefined}
+              />
+              <ShareResumeCard />
+            </>
+          )}
         </div>
       </div>
 
