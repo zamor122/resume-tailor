@@ -170,4 +170,59 @@ B.S. in Computer Science, University of California (2014)
     // MUST preserve original Education
     expect(scored.finalResumeText).toContain("University of California");
   });
+
+  it("Preserves all sections when resume is 100+ lines and sections are past line 50", async () => {
+    const fillerLines = Array.from({ length: 60 }, (_, i) => `- Managed sprint backlog item #${i + 1} with cross-functional team`).join("\n");
+    const longResume = `Jane Doe
+New York, NY | jane@example.com | 555-987-6543
+
+## Summary
+Experienced software engineer with deep expertise in scalable cloud architectures.
+
+## Experience
+Staff Engineer - Cloud Scale Corp - 2019 - Present
+${fillerLines}
+
+## Skills
+Go, Python, Rust, Kubernetes, Terraform, Distributed Systems
+
+## Education
+M.S. in Computer Science - Columbia University - 2018
+`;
+
+    const state: AgentState = {
+      rawResume: longResume,
+      rawJobDescription: "Looking for Go and Kubernetes expert",
+      preferences: DEFAULT_PREFERENCES,
+      resumeAST: {
+        summary: "Experienced software engineer with deep expertise in scalable cloud architectures.",
+        experience: [
+          {
+            title: "Staff Engineer",
+            company: "Cloud Scale Corp",
+            dates: "2019 - Present",
+            description: fillerLines,
+          },
+        ],
+        skills: { technical: ["Go", "Python", "Kubernetes"], soft: [] },
+        education: [
+          { degree: "M.S. in Computer Science", institution: "Columbia University", dates: "2018" },
+        ],
+        sections: ["Summary", "Experience", "Skills", "Education"],
+      },
+      tailoredSummary: "Staff Engineer specializing in Go, Kubernetes, and highly available distributed systems.",
+      tailoredBulletsByJob: [fillerLines],
+      baselineScore: 75,
+      logs: [],
+      errors: [],
+    };
+
+    const scored = await reassembleAndScoreNode(state);
+    expect(scored.finalResumeText).toBeDefined();
+    expect(scored.finalResumeText?.length).toBeGreaterThan(1500);
+    expect(scored.finalResumeText).toContain("Go, Python, Rust, Kubernetes");
+    expect(scored.finalResumeText).toContain("Columbia University");
+    expect(scored.finalResumeText).toContain("Staff Engineer");
+    expect(scored.finalResumeText).toContain("backlog item #59");
+  });
 });

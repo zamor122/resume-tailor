@@ -56,26 +56,5 @@ export function sanitizeResumeForATS(resume: string): string {
   const contactBlock = contactLines.join("\n");
   result = [contactBlock, ...restLines].join("\n");
 
-  // 4. Ensure section headers exist - check first 50 lines
-  const first50 = result.split("\n").slice(0, 50).join("\n").toLowerCase();
-  const hasExperience = /\b(experience|work experience|professional experience)\b/.test(first50);
-  const hasEducation = /\b(education|academic)\b/.test(first50);
-  const hasSkills = /\b(skills|technical skills|core competencies)\b/.test(first50);
-
-  if (!hasExperience || !hasEducation || !hasSkills) {
-    const linesOut = result.split("\n");
-    const headersToAdd: string[] = [];
-    if (!hasExperience) headersToAdd.push("## Experience");
-    if (!hasSkills) headersToAdd.push("## Skills");
-    if (!hasEducation) headersToAdd.push("## Education");
-
-    if (headersToAdd.length > 0) {
-      const insertIndex = Math.min(contactLines.length, linesOut.length);
-      const before = linesOut.slice(0, insertIndex);
-      const after = linesOut.slice(insertIndex);
-      result = [...before, "", ...headersToAdd, "", ...after].join("\n");
-    }
-  }
-
   return result;
 }

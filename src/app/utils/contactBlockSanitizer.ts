@@ -44,6 +44,46 @@ function looksLikeDegreeOrUniversity(line: string): boolean {
   return degreeWords.test(t) || universityWords.test(t);
 }
 
+const SECTION_HEADER_SET = new Set([
+  "summary",
+  "profile",
+  "professional summary",
+  "about",
+  "about me",
+  "executive summary",
+  "objective",
+  "experience",
+  "work experience",
+  "professional experience",
+  "employment history",
+  "employment",
+  "skills",
+  "technical skills",
+  "core competencies",
+  "education",
+  "projects",
+  "certifications",
+]);
+
+export function findContactEndIndex(lines: string[]): number {
+  for (let i = 0; i < Math.min(lines.length, 12); i++) {
+    const line = lines[i].trim();
+    if (/^#+\s+/.test(line)) {
+      return i;
+    }
+    const clean = line.replace(/^[#*_\s]+|[#*_\s:]+$/g, "").trim().toLowerCase();
+    if (clean && SECTION_HEADER_SET.has(clean)) {
+      return i;
+    }
+  }
+  for (let i = 0; i < Math.min(lines.length, 6); i++) {
+    if (!lines[i].trim() && i > 0) {
+      return i;
+    }
+  }
+  return Math.min(lines.length, 2);
+}
+
 /**
  * Sanitize the contact block in the tailored resume using parsed original data.
  * - Removes location line if original had no location.
@@ -55,15 +95,7 @@ export function sanitizeContactBlock(
   parsedOriginal?: ParsedOriginal | null
 ): string {
   const lines = tailoredResume.split("\n");
-  let contactEndIndex = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (/^##\s+/.test(line.trim())) {
-      contactEndIndex = i;
-      break;
-    }
-    contactEndIndex = i + 1;
-  }
+  const contactEndIndex = findContactEndIndex(lines);
 
   if (contactEndIndex === 0) return tailoredResume;
 
@@ -86,20 +118,12 @@ export function sanitizeContactBlock(
 }
 
 /**
- * Replace the contact block (lines before the first ##) with the given contact string.
+ * Replace the contact block (lines before the first ## or section header) with the given contact string.
  * Used to overwrite tailored contact with contact built from the original resume.
  */
 export function replaceContactBlock(markdown: string, newContactBlock: string): string {
   const lines = markdown.split("\n");
-  let contactEndIndex = 0;
-  for (let i = 0; i < lines.length; i++) {
-    if (/^##\s+/.test(lines[i].trim())) {
-      contactEndIndex = i;
-      break;
-    }
-    contactEndIndex = i + 1;
-  }
-  if (contactEndIndex === 0) return markdown;
+  const contactEndIndex = findContactEndIndex(lines);
   const rest = lines.slice(contactEndIndex);
   const trimmed = newContactBlock.trim();
   if (!trimmed) return rest.join("\n").replace(/^\n+/, "");

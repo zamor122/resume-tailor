@@ -3,7 +3,7 @@
  * Used by section-based tailoring: fixed title/company/dates + tailored bullets per job.
  */
 
-import type { ParsedOriginal } from "./contactBlockSanitizer";
+import { type ParsedOriginal, findContactEndIndex } from "./contactBlockSanitizer";
 
 export interface ParsedExperienceEntry {
   title: string;
@@ -45,7 +45,7 @@ export function buildContactFromParsed(parsed: ParsedResumeForReassemble): strin
 
 /**
  * Build contact block from the original resume: prefer parsed contact when present and sufficient,
- * otherwise use the first block (lines before the first ##) normalized to 1-2 lines.
+ * otherwise use the first block (lines before the first section header or ##) normalized to 1-2 lines.
  * Used after tailoring to restore contact from the original so no fields are lost.
  */
 export function buildContactFromOriginal(
@@ -59,14 +59,7 @@ export function buildContactFromOriginal(
     return buildContactFromParsed(parsed as ParsedResumeForReassemble);
   }
   const lines = originalResume.split(/\r?\n/);
-  let contactEndIndex = 0;
-  for (let i = 0; i < lines.length; i++) {
-    if (/^##\s+/.test(lines[i].trim())) {
-      contactEndIndex = i;
-      break;
-    }
-    contactEndIndex = i + 1;
-  }
+  const contactEndIndex = findContactEndIndex(lines);
   if (contactEndIndex === 0) return "";
   const firstBlock = lines.slice(0, contactEndIndex).join("\n");
   const normalized = firstBlock
