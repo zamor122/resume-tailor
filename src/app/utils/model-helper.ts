@@ -1,6 +1,6 @@
 // Default model is configurable via env to make switching providers/models trivial.
 // Prefer DEFAULT_MODEL_KEY (server/runtime). Keep a safe fallback for local dev.
-const DEFAULT_MODEL_KEY = process.env.DEFAULT_MODEL_KEY || 'cerebras:gpt-oss-120b';
+const DEFAULT_MODEL_KEY = process.env.DEFAULT_MODEL_KEY || 'gemini:gemini-2.5-flash';
 
 export async function getModelFromSession(
   sessionId: string | undefined,

@@ -25,9 +25,9 @@ export function classifyProvider(provider: string): CostClass {
 
 /** The ONLY models ever used in automatic (free) fallback. */
 export const FREE_FALLBACK_CHAIN = [
-  'cerebras:gpt-oss-120b',
-  'gemini:gemini-2.5-flash-lite',
+  'gemini:gemini-2.5-flash',
   'groq:llama-3.3-70b-versatile',
+  'gemini:gemini-2.5-flash-lite',
 ] as const;
 
 // ---------------------------------------------------------------
@@ -44,9 +44,9 @@ export function resolveStepModel(stepId: StepId, userModelKey?: string): string 
   if (userModelKey) return userModelKey;
 
   // Heavy nodes get the most capable free model.
-  if (HEAVY_GEN_STEPS.has(stepId)) return FREE_FALLBACK_CHAIN[0]; // cerebras:gpt-oss-120b
+  if (HEAVY_GEN_STEPS.has(stepId)) return FREE_FALLBACK_CHAIN[0]; // gemini:gemini-2.5-flash
   // Light read nodes get the fastest model to preserve quota.
-  if (READ_STEPS.has(stepId)) return FREE_FALLBACK_CHAIN[1]; // gemini:gemini-2.5-flash-lite
+  if (READ_STEPS.has(stepId)) return FREE_FALLBACK_CHAIN[2]; // gemini:gemini-2.5-flash-lite
   // Default: first free model.
   return FREE_FALLBACK_CHAIN[0];
 }
