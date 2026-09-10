@@ -274,14 +274,14 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
 export const DEFAULT_MODEL =
   (process.env.NEXT_PUBLIC_DEFAULT_MODEL_KEY ||
     process.env.DEFAULT_MODEL_KEY ||
-    'groq:llama-3.3-70b-versatile') as string;
+    'gemini:gemini-2.5-flash') as string;
 
 export const FALLBACK_MODELS = [
   'groq:llama-3.3-70b-versatile',
   'gemini:gemini-2.5-flash-lite',
-  'openai:gpt-4o-mini',
+  'gemini:gemini-2.5-flash',
   'deepseek:deepseek-chat',
-  'cerebras:llama-3.3-70b',
+  'openrouter:openai/gpt-4o-mini',
 ];
 
 export function getModelConfig(modelKey: string): ModelConfig | undefined {

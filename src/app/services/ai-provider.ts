@@ -91,7 +91,7 @@ export async function generateContentWithFallback(
     ...(fallbackModels || []),
     'groq:llama-3.3-70b-versatile',
     'gemini:gemini-2.5-flash-lite',
-    'openai:gpt-4o-mini',
+    'gemini:gemini-2.5-flash',
     'deepseek:deepseek-chat',
   ].filter(Boolean) as string[];
 
