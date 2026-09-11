@@ -1,4 +1,4 @@
-import type { AgentState } from "../state";
+import type { AgentState, ResumeSuggestion } from "../state";
 import { generateWithFallback } from "@/app/services/model-fallback";
 import {
   getSummaryTailoringPrompt,
@@ -19,10 +19,12 @@ export async function surgicalTailorNode(
 
   const experience = resumeAST?.experience || [];
   const jdSnippet = selectedJobDescription.slice(0, 3000);
-  const promises: Promise<{ type: "summary" | "bullets"; index?: number; text: string }>[] = [];
+  const promises: Promise<{ type: "summary" | "bullets"; index?: number; text: string; originalInputText: string }>[] = [];
+  const suggestions: ResumeSuggestion[] = [];
 
   // 1. Tailor Summary if planned
   if (bulletPlan?.summaryChange) {
+    const originalSummary = resumeAST?.summary || "";
     promises.push(
       generateWithFallback(
         getSummaryTailoringPrompt({
@@ -35,7 +37,11 @@ export async function surgicalTailorNode(
         state.modelKey,
         { maxTokens: 400, temperature: 0.2 },
         state.sessionApiKeys
-      ).then((res) => ({ type: "summary", text: res.text.trim() }))
+      ).then((res) => ({
+        type: "summary",
+        text: res.text.trim(),
+        originalInputText: originalSummary,
+      }))
     );
   }
 
@@ -64,7 +70,12 @@ export async function surgicalTailorNode(
         state.modelKey,
         { maxTokens: bulletIndices === "all" ? 800 : 400, temperature: 0.2 },
         state.sessionApiKeys
-      ).then((res) => ({ type: "bullets", index: jobIndex, text: res.text.trim() }))
+      ).then((res) => ({
+        type: "bullets",
+        index: jobIndex,
+        text: res.text.trim(),
+        originalInputText: bulletsText,
+      }))
     );
   });
 
@@ -76,16 +87,73 @@ export async function surgicalTailorNode(
   results.forEach((r) => {
     if (r.type === "summary") {
       tailoredSummary = r.text;
+      if (r.originalInputText.trim() && r.text.trim() && r.originalInputText.trim() !== r.text.trim()) {
+        const topKeywords = sortedMissingKeywords.slice(0, 4);
+        suggestions.push({
+          id: "sug-summary",
+          section: "Professional Summary",
+          originalText: r.originalInputText.trim(),
+          suggestedText: r.text.trim(),
+          reason: `Reframed summary to highlight target role competencies and leadership scope`,
+          keywords: topKeywords,
+          status: "accepted",
+        });
+      }
     } else if (r.type === "bullets" && r.index !== undefined) {
+      const exp = experience[r.index];
       const planItem = bulletPlan?.jobBulletChanges.find((c) => c.jobIndex === r.index);
+      
       if (planItem?.bulletIndices === "all") {
         tailoredBulletsByJob[r.index] = r.text;
+        // Break into individual bullet suggestions
+        const origBullets = exp.description.split("\n").filter((l) => l.trim().startsWith("-"));
+        const newBullets = r.text.split("\n").filter((l) => l.trim().startsWith("-"));
+        newBullets.forEach((newB, bIdx) => {
+          const origB = origBullets[bIdx] || origBullets[0] || "";
+          if (origB && newB && origB.trim() !== newB.trim()) {
+            const matchedKw = sortedMissingKeywords.filter((kw) =>
+              newB.toLowerCase().includes(kw.toLowerCase())
+            ).slice(0, 3);
+            suggestions.push({
+              id: `sug-job-${r.index}-bullet-${bIdx}`,
+              section: `${exp.company} – ${exp.title}`,
+              originalText: origB.trim(),
+              suggestedText: newB.trim(),
+              reason: planItem.reason || "Targeted ATS keyword alignment and quantifiable achievement metric",
+              keywords: matchedKw,
+              status: "accepted",
+              jobIndex: r.index,
+              bulletIndex: bIdx,
+            });
+          }
+        });
       } else if (planItem?.bulletIndices) {
         tailoredBulletsByJob[r.index] = spliceRewrittenBullets(
           experience[r.index].description,
           r.text,
           planItem.bulletIndices as number[]
         );
+        const origBullets = extractSpecificBulletsArray(exp.description, planItem.bulletIndices as number[]);
+        const newBullets = r.text.split("\n").filter((l) => l.trim().startsWith("-"));
+        newBullets.forEach((newB, bIdx) => {
+          const origB = origBullets[bIdx] || "";
+          if (origB && newB && origB.trim() !== newB.trim()) {
+            const matchedKw = sortedMissingKeywords.filter((kw) =>
+              newB.toLowerCase().includes(kw.toLowerCase())
+            ).slice(0, 3);
+            suggestions.push({
+              id: `sug-job-${r.index}-bullet-${planItem.bulletIndices[bIdx] ?? bIdx}`,
+              section: `${exp.company} – ${exp.title}`,
+              originalText: origB.trim(),
+              suggestedText: newB.trim(),
+              reason: planItem.reason || "Targeted ATS keyword alignment and quantifiable achievement metric",
+              keywords: matchedKw,
+              status: "accepted",
+              jobIndex: r.index,
+              bulletIndex: typeof planItem.bulletIndices === "object" ? (planItem.bulletIndices[bIdx] ?? bIdx) : bIdx,
+            });
+          }
+        });
       }
     }
   });
@@ -93,19 +161,23 @@ export async function surgicalTailorNode(
   return {
     tailoredSummary,
     tailoredBulletsByJob,
+    suggestions,
     logs: [
-      `[surgicalTailor] Completed ${results.length} surgical tailoring tasks in parallel (${preferences.intensity.toUpperCase()})`,
+      `[surgicalTailor] Generated ${suggestions.length} granular suggestions across ${results.length} tailoring tasks (${preferences.intensity.toUpperCase()})`,
     ],
   };
 }
 
 function extractSpecificBullets(description: string, indices: number[]): string {
+  return extractSpecificBulletsArray(description, indices).join("\n");
+}
+
+function extractSpecificBulletsArray(description: string, indices: number[]): string[] {
   const lines = description.split("\n");
   const bullets = lines.filter((l) => l.trim().startsWith("-"));
   return indices
     .map((i) => bullets[i])
-    .filter(Boolean)
-    .join("\n");
+    .filter(Boolean);
 }
 
 function spliceRewrittenBullets(

@@ -1,5 +1,7 @@
 import type { TailoringPreferences } from "./tailoringPreferences";
-import type { DiscoveredJob } from "@/app/agent/state";
+import type { DiscoveredJob, ResumeSuggestion } from "@/app/agent/state";
+
+export type { ResumeSuggestion };
 
 /** Keyword gap for sidebar: JD keywords found vs missing in the tailored resume */
 export interface KeywordGapSnapshot {
@@ -25,6 +27,7 @@ export interface HumanizeResponse {
   obfuscatedResume: string;
   contentMap?: Record<string, string> | null;
   freeReveal?: { section: string; originalText: string; improvedText: string } | null;
+  suggestions?: ResumeSuggestion[];
   improvementMetrics?: {
     quantifiedBulletsAdded?: number;
     atsKeywordsMatched?: number;

@@ -1,9 +1,70 @@
-/**
- * Reassemble a resume from parsed sections and tailored content.
- * Used by section-based tailoring: fixed title/company/dates + tailored bullets per job.
- */
-
 import { type ParsedOriginal, findContactEndIndex } from "./contactBlockSanitizer";
+import type { ResumeSuggestion } from "@/app/agent/state";
+
+/**
+ * Verbatim surgical application:
+ * Applies accepted suggestions to the original resume text without modifying
+ * or dropping any un-targeted sections, headers, contact lines, or custom styling.
+ */
+export function applySuggestionsToOriginal(
+  originalResume: string,
+  suggestions: ResumeSuggestion[]
+): string {
+  if (!originalResume) return "";
+  if (!suggestions || suggestions.length === 0) return originalResume;
+
+  let currentText = originalResume;
+
+  for (const sug of suggestions) {
+    // Only apply if accepted (default to accepted if status not explicitly rejected)
+    if (sug.status === "rejected") continue;
+    if (!sug.originalText || !sug.suggestedText) continue;
+
+    const target = sug.originalText.trim();
+    const replacement = sug.suggestedText.trim();
+
+    if (!target || target === replacement) continue;
+
+    // 1. Direct exact replacement
+    if (currentText.includes(target)) {
+      currentText = currentText.replace(target, replacement);
+      continue;
+    }
+
+    // 2. Normalize whitespace/line-endings and try matching
+    const normalizedTarget = target.replace(/\r?\n\s*/g, " ").replace(/\s+/g, " ");
+    const lines = currentText.split(/\r?\n/);
+    let matchedIndex = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const normalizedLine = lines[i].replace(/\s+/g, " ").trim();
+      if (
+        normalizedLine.length > 20 &&
+        (normalizedLine === normalizedTarget ||
+          normalizedLine.includes(normalizedTarget) ||
+          normalizedTarget.includes(normalizedLine))
+      ) {
+        matchedIndex = i;
+        break;
+      }
+    }
+
+    if (matchedIndex !== -1) {
+      const origLine = lines[matchedIndex];
+      const bulletPrefix = origLine.match(/^(\s*[-*•]\s*)/)?.[1] || "";
+      const formattedReplacement =
+        replacement.startsWith("-") || replacement.startsWith("*") || replacement.startsWith("•")
+          ? replacement
+          : bulletPrefix
+          ? `${bulletPrefix}${replacement}`
+          : replacement;
+      lines[matchedIndex] = formattedReplacement;
+      currentText = lines.join("\n");
+    }
+  }
+
+  return currentText;
+}
 
 export interface ParsedExperienceEntry {
   title: string;

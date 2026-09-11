@@ -235,7 +235,13 @@ export async function POST(req: NextRequest) {
                 after: agentResult.afterScore ?? 85,
                 keywordGap: agentResult.keywordGap,
               },
-              improvement_metrics: agentResult.improvementMetrics,
+              improvement_metrics: {
+                ...agentResult.improvementMetrics,
+                suggestions: agentResult.suggestions,
+              },
+              format_spec: {
+                suggestions: agentResult.suggestions,
+              },
               free_reveal: obfuscationResult.freeReveal,
               job_title: agentResult.jobTitle || clientJobTitle || null,
               company_name: null,
@@ -274,11 +280,13 @@ export async function POST(req: NextRequest) {
           tailoredLength: tailoredResume.length,
           contentMapEntries: obfuscationResult.contentMap?.length || 0,
           hasFreeReveal: !!obfuscationResult.freeReveal,
+          suggestionCount: agentResult.suggestions?.length || 0,
         });
 
         // Final completion event
         streamClosed = !sendSSE(controller, "complete", {
           tailoredResume,
+          suggestions: agentResult.suggestions || [],
           improvementMetrics: agentResult.improvementMetrics,
           matchScore: agentResult.afterScore ?? 85,
           beforeScore: agentResult.beforeScore ?? 50,

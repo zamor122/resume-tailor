@@ -161,8 +161,10 @@ async function runHumanizeStream(params: {
       obfuscatedResume: completeData.tailoredResume,
       contentMap: completeData.contentMap,
       freeReveal: completeData.freeReveal,
+      suggestions: completeData.suggestions || [],
       improvementMetrics: completeData.improvementMetrics,
       matchScore: completeData.matchScore,
+      beforeScore: completeData.beforeScore,
       metrics: completeData.metrics,
       validationResult: completeData.validationResult,
       resumeId: completeData.resumeId,
@@ -770,6 +772,15 @@ export default function SplitScreenTailorView() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Your tailored resume</h2>
             <TailoredResumeOutput
               newResume={results.tailoredResume ?? ""}
+              originalResume={resume}
+              suggestions={results.suggestions || []}
+              onSuggestionsChange={(updated) =>
+                setResults((prev) => (prev ? { ...prev, suggestions: updated } : null))
+              }
+              isUnlocked={false}
+              onUnlockRequest={() => setShowAuthModalMode("signup")}
+              beforeScore={results.beforeScore ?? 50}
+              matchScore={results.matchScore ?? 85}
               loading={false}
               showDownload={false}
             />

@@ -225,4 +225,75 @@ M.S. in Computer Science - Columbia University - 2018
     expect(scored.finalResumeText).toContain("Staff Engineer");
     expect(scored.finalResumeText).toContain("backlog item #59");
   });
+
+  it("Applies granular suggestions surgically while preserving custom headers and non-standard sections", async () => {
+    const customResume = `Alex Rivera
+Senior Engineering Leader | alex@example.com | (555) 321-9876 | Austin, TX
+
+EXECUTIVE SUMMARY
+Technology leader with 10+ years architecting enterprise SaaS platforms.
+
+SELECTED ACCOMPLISHMENTS & PATENTS
+- US Patent 10,982,341: Distributed consensus mechanism for event streaming.
+- Scaled engineering org from 4 to 45 engineers.
+
+CORE EXPERIENCE
+VP of Engineering | TechCorp Systems | 2021 - Present
+- Spearheaded delivery of cloud microservices platform.
+- Managed $12M annual R&D budget.
+
+Director of Architecture | NextGen Data | 2017 - 2021
+- Architected distributed data pipeline processing 50TB daily.
+
+HONORS & BOARD ROLES
+- Keynote Speaker, CloudTech Global 2023
+- Technical Advisory Board Member, OpenSource Initiative
+`;
+
+    const state: AgentState = {
+      rawResume: customResume,
+      rawJobDescription: "VP of Engineering leading Kubernetes and AI innovation pipeline",
+      preferences: DEFAULT_PREFERENCES,
+      suggestions: [
+        {
+          id: "sug-summary",
+          section: "EXECUTIVE SUMMARY",
+          originalText: "Technology leader with 10+ years architecting enterprise SaaS platforms.",
+          suggestedText: "VP of Engineering with 10+ years architecting high-scale enterprise SaaS platforms and leading AI innovation pipelines.",
+          reason: "Aligned title and injected AI innovation keyword",
+          keywords: ["VP of Engineering", "AI innovation"],
+          status: "accepted",
+        },
+        {
+          id: "sug-job-0-b0",
+          section: "TechCorp Systems",
+          originalText: "- Spearheaded delivery of cloud microservices platform.",
+          suggestedText: "- Spearheaded delivery of cloud microservices platform leveraging Kubernetes and event streaming, driving 99.99% SLA.",
+          reason: "Injected Kubernetes and quantifiable SLA metric",
+          keywords: ["Kubernetes"],
+          status: "accepted",
+        },
+      ],
+      baselineScore: 60,
+      logs: [],
+      errors: [],
+    };
+
+    const scored = await reassembleAndScoreNode(state);
+    expect(scored.finalResumeText).toBeDefined();
+    expect(scored.suggestions?.length).toBe(2);
+
+    // Verify surgical changes are applied
+    expect(scored.finalResumeText).toContain("leading AI innovation pipelines");
+    expect(scored.finalResumeText).toContain("leveraging Kubernetes and event streaming, driving 99.99% SLA");
+
+    // Verify 100% of non-standard sections and custom headers are preserved
+    expect(scored.finalResumeText).toContain("SELECTED ACCOMPLISHMENTS & PATENTS");
+    expect(scored.finalResumeText).toContain("US Patent 10,982,341");
+    expect(scored.finalResumeText).toContain("Scaled engineering org from 4 to 45 engineers");
+    expect(scored.finalResumeText).toContain("HONORS & BOARD ROLES");
+    expect(scored.finalResumeText).toContain("Keynote Speaker, CloudTech Global 2023");
+    expect(scored.finalResumeText).toContain("Technical Advisory Board Member");
+    expect(scored.finalResumeText).toContain("Managed $12M annual R&D budget");
+  });
 });

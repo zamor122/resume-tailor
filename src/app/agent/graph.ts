@@ -5,6 +5,7 @@ import type {
   DiscoveredJob,
   BulletPlan,
   ImprovementMetrics,
+  ResumeSuggestion,
 } from "./state";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
@@ -44,6 +45,7 @@ export const AgentStateAnnotation = Annotation.Root({
   tailoredSummary: Annotation<string | undefined>(),
   tailoredBulletsByJob: Annotation<string[] | undefined>(),
   tailoredSkills: Annotation<string | undefined>(),
+  suggestions: Annotation<ResumeSuggestion[] | undefined>(),
 
   finalResumeText: Annotation<string | undefined>(),
   beforeScore: Annotation<number | undefined>(),

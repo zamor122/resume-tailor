@@ -1,5 +1,6 @@
 import type { AgentState, ImprovementMetrics } from "../state";
 import {
+  applySuggestionsToOriginal,
   reassembleResumeFromSections,
   buildContactFromOriginal,
 } from "@/app/utils/resumeReassemble";
@@ -20,6 +21,7 @@ export async function reassembleAndScoreNode(
     resumeAST,
     tailoredSummary = "",
     tailoredBulletsByJob = [],
+    suggestions = [],
     rawResume,
     keywordResult,
     baselineScore = 50,
@@ -27,33 +29,32 @@ export async function reassembleAndScoreNode(
     bulletPlan,
   } = state;
 
-  if (!resumeAST) {
+  if (!rawResume || rawResume.trim().length === 0) {
     return {
       finalResumeText: rawResume,
       afterScore: baselineScore,
+      suggestions: [],
     };
   }
 
-  // 1. Reassemble from AST + tailored sections
-  let finalResume = reassembleResumeFromSections({
-    parsed: resumeAST,
-    tailoredSummary,
-    tailoredBulletsByJob,
-    originalResume: rawResume,
-  });
-
-  // 2. Deterministic ATS sanitization chain
-  finalResume = sanitizeResumeForATS(finalResume);
-  finalResume = deduplicateResumeSections(finalResume);
-  finalResume = rewriteParentheticalKeywords(finalResume);
-  finalResume = validateOrFixEducationBlock(finalResume);
-  finalResume = sanitizeContactBlock(finalResume, resumeAST);
-
-  const contactFromOriginal = buildContactFromOriginal(rawResume, resumeAST);
-  if (contactFromOriginal) {
-    finalResume = replaceContactBlock(finalResume, contactFromOriginal);
-    finalResume = sanitizeContactBlock(finalResume, resumeAST);
+  // 1. Surgical in-place application: preserves 100% of original headers, custom sections, and formatting
+  let finalResume: string;
+  if (suggestions && suggestions.length > 0) {
+    finalResume = applySuggestionsToOriginal(rawResume, suggestions);
+  } else if (resumeAST) {
+    finalResume = reassembleResumeFromSections({
+      parsed: resumeAST,
+      tailoredSummary,
+      tailoredBulletsByJob,
+      originalResume: rawResume,
+    });
+  } else {
+    finalResume = rawResume;
   }
+
+  // 2. Deterministic ATS formatting hygiene (normalize bullet glyphs and date separators)
+  finalResume = sanitizeResumeForATS(finalResume);
+  finalResume = rewriteParentheticalKeywords(finalResume);
 
   // 3. Compute final keyword gap
   const keywordGap = computeKeywordGap(keywordResult, finalResume);
@@ -69,7 +70,7 @@ export async function reassembleAndScoreNode(
   // 5. Count metrics and modifications
   const placeholderCount = (finalResume.match(/\[[^\]]+\]/g) || []).length;
   const totalBulletsModified = (bulletPlan?.jobBulletChanges || []).reduce(
-    (acc, cur) => acc + (cur.bulletIndices === "all" ? (resumeAST.experience?.length || 1) * 3 : cur.bulletIndices.length),
+    (acc, cur) => acc + (cur.bulletIndices === "all" ? (resumeAST?.experience?.length || 1) * 3 : cur.bulletIndices.length),
     0
   );
 
@@ -86,9 +87,10 @@ export async function reassembleAndScoreNode(
     beforeScore: baselineScore,
     afterScore,
     keywordGap,
+    suggestions,
     improvementMetrics,
     logs: [
-      `[reassembleAndScore] Reassembled resume | Match score: ${baselineScore}% -> ${afterScore}% (+${afterScore - baselineScore}%)`,
+      `[reassembleAndScore] Reassembled resume | Match score: ${baselineScore}% -> ${afterScore}% (+${afterScore - baselineScore}%) | Suggestions: ${suggestions.length}`,
     ],
   };
 }

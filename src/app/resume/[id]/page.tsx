@@ -16,7 +16,7 @@ import ResumeDiffView from "@/app/components/ResumeDiffView";
 import AddVersionInfoPopover from "@/app/components/AddVersionInfoPopover";
 import Link from "next/link";
 import { analytics } from "@/app/services/analytics";
-import type { ResumeMetricsSnapshot, KeywordGapSnapshot } from "@/app/types/humanize";
+import type { ResumeMetricsSnapshot, KeywordGapSnapshot, ResumeSuggestion } from "@/app/types/humanize";
 
 function normalizeSwrError(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -34,6 +34,7 @@ interface ResumeData {
   jobTitle?: string | null;
   matchScore?: number;
   metrics?: ResumeMetricsSnapshot;
+  suggestions?: ResumeSuggestion[];
   improvementMetrics?: {
     quantifiedBulletsAdded?: number;
     atsKeywordsMatched?: number;
@@ -377,10 +378,20 @@ export default function ResumeDetailPage() {
               {viewMode === "resume" && (
                 <TailoredResumeOutput
                   newResume={displayResume}
+                  originalResume={data.originalResume}
+                  suggestions={data.suggestions || []}
+                  onSuggestionsChange={(updated) => {
+                    if (json) {
+                      mutate({ ...json, success: json.success ?? true, suggestions: updated }, false);
+                    }
+                  }}
                   loading={false}
                   showDownload={data.isUnlocked}
                   downloadJobTitle={data.jobTitle ?? undefined}
                   resumeId={data.resumeId}
+                  isUnlocked={data.isUnlocked}
+                  onUnlockRequest={() => setShowTierModal(true)}
+                  matchScore={matchScore}
                 />
               )}
               {viewMode === "diff" && (

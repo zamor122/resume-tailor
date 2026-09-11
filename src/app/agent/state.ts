@@ -36,6 +36,18 @@ export interface ImprovementMetrics {
   metricsInjected: number;
 }
 
+export interface ResumeSuggestion {
+  id: string;
+  section: string;
+  originalText: string;
+  suggestedText: string;
+  reason: string;
+  keywords: string[];
+  status?: "accepted" | "rejected";
+  jobIndex?: number;
+  bulletIndex?: number;
+}
+
 export interface AgentLog {
   step: string;
   message: string;
@@ -75,6 +87,7 @@ export interface AgentState {
   tailoredSummary?: string;
   tailoredBulletsByJob?: string[];
   tailoredSkills?: string;
+  suggestions?: ResumeSuggestion[];
 
   // Final Output
   finalResumeText?: string;

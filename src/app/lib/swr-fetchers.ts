@@ -1,4 +1,4 @@
-import type { KeywordGapSnapshot } from "@/app/types/humanize";
+import type { KeywordGapSnapshot, ResumeSuggestion } from "@/app/types/humanize";
 
 /**
  * SWR fetchers and key helpers for resume and job-title data.
@@ -16,6 +16,7 @@ export interface ResumeRetrieveResponse {
   matchScore?: number;
   metrics?: unknown;
   keywordGap?: KeywordGapSnapshot;
+  suggestions?: ResumeSuggestion[];
   improvementMetrics?: Record<string, unknown>;
   freeReveal?: { section: string; originalText: string; improvedText: string } | null;
   resumeId?: string;
