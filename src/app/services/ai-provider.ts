@@ -88,11 +88,10 @@ export async function generateContentWithFallback(
   const modelsToTry = [
     modelKey,
     DEFAULT_MODEL,
-    ...(fallbackModels || []),
-    'groq:llama-3.3-70b-versatile',
-    'gemini:gemini-2.5-flash-lite',
+    ...(fallbackModels || FALLBACK_MODELS),
     'gemini:gemini-2.5-flash',
-    'deepseek:deepseek-chat',
+    'gemini:gemini-2.5-flash-lite',
+    'groq:openai/gpt-oss-120b',
   ].filter(Boolean) as string[];
 
   // Deduplicate while preserving priority order
@@ -102,6 +101,17 @@ export async function generateContentWithFallback(
 
   for (const model of uniqueModels) {
     try {
+      const config = getModelConfig(model);
+      if (!config) continue;
+
+      // Skip models requiring an API key when neither session nor environment has the key
+      if (config.requiresApiKey && config.apiKeyEnvVar) {
+        const hasKey = !!(sessionApiKeys?.[config.apiKeyEnvVar] || process.env[config.apiKeyEnvVar]);
+        if (!hasKey) {
+          continue;
+        }
+      }
+
       const provider = await getModelProvider(model, sessionApiKeys);
       if (!provider.isAvailable()) {
         continue;

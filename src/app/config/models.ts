@@ -164,33 +164,32 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
   },
 
   // Groq Models - Free tier available
-  'groq:llama-3.1-70b-versatile': {
+  'groq:openai/gpt-oss-120b': {
     provider: 'groq',
-    modelId: 'llama-3.1-70b-versatile',
-    name: 'Llama 3.1 70B (Groq) [DEPRECATED]',
-    freeTierLimit: '~14.4k requests/day (Small models)',
+    modelId: 'openai/gpt-oss-120b',
+    name: 'GPT-OSS 120B (Groq)',
+    freeTierLimit: '~14.4k requests/day',
     requiresApiKey: true,
     apiKeyEnvVar: 'GROQ_API_KEY',
-    description: 'DEPRECATED - Use llama-3.3-70b-versatile instead',
-    // deprecated: true, // Removed deprecated property as it's not in ModelConfig interface
+    description: 'Ultra-fast inference - OpenAI GPT-OSS 120B on Groq LPUs',
+  },
+  'groq:qwen/qwen3.6-27b': {
+    provider: 'groq',
+    modelId: 'qwen/qwen3.6-27b',
+    name: 'Qwen 3.6 27B (Groq)',
+    freeTierLimit: '~14.4k requests/day',
+    requiresApiKey: true,
+    apiKeyEnvVar: 'GROQ_API_KEY',
+    description: 'Fast open-source reasoning model on Groq',
   },
   'groq:llama-3.3-70b-versatile': {
     provider: 'groq',
-    modelId: 'llama-3.3-70b-versatile',
-    name: 'Llama 3.3 70B (Groq)',
-    freeTierLimit: '~14.4k requests/day (Small models)',
+    modelId: 'openai/gpt-oss-120b', // Alias to working model
+    name: 'GPT-OSS 120B (Groq alias)',
+    freeTierLimit: '~14.4k requests/day',
     requiresApiKey: true,
     apiKeyEnvVar: 'GROQ_API_KEY',
-    description: 'Ultra-fast inference - Current Llama 3.3 model',
-  },
-  'groq:mixtral-8x7b-32768': {
-    provider: 'groq',
-    modelId: 'mixtral-8x7b-32768',
-    name: 'Mixtral 8x7B (Groq)',
-    freeTierLimit: '~14.4k requests/day (Small models)',
-    requiresApiKey: true,
-    apiKeyEnvVar: 'GROQ_API_KEY',
-    description: 'Fast Mixtral model',
+    description: 'Ultra-fast inference on Groq LPUs',
   },
 
   // Mistral Models (Evaluation - Strict limits or trial only)
@@ -277,11 +276,10 @@ export const DEFAULT_MODEL =
     'gemini:gemini-2.5-flash') as string;
 
 export const FALLBACK_MODELS = [
-  'groq:llama-3.3-70b-versatile',
-  'gemini:gemini-2.5-flash-lite',
   'gemini:gemini-2.5-flash',
-  'deepseek:deepseek-chat',
-  'openrouter:openai/gpt-4o-mini',
+  'gemini:gemini-2.5-flash-lite',
+  'groq:openai/gpt-oss-120b',
+  'groq:qwen/qwen3.6-27b',
 ];
 
 export function getModelConfig(modelKey: string): ModelConfig | undefined {

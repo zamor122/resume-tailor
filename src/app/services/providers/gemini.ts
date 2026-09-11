@@ -23,7 +23,7 @@ export class GeminiProvider implements AIProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.GEMINI_API_KEY || true; // Will be checked at creation
+    return !!process.env.GEMINI_API_KEY;
   }
 
   async generateContent(

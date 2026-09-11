@@ -21,7 +21,7 @@ export class MistralProvider implements AIProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.MISTRAL_API_KEY || true; // Will be checked at creation
+    return !!process.env.MISTRAL_API_KEY;
   }
 
   async generateContent(

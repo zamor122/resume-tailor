@@ -21,7 +21,7 @@ export class HuggingFaceProvider implements AIProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.HUGGINGFACE_API_KEY || true; // Will be checked at creation
+    return !!process.env.HUGGINGFACE_API_KEY;
   }
 
   async generateContent(

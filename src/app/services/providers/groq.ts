@@ -6,7 +6,7 @@ export class GroqProvider implements AIProvider {
   public provider = 'groq';
 
   constructor(
-    private modelId: string = 'llama-3.1-70b-versatile',
+    private modelId: string = 'openai/gpt-oss-120b',
     apiKey?: string
   ) {
     const key = apiKey || process.env.GROQ_API_KEY;
@@ -21,7 +21,7 @@ export class GroqProvider implements AIProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.GROQ_API_KEY || true; // Will be checked at creation
+    return !!process.env.GROQ_API_KEY;
   }
 
   async generateContent(

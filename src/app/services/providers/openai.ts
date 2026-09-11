@@ -26,7 +26,7 @@ export class OpenAIProvider implements AIProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.OPENAI_API_KEY || true; // Will be checked at creation
+    return !!process.env.OPENAI_API_KEY;
   }
 
   async generateContent(

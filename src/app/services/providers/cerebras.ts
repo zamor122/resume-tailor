@@ -55,7 +55,7 @@ export class CerebrasProvider implements AIProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.CEREBRAS_API_KEY || true; // Will be checked at creation
+    return !!process.env.CEREBRAS_API_KEY;
   }
 
   /**

@@ -26,7 +26,7 @@ export class AnthropicProvider implements AIProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.ANTHROPIC_API_KEY || true; // Will be checked at creation
+    return !!process.env.ANTHROPIC_API_KEY;
   }
 
   async generateContent(
