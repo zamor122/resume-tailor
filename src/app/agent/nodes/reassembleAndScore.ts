@@ -52,8 +52,9 @@ export async function reassembleAndScoreNode(
       });
     }
     if (tailoredBulletsByJob && tailoredBulletsByJob.length > 0 && resumeAST?.experience) {
+      const expList = resumeAST.experience;
       tailoredBulletsByJob.forEach((newBullets, jobIdx) => {
-        const origExp = resumeAST.experience[jobIdx];
+        const origExp = expList[jobIdx];
         if (origExp && newBullets && newBullets.trim() !== origExp.description.trim()) {
           activeSuggestions.push({
             id: `sug-job-${jobIdx}-auto`,
