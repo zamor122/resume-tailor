@@ -59,14 +59,25 @@ export default function ResumeSuggestionReviewer({
       if (selectedFilter === "all") return true;
       if (selectedFilter === "accepted") return s.status !== "rejected";
       if (selectedFilter === "rejected") return s.status === "rejected";
-      if (selectedFilter === "Summary") return s.section.toLowerCase().includes("summary");
-      if (selectedFilter === "Experience") return s.section.includes("–") || s.section.includes("-");
+      if (selectedFilter === "keyword") return s.category === "keyword";
+      if (selectedFilter === "metric") return s.category === "metric";
+      if (selectedFilter === "summary") return s.category === "summary" || s.section.toLowerCase().includes("summary");
+      if (selectedFilter === "action_verb") return s.category === "action_verb";
       return true;
     });
   }, [suggestions, selectedFilter]);
 
   const acceptedCount = useMemo(() => {
     return suggestions.filter((s) => s.status !== "rejected").length;
+  }, [suggestions]);
+
+  // Compute category counts
+  const categoryCounts = useMemo(() => {
+    return {
+      keyword: suggestions.filter((s) => s.category === "keyword").length,
+      metric: suggestions.filter((s) => s.category === "metric").length,
+      summary: suggestions.filter((s) => s.category === "summary" || s.section.toLowerCase().includes("summary")).length,
+    };
   }, [suggestions]);
 
   // Compute live match score based on accepted ratio
@@ -78,7 +89,6 @@ export default function ResumeSuggestionReviewer({
   }, [suggestions, acceptedCount, beforeScore, matchScore]);
 
   const isCurrentAccepted = currentSug ? currentSug.status !== "rejected" : true;
-  const isCurrentLocked = !isUnlocked && currentIndex >= 2;
 
   const handleToggle = (id: string, newStatus: "accepted" | "rejected", autoAdvance = false) => {
     const updated = suggestions.map((s) =>
@@ -125,6 +135,20 @@ export default function ResumeSuggestionReviewer({
     setEditText("");
   };
 
+  const getCategoryBadge = (cat?: string) => {
+    switch (cat) {
+      case "metric":
+        return { label: "📈 Metric & Impact Boost", color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" };
+      case "summary":
+        return { label: "✨ Summary Alignment", color: "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30" };
+      case "action_verb":
+        return { label: "⚡ Action Verb Polish", color: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" };
+      case "keyword":
+      default:
+        return { label: "🎯 Target Keyword Match", color: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30" };
+    }
+  };
+
   if (!suggestions || suggestions.length === 0) {
     return (
       <div className="p-8 text-center bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
@@ -139,14 +163,14 @@ export default function ResumeSuggestionReviewer({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Cockpit Header: Progress & Live ATS Meter */}
+      {/* Studio Header: You are in the driver's seat */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-gray-900 via-gray-900/95 to-gray-800 text-white border border-gray-700/80 shadow-xl space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-                Change Review Cockpit
+                Resume Change Studio
               </span>
             </div>
             <div className="text-sm font-semibold text-gray-200">
@@ -157,7 +181,7 @@ export default function ResumeSuggestionReviewer({
           {/* Dynamic Match Score Badge */}
           <div className="flex items-center gap-3 bg-black/40 px-3.5 py-1.5 rounded-xl border border-gray-700/60 shrink-0">
             <div className="text-right">
-              <div className="text-[9px] uppercase tracking-wider text-gray-400 font-bold">ATS Score</div>
+              <div className="text-[9px] uppercase tracking-wider text-gray-400 font-bold">Estimated ATS</div>
               <div className="flex items-center gap-1 font-bold">
                 <span className="text-gray-400 text-xs">{beforeScore}%</span>
                 <span className="text-cyan-400 text-[10px]">→</span>
@@ -170,11 +194,11 @@ export default function ResumeSuggestionReviewer({
           </div>
         </div>
 
-        {/* Interactive Progress Bar with Clickable Dots */}
+        {/* Interactive Progress Bar with Clickable Step Dots */}
         <div className="space-y-1.5 pt-1">
           <div className="flex items-center justify-between text-[11px] text-gray-400">
-            <span>Progress: {Math.round(((currentIndex + 1) / suggestions.length) * 100)}%</span>
             <span>Change {currentIndex + 1} of {suggestions.length}</span>
+            <span>{Math.round((acceptedCount / suggestions.length) * 100)}% Applied</span>
           </div>
           <div className="grid grid-flow-col auto-cols-fr gap-1.5">
             {suggestions.map((s, idx) => {
@@ -200,13 +224,13 @@ export default function ResumeSuggestionReviewer({
         </div>
       </div>
 
-      {/* Mode Switcher & Batch Quick Actions */}
-      <div className="flex items-center justify-between gap-2 px-1">
-        <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
+      {/* Category Filter Tabs & Batch Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        <div className="flex items-center bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl border border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full">
           <button
             type="button"
             onClick={() => setMode("step")}
-            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all shrink-0 ${
               mode === "step"
                 ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -217,7 +241,7 @@ export default function ResumeSuggestionReviewer({
           <button
             type="button"
             onClick={() => setMode("list")}
-            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all shrink-0 ${
               mode === "list"
                 ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -227,12 +251,12 @@ export default function ResumeSuggestionReviewer({
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={handleAcceptAll}
             className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-all active:scale-95"
-            title="Accept all suggestions"
+            title="Accept all suggested improvements"
           >
             ✓ Accept All
           </button>
@@ -240,24 +264,24 @@ export default function ResumeSuggestionReviewer({
             type="button"
             onClick={handleRejectAll}
             className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 transition-all active:scale-95"
-            title="Keep all original resume text"
+            title="Keep all original resume lines"
           >
-            Keep Original
+            ↺ Keep All Original
           </button>
         </div>
       </div>
 
-      {/* MODE 1: FOCUSED STEP-BY-STEP NAVIGATOR */}
+      {/* MODE 1: STEP-BY-STEP CHANGE CARD */}
       {mode === "step" && currentSug && (
         <div className="relative rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg overflow-hidden transition-all">
-          {/* Card Section Header */}
+          {/* Card Header */}
           <div className="flex items-center justify-between gap-2 p-3.5 px-4 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 shrink-0">
+            <div className="flex items-center gap-2 min-w-0 flex-wrap">
+              <span className="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-gray-200/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 shrink-0">
                 {currentSug.section}
               </span>
-              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 truncate">
-                Change {currentIndex + 1} of {suggestions.length}
+              <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${getCategoryBadge(currentSug.category).color}`}>
+                {getCategoryBadge(currentSug.category).label}
               </span>
             </div>
 
@@ -283,13 +307,13 @@ export default function ResumeSuggestionReviewer({
             </div>
           </div>
 
-          {/* Card Body: Diff & Reasoning */}
+          {/* Card Body: ATS Strategy + Diff */}
           <div className="p-4 space-y-4">
             {currentSug.reason && (
               <div className="flex items-start gap-2 p-3 rounded-xl bg-cyan-500/5 dark:bg-cyan-950/20 border border-cyan-500/20 text-xs text-cyan-900 dark:text-cyan-200 leading-relaxed">
                 <span className="text-base shrink-0">💡</span>
                 <div>
-                  <span className="font-bold">ATS Strategy: </span>
+                  <span className="font-bold">Why the AI suggests this: </span>
                   {currentSug.reason}
                 </div>
               </div>
@@ -298,7 +322,7 @@ export default function ResumeSuggestionReviewer({
             {editingId === currentSug.id ? (
               <div className="space-y-3">
                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                  Edit Suggested Text:
+                  Customize wording for this line:
                 </label>
                 <textarea
                   value={editText}
@@ -325,27 +349,27 @@ export default function ResumeSuggestionReviewer({
               </div>
             ) : (
               <div className="space-y-3">
-                {/* Original Snippet */}
+                {/* Original Resume Snippet */}
                 <div className="p-3.5 rounded-xl bg-rose-500/5 dark:bg-rose-950/20 border border-rose-500/20">
                   <div className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-1">
-                    Original Resume Line:
+                    Your Original Resume Text:
                   </div>
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                     {currentSug.originalText}
                   </p>
                 </div>
 
-                {/* AI Tailored Snippet */}
+                {/* AI Proposed Suggestion */}
                 <div
                   className={`p-3.5 rounded-xl border transition-all ${
                     isCurrentAccepted
-                      ? "bg-emerald-500/10 dark:bg-emerald-950/30 border-emerald-500/40 text-gray-900 dark:text-white"
+                      ? "bg-emerald-500/10 dark:bg-emerald-950/30 border-emerald-500/40 text-gray-900 dark:text-white ring-1 ring-emerald-500/30"
                       : "bg-gray-100 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 text-gray-500"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
                     <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                      ✨ AI-Optimized Version ({isCurrentAccepted ? "Active" : "Rejected"}):
+                      ✨ Proposed Enhancement ({isCurrentAccepted ? "Applied" : "Declined"}):
                     </span>
                     {currentSug.keywords && currentSug.keywords.length > 0 && (
                       <div className="flex flex-wrap gap-1">
@@ -367,14 +391,14 @@ export default function ResumeSuggestionReviewer({
               </div>
             )}
 
-            {/* Step-Through Action Buttons */}
-            <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-800">
+            {/* 3 Driver Actions: Accept / Keep Original / Adjust */}
+            <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-800">
               <button
                 type="button"
                 onClick={() => handleStartEdit(currentSug)}
                 className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
-                ✎ Customize Line
+                ✎ Adjust / Edit
               </button>
 
               <div className="flex items-center gap-2">
@@ -387,7 +411,7 @@ export default function ResumeSuggestionReviewer({
                       : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100"
                   }`}
                 >
-                  ✕ Keep Original
+                  ✕ Keep My Original
                 </button>
                 <button
                   type="button"
@@ -398,7 +422,7 @@ export default function ResumeSuggestionReviewer({
                       : "bg-cyan-600 hover:bg-cyan-500 shadow-cyan-600/20"
                   }`}
                 >
-                  ✓ Accept & Next →
+                  ✓ Accept Change →
                 </button>
               </div>
             </div>
@@ -406,12 +430,13 @@ export default function ResumeSuggestionReviewer({
         </div>
       )}
 
-      {/* MODE 2: FULL LIST VIEW */}
+      {/* MODE 2: ALL CHANGES LIST VIEW */}
       {mode === "list" && (
         <div className="space-y-3">
           {filteredSuggestions.map((sug) => {
             const isAccepted = sug.status !== "rejected";
             const isActive = activeId === sug.id;
+            const badge = getCategoryBadge(sug.category);
 
             return (
               <div
@@ -425,10 +450,15 @@ export default function ResumeSuggestionReviewer({
                     : "bg-gray-50/80 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-70"
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-                    {sug.section}
-                  </span>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-200/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200">
+                      {sug.section}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badge.color}`}>
+                      {badge.label}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
@@ -439,7 +469,7 @@ export default function ResumeSuggestionReviewer({
                           : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                       }`}
                     >
-                      {isAccepted ? "✓ Accepted" : "+ Apply"}
+                      {isAccepted ? "✓ Accepted" : "+ Accept"}
                     </button>
                   </div>
                 </div>
@@ -447,6 +477,11 @@ export default function ResumeSuggestionReviewer({
                 <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
                   {sug.suggestedText}
                 </p>
+                {sug.reason && (
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    💡 {sug.reason}
+                  </p>
+                )}
               </div>
             );
           })}

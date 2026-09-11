@@ -556,21 +556,10 @@ export default function SplitScreenTailorView() {
                 : "text-gray-600 dark:text-gray-400"
             }`}
           >
-            <span>💼 2. Job</span>
+            <span>💼 2. Target Job</span>
             {jobDescription.trim().length >= 100 ? (
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
             ) : null}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveMobileTab("options")}
-            className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-              activeMobileTab === "options"
-                ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-                : "text-gray-600 dark:text-gray-400"
-            }`}
-          >
-            <span>⚡ 3. Style</span>
           </button>
         </div>
 
@@ -597,7 +586,7 @@ export default function SplitScreenTailorView() {
           <div className={`flex flex-col min-h-[320px] md:min-h-[400px] md:h-full ${activeMobileTab === "job" || "hidden md:flex"}`}>
             <JobDescriptionInput
               label="Job Description"
-              placeholder="Paste the job posting or a job listing URL..."
+              placeholder="Paste the target job posting or a job listing URL..."
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
               onValueChange={(newValue) => setJobDescription(newValue)}
@@ -605,60 +594,45 @@ export default function SplitScreenTailorView() {
               fillHeight
             />
           </div>
-
         </div>
 
-        {/* Tailor Action & Options Container */}
-        <div className={`input-container p-0 overflow-hidden ${activeMobileTab === "options" || "block md:block"}`}>
-          <div className="p-4 sm:p-6 border-t border-gray-200/80 dark:border-gray-800">
-            {/* Status chips */}
-            {(resume.trim() || jobDescription.trim()) && (
-              <div className="flex items-center justify-center gap-3 text-xs sm:text-sm mb-3">
-                <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${resume.trim().length >= 100 ? "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800" : "bg-gray-50 dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800"}`}>
-                  {resume.trim().length >= 100 ? "✓" : "○"} Resume {resume.trim().length >= 100 ? "Ready" : "(min 100 chars)"}
-                </span>
-                <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${jobDescription.trim().length >= 100 ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800" : "bg-gray-50 dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800"}`}>
-                  {jobDescription.trim().length >= 100 ? "✓" : "○"} Job {jobDescription.trim().length >= 100 ? "Ready" : "(min 100 chars)"}
-                </span>
-              </div>
-            )}
-
-            {/* Unified 1-Click Tailoring Style Controls */}
-            <TailoringControlsPanel
-              preferences={preferences}
-              onChange={setPreferences}
-              disabled={loading}
-              keywordsToWeave={keywordsToWeave}
-              onKeywordsChange={setKeywordsToWeave}
-              customInstructions={customInstructions}
-              onCustomInstructionsChange={setCustomInstructions}
-            />
-
-            {/* Primary Action Button */}
-            <div className="text-center space-y-3 pt-2">
-              <TailorButton
-                loading={loading}
-                onClick={() => {
-                  analytics.trackEvent(analytics.events.CTA_TAILOR_CLICK, {
-                    ...analytics.getTrackingContext({
-                      section: "tailorResume",
-                      element: "tailor_button",
-                      hasResume: !!resume.trim(),
-                      hasJobDescription: !!jobDescription.trim(),
-                      resumeCharCount: resume.trim().length,
-                      jobDescCharCount: jobDescription.trim().length,
-                    }),
-                    hasUser: !!user,
-                  });
-                  handleTailor();
-                }}
-                disabled={!resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100}
-                ready={resume.trim().length >= 100 && jobDescription.trim().length >= 100}
-              />
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                1-Click ATS Optimization • Preserves your authentic experience & voice
-              </p>
+        {/* Primary Action Button Container */}
+        <div className="input-container p-6 rounded-2xl bg-white/80 dark:bg-gray-900/80 border border-gray-200/80 dark:border-gray-800 shadow-sm">
+          {/* Status chips */}
+          {(resume.trim() || jobDescription.trim()) && (
+            <div className="flex items-center justify-center gap-3 text-xs sm:text-sm mb-4">
+              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${resume.trim().length >= 100 ? "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800 font-semibold" : "bg-gray-50 dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800"}`}>
+                {resume.trim().length >= 100 ? "✓" : "○"} Resume {resume.trim().length >= 100 ? "Ready" : "(min 100 chars)"}
+              </span>
+              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${jobDescription.trim().length >= 100 ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 font-semibold" : "bg-gray-50 dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800"}`}>
+                {jobDescription.trim().length >= 100 ? "✓" : "○"} Job {jobDescription.trim().length >= 100 ? "Ready" : "(min 100 chars)"}
+              </span>
             </div>
+          )}
+
+          <div className="text-center space-y-3">
+            <TailorButton
+              loading={loading}
+              onClick={() => {
+                analytics.trackEvent(analytics.events.CTA_TAILOR_CLICK, {
+                  ...analytics.getTrackingContext({
+                    section: "tailorResume",
+                    element: "tailor_button",
+                    hasResume: !!resume.trim(),
+                    hasJobDescription: !!jobDescription.trim(),
+                    resumeCharCount: resume.trim().length,
+                    jobDescCharCount: jobDescription.trim().length,
+                  }),
+                  hasUser: !!user,
+                });
+                handleTailor();
+              }}
+              disabled={!resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100}
+              ready={resume.trim().length >= 100 && jobDescription.trim().length >= 100}
+            />
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Analyzes keyword alignment & proposes granular changes you can accept, deny, or adjust.
+            </p>
           </div>
         </div>
 

@@ -113,8 +113,9 @@ export async function surgicalTailorNode(
           section: "Professional Summary",
           originalText: r.originalInputText.trim(),
           suggestedText: r.text.trim(),
-          reason: `Reframed summary to highlight target role competencies and leadership scope`,
+          reason: `Reframed summary to highlight target role competencies, core tech stack, and leadership scope`,
           keywords: topKeywords,
+          category: "summary",
           status: "accepted",
         });
       }
@@ -133,13 +134,16 @@ export async function surgicalTailorNode(
             const matchedKw = sortedMissingKeywords.filter((kw) =>
               newB.toLowerCase().includes(kw.toLowerCase())
             ).slice(0, 3);
+            const hasMetric = /\d+%|\$\d+|\d+x|\d+\+/i.test(newB) && !/\d+%|\$\d+|\d+x|\d+\+/i.test(origB);
+            const cat = hasMetric ? "metric" : matchedKw.length > 0 ? "keyword" : "action_verb";
             suggestions.push({
               id: `sug-job-${r.index}-bullet-${bIdx}`,
               section: `${exp.company} – ${exp.title}`,
               originalText: origB.trim(),
               suggestedText: newB.trim(),
-              reason: planItem.reason || "Targeted ATS keyword alignment and quantifiable achievement metric",
+              reason: planItem.reason || (hasMetric ? "Quantified impact metric for recruiter resonance" : "Targeted ATS keyword alignment and active leadership voice"),
               keywords: matchedKw,
+              category: cat,
               status: "accepted",
               jobIndex: r.index,
               bulletIndex: bIdx,
@@ -160,13 +164,16 @@ export async function surgicalTailorNode(
             const matchedKw = sortedMissingKeywords.filter((kw) =>
               newB.toLowerCase().includes(kw.toLowerCase())
             ).slice(0, 3);
+            const hasMetric = /\d+%|\$\d+|\d+x|\d+\+/i.test(newB) && !/\d+%|\$\d+|\d+x|\d+\+/i.test(origB);
+            const cat = hasMetric ? "metric" : matchedKw.length > 0 ? "keyword" : "action_verb";
             suggestions.push({
               id: `sug-job-${r.index}-bullet-${planItem.bulletIndices[bIdx] ?? bIdx}`,
               section: `${exp.company} – ${exp.title}`,
               originalText: origB.trim(),
               suggestedText: newB.trim(),
-              reason: planItem.reason || "Targeted ATS keyword alignment and quantifiable achievement metric",
+              reason: planItem.reason || (hasMetric ? "Quantified impact metric for recruiter resonance" : "Targeted ATS keyword alignment and active leadership voice"),
               keywords: matchedKw,
+              category: cat,
               status: "accepted",
               jobIndex: r.index,
               bulletIndex: typeof planItem.bulletIndices === "object" ? (planItem.bulletIndices[bIdx] ?? bIdx) : bIdx,

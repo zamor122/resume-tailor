@@ -43,6 +43,7 @@ export interface ResumeSuggestion {
   suggestedText: string;
   reason: string;
   keywords: string[];
+  category?: "keyword" | "metric" | "summary" | "action_verb" | "streamline";
   status?: "accepted" | "rejected";
   jobIndex?: number;
   bulletIndex?: number;

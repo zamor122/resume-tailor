@@ -169,7 +169,7 @@ export default function ResumeDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
           <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -181,7 +181,7 @@ export default function ResumeDetailPage() {
 
   if (error || !data) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="p-6 rounded-xl bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800/30">
           <p className="text-pink-700 dark:text-pink-400">{error || "Resume not found"}</p>
           <Link href="/" className="mt-4 inline-block text-cyan-500 hover:underline">
@@ -203,7 +203,7 @@ export default function ResumeDetailPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center justify-between gap-3 min-w-0">
           <Link
