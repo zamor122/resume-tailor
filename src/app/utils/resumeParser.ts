@@ -108,65 +108,161 @@ export function parseResume(resumeText: string): ParsedResume {
   }
   
   // Detect sections
-  const sectionHeaders = [
-    /^(summary|profile|objective|about)/i,
-    /^(experience|work experience|employment|professional experience)/i,
-    /^(education|academic)/i,
-    /^(skills|technical skills|core competencies)/i,
-    /^(projects|portfolio)/i,
-    /^(certifications|certificates)/i,
-    /^(awards|achievements|honors)/i,
+  const sectionHeaders: Array<{ pattern: RegExp; name: string }> = [
+    { pattern: /^(?:#+\s*)?(?:summary|profile|professional summary|executive summary|about|about me|career objective|objective)\b/i, name: 'Summary' },
+    { pattern: /^(?:#+\s*)?(?:experience|work experience|employment history|employment|professional experience|work history|relevant experience)\b/i, name: 'Experience' },
+    { pattern: /^(?:#+\s*)?(?:education|academic background|academic|education & certifications)\b/i, name: 'Education' },
+    { pattern: /^(?:#+\s*)?(?:skills|technical skills|core competencies|skills & technologies|technical expertise)\b/i, name: 'Skills' },
+    { pattern: /^(?:#+\s*)?(?:projects|key projects|personal projects|technical projects)\b/i, name: 'Projects' },
+    { pattern: /^(?:#+\s*)?(?:certifications|certificates|licenses)\b/i, name: 'Certifications' },
+    { pattern: /^(?:#+\s*)?(?:awards|achievements|honors)\b/i, name: 'Awards' },
   ];
   
   const sections: string[] = [];
   lines.forEach((line) => {
-    sectionHeaders.forEach((pattern, i) => {
-      if (pattern.test(line)) {
-        const sectionNames = ['Summary', 'Experience', 'Education', 'Skills', 'Projects', 'Certifications', 'Awards'];
-        if (!sections.includes(sectionNames[i])) {
-          sections.push(sectionNames[i]);
-        }
+    sectionHeaders.forEach(({ pattern, name }) => {
+      if (pattern.test(line) && !sections.includes(name)) {
+        sections.push(name);
       }
     });
   });
+
+  const isSectionHeader = (line: string): string | null => {
+    for (const { pattern, name } of sectionHeaders) {
+      if (pattern.test(line.trim())) return name;
+    }
+    return null;
+  };
+
+  const isBullet = (line: string): boolean => {
+    const trimmed = line.trim();
+    return /^([-*•–—]|\d+\.)\s+/.test(trimmed) || /^[-*•–—]/.test(trimmed);
+  };
   
+  // Extract summary: all lines between Summary header and next section header
+  let summary: string | null = null;
+  let inSummary = false;
+  const summaryLines: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const sec = isSectionHeader(line);
+    if (sec === 'Summary') {
+      inSummary = true;
+      continue;
+    }
+    if (inSummary) {
+      if (sec && sec !== 'Summary') {
+        inSummary = false;
+        break;
+      }
+      summaryLines.push(line);
+    }
+  }
+  if (summaryLines.length > 0) {
+    summary = summaryLines.join('\n').trim();
+  }
+
   // Extract experience
   const experience: ParsedResume['experience'] = [];
-  
   let inExperienceSection = false;
   let currentExp: any = null;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
-    // Detect experience section
-    if (/^(?:#+\s*)?(experience|work experience|employment)/i.test(line)) {
+    const sec = isSectionHeader(line);
+
+    if (sec === 'Experience') {
       inExperienceSection = true;
       continue;
     }
-    
+
     if (inExperienceSection) {
-      // Check if this looks like a job entry (title - company - dates)
-      const match = line.match(/^(.+?)\s+[-–—]\s+(.+?)(?:\s+[-–—]\s+(.+?))?$/);
-      if (match) {
+      if (sec && sec !== 'Experience') {
+        inExperienceSection = false;
         if (currentExp) {
           experience.push(currentExp);
+          currentExp = null;
         }
+        continue;
+      }
+
+      // Check if this line is a bullet point under current job
+      if (isBullet(line)) {
+        if (!currentExp) {
+          currentExp = {
+            title: 'Software Engineer',
+            company: 'Experience',
+            dates: null,
+            location: null,
+            description: '',
+          };
+        }
+        currentExp.description += (currentExp.description ? '\n' : '') + line;
+        continue;
+      }
+
+      // Check if line looks like a job header:
+      // Pattern 1: Title - Company - Dates OR Company - Title (Dates)
+      const dashMatch = line.match(/^(.+?)\s+[-–—]\s+(.+?)(?:\s+[-–—]\s+(.+?))?$/);
+      // Pattern 2: Title at Company (Dates)
+      const atMatch = line.match(/^(.+?)\s+(?:at|@)\s+(.+?)(?:\s*\((.+?)\))?$/i);
+      // Pattern 3: Line containing dates (e.g. April 2026 - Present, 2018 - 2022)
+      const dateRangeMatch = line.match(/(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4}\s*[-–—]\s*(?:Present|Current|(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4})/i);
+
+      if (dashMatch) {
+        if (currentExp) experience.push(currentExp);
         currentExp = {
-          title: match[1].trim(),
-          company: match[2].trim(),
-          dates: match[3]?.trim() || null,
+          title: dashMatch[1].trim(),
+          company: dashMatch[2].trim(),
+          dates: dashMatch[3]?.trim() || null,
           location: null,
           description: '',
         };
-      } else if (currentExp && line.length > 10) {
-        // Accumulate description
-        currentExp.description += (currentExp.description ? ' ' : '') + line;
+      } else if (atMatch) {
+        if (currentExp) experience.push(currentExp);
+        currentExp = {
+          title: atMatch[1].trim(),
+          company: atMatch[2].trim(),
+          dates: atMatch[3]?.trim() || null,
+          location: null,
+          description: '',
+        };
+      } else if (dateRangeMatch && currentExp && !currentExp.dates && !currentExp.description) {
+        // Line is the date for the preceding job title/company line
+        currentExp.dates = line.trim();
+      } else if (!isBullet(line) && line.length < 100 && (i + 1 < lines.length && (isBullet(lines[i + 1]) || dateRangeMatch))) {
+        // Line is a job title / company name header
+        if (currentExp) experience.push(currentExp);
+        currentExp = {
+          title: line.trim(),
+          company: line.trim(),
+          dates: null,
+          location: null,
+          description: '',
+        };
+      } else if (currentExp && line.length > 5) {
+        currentExp.description += (currentExp.description ? '\n' : '') + (isBullet(line) ? line : `- ${line}`);
       }
     }
   }
+
   if (currentExp) {
     experience.push(currentExp);
+  }
+
+  // Fallback: If no experience section was found, extract bullet clusters as experience
+  if (experience.length === 0) {
+    const allBullets = lines.filter(isBullet);
+    if (allBullets.length > 0) {
+      experience.push({
+        title: 'Professional Experience',
+        company: 'Experience',
+        dates: null,
+        location: null,
+        description: allBullets.join('\n'),
+      });
+    }
   }
   
   // Extract education
@@ -175,15 +271,20 @@ export function parseResume(resumeText: string): ParsedResume {
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
-    if (/^(?:#+\s*)?(education|academic)/i.test(line)) {
+    const sec = isSectionHeader(line);
+
+    if (sec === 'Education') {
       inEducationSection = true;
       continue;
     }
     
     if (inEducationSection) {
-      // Look for degree patterns
-      const degreeMatch = line.match(/\b(B\.?S\.?|B\.?A\.?|B\.?E\.?|M\.?S\.?|M\.?A\.?|M\.?B\.?A\.?|Ph\.?D\.?|Doctorate)\b/i);
+      if (sec && sec !== 'Education') {
+        inEducationSection = false;
+        continue;
+      }
+
+      const degreeMatch = line.match(/\b(B\.?S\.?|B\.?A\.?|B\.?E\.?|M\.?S\.?|M\.?A\.?|M\.?B\.?A\.?|Ph\.?D\.?|Bachelor|Master|Doctorate)\b/i);
       if (degreeMatch) {
         const parts = line.split(/[-–—,]/).map(p => p.trim());
         education.push({
@@ -206,18 +307,21 @@ export function parseResume(resumeText: string): ParsedResume {
   };
   
   let inSkillsSection = false;
-  const technicalKeywords = ['javascript', 'python', 'react', 'node', 'aws', 'docker', 'kubernetes', 'sql', 'java', 'typescript'];
-  const softKeywords = ['leadership', 'communication', 'teamwork', 'problem solving', 'collaboration'];
+  const technicalKeywords = ['javascript', 'python', 'react', 'node', 'aws', 'docker', 'kubernetes', 'sql', 'java', 'typescript', 'graphql', 'next.js', 'redis', 'postgres', 'mongodb', 'ci/cd', 'git'];
+  const softKeywords = ['leadership', 'communication', 'teamwork', 'problem solving', 'collaboration', 'management', 'mentoring', 'strategic'];
   
   for (const line of lines) {
-    if (/^(?:#+\s*)?(skills|technical skills)/i.test(line)) {
+    const sec = isSectionHeader(line);
+    if (sec === 'Skills') {
       inSkillsSection = true;
       continue;
     }
-    
     if (inSkillsSection) {
-      // Split by common delimiters
-      const skillItems = line.split(/[,;•·]/).map(s => s.trim()).filter(s => s.length > 0);
+      if (sec && sec !== 'Skills') {
+        inSkillsSection = false;
+        continue;
+      }
+      const skillItems = line.split(/[,;•·|\n]/).map(s => s.replace(/^[-*•–—\s]+/, '').trim()).filter(s => s.length > 0 && s.length < 50);
       skillItems.forEach(skill => {
         const lowerSkill = skill.toLowerCase();
         if (technicalKeywords.some(kw => lowerSkill.includes(kw))) {
@@ -232,14 +336,13 @@ export function parseResume(resumeText: string): ParsedResume {
       });
     }
   }
-  
-  // Extract summary (usually first paragraph under summary header or after contact)
-  let summary: string | null = null;
-  for (let i = 0; i < Math.min(10, lines.length); i++) {
-    const line = lines[i];
-    const isContactLine = emailRegex.test(line) || /\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/.test(line);
-    if (line.length > 30 && line.length < 500 && !isContactLine) {
-      if (/^(?:#+\s*)?(summary|profile|objective|about)/i.test(lines[i - 1] || '') || (i < 4 && !/^(?:#+\s*)/.test(line))) {
+
+  // Fallback summary if not found under Summary header: first paragraph
+  if (!summary) {
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const line = lines[i];
+      const isContactLine = emailRegex.test(line) || /\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/.test(line);
+      if (line.length > 30 && line.length < 1000 && !isContactLine && !isSectionHeader(line)) {
         summary = line;
         break;
       }

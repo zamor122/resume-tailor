@@ -54,6 +54,12 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
     suggestions && suggestions.length > 0 ? "suggestions" : "document"
   );
 
+  React.useEffect(() => {
+    if (suggestions && suggestions.length > 0) {
+      setViewTab("suggestions");
+    }
+  }, [suggestions?.length]);
+
   // Compute live active resume text from suggestions if available
   const activeResumeText = useMemo(() => {
     if (originalResume && suggestions && suggestions.length > 0) {
@@ -62,7 +68,24 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
     return newResume;
   }, [originalResume, suggestions, newResume]);
 
-  const displayResume = useMemo(() => deduplicateResumeSections(activeResumeText), [activeResumeText]);
+  const displayResume = useMemo(() => {
+    const deduped = deduplicateResumeSections(activeResumeText);
+    // Ensure every line has proper markdown newline formatting so it never collapses into a single paragraph
+    return deduped
+      .split("\n")
+      .map((line) => {
+        const trimmed = line.trim();
+        if (/^[-*•–—]\s+/.test(trimmed)) {
+          return `- ${trimmed.replace(/^[-*•–—]\s+/, "")}`;
+        }
+        if (/^(Summary|Experience|Skills|Education|Projects|Certifications|Awards)/i.test(trimmed) && !trimmed.startsWith("#")) {
+          return `\n## ${trimmed}\n`;
+        }
+        return line;
+      })
+      .join("\n\n");
+  }, [activeResumeText]);
+
   const proseFontSizeClass = getProseFontSizeClass(fontSize);
   const formatStyles = formatSpec ? {
     fontFamily: formatSpec.fontFamily,
@@ -179,7 +202,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
                 </h3>
               ),
               p: ({ children }) => (
-                <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 !my-1.5">
+                <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 !my-1.5 whitespace-pre-line">
                   {children}
                 </p>
               ),

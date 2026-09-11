@@ -56,7 +56,7 @@ function pickTopBulletsAcrossJobs(
 
   experience.forEach((job, ji) => {
     const lines = (job.description || "").split("\n");
-    const bullets = lines.filter((l) => l.trim().startsWith("-"));
+    const bullets = lines.filter((l) => /^([-*•–—]|\d+\.)\s+/.test(l.trim()) || /^[-*•–—]/.test(l.trim()));
 
     bullets.forEach((b, bi) => {
       const bLower = b.toLowerCase();

@@ -125,8 +125,8 @@ export async function surgicalTailorNode(
       if (planItem?.bulletIndices === "all") {
         tailoredBulletsByJob[r.index] = r.text;
         // Break into individual bullet suggestions
-        const origBullets = exp.description.split("\n").filter((l) => l.trim().startsWith("-"));
-        const newBullets = r.text.split("\n").filter((l) => l.trim().startsWith("-"));
+        const origBullets = getBulletsList(exp.description);
+        const newBullets = getBulletsList(r.text);
         newBullets.forEach((newB, bIdx) => {
           const origB = origBullets[bIdx] || origBullets[0] || "";
           if (origB && newB && origB.trim() !== newB.trim()) {
@@ -153,7 +153,7 @@ export async function surgicalTailorNode(
           planItem.bulletIndices as number[]
         );
         const origBullets = extractSpecificBulletsArray(exp.description, planItem.bulletIndices as number[]);
-        const newBullets = r.text.split("\n").filter((l) => l.trim().startsWith("-"));
+        const newBullets = getBulletsList(r.text);
         newBullets.forEach((newB, bIdx) => {
           const origB = origBullets[bIdx] || "";
           if (origB && newB && origB.trim() !== newB.trim()) {
@@ -187,13 +187,25 @@ export async function surgicalTailorNode(
   };
 }
 
+function isBullet(line: string): boolean {
+  const trimmed = line.trim();
+  return /^([-*•–—]|\d+\.)\s+/.test(trimmed) || /^[-*•–—]/.test(trimmed);
+}
+
+function getBulletsList(text: string): string[] {
+  return text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(isBullet);
+}
+
 function extractSpecificBullets(description: string, indices: number[]): string {
   return extractSpecificBulletsArray(description, indices).join("\n");
 }
 
 function extractSpecificBulletsArray(description: string, indices: number[]): string[] {
   const lines = description.split("\n");
-  const bullets = lines.filter((l) => l.trim().startsWith("-"));
+  const bullets = lines.filter(isBullet);
   return indices
     .map((i) => bullets[i])
     .filter(Boolean);
@@ -209,17 +221,14 @@ function spliceRewrittenBullets(
   const nonBulletPrefixes: Array<{ index: number; line: string }> = [];
 
   originalLines.forEach((l) => {
-    if (l.trim().startsWith("-")) {
+    if (isBullet(l)) {
       bullets.push(l);
     } else if (bullets.length === 0 && l.trim().length > 0) {
       nonBulletPrefixes.push({ index: 0, line: l });
     }
   });
 
-  const rewrittenList = rewrittenBulletsText
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith("-"));
+  const rewrittenList = getBulletsList(rewrittenBulletsText);
 
   targetIndices.forEach((targetIdx, listIdx) => {
     if (rewrittenList[listIdx] && bullets[targetIdx]) {
