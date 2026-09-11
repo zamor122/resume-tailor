@@ -1,6 +1,5 @@
 import type { AIProvider, ModelOptions, GenerateContentResult } from '@/app/types/model';
-import { parseModelKey, getModelConfig } from '@/app/config/models';
-import { DEFAULT_MODEL } from '@/app/config/models';
+import { parseModelKey, getModelConfig, DEFAULT_MODEL, FALLBACK_MODELS } from '@/app/config/models';
 import { isRateLimitError as checkRateLimit } from './error-utils';
 import { OpenAIProvider } from './providers/openai';
 import { AnthropicProvider } from './providers/anthropic';
