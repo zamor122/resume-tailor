@@ -193,10 +193,14 @@ function isBullet(line: string): boolean {
 }
 
 function getBulletsList(text: string): string[] {
-  return text
-    .split("\n")
+  if (!text) return [];
+  const lines = text
+    .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter(isBullet);
+    .filter(Boolean);
+  const bulletLines = lines.filter(isBullet);
+  if (bulletLines.length > 0) return bulletLines;
+  return lines;
 }
 
 function extractSpecificBullets(description: string, indices: number[]): string {

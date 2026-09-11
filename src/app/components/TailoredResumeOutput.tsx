@@ -195,20 +195,47 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
                       : "hover:bg-cyan-500/5 border border-transparent rounded-lg"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
                       {isActive && <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />}
                       Change {match.index + 1} ({match.suggestion.section})
                     </span>
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                        isAccepted
-                          ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-                          : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      {isAccepted ? "✓ AI Tailored" : "Original Kept"}
-                    </span>
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const updated = suggestions.map((s) =>
+                            s.id === match.suggestion.id ? { ...s, status: "accepted" as const } : s
+                          );
+                          onSuggestionsChange?.(updated);
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                          isAccepted
+                            ? "bg-emerald-500 text-white shadow-xs"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
+                        }`}
+                      >
+                        ✓ Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const updated = suggestions.map((s) =>
+                            s.id === match.suggestion.id ? { ...s, status: "rejected" as const } : s
+                          );
+                          onSuggestionsChange?.(updated);
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                          !isAccepted
+                            ? "bg-gray-700 text-white shadow-xs"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
+                        }`}
+                      >
+                        ✕ Keep Original
+                      </button>
+                    </div>
                   </div>
                   <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-200 !my-0 whitespace-pre-line font-medium">
                     {children}
@@ -244,20 +271,47 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
                       : "hover:bg-cyan-500/5 border border-transparent rounded-lg text-gray-700 dark:text-gray-300"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
                       {isActive && <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />}
                       Change {match.index + 1}
                     </span>
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                        isAccepted
-                          ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-                          : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      {isAccepted ? "✓ AI Tailored" : "Original Kept"}
-                    </span>
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const updated = suggestions.map((s) =>
+                            s.id === match.suggestion.id ? { ...s, status: "accepted" as const } : s
+                          );
+                          onSuggestionsChange?.(updated);
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                          isAccepted
+                            ? "bg-emerald-500 text-white shadow-xs"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
+                        }`}
+                      >
+                        ✓ Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const updated = suggestions.map((s) =>
+                            s.id === match.suggestion.id ? { ...s, status: "rejected" as const } : s
+                          );
+                          onSuggestionsChange?.(updated);
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                          !isAccepted
+                            ? "bg-gray-700 text-white shadow-xs"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
+                        }`}
+                      >
+                        ✕ Keep Original
+                      </button>
+                    </div>
                   </div>
                   <div>• {children}</div>
                 </li>

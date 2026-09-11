@@ -368,108 +368,99 @@ export default function ResumeDetailPage() {
               </div>
             </div>
 
-            <PaymentGate resumeId={data.resumeId} onUnlock={() => {}} isUnlocked={data.isUnlocked}>
-              {data.freeReveal && !data.isUnlocked && viewMode === "resume" && (
-                <FreeReveal
-                  section={data.freeReveal.section}
-                  originalText={data.freeReveal.originalText}
-                  improvedText={data.freeReveal.improvedText}
-                />
-              )}
-              {viewMode === "resume" && (
-                <TailoredResumeOutput
-                  newResume={displayResume}
-                  originalResume={data.originalResume}
-                  suggestions={data.suggestions || []}
-                  onSuggestionsChange={(updated) => {
-                    if (json) {
-                      mutate({ ...json, success: json.success ?? true, suggestions: updated }, false);
-                    }
-                  }}
-                  loading={false}
-                  showDownload={data.isUnlocked}
-                  downloadJobTitle={data.jobTitle ?? undefined}
-                  resumeId={data.resumeId}
-                  isUnlocked={data.isUnlocked}
-                  onUnlockRequest={() => setShowTierModal(true)}
-                  matchScore={matchScore}
-                />
-              )}
-              {viewMode === "diff" && (
-                <ResumeDiffView
-                  originalText={data.originalResume}
-                  tailoredText={displayResume}
-                  className="min-h-[320px]"
-                  addedLabel="Added in your tailored resume"
-                  removedLabel="Removed from your original"
-                />
-              )}
-              {viewMode === "compare" && (
-                <>
-                  <div className="mb-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/60">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
-                      You have {versions.length} versions for this job. Compare any two:
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      {versions.map((v) => (
-                        <Link
-                          key={v.id}
-                          href={`/resume/${v.id}`}
-                          className={`px-2.5 py-1 text-xs sm:text-sm rounded-lg transition-colors ${
-                            v.id === id
-                              ? "bg-cyan-500 text-white font-medium shadow-sm"
-                              : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          }`}
-                        >
-                          Version {v.version_number}
-                        </Link>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 pt-2">
-                      <select
-                        value={compareWithVersionId ?? ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCompareWithVersionId(val || null);
-                          if (val) setViewMode("compare");
-                        }}
-                        className="text-xs sm:text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+            {viewMode === "resume" && (
+              <TailoredResumeOutput
+                newResume={displayResume}
+                originalResume={data.originalResume}
+                suggestions={data.suggestions || []}
+                onSuggestionsChange={(updated) => {
+                  if (json) {
+                    mutate({ ...json, success: json.success ?? true, suggestions: updated }, false);
+                  }
+                }}
+                loading={false}
+                showDownload={data.isUnlocked}
+                downloadJobTitle={data.jobTitle ?? undefined}
+                resumeId={data.resumeId}
+                isUnlocked={data.isUnlocked}
+                onUnlockRequest={() => setShowTierModal(true)}
+                matchScore={matchScore}
+              />
+            )}
+            {viewMode === "diff" && (
+              <ResumeDiffView
+                originalText={data.originalResume}
+                tailoredText={displayResume}
+                className="min-h-[320px]"
+                addedLabel="Added in your tailored resume"
+                removedLabel="Removed from your original"
+              />
+            )}
+            {viewMode === "compare" && (
+              <>
+                <div className="mb-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/60">
+                  <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
+                    You have {versions.length} versions for this job. Compare any two:
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {versions.map((v) => (
+                      <Link
+                        key={v.id}
+                        href={`/resume/${v.id}`}
+                        className={`px-2.5 py-1 text-xs sm:text-sm rounded-lg transition-colors ${
+                          v.id === id
+                            ? "bg-cyan-500 text-white font-medium shadow-sm"
+                            : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        }`}
                       >
-                        <option value="">Select version to compare...</option>
-                        {versions.filter((v) => v.id !== id).map((v) => (
-                          <option key={v.id} value={v.id}>
-                            Version {v.version_number}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                        Version {v.version_number}
+                      </Link>
+                    ))}
                   </div>
-                  {compareData ? (
-                    <ResumeDiffView
-                      originalText={displayResume}
-                      tailoredText={compareData.tailoredResume}
-                      className="min-h-[320px]"
-                      addedLabel={
-                        (() => {
-                          const sel = versions.find((v) => v.id === compareWithVersionId);
-                          return sel ? `Added in Version ${sel.version_number}` : "Added in selected version";
-                        })()
-                      }
-                      removedLabel={
-                        (() => {
-                          const cur = versions.find((v) => v.id === id);
-                          return cur ? `Removed from Version ${cur.version_number} (current)` : "Removed from current version";
-                        })()
-                      }
-                    />
-                  ) : compareWithVersionId ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">Loading version to compare...</p>
-                  ) : (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">Select a version above to compare.</p>
-                  )}
-                </>
-              )}
-            </PaymentGate>
+                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                    <select
+                      value={compareWithVersionId ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCompareWithVersionId(val || null);
+                        if (val) setViewMode("compare");
+                      }}
+                      className="text-xs sm:text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                    >
+                      <option value="">Select version to compare...</option>
+                      {versions.filter((v) => v.id !== id).map((v) => (
+                        <option key={v.id} value={v.id}>
+                          Version {v.version_number}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {compareData ? (
+                  <ResumeDiffView
+                    originalText={displayResume}
+                    tailoredText={compareData.tailoredResume}
+                    className="min-h-[320px]"
+                    addedLabel={
+                      (() => {
+                        const sel = versions.find((v) => v.id === compareWithVersionId);
+                        return sel ? `Added in Version ${sel.version_number}` : "Added in selected version";
+                      })()
+                    }
+                    removedLabel={
+                      (() => {
+                        const cur = versions.find((v) => v.id === id);
+                        return cur ? `Removed from Version ${cur.version_number} (current)` : "Removed from current version";
+                      })()
+                    }
+                  />
+                ) : compareWithVersionId ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">Loading version to compare...</p>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">Select a version above to compare.</p>
+                )}
+              </>
+            )}
           </div>
         </div>
 

@@ -403,33 +403,14 @@ export default function ResumeSuggestionReviewer({
               </div>
             </div>
           </div>
-
-          {/* Locked Paywall Overlay */}
-          {isCurrentLocked && (
-            <div className="absolute inset-0 bg-gray-950/85 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 text-center">
-              <span className="text-3xl mb-2">🔒</span>
-              <h4 className="text-sm font-bold text-white">Unlock All ATS Suggestions</h4>
-              <p className="text-xs text-gray-300 max-w-xs mt-1 mb-4">
-                Sign in or unlock to review and customize all {suggestions.length} high-impact improvements.
-              </p>
-              <button
-                type="button"
-                onClick={onUnlockRequest}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-purple-600 text-white shadow-lg hover:scale-105 active:scale-95 transition-all"
-              >
-                Unlock All Suggestions
-              </button>
-            </div>
-          )}
         </div>
       )}
 
       {/* MODE 2: FULL LIST VIEW */}
       {mode === "list" && (
         <div className="space-y-3">
-          {filteredSuggestions.map((sug, idx) => {
+          {filteredSuggestions.map((sug) => {
             const isAccepted = sug.status !== "rejected";
-            const isLocked = !isUnlocked && idx >= 2;
             const isActive = activeId === sug.id;
 
             return (
@@ -466,18 +447,6 @@ export default function ResumeSuggestionReviewer({
                 <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
                   {sug.suggestedText}
                 </p>
-
-                {isLocked && (
-                  <div className="absolute inset-0 bg-gray-950/80 backdrop-blur-xs z-10 flex items-center justify-center p-2 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={onUnlockRequest}
-                      className="px-3 py-1 rounded-lg text-[11px] font-bold bg-cyan-500 text-white shadow hover:scale-105"
-                    >
-                      🔒 Unlock
-                    </button>
-                  </div>
-                )}
               </div>
             );
           })}
