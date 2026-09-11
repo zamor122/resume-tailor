@@ -280,6 +280,7 @@ export const FALLBACK_MODELS = [
   'gemini:gemini-2.5-flash-lite',
   'groq:openai/gpt-oss-120b',
   'groq:qwen/qwen3.6-27b',
+  'openai:gpt-4o-mini',
 ];
 
 export function getModelConfig(modelKey: string): ModelConfig | undefined {

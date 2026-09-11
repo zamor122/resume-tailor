@@ -89,7 +89,7 @@ Must have experience in:
       rawJobDescription: sampleJob,
       preferences: DEFAULT_PREFERENCES,
       resumeAST: {
-        summary: "Software Engineer with experience",
+        summary: "Software Engineer with 4 years of experience building web applications with React and Node.js.",
         experience: [
           {
             title: "Senior Full Stack Engineer",

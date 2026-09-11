@@ -37,11 +37,20 @@ export async function surgicalTailorNode(
         state.modelKey,
         { maxTokens: 400, temperature: 0.2 },
         state.sessionApiKeys
-      ).then((res) => ({
-        type: "summary",
-        text: res.text.trim(),
-        originalInputText: originalSummary,
-      }))
+      )
+        .then((res) => ({
+          type: "summary" as const,
+          text: res.text.trim(),
+          originalInputText: originalSummary,
+        }))
+        .catch((err) => {
+          console.warn("[surgicalTailor] Summary tailoring LLM failed:", err);
+          return {
+            type: "summary" as const,
+            text: originalSummary,
+            originalInputText: originalSummary,
+          };
+        })
     );
   }
 
@@ -70,12 +79,22 @@ export async function surgicalTailorNode(
         state.modelKey,
         { maxTokens: bulletIndices === "all" ? 800 : 400, temperature: 0.2 },
         state.sessionApiKeys
-      ).then((res) => ({
-        type: "bullets",
-        index: jobIndex,
-        text: res.text.trim(),
-        originalInputText: bulletsText,
-      }))
+      )
+        .then((res) => ({
+          type: "bullets" as const,
+          index: jobIndex,
+          text: res.text.trim(),
+          originalInputText: bulletsText,
+        }))
+        .catch((err) => {
+          console.warn(`[surgicalTailor] Job ${jobIndex} bullet tailoring LLM failed:`, err);
+          return {
+            type: "bullets" as const,
+            index: jobIndex,
+            text: bulletsText,
+            originalInputText: bulletsText,
+          };
+        })
     );
   });
 

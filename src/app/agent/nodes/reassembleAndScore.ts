@@ -38,16 +38,40 @@ export async function reassembleAndScoreNode(
   }
 
   // 1. Surgical in-place application: preserves 100% of original headers, custom sections, and formatting
+  const activeSuggestions = [...(suggestions || [])];
+  if (activeSuggestions.length === 0) {
+    if (tailoredSummary && resumeAST?.summary && tailoredSummary.trim() !== resumeAST.summary.trim()) {
+      activeSuggestions.push({
+        id: "sug-summary-auto",
+        section: "Summary",
+        originalText: resumeAST.summary.trim(),
+        suggestedText: tailoredSummary.trim(),
+        reason: "Keyword alignment and leadership scope",
+        keywords: [],
+        status: "accepted",
+      });
+    }
+    if (tailoredBulletsByJob && tailoredBulletsByJob.length > 0 && resumeAST?.experience) {
+      tailoredBulletsByJob.forEach((newBullets, jobIdx) => {
+        const origExp = resumeAST.experience[jobIdx];
+        if (origExp && newBullets && newBullets.trim() !== origExp.description.trim()) {
+          activeSuggestions.push({
+            id: `sug-job-${jobIdx}-auto`,
+            section: origExp.company || "Experience",
+            originalText: origExp.description.trim(),
+            suggestedText: newBullets.trim(),
+            reason: "Targeted keyword and achievement enhancement",
+            keywords: [],
+            status: "accepted",
+          });
+        }
+      });
+    }
+  }
+
   let finalResume: string;
-  if (suggestions && suggestions.length > 0) {
-    finalResume = applySuggestionsToOriginal(rawResume, suggestions);
-  } else if (resumeAST) {
-    finalResume = reassembleResumeFromSections({
-      parsed: resumeAST,
-      tailoredSummary,
-      tailoredBulletsByJob,
-      originalResume: rawResume,
-    });
+  if (activeSuggestions.length > 0) {
+    finalResume = applySuggestionsToOriginal(rawResume, activeSuggestions);
   } else {
     finalResume = rawResume;
   }

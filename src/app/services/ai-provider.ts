@@ -91,6 +91,7 @@ export async function generateContentWithFallback(
     'gemini:gemini-2.5-flash',
     'gemini:gemini-2.5-flash-lite',
     'groq:openai/gpt-oss-120b',
+    'openai:gpt-4o-mini',
   ].filter(Boolean) as string[];
 
   // Deduplicate while preserving priority order
