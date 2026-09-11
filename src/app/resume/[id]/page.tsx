@@ -122,6 +122,7 @@ export default function ResumeDetailPage() {
       appliedWithResume: json.appliedWithResume ?? null,
       feedbackComment: json.feedbackComment ?? null,
       keywordGap: json.keywordGap as ResumeData["keywordGap"] ?? undefined,
+      suggestions: (json.suggestions || (json as any).improvementMetrics?.suggestions || (json as any).formatSpec?.suggestions || []) as ResumeSuggestion[],
     };
   }, [json, id]);
 
