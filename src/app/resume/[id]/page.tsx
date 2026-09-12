@@ -298,17 +298,10 @@ export default function ResumeDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-        {/* Main Resume Column (Left on desktop, active tab on mobile) */}
-        <div className={`md:col-span-8 space-y-6 min-w-0 ${mobileTab === "resume" ? "block" : "hidden md:block"}`}>
-          <div className="output-container p-4 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-5 border-b border-gray-100 dark:border-gray-800 pb-4">
-              <h2 className="text-xl sm:text-2xl font-bold gradient-text-emerald">
-                {viewMode === "resume"
-                  ? "Your Tailored Resume"
-                  : viewMode === "compare"
-                    ? "Compare Versions"
-                    : "See What We Changed"}
-              </h2>
+        {/* Main Resume Column */}
+        <div className={`${viewMode === "resume" ? "col-span-12" : "md:col-span-8"} space-y-6 min-w-0 ${mobileTab === "resume" ? "block" : "hidden md:block"}`}>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
               <div className="flex rounded-xl border border-gray-200 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-800/50 p-1">
                 <button
                   type="button"
@@ -325,7 +318,7 @@ export default function ResumeDetailPage() {
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
                   }`}
                 >
-                  View
+                  ⚡ Change Studio & Resume
                 </button>
                 <button
                   type="button"
@@ -464,8 +457,8 @@ export default function ResumeDetailPage() {
           </div>
         </div>
 
-        {/* Stats & Insights Column (Right on desktop, active tab on mobile) */}
-        <div className={`md:col-span-4 space-y-6 ${mobileTab === "stats" ? "block" : "hidden md:block"}`}>
+        {/* Stats & Insights Column (Shown in Diff/Compare modes or Mobile stats tab) */}
+        <div className={`${viewMode === "resume" ? "hidden" : "md:col-span-4"} space-y-6 ${mobileTab === "stats" ? "block" : "hidden md:block"}`}>
           {/* Match Strength Card */}
           <div className="output-container p-5 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center justify-between">
