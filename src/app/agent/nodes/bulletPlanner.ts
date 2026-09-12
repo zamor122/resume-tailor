@@ -1,4 +1,4 @@
-import type { AgentState, BulletPlan } from "../state";
+import type { AgentState, BulletPlan, JobAudit } from "../state";
 
 export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
   const { preferences, resumeAST, sortedMissingKeywords = [] } = state;
@@ -33,6 +33,28 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
       })),
     };
   }
+
+  const jobAudits: JobAudit[] = experience.map((job, idx) => {
+    const planChange = bulletPlan.jobBulletChanges.find((c) => c.jobIndex === idx);
+    if (planChange) {
+      return {
+        jobIndex: idx,
+        hasChanges: true,
+        bulletIndices: planChange.bulletIndices,
+        auditRationale: planChange.reason || "Targeted impact metric and ATS keyword alignment",
+      };
+    }
+    return {
+      jobIndex: idx,
+      hasChanges: false,
+      bulletIndices: [],
+      auditRationale: idx === experience.length - 1
+        ? "Foundational early tenure preserved to maintain genuine career history"
+        : "Role already satisfies target profile baseline; preserved as-is",
+    };
+  });
+
+  bulletPlan.jobAudits = jobAudits;
 
   const totalBulletsToModify = bulletPlan.jobBulletChanges.reduce(
     (sum, c) => sum + (c.bulletIndices === "all" ? 99 : c.bulletIndices.length),

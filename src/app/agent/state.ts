@@ -18,6 +18,13 @@ export interface DiscoveredJob {
   snippet: string;
 }
 
+export interface JobAudit {
+  jobIndex: number;
+  hasChanges: boolean;
+  bulletIndices: number[] | 'all';
+  auditRationale: string;
+}
+
 export interface BulletPlan {
   summaryChange: boolean;
   jobBulletChanges: Array<{
@@ -25,8 +32,10 @@ export interface BulletPlan {
     bulletIndices: number[] | 'all';
     reason: string;
   }>;
+  jobAudits?: JobAudit[];
   skillsChange: boolean;
 }
+
 
 export interface ImprovementMetrics {
   bulletsRewritten: number;
