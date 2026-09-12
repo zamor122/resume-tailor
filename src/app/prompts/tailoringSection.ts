@@ -116,3 +116,44 @@ ${resumeContext.slice(0, 4000)}
 
 Output only the tailored bullets, one per line, each starting with "- ".`;
 }
+
+/**
+ * Prompt to synthesize a holistic career summary from the assembled resume.
+ * Focuses on full career arc, core leadership/engineering scope, and signature competencies.
+ * Zero contradictions with vetted experience, never a changelog of edits.
+ */
+export function getHolisticSummaryPrompt(params: {
+  assembledResume: string;
+  jobDescription: string;
+  jobTitle?: string;
+  userRequestedKeywords?: string[];
+  preferences?: TailoringPreferences;
+}): string {
+  const { assembledResume, jobDescription, jobTitle, userRequestedKeywords = [], preferences } = params;
+  const targetTitleLine = jobTitle ? `Target Role Title: "${jobTitle}"\n` : "";
+  const keywordsLine =
+    userRequestedKeywords.length > 0 ? `Target Keywords: ${userRequestedKeywords.join(", ")}\n` : "";
+  const leverBlock = preferences ? `\n${buildLeverInstructions(preferences)}\n` : "";
+
+  return `You are an elite executive resume writer. Write a cohesive, holistic Professional Summary (3–4 sentences) representing the candidate's ENTIRE career arc, tailored for the target role below.
+${leverBlock}
+${targetTitleLine}${keywordsLine}
+CRITICAL INSTRUCTIONS:
+- This is a HOLISTIC EXECUTIVE SUMMARY of the candidate's career as an organic whole, NOT a changelog of recent edits.
+- Synthesize their complete trajectory: years of experience, core leadership/engineering scope, and signature technical proficiencies derived directly from the assembled resume.
+- GUARANTEE ZERO CONTRADICTIONS: Every capability, tool, and achievement claimed must be 100% grounded in the vetted resume below.
+- Do NOT use fluff ("passionate", "results-driven", "team player"). Use authoritative, factual declarative sentences with present participles where appropriate.
+- Output ONLY the 3–4 sentence summary paragraph. No headers, no intro, no conversational remarks.
+
+Assembled Resume:
+"""
+${assembledResume}
+"""
+
+Target Job Description:
+"""
+${jobDescription.slice(0, 3000)}
+"""
+
+Output only the summary text:`;
+}
