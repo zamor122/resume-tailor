@@ -1,9 +1,17 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { intakeParserNode } from "@/app/agent/nodes/intakeParser";
 import { bulletPlannerNode } from "@/app/agent/nodes/bulletPlanner";
+import { surgicalTailorNode } from "@/app/agent/nodes/surgicalTailor";
 import { reassembleAndScoreNode } from "@/app/agent/nodes/reassembleAndScore";
 import type { AgentState } from "@/app/agent/state";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
+
+vi.mock("@/app/services/model-fallback", () => ({
+  generateWithFallback: vi.fn().mockResolvedValue({
+    text: "- Engineered high performance cloud pipelines",
+    modelUsed: "mock-model",
+  }),
+}));
 
 describe("Resume Tailor Agent Pipeline Flow", () => {
   const sampleResume = `# John Doe
@@ -295,5 +303,112 @@ HONORS & BOARD ROLES
     expect(scored.finalResumeText).toContain("Keynote Speaker, CloudTech Global 2023");
     expect(scored.finalResumeText).toContain("Technical Advisory Board Member");
     expect(scored.finalResumeText).toContain("Managed $12M annual R&D budget");
+  });
+
+  describe("End-to-End Section Studio Tailoring Flow", () => {
+    it("initializes sectionGroups with bottom-to-top sequence and prepares Chunk 1 immediately", async () => {
+      const initialState: AgentState = {
+        rawResume: "Resume content",
+        preferences: {
+          ...DEFAULT_PREFERENCES,
+          intensity: "targeted",
+          sectionsToModify: { summary: true, experience: true, skills: true, education: false, projects: false },
+        },
+        resumeAST: {
+          summary: "Original summary",
+          experience: [
+            { title: "Senior Eng", company: "Google", dates: "2021", description: "- Cloud work" },
+            { title: "Junior Eng", company: "Chapman", dates: "2019", description: "- Web apps" },
+          ],
+          skills: { technical: ["React"], soft: [] },
+          education: [],
+          sections: ["Summary", "Experience", "Skills"],
+        },
+        sortedMissingKeywords: ["Cloud", "Kubernetes"],
+        logs: [],
+        errors: [],
+      };
+
+      const planned = bulletPlannerNode(initialState);
+      const stateWithPlan = { ...initialState, ...planned };
+
+      const tailored = await surgicalTailorNode(stateWithPlan);
+      expect(tailored.sectionGroups).toBeDefined();
+      expect(tailored.sectionGroups?.length).toBeGreaterThan(0);
+      expect(tailored.sectionGroups?.[0].title).toContain("Chapman"); // Earliest role first
+      expect(tailored.sectionGroups?.[0].status).toBe("ready");
+      expect(tailored.activeSectionId).toBe(tailored.sectionGroups?.[0].id);
+    });
+
+    it("connects bulletPlan.jobAudits to sectionGroups preserving explicit rationales for both tailored and untouched roles", async () => {
+      const initialState: AgentState = {
+        rawResume: "Resume content",
+        preferences: {
+          ...DEFAULT_PREFERENCES,
+          intensity: "minimal",
+          sectionsToModify: { summary: false, experience: true, skills: false, education: false, projects: false },
+        },
+        resumeAST: {
+          summary: "Software Engineer",
+          experience: [
+            {
+              title: "Senior Eng",
+              company: "Google",
+              dates: "2022 - Present",
+              description: "- Cloud architecture\n- Distributed databases",
+            },
+            {
+              title: "Mid-level Dev",
+              company: "Meta",
+              dates: "2020 - 2022",
+              description: "- React UI features with Kubernetes\n- Internal tooling with Kubernetes",
+            },
+            {
+              title: "Junior Dev",
+              company: "Chapman",
+              dates: "2018 - 2020",
+              description: "- Campus portals with Kubernetes\n- Student databases with Kubernetes",
+            },
+          ],
+          skills: { technical: ["React"], soft: [] },
+          education: [],
+          sections: ["Summary", "Experience", "Skills"],
+        },
+        sortedMissingKeywords: ["Kubernetes", "Cloud"],
+        logs: [],
+        errors: [],
+      };
+
+      const planned = bulletPlannerNode(initialState);
+      const stateWithPlan = { ...initialState, ...planned };
+
+      const tailored = await surgicalTailorNode(stateWithPlan);
+      expect(tailored.sectionGroups).toBeDefined();
+
+      // Bottom-to-top sequence: Chapman (jobIndex: 2), Meta (jobIndex: 1), Google (jobIndex: 0)
+      const expGroups = tailored.sectionGroups?.filter((g) => g.sectionType === "experience");
+      expect(expGroups).toHaveLength(3);
+
+      expect(expGroups?.[0].jobIndex).toBe(2);
+      expect(expGroups?.[0].title).toContain("Chapman");
+      expect(expGroups?.[0].status).toBe("unchanged");
+      expect(expGroups?.[0].auditRationale).toBe(
+        "Foundational early tenure preserved to maintain genuine career history"
+      );
+
+      expect(expGroups?.[1].jobIndex).toBe(1);
+      expect(expGroups?.[1].title).toContain("Meta");
+      expect(expGroups?.[1].status).toBe("unchanged");
+      expect(expGroups?.[1].auditRationale).toBe(
+        "Role already satisfies target profile baseline; preserved as-is"
+      );
+
+      expect(expGroups?.[2].jobIndex).toBe(0);
+      expect(expGroups?.[2].title).toContain("Google");
+      expect(expGroups?.[2].status).toBe("ready");
+      expect(expGroups?.[2].auditRationale).toBeTruthy();
+
+      expect(tailored.activeSectionId).toBe(tailored.sectionGroups?.[0].id);
+    });
   });
 });

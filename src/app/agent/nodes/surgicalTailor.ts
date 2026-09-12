@@ -4,6 +4,7 @@ import {
   getSummaryTailoringPrompt,
   getExperienceBulletsPrompt,
 } from "@/app/prompts/tailoringSection";
+import { groupSuggestionsBySection } from "@/app/utils/resumeReassemble";
 
 export async function surgicalTailorNode(
   state: AgentState
@@ -184,10 +185,34 @@ export async function surgicalTailorNode(
     }
   });
 
+  // Group suggestions into bottom-to-top section groups
+  const sectionGroups = groupSuggestionsBySection(suggestions, resumeAST, rawResume);
+
+  // Connect explicit audit rationales from bulletPlan.jobAudits
+  if (bulletPlan?.jobAudits && bulletPlan.jobAudits.length > 0) {
+    sectionGroups.forEach((group) => {
+      if (group.sectionType === "experience" && group.jobIndex !== undefined) {
+        const audit = bulletPlan.jobAudits?.find((a) => a.jobIndex === group.jobIndex);
+        if (audit) {
+          group.auditRationale = audit.auditRationale;
+          if (!audit.hasChanges && (!group.suggestions || group.suggestions.length === 0)) {
+            group.status = "unchanged";
+            group.hasChanges = false;
+          }
+        }
+      }
+    });
+  }
+
+  // Set initial active section to the first section group (bottom-to-top start)
+  const activeSectionId = sectionGroups[0]?.id;
+
   return {
     tailoredSummary,
     tailoredBulletsByJob,
     suggestions,
+    sectionGroups,
+    activeSectionId,
     logs: [
       `[surgicalTailor] Generated ${suggestions.length} granular suggestions across ${results.length} tailoring tasks (${preferences.intensity.toUpperCase()})`,
     ],
