@@ -66,6 +66,76 @@ export function applySuggestionsToOriginal(
   return currentText;
 }
 
+/**
+ * Derives granular suggestions by comparing original text to new text.
+ * Used as a 100% reliable fallback so the Change Studio cockpit ALWAYS renders
+ * even if stored records or upstream LLM responses didn't include structured suggestions.
+ */
+export function deriveSuggestionsFromDiff(
+  originalResume: string,
+  newResume: string
+): ResumeSuggestion[] {
+  if (!originalResume || !newResume || originalResume.trim() === newResume.trim()) {
+    return [];
+  }
+
+  const origLines = originalResume
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const newLines = newResume
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const suggestions: ResumeSuggestion[] = [];
+  let currentSection = "Professional Experience";
+
+  newLines.forEach((newLine, idx) => {
+    // Check if line is a section header
+    const headerMatch = newLine.match(/^(?:#+\s*|(?:##\s*)?)(Summary|Experience|Skills|Education|Projects|Certifications|Work History|Professional Experience)/i);
+    if (headerMatch) {
+      currentSection = headerMatch[1];
+      return;
+    }
+
+    const cleanNew = newLine.replace(/^[-*•–—\d.]+\s*/, "").trim().toLowerCase();
+    if (cleanNew.length < 15) return;
+
+    const existsInOrig = origLines.some((origLine) => {
+      const cleanOrig = origLine.replace(/^[-*•–—\d.]+\s*/, "").trim().toLowerCase();
+      return cleanOrig === cleanNew || cleanOrig.includes(cleanNew) || cleanNew.includes(cleanOrig);
+    });
+
+    if (!existsInOrig) {
+      // Find closest matching original line for diff
+      const origInSameSection = origLines.find((ol) => {
+        const co = ol.replace(/^[-*•–—\d.]+\s*/, "").trim().toLowerCase();
+        return co.length > 20 && (co.slice(0, 15) === cleanNew.slice(0, 15) || cleanNew.slice(0, 15) === co.slice(0, 15));
+      });
+      const closestOrig = origInSameSection || origLines[Math.min(idx, origLines.length - 1)] || newLine;
+
+      const hasMetric = /\d+%|\$\d+|\d+x|\d+\+/i.test(newLine);
+      const cat = currentSection.toLowerCase().includes("summary") ? "summary" : hasMetric ? "metric" : "keyword";
+
+      suggestions.push({
+        id: `sug-diff-${idx}`,
+        section: currentSection,
+        originalText: closestOrig.trim() || newLine.trim(),
+        suggestedText: newLine.trim(),
+        reason: hasMetric
+          ? "Quantified impact and metrics for ATS resonance"
+          : "Targeted keyword and leadership action phrasing",
+        keywords: [],
+        category: cat,
+        status: "accepted",
+      });
+    }
+  });
+
+  return suggestions;
+}
+
 export interface ParsedExperienceEntry {
   title: string;
   company: string;

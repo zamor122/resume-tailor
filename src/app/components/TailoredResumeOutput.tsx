@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import CopyButton from "./CopyButton";
 import ResumeDownloadButton from "./ResumeDownloadButton";
 import ResumeSuggestionReviewer from "./ResumeSuggestionReviewer";
 import { getProseFontSizeClass } from "@/app/utils/fontSize";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
-import { applySuggestionsToOriginal } from "@/app/utils/resumeReassemble";
+import { applySuggestionsToOriginal, deriveSuggestionsFromDiff } from "@/app/utils/resumeReassemble";
 import type { FormatSpec } from "@/app/types/format";
 import type { ResumeSuggestion } from "@/app/types/humanize";
 
@@ -62,18 +62,29 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   beforeScore = 50,
   matchScore = 85,
 }) => {
-  const hasSuggestions = suggestions && suggestions.length > 0;
+  const [internalSuggestions, setInternalSuggestions] = useState<ResumeSuggestion[]>(suggestions || []);
+
+  useEffect(() => {
+    if (suggestions && suggestions.length > 0) {
+      setInternalSuggestions(suggestions);
+    } else if (originalResume && newResume && originalResume.trim() !== newResume.trim()) {
+      setInternalSuggestions(deriveSuggestionsFromDiff(originalResume, newResume));
+    }
+  }, [suggestions, originalResume, newResume]);
+
+  const effectiveSuggestions = internalSuggestions;
+  const hasSuggestions = effectiveSuggestions && effectiveSuggestions.length > 0;
   const [viewLayout, setViewLayout] = useState<"cockpit" | "document">("cockpit");
   const [userToggledLayout, setUserToggledLayout] = useState(false);
   const [activeSuggestionId, setActiveSuggestionId] = useState<string | null>(
-    suggestions?.[0]?.id ?? null
+    effectiveSuggestions?.[0]?.id ?? null
   );
 
   React.useEffect(() => {
     if (hasSuggestions && !activeSuggestionId) {
-      setActiveSuggestionId(suggestions[0].id);
+      setActiveSuggestionId(effectiveSuggestions[0].id);
     }
-  }, [hasSuggestions, suggestions, activeSuggestionId]);
+  }, [hasSuggestions, effectiveSuggestions, activeSuggestionId]);
 
   React.useEffect(() => {
     if (hasSuggestions && !userToggledLayout) {
@@ -81,13 +92,18 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
     }
   }, [hasSuggestions, userToggledLayout]);
 
+  const handleSuggestionsUpdate = (updated: ResumeSuggestion[]) => {
+    setInternalSuggestions(updated);
+    onSuggestionsChange?.(updated);
+  };
+
   // Compute live active resume text from suggestions if available
   const activeResumeText = useMemo(() => {
     if (originalResume && hasSuggestions) {
-      return applySuggestionsToOriginal(originalResume, suggestions);
+      return applySuggestionsToOriginal(originalResume, effectiveSuggestions);
     }
     return newResume;
-  }, [originalResume, suggestions, hasSuggestions, newResume]);
+  }, [originalResume, effectiveSuggestions, hasSuggestions, newResume]);
 
   const displayResume = useMemo(() => {
     const deduped = deduplicateResumeSections(activeResumeText);
@@ -120,8 +136,8 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
     const clean = text.replace(/^[-*•–—\d.]+\s*/, "").trim().toLowerCase();
     if (clean.length < 5) return null;
 
-    for (let i = 0; i < suggestions.length; i++) {
-      const s = suggestions[i];
+    for (let i = 0; i < effectiveSuggestions.length; i++) {
+      const s = effectiveSuggestions[i];
       const origClean = (s.originalText || "").replace(/^[-*•–—\d.]+\s*/, "").trim().toLowerCase();
       const suggClean = (s.suggestedText || "").replace(/^[-*•–—\d.]+\s*/, "").trim().toLowerCase();
 
@@ -210,10 +226,10 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          const updated = suggestions.map((s) =>
+                          const updated = effectiveSuggestions.map((s) =>
                             s.id === match.suggestion.id ? { ...s, status: "accepted" as const } : s
                           );
-                          onSuggestionsChange?.(updated);
+                          handleSuggestionsUpdate(updated);
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
                           isAccepted
@@ -227,10 +243,10 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          const updated = suggestions.map((s) =>
+                          const updated = effectiveSuggestions.map((s) =>
                             s.id === match.suggestion.id ? { ...s, status: "rejected" as const } : s
                           );
-                          onSuggestionsChange?.(updated);
+                          handleSuggestionsUpdate(updated);
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
                           !isAccepted
@@ -286,10 +302,10 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          const updated = suggestions.map((s) =>
+                          const updated = effectiveSuggestions.map((s) =>
                             s.id === match.suggestion.id ? { ...s, status: "accepted" as const } : s
                           );
-                          onSuggestionsChange?.(updated);
+                          handleSuggestionsUpdate(updated);
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
                           isAccepted
@@ -303,10 +319,10 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          const updated = suggestions.map((s) =>
+                          const updated = effectiveSuggestions.map((s) =>
                             s.id === match.suggestion.id ? { ...s, status: "rejected" as const } : s
                           );
-                          onSuggestionsChange?.(updated);
+                          handleSuggestionsUpdate(updated);
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
                           !isAccepted
@@ -363,7 +379,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                ⚡ Review Cockpit ({suggestions.length})
+                ⚡ Review Cockpit ({effectiveSuggestions.length})
               </button>
               <button
                 type="button"
@@ -405,8 +421,8 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
           <div className="xl:col-span-5 space-y-4 xl:sticky xl:top-20">
             <ResumeSuggestionReviewer
               originalResume={originalResume || displayResume}
-              suggestions={suggestions}
-              onSuggestionsChange={onSuggestionsChange || (() => {})}
+              suggestions={effectiveSuggestions}
+              onSuggestionsChange={handleSuggestionsUpdate}
               isUnlocked={isUnlocked}
               onUnlockRequest={onUnlockRequest}
               beforeScore={beforeScore}

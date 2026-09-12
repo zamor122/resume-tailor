@@ -112,10 +112,10 @@ export async function reassembleAndScoreNode(
     beforeScore: baselineScore,
     afterScore,
     keywordGap,
-    suggestions,
+    suggestions: activeSuggestions,
     improvementMetrics,
     logs: [
-      `[reassembleAndScore] Reassembled resume | Match score: ${baselineScore}% -> ${afterScore}% (+${afterScore - baselineScore}%) | Suggestions: ${suggestions.length}`,
+      `[reassembleAndScore] Reassembled resume | Match score: ${baselineScore}% -> ${afterScore}% (+${afterScore - baselineScore}%) | Suggestions: ${activeSuggestions.length}`,
     ],
   };
 }
