@@ -47,3 +47,8 @@ index.scip
 /scip-graph.llm.txt
 /scip-coverage.txt
 /scripts/.tools/
+
+# superpowers / worktrees
+.superpowers/
+.worktrees/
+
