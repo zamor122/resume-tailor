@@ -1,5 +1,5 @@
 import { type ParsedOriginal, findContactEndIndex } from "./contactBlockSanitizer";
-import type { ResumeSuggestion } from "@/app/agent/state";
+import type { ResumeSuggestion, ResumeSectionGroup, SectionGroupType, SectionTailorStatus } from "@/app/agent/state";
 
 /**
  * Verbatim surgical application:
@@ -149,7 +149,7 @@ export interface ParsedResumeForReassemble {
   education?: Array<{ degree?: string; institution?: string; field?: string | null; dates?: string | null }> | null;
   experience?: ParsedExperienceEntry[];
   sections?: string[];
-  skills?: { technical?: string[]; soft?: string[] };
+  skills?: { technical?: string[]; soft?: string[] } | string | null;
   summary?: string | null;
 }
 
@@ -456,4 +456,97 @@ export function reassembleResumeFromSections(params: {
   }
 
   return parts.join("\n\n");
+}
+
+/**
+ * Groups suggestions by resume section in bottom-to-top sequence:
+ * 1. Earliest work experience (N-1) -> ... -> Most recent (0)
+ * 2. Skills section
+ * 3. Professional Summary (finale at top)
+ */
+export function groupSuggestionsBySection(
+  suggestions: ResumeSuggestion[] = [],
+  resumeAST?: ParsedResumeForReassemble,
+  rawResume?: string
+): ResumeSectionGroup[] {
+  const groups: ResumeSectionGroup[] = [];
+  const experiences = resumeAST?.experience || [];
+
+  // 1. Experiences in reverse chronological order (earliest at index 0 of sequence)
+  // Experiences in AST are typically top-to-bottom (0 = most recent, N-1 = earliest)
+  for (let i = experiences.length - 1; i >= 0; i--) {
+    const exp = experiences[i];
+    const matchingSugs = suggestions.filter(
+      (s) =>
+        s.jobIndex === i ||
+        (s.jobIndex === undefined &&
+          Boolean(s.section && exp.company && s.section.toLowerCase().includes(exp.company.toLowerCase())))
+    );
+
+    groups.push({
+      id: `section-exp-${i}`,
+      sectionType: "experience",
+      title: `${exp.company} – ${exp.title}`,
+      subtitle: [exp.dates, exp.location].filter(Boolean).join(" • "),
+      jobIndex: i,
+      orderIndex: groups.length,
+      status: matchingSugs.length > 0 ? "ready" : "unchanged",
+      auditRationale: matchingSugs.length > 0
+        ? `Targeted keyword and metric enhancements for ${exp.company}`
+        : "Preserved authentic original tenure without edits",
+      suggestions: matchingSugs,
+      originalContent: exp.description || "",
+      tailoredContent: matchingSugs.length > 0 ? undefined : exp.description,
+      hasChanges: matchingSugs.length > 0,
+    });
+  }
+
+  // 2. Skills section (if present)
+  if (resumeAST?.skills) {
+    const skillsSugs = suggestions.filter(
+      (s) =>
+        (s.category === "keyword" && s.jobIndex === undefined && s.section?.toLowerCase().includes("skill")) ||
+        (s.section && s.section.toLowerCase().includes("skill"))
+    );
+    const skillsContent =
+      typeof resumeAST.skills === "string"
+        ? resumeAST.skills
+        : [...(resumeAST.skills.technical || []), ...(resumeAST.skills.soft || [])].join(", ");
+
+    groups.push({
+      id: "section-skills",
+      sectionType: "skills",
+      title: "Skills & Core Competencies",
+      subtitle: "Technical Proficiencies & Tools",
+      orderIndex: groups.length,
+      status: skillsSugs.length > 0 ? "ready" : "unchanged",
+      auditRationale: skillsSugs.length > 0
+        ? "Woven missing target role keywords into competency categories"
+        : "Preserved existing skills matrix",
+      suggestions: skillsSugs,
+      originalContent: skillsContent,
+      tailoredContent: skillsSugs.length > 0 ? undefined : skillsContent,
+      hasChanges: skillsSugs.length > 0,
+    });
+  }
+
+  // 3. Professional Summary (grand finale at the top)
+  const summarySugs = suggestions.filter(
+    (s) => s.category === "summary" || (s.section && s.section.toLowerCase().includes("summary"))
+  );
+  groups.push({
+    id: "section-summary",
+    sectionType: "summary",
+    title: "Professional Summary Synthesis",
+    subtitle: "Holistic Career Overview",
+    orderIndex: groups.length,
+    status: summarySugs.length > 0 ? "ready" : "pending",
+    auditRationale: "Holistic executive synthesis aligning entire career arc with target role",
+    suggestions: summarySugs,
+    originalContent: resumeAST?.summary || "",
+    tailoredContent: summarySugs.length > 0 ? summarySugs[0].suggestedText : undefined,
+    hasChanges: summarySugs.length > 0,
+  });
+
+  return groups;
 }

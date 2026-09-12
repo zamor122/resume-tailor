@@ -49,6 +49,24 @@ export interface ResumeSuggestion {
   bulletIndex?: number;
 }
 
+export type SectionGroupType = "experience" | "skills" | "summary" | "other";
+export type SectionTailorStatus = "pending" | "tailoring" | "ready" | "reviewed" | "unchanged";
+
+export interface ResumeSectionGroup {
+  id: string;
+  sectionType: SectionGroupType;
+  title: string;
+  subtitle?: string;
+  jobIndex?: number;
+  orderIndex: number;
+  status: SectionTailorStatus;
+  auditRationale: string;
+  suggestions: ResumeSuggestion[];
+  originalContent: string;
+  tailoredContent?: string;
+  hasChanges: boolean;
+}
+
 export interface AgentLog {
   step: string;
   message: string;
@@ -83,6 +101,11 @@ export interface AgentState {
 
   // Bullet Planning
   bulletPlan?: BulletPlan;
+
+  // Section Orchestration
+  sectionGroups?: ResumeSectionGroup[];
+  activeSectionId?: string;
+  sectionCache?: Record<string, ResumeSectionGroup>;
 
   // Generation Results
   tailoredSummary?: string;
