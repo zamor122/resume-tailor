@@ -10,6 +10,7 @@ import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
 import { applySuggestionsToOriginal, deriveSuggestionsFromDiff } from "@/app/utils/resumeReassemble";
 import type { FormatSpec } from "@/app/types/format";
 import type { ResumeSuggestion } from "@/app/types/humanize";
+import type { ResumeSectionGroup } from "@/app/agent/state";
 
 interface TailoredResumeOutputProps {
   newResume: string;
@@ -31,6 +32,10 @@ interface TailoredResumeOutputProps {
   onUnlockRequest?: () => void;
   beforeScore?: number;
   matchScore?: number;
+  activeSectionId?: string | null;
+  onActiveSectionChange?: (id: string | null) => void;
+  sectionGroups?: ResumeSectionGroup[];
+  onSectionGroupsChange?: (groups: ResumeSectionGroup[]) => void;
 }
 
 function extractTextContent(children: React.ReactNode): string {
@@ -43,6 +48,227 @@ function extractTextContent(children: React.ReactNode): string {
     return extractTextContent((children as any).props.children);
   }
   return "";
+}
+
+export interface DocumentSectionBlock {
+  key: string;
+  id?: string;
+  sectionType: "header" | "summary" | "experience_header" | "experience" | "skills" | "other";
+  title?: string;
+  content: string;
+}
+
+function cleanHeadingText(text: string): string {
+  return text.replace(/^#+\s*/, "").trim();
+}
+
+function getExperienceGroupId(
+  expIndex: number,
+  headingText: string,
+  sectionGroups?: ResumeSectionGroup[]
+): string {
+  if (sectionGroups && sectionGroups.length > 0) {
+    const cleanHeading = headingText.toLowerCase();
+
+    // 1. Match by title / company name
+    const byTitle = sectionGroups.find((g) => {
+      if (g.sectionType !== "experience") return false;
+      const cleanTitle = g.title.toLowerCase();
+      const companyPart = g.title.split("–")[0]?.split("-")[0]?.trim().toLowerCase();
+      return (
+        cleanTitle.includes(cleanHeading) ||
+        cleanHeading.includes(cleanTitle) ||
+        (companyPart && companyPart.length >= 3 && cleanHeading.includes(companyPart))
+      );
+    });
+    if (byTitle) return byTitle.id;
+
+    // 2. Match by jobIndex
+    const byJobIndex = sectionGroups.find(
+      (g) => g.sectionType === "experience" && g.jobIndex === expIndex
+    );
+    if (byJobIndex) return byJobIndex.id;
+
+    // 3. Match by order among experience groups
+    const expGroups = sectionGroups.filter((g) => g.sectionType === "experience");
+    if (expGroups[expIndex]) return expGroups[expIndex].id;
+  }
+
+  return `section-exp-${expIndex}`;
+}
+
+function getSummaryGroupId(sectionGroups?: ResumeSectionGroup[]): string {
+  if (sectionGroups) {
+    const summaryGroup = sectionGroups.find((g) => g.sectionType === "summary");
+    if (summaryGroup) return summaryGroup.id;
+  }
+  return "section-summary";
+}
+
+function getSkillsGroupId(sectionGroups?: ResumeSectionGroup[]): string {
+  if (sectionGroups) {
+    const skillsGroup = sectionGroups.find((g) => g.sectionType === "skills");
+    if (skillsGroup) return skillsGroup.id;
+  }
+  return "section-skills";
+}
+
+function isSectionActive(sectionId?: string, activeId?: string | null): boolean {
+  if (!sectionId || !activeId) return false;
+  const cleanActive = activeId.replace(/^#/, "").toLowerCase();
+  const cleanSection = sectionId.replace(/^#/, "").toLowerCase();
+  return cleanActive === cleanSection;
+}
+
+function parseDocumentSections(
+  markdown: string,
+  sectionGroups?: ResumeSectionGroup[]
+): DocumentSectionBlock[] {
+  if (!markdown || !markdown.trim()) return [];
+
+  const lines = markdown.split("\n");
+  const blocks: DocumentSectionBlock[] = [];
+
+  let currentLines: string[] = [];
+  let currentId: string | undefined = undefined;
+  let currentType: DocumentSectionBlock["sectionType"] = "header";
+  let currentTitle: string | undefined = undefined;
+
+  let inExperienceSection = false;
+  let expIndex = 0;
+
+  const flushCurrent = () => {
+    if (currentLines.length > 0) {
+      const content = currentLines.join("\n");
+      if (content.trim()) {
+        blocks.push({
+          key: `block-${blocks.length}-${currentId || currentType}`,
+          id: currentId,
+          sectionType: currentType,
+          title: currentTitle,
+          content,
+        });
+      }
+      currentLines = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Check for H2 headings (## ...)
+    if (/^##\s+/.test(trimmed)) {
+      const headingText = cleanHeadingText(trimmed);
+
+      // Summary section
+      if (/^(summary|professional summary|executive summary|profile|about|career summary)\b/i.test(headingText)) {
+        flushCurrent();
+        inExperienceSection = false;
+        currentId = getSummaryGroupId(sectionGroups);
+        currentType = "summary";
+        currentTitle = headingText;
+        currentLines.push(line);
+        continue;
+      }
+
+      // Experience section
+      if (/^(experience|work experience|professional experience|employment history|work history)\b/i.test(headingText)) {
+        flushCurrent();
+        inExperienceSection = true;
+
+        // Check if there are any ### subsections under experience before the next ## heading
+        let hasSubsections = false;
+        for (let j = i + 1; j < lines.length; j++) {
+          const ahead = lines[j].trim();
+          if (/^##\s+/.test(ahead)) break;
+          if (/^###\s+/.test(ahead)) {
+            hasSubsections = true;
+            break;
+          }
+        }
+
+        if (hasSubsections) {
+          // Render ## Experience heading as its own header block
+          currentId = "section-experience";
+          currentType = "experience_header";
+          currentTitle = headingText;
+          currentLines.push(line);
+          flushCurrent();
+          currentId = undefined;
+          currentType = "experience";
+          currentTitle = undefined;
+        } else {
+          // Entire experience is a single section block
+          currentId = getExperienceGroupId(expIndex, headingText, sectionGroups);
+          expIndex++;
+          currentType = "experience";
+          currentTitle = headingText;
+          currentLines.push(line);
+        }
+        continue;
+      }
+
+      // Skills section
+      if (/^(skills|technical skills|core competencies|proficiencies|technologies|areas of expertise)\b/i.test(headingText)) {
+        flushCurrent();
+        inExperienceSection = false;
+        currentId = getSkillsGroupId(sectionGroups);
+        currentType = "skills";
+        currentTitle = headingText;
+        currentLines.push(line);
+        continue;
+      }
+
+      // Education section
+      if (/^(education|academic background)\b/i.test(headingText)) {
+        flushCurrent();
+        inExperienceSection = false;
+        currentId = "section-education";
+        currentType = "other";
+        currentTitle = headingText;
+        currentLines.push(line);
+        continue;
+      }
+
+      // Any other H2 section (Projects, Certifications, etc.)
+      flushCurrent();
+      inExperienceSection = false;
+      const slug = headingText.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      currentId = `section-${slug}`;
+      currentType = "other";
+      currentTitle = headingText;
+      currentLines.push(line);
+      continue;
+    }
+
+    // Check for H3 headings (### ...)
+    if (/^###\s+/.test(trimmed)) {
+      const headingText = cleanHeadingText(trimmed);
+
+      // If in experience section or we're not in another known section (like education, skills, summary)
+      if (
+        inExperienceSection ||
+        currentType === "header" ||
+        currentType === "experience"
+      ) {
+        flushCurrent();
+        inExperienceSection = true;
+        currentId = getExperienceGroupId(expIndex, headingText, sectionGroups);
+        expIndex++;
+        currentType = "experience";
+        currentTitle = headingText;
+        currentLines.push(line);
+        continue;
+      }
+    }
+
+    // Regular line: append to current block
+    currentLines.push(line);
+  }
+
+  flushCurrent();
+  return blocks;
 }
 
 const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
@@ -61,8 +287,45 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   onUnlockRequest,
   beforeScore = 50,
   matchScore = 85,
+  activeSectionId,
+  onActiveSectionChange,
+  sectionGroups,
+  onSectionGroupsChange,
 }) => {
   const [internalSuggestions, setInternalSuggestions] = useState<ResumeSuggestion[]>(suggestions || []);
+
+  const [internalActiveSectionId, setInternalActiveSectionId] = useState<string | null>(
+    activeSectionId ?? null
+  );
+
+  useEffect(() => {
+    if (activeSectionId !== undefined) {
+      setInternalActiveSectionId(activeSectionId);
+    }
+  }, [activeSectionId]);
+
+  const effectiveActiveSectionId =
+    activeSectionId !== undefined ? activeSectionId : internalActiveSectionId;
+
+  const handleActiveSectionChange = (id: string | null) => {
+    if (activeSectionId === undefined) {
+      setInternalActiveSectionId(id);
+    }
+    onActiveSectionChange?.(id);
+  };
+
+  useEffect(() => {
+    if (!effectiveActiveSectionId) return;
+    const cleanId = effectiveActiveSectionId.replace(/^#/, "");
+    const targetElement =
+      document.getElementById(cleanId) ||
+      document.querySelector(`[data-section-id="${cleanId}"]`) ||
+      document.querySelector(`[data-section-id="#${cleanId}"]`);
+
+    if (targetElement && typeof targetElement.scrollIntoView === "function") {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [effectiveActiveSectionId]);
 
   useEffect(() => {
     if (suggestions && suggestions.length > 0) {
@@ -115,13 +378,21 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
         if (/^[-*•–—]\s+/.test(trimmed)) {
           return `- ${trimmed.replace(/^[-*•–—]\s+/, "")}`;
         }
-        if (/^(Summary|Experience|Skills|Education|Projects|Certifications|Awards)/i.test(trimmed) && !trimmed.startsWith("#")) {
+        if (
+          /^(Summary|Experience|Skills|Education|Projects|Certifications|Awards)\b/i.test(trimmed) &&
+          trimmed.split(/\s+/).length <= 4 &&
+          !trimmed.startsWith("#")
+        ) {
           return `\n## ${trimmed}\n`;
         }
         return line;
       })
       .join("\n\n");
   }, [activeResumeText]);
+
+  const documentSections = useMemo(() => {
+    return parseDocumentSections(displayResume, sectionGroups);
+  }, [displayResume, sectionGroups]);
 
   const proseFontSizeClass = getProseFontSizeClass(fontSize);
   const formatStyles = formatSpec ? {
@@ -177,183 +448,207 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   }
 
   // Common Markdown components with active change highlighting
+  const getMarkdownComponents = (isSplit: boolean) => ({
+    h1: ({ children }: { children?: React.ReactNode }) => (
+      <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-gray-100 text-center !mt-0 !mb-2 tracking-tight">
+        {children}
+      </h1>
+    ),
+    h2: ({ children }: { children?: React.ReactNode }) => (
+      <h2 className="text-xs sm:text-sm font-bold uppercase tracking-widest text-cyan-700 dark:text-cyan-400 border-b-2 border-cyan-500/30 dark:border-cyan-500/20 !mt-6 !mb-2.5 pb-1">
+        {children}
+      </h2>
+    ),
+    h3: ({ children }: { children?: React.ReactNode }) => (
+      <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 !mt-3 !mb-1">
+        {children}
+      </h3>
+    ),
+    p: ({ children }: { children?: React.ReactNode }) => {
+      const rawText = extractTextContent(children);
+      const match = isSplit ? findMatchingSuggestion(rawText) : null;
+      const isActive = match && match.suggestion.id === activeSuggestionId;
+      const isAccepted = match ? match.suggestion.status !== "rejected" : false;
+
+      if (match && isSplit) {
+        return (
+          <div
+            onClick={() => setActiveSuggestionId(match.suggestion.id)}
+            className={`my-2 p-3 rounded-xl transition-all duration-300 cursor-pointer ${
+              isActive
+                ? "ring-2 ring-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/40 border border-cyan-500/40 shadow-md"
+                : "hover:bg-cyan-500/5 border border-transparent rounded-lg"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
+                {isActive && <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />}
+                Change {match.index + 1} ({match.suggestion.section})
+              </span>
+              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const updated = effectiveSuggestions.map((s) =>
+                      s.id === match.suggestion.id ? { ...s, status: "accepted" as const } : s
+                    );
+                    handleSuggestionsUpdate(updated);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                    isAccepted
+                      ? "bg-emerald-500 text-white shadow-xs"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
+                  }`}
+                >
+                  ✓ Accept
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const updated = effectiveSuggestions.map((s) =>
+                      s.id === match.suggestion.id ? { ...s, status: "rejected" as const } : s
+                    );
+                    handleSuggestionsUpdate(updated);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                    !isAccepted
+                      ? "bg-gray-700 text-white shadow-xs"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
+                  }`}
+                >
+                  ✕ Keep Original
+                </button>
+              </div>
+            </div>
+            <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-200 !my-0 whitespace-pre-line font-medium">
+              {children}
+            </p>
+          </div>
+        );
+      }
+
+      return (
+        <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 !my-1.5 whitespace-pre-line">
+          {children}
+        </p>
+      );
+    },
+    ul: ({ children }: { children?: React.ReactNode }) => (
+      <ul className="list-disc !pl-5 space-y-2 !my-2.5 text-sm text-gray-700 dark:text-gray-300">
+        {children}
+      </ul>
+    ),
+    li: ({ children }: { children?: React.ReactNode }) => {
+      const rawText = extractTextContent(children);
+      const match = isSplit ? findMatchingSuggestion(rawText) : null;
+      const isActive = match && match.suggestion.id === activeSuggestionId;
+      const isAccepted = match ? match.suggestion.status !== "rejected" : false;
+
+      if (match && isSplit) {
+        return (
+          <li
+            onClick={() => setActiveSuggestionId(match.suggestion.id)}
+            className={`leading-relaxed pl-0.5 transition-all duration-300 cursor-pointer list-none -ml-5 my-1.5 p-2.5 rounded-xl ${
+              isActive
+                ? "ring-2 ring-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/40 border border-cyan-500/50 shadow-md font-medium text-gray-900 dark:text-white"
+                : "hover:bg-cyan-500/5 border border-transparent rounded-lg text-gray-700 dark:text-gray-300"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
+                {isActive && <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />}
+                Change {match.index + 1}
+              </span>
+              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const updated = effectiveSuggestions.map((s) =>
+                      s.id === match.suggestion.id ? { ...s, status: "accepted" as const } : s
+                    );
+                    handleSuggestionsUpdate(updated);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                    isAccepted
+                      ? "bg-emerald-500 text-white shadow-xs"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
+                  }`}
+                >
+                  ✓ Accept
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const updated = effectiveSuggestions.map((s) =>
+                      s.id === match.suggestion.id ? { ...s, status: "rejected" as const } : s
+                    );
+                    handleSuggestionsUpdate(updated);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                    !isAccepted
+                      ? "bg-gray-700 text-white shadow-xs"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
+                  }`}
+                >
+                  ✕ Keep Original
+                </button>
+              </div>
+            </div>
+            <div>• {children}</div>
+          </li>
+        );
+      }
+
+      return (
+        <li className="leading-relaxed pl-0.5">
+          {children}
+        </li>
+      );
+    },
+    strong: ({ children }: { children?: React.ReactNode }) => (
+      <strong className="font-semibold text-gray-900 dark:text-gray-100">
+        {children}
+      </strong>
+    ),
+  });
+
   const renderMarkdownCanvas = (isSplit = false) => (
     <div
       className={`prose prose-emerald dark:prose-invert max-w-none resume-prose ${proseFontSizeClass} pb-4`}
       style={formatStyles}
       data-format-spec={formatSpec ? JSON.stringify(formatSpec) : undefined}
     >
-      <ReactMarkdown
-        components={{
-          h1: ({ children }) => (
-            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-gray-100 text-center !mt-0 !mb-2 tracking-tight">
-              {children}
-            </h1>
-          ),
-          h2: ({ children }) => (
-            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-widest text-cyan-700 dark:text-cyan-400 border-b-2 border-cyan-500/30 dark:border-cyan-500/20 !mt-6 !mb-2.5 pb-1">
-              {children}
-            </h2>
-          ),
-          h3: ({ children }) => (
-            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 !mt-3 !mb-1">
-              {children}
-            </h3>
-          ),
-          p: ({ children }) => {
-            const rawText = extractTextContent(children);
-            const match = isSplit ? findMatchingSuggestion(rawText) : null;
-            const isActive = match && match.suggestion.id === activeSuggestionId;
-            const isAccepted = match ? match.suggestion.status !== "rejected" : false;
+      {documentSections.map((section, idx) => {
+        const isActive = isSectionActive(section.id, effectiveActiveSectionId);
+        const hasId = Boolean(section.id);
+        const sectionClassName = hasId
+          ? isActive
+            ? "border-l-4 border-cyan-500 pl-3 bg-cyan-500/10 dark:bg-cyan-950/20 rounded-r-xl transition-all duration-300 my-2 cursor-pointer"
+            : "border-l-4 border-transparent pl-3 transition-all duration-300 rounded-r-xl my-2 cursor-pointer hover:bg-cyan-500/5"
+          : "my-2";
 
-            if (match && isSplit) {
-              return (
-                <div
-                  onClick={() => setActiveSuggestionId(match.suggestion.id)}
-                  className={`my-2 p-3 rounded-xl transition-all duration-300 cursor-pointer ${
-                    isActive
-                      ? "ring-2 ring-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/40 border border-cyan-500/40 shadow-md"
-                      : "hover:bg-cyan-500/5 border border-transparent rounded-lg"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
-                      {isActive && <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />}
-                      Change {match.index + 1} ({match.suggestion.section})
-                    </span>
-                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const updated = effectiveSuggestions.map((s) =>
-                            s.id === match.suggestion.id ? { ...s, status: "accepted" as const } : s
-                          );
-                          handleSuggestionsUpdate(updated);
-                        }}
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                          isAccepted
-                            ? "bg-emerald-500 text-white shadow-xs"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
-                        }`}
-                      >
-                        ✓ Accept
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const updated = effectiveSuggestions.map((s) =>
-                            s.id === match.suggestion.id ? { ...s, status: "rejected" as const } : s
-                          );
-                          handleSuggestionsUpdate(updated);
-                        }}
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                          !isAccepted
-                            ? "bg-gray-700 text-white shadow-xs"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
-                        }`}
-                      >
-                        ✕ Keep Original
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-200 !my-0 whitespace-pre-line font-medium">
-                    {children}
-                  </p>
-                </div>
-              );
-            }
-
-            return (
-              <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 !my-1.5 whitespace-pre-line">
-                {children}
-              </p>
-            );
-          },
-          ul: ({ children }) => (
-            <ul className="list-disc !pl-5 space-y-2 !my-2.5 text-sm text-gray-700 dark:text-gray-300">
-              {children}
-            </ul>
-          ),
-          li: ({ children }) => {
-            const rawText = extractTextContent(children);
-            const match = isSplit ? findMatchingSuggestion(rawText) : null;
-            const isActive = match && match.suggestion.id === activeSuggestionId;
-            const isAccepted = match ? match.suggestion.status !== "rejected" : false;
-
-            if (match && isSplit) {
-              return (
-                <li
-                  onClick={() => setActiveSuggestionId(match.suggestion.id)}
-                  className={`leading-relaxed pl-0.5 transition-all duration-300 cursor-pointer list-none -ml-5 my-1.5 p-2.5 rounded-xl ${
-                    isActive
-                      ? "ring-2 ring-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/40 border border-cyan-500/50 shadow-md font-medium text-gray-900 dark:text-white"
-                      : "hover:bg-cyan-500/5 border border-transparent rounded-lg text-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
-                      {isActive && <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />}
-                      Change {match.index + 1}
-                    </span>
-                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const updated = effectiveSuggestions.map((s) =>
-                            s.id === match.suggestion.id ? { ...s, status: "accepted" as const } : s
-                          );
-                          handleSuggestionsUpdate(updated);
-                        }}
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                          isAccepted
-                            ? "bg-emerald-500 text-white shadow-xs"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
-                        }`}
-                      >
-                        ✓ Accept
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const updated = effectiveSuggestions.map((s) =>
-                            s.id === match.suggestion.id ? { ...s, status: "rejected" as const } : s
-                          );
-                          handleSuggestionsUpdate(updated);
-                        }}
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                          !isAccepted
-                            ? "bg-gray-700 text-white shadow-xs"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
-                        }`}
-                      >
-                        ✕ Keep Original
-                      </button>
-                    </div>
-                  </div>
-                  <div>• {children}</div>
-                </li>
-              );
-            }
-
-            return (
-              <li className="leading-relaxed pl-0.5">
-                {children}
-              </li>
-            );
-          },
-          strong: ({ children }) => (
-            <strong className="font-semibold text-gray-900 dark:text-gray-100">
-              {children}
-            </strong>
-          ),
-        }}
-      >
-        {displayResume}
-      </ReactMarkdown>
+        return (
+          <div
+            key={section.key || `${section.id || "sec"}-${idx}`}
+            id={section.id}
+            data-section-id={section.id}
+            onClick={() => {
+              if (section.id) {
+                handleActiveSectionChange(section.id);
+              }
+            }}
+            className={sectionClassName}
+          >
+            <ReactMarkdown components={getMarkdownComponents(isSplit)}>
+              {section.content}
+            </ReactMarkdown>
+          </div>
+        );
+      })}
     </div>
   );
 
@@ -429,6 +724,10 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
               matchScore={matchScore}
               activeSuggestionId={activeSuggestionId}
               onActiveSuggestionChange={setActiveSuggestionId}
+              sectionGroups={sectionGroups}
+              onSectionGroupsChange={onSectionGroupsChange}
+              activeSectionId={effectiveActiveSectionId}
+              onActiveSectionChange={handleActiveSectionChange}
             />
           </div>
 
