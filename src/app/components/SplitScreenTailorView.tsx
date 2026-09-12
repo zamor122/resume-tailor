@@ -292,6 +292,15 @@ export default function SplitScreenTailorView() {
   }, [router]);
 
   useEffect(() => {
+    if (results && !loading && !user) {
+      const el = document.getElementById("results-section");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  }, [results, loading, user]);
+
+  useEffect(() => {
     if (sessionId && (resume || jobDescription || results)) {
       saveResumeData({
         resumeText: resume,
@@ -742,8 +751,7 @@ export default function SplitScreenTailorView() {
 
         {/* Anonymous result: show tailored resume inline and CTA to sign up to save */}
         {!user && hasStartedTailoring && results && !results.resumeId && !loading && (
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 p-6 md:p-8 space-y-6" data-parallax="0.05">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Your tailored resume</h2>
+          <div id="results-section" className="space-y-6 pt-4" data-parallax="0.05">
             <TailoredResumeOutput
               newResume={results.tailoredResume ?? ""}
               originalResume={resume}
