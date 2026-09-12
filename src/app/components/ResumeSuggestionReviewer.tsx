@@ -1,86 +1,241 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import type { ResumeSuggestion } from "@/app/types/humanize";
+import { useState, useMemo, useEffect, useRef } from "react";
+import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
+import { groupSuggestionsBySection, type ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 
-interface ResumeSuggestionReviewerProps {
+export interface ResumeSuggestionReviewerProps {
   originalResume: string;
   suggestions: ResumeSuggestion[];
+  sectionGroups?: ResumeSectionGroup[];
+  onSectionGroupsChange?: (groups: ResumeSectionGroup[]) => void;
   onSuggestionsChange: (updatedSuggestions: ResumeSuggestion[]) => void;
-  isUnlocked?: boolean;
-  onUnlockRequest?: () => void;
+  activeSectionId?: string | null;
+  onActiveSectionChange?: (id: string | null) => void;
   beforeScore?: number;
   matchScore?: number;
+  jobDescription?: string;
+  jobTitle?: string;
+  resumeAST?: ParsedResumeForReassemble;
+  isUnlocked?: boolean;
+  onUnlockRequest?: () => void;
   activeSuggestionId?: string | null;
   onActiveSuggestionChange?: (id: string | null) => void;
   className?: string;
+  onFinalize?: () => void;
+}
+
+/**
+ * Fallback to group suggestions when sectionGroups prop is omitted
+ */
+function deriveSectionGroups(
+  suggestions: ResumeSuggestion[] = [],
+  resumeAST?: ParsedResumeForReassemble,
+  originalResume?: string
+): ResumeSectionGroup[] {
+  const groupsFromReassemble = groupSuggestionsBySection(suggestions, resumeAST, originalResume);
+  const hasExperienceOrSkills = groupsFromReassemble.some(
+    (g) => g.sectionType === "experience" || g.sectionType === "skills"
+  );
+  if (hasExperienceOrSkills || suggestions.length === 0) {
+    return groupsFromReassemble;
+  }
+
+  // Fallback: group suggestions by section/jobIndex if resumeAST was not provided
+  const expSuggestions = suggestions.filter(
+    (s) => s.category !== "summary" && (!s.section || !s.section.toLowerCase().includes("summary"))
+  );
+  const summarySuggestions = suggestions.filter(
+    (s) => s.category === "summary" || (s.section && s.section.toLowerCase().includes("summary"))
+  );
+
+  const groupedMap = new Map<string, { jobIndex?: number; section: string; sugs: ResumeSuggestion[] }>();
+  expSuggestions.forEach((s) => {
+    const key = s.jobIndex !== undefined ? `job-${s.jobIndex}` : (s.section || "Experience");
+    if (!groupedMap.has(key)) {
+      groupedMap.set(key, { jobIndex: s.jobIndex, section: s.section || "Experience", sugs: [] });
+    }
+    groupedMap.get(key)!.sugs.push(s);
+  });
+
+  // Sort groups bottom-to-top: higher jobIndex first (earlier jobs)
+  const sortedEntries = Array.from(groupedMap.entries()).sort((a, b) => {
+    if (a[1].jobIndex !== undefined && b[1].jobIndex !== undefined) {
+      return b[1].jobIndex - a[1].jobIndex;
+    }
+    return 0;
+  });
+
+  const dynamicGroups: ResumeSectionGroup[] = sortedEntries.map(([key, entry], idx) => ({
+    id: `section-exp-${entry.jobIndex !== undefined ? entry.jobIndex : idx}`,
+    sectionType: "experience",
+    title: entry.section,
+    subtitle: undefined,
+    jobIndex: entry.jobIndex,
+    orderIndex: idx,
+    status: "ready",
+    auditRationale: `Targeted enhancement for ${entry.section}`,
+    suggestions: entry.sugs,
+    originalContent: entry.sugs.map((s) => s.originalText).join("\n"),
+    tailoredContent: entry.sugs.map((s) => s.suggestedText).join("\n"),
+    hasChanges: entry.sugs.length > 0,
+  }));
+
+  if (summarySuggestions.length > 0) {
+    dynamicGroups.push({
+      id: "section-summary",
+      sectionType: "summary",
+      title: "Professional Summary Synthesis",
+      subtitle: "Holistic Career Overview",
+      orderIndex: dynamicGroups.length,
+      status: "ready",
+      auditRationale: "Holistic executive synthesis aligning career arc with target profile",
+      suggestions: summarySuggestions,
+      originalContent: summarySuggestions.map((s) => s.originalText).join("\n"),
+      tailoredContent: summarySuggestions.map((s) => s.suggestedText).join("\n"),
+      hasChanges: true,
+    });
+  }
+
+  return dynamicGroups.length > 0 ? dynamicGroups : groupsFromReassemble;
 }
 
 export default function ResumeSuggestionReviewer({
   originalResume,
-  suggestions,
+  suggestions = [],
+  sectionGroups,
+  onSectionGroupsChange,
   onSuggestionsChange,
-  isUnlocked = true,
-  onUnlockRequest,
+  activeSectionId,
+  onActiveSectionChange,
   beforeScore = 50,
   matchScore = 85,
+  jobDescription,
+  jobTitle,
+  resumeAST,
+  isUnlocked = true,
+  onUnlockRequest,
   activeSuggestionId,
   onActiveSuggestionChange,
   className = "",
+  onFinalize,
 }: ResumeSuggestionReviewerProps) {
-  const [mode, setMode] = useState<"step" | "list">("step");
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"studio" | "list">("studio");
+  const [currentSectionIndex, setCurrentSectionIndex] = useState<number>(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>("");
+  const [isSynthesizing, setIsSynthesizing] = useState<boolean>(false);
+  const [synthesizedSummary, setSynthesizedSummary] = useState<string | null>(null);
+  const [selectedListFilter, setSelectedListFilter] = useState<string>("all");
 
-  // Keep currentIndex in sync if parent changes activeSuggestionId
+  const prefetchedIds = useRef<Set<string>>(new Set());
+
+  // Determine effective section groups
+  const [localGroups, setLocalGroups] = useState<ResumeSectionGroup[]>(() => {
+    return sectionGroups && sectionGroups.length > 0
+      ? sectionGroups
+      : deriveSectionGroups(suggestions, resumeAST, originalResume);
+  });
+
+  const prevPropGroupsRef = useRef<ResumeSectionGroup[] | undefined>(sectionGroups);
   useEffect(() => {
-    if (activeSuggestionId) {
-      const idx = suggestions.findIndex((s) => s.id === activeSuggestionId);
-      if (idx !== -1 && idx !== currentIndex) {
-        setCurrentIndex(idx);
+    if (sectionGroups !== prevPropGroupsRef.current) {
+      prevPropGroupsRef.current = sectionGroups;
+      if (sectionGroups && sectionGroups.length > 0) {
+        setLocalGroups(sectionGroups);
+      }
+    } else if (!sectionGroups) {
+      setLocalGroups(deriveSectionGroups(suggestions, resumeAST, originalResume));
+    }
+  }, [sectionGroups, suggestions, resumeAST, originalResume]);
+
+  const effectiveGroups = useMemo(() => {
+    if (localGroups && localGroups.length > 0) {
+      return localGroups;
+    }
+    return deriveSectionGroups(suggestions, resumeAST, originalResume);
+  }, [localGroups, suggestions, resumeAST, originalResume]);
+
+  // Synchronize currentSectionIndex if parent updates activeSectionId
+  useEffect(() => {
+    if (activeSectionId && effectiveGroups.length > 0) {
+      const idx = effectiveGroups.findIndex((g) => g.id === activeSectionId);
+      if (idx !== -1 && idx !== currentSectionIndex) {
+        setCurrentSectionIndex(idx);
       }
     }
-  }, [activeSuggestionId, suggestions]);
+  }, [activeSectionId, effectiveGroups]);
 
-  // Sync active suggestion with parent on step change
-  const currentSug = suggestions[currentIndex] || suggestions[0];
-  const activeId = mode === "step" ? currentSug?.id : activeSuggestionId;
+  const activeGroup = effectiveGroups[currentSectionIndex] || effectiveGroups[0];
 
+  // Notify parent on active section change
   useEffect(() => {
-    if (currentSug?.id && mode === "step") {
-      onActiveSuggestionChange?.(currentSug.id);
+    if (activeGroup?.id) {
+      onActiveSectionChange?.(activeGroup.id);
     }
-  }, [currentIndex, currentSug?.id, mode]);
+  }, [activeGroup?.id, onActiveSectionChange]);
 
-  const filteredSuggestions = useMemo(() => {
-    return suggestions.filter((s) => {
-      if (selectedFilter === "all") return true;
-      if (selectedFilter === "accepted") return s.status !== "rejected";
-      if (selectedFilter === "rejected") return s.status === "rejected";
-      if (selectedFilter === "keyword") return s.category === "keyword";
-      if (selectedFilter === "metric") return s.category === "metric";
-      if (selectedFilter === "summary") return s.category === "summary" || s.section.toLowerCase().includes("summary");
-      if (selectedFilter === "action_verb") return s.category === "action_verb";
-      return true;
-    });
-  }, [suggestions, selectedFilter]);
+  // Background prefetch for next pending section
+  useEffect(() => {
+    const nextIdx = currentSectionIndex + 1;
+    if (nextIdx < effectiveGroups.length) {
+      const nextGroup = effectiveGroups[nextIdx];
+      if (nextGroup && nextGroup.status === "pending" && !prefetchedIds.current.has(nextGroup.id)) {
+        prefetchedIds.current.add(nextGroup.id);
 
+        fetch("/api/agent/tailor-chunk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sectionGroup: nextGroup,
+            resumeContext: originalResume,
+            jobDescription: jobDescription || "",
+            jobTitle: jobTitle,
+          }),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error("Prefetch failed");
+            return res.json();
+          })
+          .then((data) => {
+            if (data.sectionGroup) {
+              const updatedGroups = effectiveGroups.map((g) =>
+                g.id === nextGroup.id ? data.sectionGroup : g
+              );
+              setLocalGroups(updatedGroups);
+              onSectionGroupsChange?.(updatedGroups);
+
+              if (data.sectionGroup.suggestions?.length > 0) {
+                const newSugs: ResumeSuggestion[] = data.sectionGroup.suggestions;
+                const existingIds = new Set(suggestions.map((s) => s.id));
+                const additions = newSugs.filter((s) => !existingIds.has(s.id));
+                if (additions.length > 0) {
+                  onSuggestionsChange([...suggestions, ...additions]);
+                }
+              }
+            }
+          })
+          .catch((err) => {
+            console.warn("[ResumeSuggestionReviewer] Background prefetch note:", err);
+          });
+      }
+    }
+  }, [
+    currentSectionIndex,
+    effectiveGroups,
+    originalResume,
+    jobDescription,
+    jobTitle,
+    suggestions,
+    onSectionGroupsChange,
+    onSuggestionsChange,
+  ]);
+
+  // Counts and scores
   const acceptedCount = useMemo(() => {
     return suggestions.filter((s) => s.status !== "rejected").length;
   }, [suggestions]);
 
-  // Compute category counts
-  const categoryCounts = useMemo(() => {
-    return {
-      keyword: suggestions.filter((s) => s.category === "keyword").length,
-      metric: suggestions.filter((s) => s.category === "metric").length,
-      summary: suggestions.filter((s) => s.category === "summary" || s.section.toLowerCase().includes("summary")).length,
-    };
-  }, [suggestions]);
-
-  // Compute live match score based on accepted ratio
   const liveScore = useMemo(() => {
     if (suggestions.length === 0) return matchScore;
     const ratio = acceptedCount / suggestions.length;
@@ -88,35 +243,59 @@ export default function ResumeSuggestionReviewer({
     return Math.round(beforeScore + boost * ratio);
   }, [suggestions, acceptedCount, beforeScore, matchScore]);
 
-  const isCurrentAccepted = currentSug ? currentSug.status !== "rejected" : true;
+  // Section batch actions
+  const handleAcceptSection = () => {
+    if (!activeGroup) return;
+    const activeSugIds = new Set(activeGroup.suggestions.map((s) => s.id));
+    const updated = suggestions.map((s) =>
+      activeSugIds.has(s.id) ? { ...s, status: "accepted" as const } : s
+    );
+    onSuggestionsChange(updated);
 
-  const handleToggle = (id: string, newStatus: "accepted" | "rejected", autoAdvance = false) => {
+    if (currentSectionIndex < effectiveGroups.length - 1) {
+      const nextIdx = currentSectionIndex + 1;
+      setCurrentSectionIndex(nextIdx);
+      onActiveSectionChange?.(effectiveGroups[nextIdx]?.id || null);
+    }
+  };
+
+  const handleRejectSection = () => {
+    if (!activeGroup) return;
+    const activeSugIds = new Set(activeGroup.suggestions.map((s) => s.id));
+    const updated = suggestions.map((s) =>
+      activeSugIds.has(s.id) ? { ...s, status: "rejected" as const } : s
+    );
+    onSuggestionsChange(updated);
+
+    if (currentSectionIndex < effectiveGroups.length - 1) {
+      const nextIdx = currentSectionIndex + 1;
+      setCurrentSectionIndex(nextIdx);
+      onActiveSectionChange?.(effectiveGroups[nextIdx]?.id || null);
+    }
+  };
+
+  const handlePreviousSection = () => {
+    if (currentSectionIndex > 0) {
+      const prevIdx = currentSectionIndex - 1;
+      setCurrentSectionIndex(prevIdx);
+      onActiveSectionChange?.(effectiveGroups[prevIdx]?.id || null);
+    }
+  };
+
+  const handleSelectSection = (idx: number) => {
+    setCurrentSectionIndex(idx);
+    onActiveSectionChange?.(effectiveGroups[idx]?.id || null);
+  };
+
+  // Individual suggestion toggles
+  const handleToggleSuggestion = (id: string, newStatus: "accepted" | "rejected") => {
     const updated = suggestions.map((s) =>
       s.id === id ? { ...s, status: newStatus } : s
     );
     onSuggestionsChange(updated);
-    if (autoAdvance && currentIndex < suggestions.length - 1) {
-      const nextIdx = currentIndex + 1;
-      setCurrentIndex(nextIdx);
-      onActiveSuggestionChange?.(suggestions[nextIdx]?.id || null);
-    }
   };
 
-  const handleSelectStep = (idx: number) => {
-    setCurrentIndex(idx);
-    onActiveSuggestionChange?.(suggestions[idx]?.id || null);
-  };
-
-  const handleAcceptAll = () => {
-    const updated = suggestions.map((s) => ({ ...s, status: "accepted" as const }));
-    onSuggestionsChange(updated);
-  };
-
-  const handleRejectAll = () => {
-    const updated = suggestions.map((s) => ({ ...s, status: "rejected" as const }));
-    onSuggestionsChange(updated);
-  };
-
+  // Inline editing
   const handleStartEdit = (sug: ResumeSuggestion) => {
     setEditingId(sug.id);
     setEditText(sug.suggestedText);
@@ -135,6 +314,42 @@ export default function ResumeSuggestionReviewer({
     setEditText("");
   };
 
+  // Summary Re-synthesis
+  const handleReSynthesizeSummary = async () => {
+    setIsSynthesizing(true);
+    try {
+      const res = await fetch("/api/agent/synthesize-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assembledResume: originalResume,
+          jobDescription: jobDescription || "",
+          jobTitle: jobTitle,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.summaryText) {
+          setSynthesizedSummary(data.summaryText);
+          if (activeGroup?.suggestions?.length > 0) {
+            const summarySug = activeGroup.suggestions[0];
+            const updated = suggestions.map((s) =>
+              s.id === summarySug.id
+                ? { ...s, suggestedText: data.summaryText, status: "accepted" as const }
+                : s
+            );
+            onSuggestionsChange(updated);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[ResumeSuggestionReviewer] Synthesis error:", err);
+    } finally {
+      setIsSynthesizing(false);
+    }
+  };
+
+  // Badge helper
   const getCategoryBadge = (cat?: string) => {
     switch (cat) {
       case "metric":
@@ -149,28 +364,34 @@ export default function ResumeSuggestionReviewer({
     }
   };
 
-  if (!suggestions || suggestions.length === 0) {
-    return (
-      <div className="p-8 text-center bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
-        <span className="text-3xl">✨</span>
-        <h4 className="font-bold text-gray-800 dark:text-gray-200">No Changes Needed</h4>
-        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-          Your resume already has high keyword alignment with the target job posting.
-        </p>
-      </div>
-    );
-  }
+  // Company extraction for skeleton card
+  const activeCompanyName = useMemo(() => {
+    if (!activeGroup?.title) return "experience";
+    const parts = activeGroup.title.split(/–|-/);
+    return parts[0].trim();
+  }, [activeGroup?.title]);
+
+  const isTailoring = activeGroup?.status === "pending" || activeGroup?.status === "tailoring";
+  const isSummaryStage = activeGroup?.sectionType === "summary";
+
+  // Derive concise breadcrumb label
+  const getBreadcrumbLabel = (group: ResumeSectionGroup, idx: number) => {
+    if (group.sectionType === "summary") return `${idx + 1}. Summary`;
+    if (group.sectionType === "skills") return `${idx + 1}. Skills`;
+    const company = group.title.split(/–|-/)[0].trim();
+    return `${idx + 1}. ${company || group.title}`;
+  };
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Studio Header: You are in the driver's seat */}
+      {/* Studio Header: Narrative Stepper & Progress */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-gray-900 via-gray-900/95 to-gray-800 text-white border border-gray-700/80 shadow-xl space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-                Resume Change Studio
+                Narrative Section Studio
               </span>
             </div>
             <div className="text-sm font-semibold text-gray-200">
@@ -194,55 +415,69 @@ export default function ResumeSuggestionReviewer({
           </div>
         </div>
 
-        {/* Interactive Progress Bar with Clickable Step Dots */}
-        <div className="space-y-1.5 pt-1">
+        {/* Stepper Progress & Clickable Breadcrumbs */}
+        <div className="space-y-2 pt-1">
           <div className="flex items-center justify-between text-[11px] text-gray-400">
-            <span>Change {currentIndex + 1} of {suggestions.length}</span>
-            <span>{Math.round((acceptedCount / suggestions.length) * 100)}% Applied</span>
+            <span className="font-semibold text-gray-300">
+              Stage {currentSectionIndex + 1} / {effectiveGroups.length}: Bottom-to-Top Career Flow
+            </span>
+            <span>Upward Narrative</span>
           </div>
-          <div className="grid grid-flow-col auto-cols-fr gap-1.5">
-            {suggestions.map((s, idx) => {
-              const isAcc = s.status !== "rejected";
-              const isCur = idx === currentIndex;
+
+          {/* Stepper Breadcrumbs Bar */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {effectiveGroups.map((group, idx) => {
+              const isCur = idx === currentSectionIndex;
+              const isUnchanged = !group.hasChanges || group.status === "unchanged";
+              const isPending = group.status === "pending" || group.status === "tailoring";
+              const isDone =
+                group.status === "reviewed" ||
+                (group.suggestions.length > 0 && group.suggestions.every((s) => s.status === "accepted"));
+
+              const icon = isPending ? "⏳" : isUnchanged ? "🛡️" : isDone ? "✓" : isCur ? "●" : `${idx + 1}`;
+
               return (
                 <button
-                  key={s.id}
+                  key={group.id}
                   type="button"
-                  onClick={() => handleSelectStep(idx)}
-                  className={`h-2 rounded-full transition-all ${
+                  onClick={() => handleSelectSection(idx)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 ${
                     isCur
-                      ? "ring-2 ring-cyan-400 ring-offset-1 ring-offset-gray-900 bg-cyan-400"
-                      : isAcc
-                      ? "bg-emerald-500 hover:bg-emerald-400"
-                      : "bg-gray-700 hover:bg-gray-600"
+                      ? "bg-cyan-500 text-white shadow-sm ring-1 ring-cyan-400 font-bold"
+                      : isDone
+                      ? "bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-900/60"
+                      : "bg-gray-800/80 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700/60"
                   }`}
-                  title={`Jump to Change ${idx + 1}: ${s.section}`}
-                />
+                  title={`Jump to Section ${idx + 1}: ${group.title}`}
+                >
+                  <span className="text-[10px]">{icon}</span>
+                  <span className="truncate max-w-[130px]">{getBreadcrumbLabel(group, idx)}</span>
+                </button>
               );
             })}
           </div>
         </div>
       </div>
 
-      {/* Mode Toggle & Batch Controls */}
+      {/* Mode Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-        <div className="flex items-center bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl border border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full">
+        <div className="flex items-center bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl border border-gray-200 dark:border-gray-700 overflow-x-auto">
           <button
             type="button"
-            onClick={() => setMode("step")}
+            onClick={() => setViewMode("studio")}
             className={`px-3 py-1 text-xs font-bold rounded-lg transition-all shrink-0 ${
-              mode === "step"
+              viewMode === "studio"
                 ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             }`}
           >
-            🎯 Step-by-Step
+            🎯 Section Studio
           </button>
           <button
             type="button"
-            onClick={() => setMode("list")}
+            onClick={() => setViewMode("list")}
             className={`px-3 py-1 text-xs font-bold rounded-lg transition-all shrink-0 ${
-              mode === "list"
+              viewMode === "list"
                 ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             }`}
@@ -251,18 +486,19 @@ export default function ResumeSuggestionReviewer({
           </button>
         </div>
 
+        {/* Global Quick Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
-            onClick={handleAcceptAll}
+            onClick={() => onSuggestionsChange(suggestions.map((s) => ({ ...s, status: "accepted" as const })))}
             className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-all active:scale-95"
-            title="Accept all suggested improvements"
+            title="Accept all suggested improvements across entire resume"
           >
             ✓ Accept All
           </button>
           <button
             type="button"
-            onClick={handleRejectAll}
+            onClick={() => onSuggestionsChange(suggestions.map((s) => ({ ...s, status: "rejected" as const })))}
             className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 transition-all active:scale-95"
             title="Keep all original resume lines"
           >
@@ -271,212 +507,334 @@ export default function ResumeSuggestionReviewer({
         </div>
       </div>
 
-      {/* Category & Status Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] px-1 scrollbar-none">
-        <button
-          type="button"
-          onClick={() => setSelectedFilter("all")}
-          className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
-            selectedFilter === "all"
-              ? "bg-cyan-500 text-white shadow-xs"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-          }`}
-        >
-          All ({suggestions.length})
-        </button>
-        {categoryCounts.keyword > 0 && (
-          <button
-            type="button"
-            onClick={() => setSelectedFilter("keyword")}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
-              selectedFilter === "keyword"
-                ? "bg-cyan-600 text-white shadow-xs"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            🎯 Keywords ({categoryCounts.keyword})
-          </button>
-        )}
-        {categoryCounts.metric > 0 && (
-          <button
-            type="button"
-            onClick={() => setSelectedFilter("metric")}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
-              selectedFilter === "metric"
-                ? "bg-emerald-600 text-white shadow-xs"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            📈 Metrics ({categoryCounts.metric})
-          </button>
-        )}
-        {categoryCounts.summary > 0 && (
-          <button
-            type="button"
-            onClick={() => setSelectedFilter("summary")}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
-              selectedFilter === "summary"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            ✨ Summary ({categoryCounts.summary})
-          </button>
-        )}
-      </div>
-
-      {/* MODE 1: STEP-BY-STEP CHANGE CARD */}
-      {mode === "step" && currentSug && (
-        <div className="relative rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg overflow-hidden transition-all">
-          {/* Card Header */}
-          <div className="flex items-center justify-between gap-2 p-3.5 px-4 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-2 min-w-0 flex-wrap">
-              <span className="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-gray-200/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 shrink-0">
-                {currentSug.section}
-              </span>
-              <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${getCategoryBadge(currentSug.category).color}`}>
-                {getCategoryBadge(currentSug.category).label}
-              </span>
+      {/* VIEW MODE 1: SECTION STUDIO */}
+      {viewMode === "studio" && activeGroup && (
+        <div className="relative rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg overflow-hidden transition-all space-y-0">
+          {/* Unified Section Header */}
+          <div className="p-4 bg-gray-50/90 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
+                  Section {currentSectionIndex + 1} of {effectiveGroups.length}
+                </span>
+                {activeGroup.status === "unchanged" || !activeGroup.hasChanges ? (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    🛡️ Authentic Baseline
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30">
+                    ✦ Tailored Enhancement
+                  </span>
+                )}
+              </div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mt-0.5">
+                {activeGroup.title}
+              </h3>
+              {activeGroup.subtitle && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {activeGroup.subtitle}
+                </p>
+              )}
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
+            {/* Stepper navigation buttons */}
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
-                disabled={currentIndex === 0}
-                onClick={() => handleSelectStep(Math.max(0, currentIndex - 1))}
-                className="p-1.5 px-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition-colors"
-                title="Previous change"
+                disabled={currentSectionIndex === 0}
+                onClick={handlePreviousSection}
+                className="p-1.5 px-2.5 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                title="Previous section"
               >
                 ← Prev
               </button>
               <button
                 type="button"
-                disabled={currentIndex === suggestions.length - 1}
-                onClick={() => handleSelectStep(Math.min(suggestions.length - 1, currentIndex + 1))}
-                className="p-1.5 px-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition-colors"
-                title="Next change"
+                disabled={currentSectionIndex === effectiveGroups.length - 1}
+                onClick={() => handleSelectSection(currentSectionIndex + 1)}
+                className="p-1.5 px-2.5 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                title="Next section"
               >
                 Next →
               </button>
             </div>
           </div>
 
-          {/* Card Body: ATS Strategy + Diff */}
-          <div className="p-4 space-y-4">
-            {currentSug.reason && (
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-cyan-500/5 dark:bg-cyan-950/20 border border-cyan-500/20 text-xs text-cyan-900 dark:text-cyan-200 leading-relaxed">
-                <span className="text-base shrink-0">💡</span>
-                <div>
-                  <span className="font-bold">Why the AI suggests this: </span>
-                  {currentSug.reason}
+          {/* Section Body */}
+          <div className="p-4 sm:p-5 space-y-4">
+            {/* Audit Rationale Banner */}
+            {activeGroup.auditRationale && (
+              <div
+                className={`p-3.5 rounded-xl border flex items-start gap-2.5 text-xs leading-relaxed ${
+                  !activeGroup.hasChanges || activeGroup.status === "unchanged"
+                    ? "bg-emerald-500/5 dark:bg-emerald-950/20 border-emerald-500/20 text-emerald-900 dark:text-emerald-200"
+                    : "bg-cyan-500/5 dark:bg-cyan-950/20 border-cyan-500/20 text-cyan-950 dark:text-cyan-200"
+                }`}
+              >
+                <span className="text-base shrink-0">
+                  {!activeGroup.hasChanges || activeGroup.status === "unchanged" ? "🛡️" : "✦"}
+                </span>
+                <div className="space-y-0.5">
+                  <div className="font-bold text-[11px] uppercase tracking-wider">
+                    {!activeGroup.hasChanges || activeGroup.status === "unchanged"
+                      ? "Preserved Authenticity"
+                      : "✦ Tailored for Target Role"}
+                  </div>
+                  <div>{activeGroup.auditRationale}</div>
                 </div>
               </div>
             )}
 
-            {editingId === currentSug.id ? (
-              <div className="space-y-3">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                  Customize wording for this line:
-                </label>
-                <textarea
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  rows={3}
-                  className="w-full p-3 text-sm rounded-xl border border-cyan-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                />
-                <div className="flex items-center gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveEdit(currentSug.id)}
-                    className="px-4 py-1.5 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white shadow"
-                  >
-                    Save & Accept
-                  </button>
+            {/* Shimmer Skeleton if section is tailoring/pending */}
+            {isTailoring && (
+              <div className="p-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 shadow-inner space-y-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl animate-spin">⏳</span>
+                  <div>
+                    <h4 className="font-bold text-gray-800 dark:text-gray-200 text-sm">
+                      Analyzing {activeCompanyName} experience against target role requirements...
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Generating high-impact metrics and keyword alignment in the background.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6" />
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/6" />
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
                 </div>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {/* Original Resume Snippet */}
-                <div className="p-3.5 rounded-xl bg-rose-500/5 dark:bg-rose-950/20 border border-rose-500/20">
-                  <div className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-1">
-                    Your Original Resume Text:
-                  </div>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {currentSug.originalText}
-                  </p>
-                </div>
+            )}
 
-                {/* AI Proposed Suggestion */}
-                <div
-                  className={`p-3.5 rounded-xl border transition-all ${
-                    isCurrentAccepted
-                      ? "bg-emerald-500/10 dark:bg-emerald-950/30 border-emerald-500/40 text-gray-900 dark:text-white ring-1 ring-emerald-500/30"
-                      : "bg-gray-100 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 text-gray-500"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                      ✨ Proposed Enhancement ({isCurrentAccepted ? "Applied" : "Declined"}):
+            {/* Untouched / Preserved Section Content */}
+            {!isTailoring && (!activeGroup.hasChanges || activeGroup.suggestions.length === 0) && !isSummaryStage && (
+              <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/30 space-y-3">
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span className="font-semibold">Original Phrasing Maintained</span>
+                  <span className="text-[11px] bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded font-mono">
+                    No Changes Proposed
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 text-xs sm:text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
+                  {activeGroup.originalContent || "No content recorded for this section."}
+                </div>
+              </div>
+            )}
+
+            {/* Summary Finale Stage */}
+            {!isTailoring && isSummaryStage && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl border border-purple-500/30 bg-purple-500/5 dark:bg-purple-950/20 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                      Holistic Career Summary Synthesis
                     </span>
-                    {currentSug.keywords && currentSug.keywords.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {currentSug.keywords.map((kw) => (
-                          <span
-                            key={kw}
-                            className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
-                          >
-                            +{kw}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <button
+                      type="button"
+                      disabled={isSynthesizing}
+                      onClick={handleReSynthesizeSummary}
+                      className="px-3 py-1 text-xs font-bold rounded-lg bg-purple-600 hover:bg-purple-500 text-white shadow-sm transition-all disabled:opacity-50 active:scale-95 flex items-center gap-1.5"
+                    >
+                      {isSynthesizing ? "⏳ Synthesizing..." : "↺ Re-Synthesize Summary"}
+                    </button>
                   </div>
-                  <p className="text-xs sm:text-sm font-medium leading-relaxed">
-                    {currentSug.suggestedText}
+
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    This executive summary unifies your entire career trajectory across all accepted experience enhancements into a compelling 3–4 sentence pitch.
                   </p>
+
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-gray-950 border border-purple-500/20 text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
+                    {synthesizedSummary ||
+                      activeGroup.tailoredContent ||
+                      activeGroup.suggestions[0]?.suggestedText ||
+                      activeGroup.originalContent ||
+                      "Executive professional summary aligned with target role."}
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleAcceptSection();
+                      onFinalize?.();
+                    }}
+                    className="px-6 py-2.5 text-sm font-bold rounded-xl text-white bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 shadow-lg shadow-emerald-500/25 transition-all active:scale-95"
+                  >
+                    ✓ Approve & Finalize Resume
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* 3 Driver Actions: Accept / Keep Original / Adjust */}
-            <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-800">
+            {/* In-Context Bullets List (Experience & Skills) */}
+            {!isTailoring && !isSummaryStage && activeGroup.suggestions.length > 0 && (
+              <div className="space-y-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Suggestions in Context ({activeGroup.suggestions.length})
+                </div>
+
+                {activeGroup.suggestions.map((sug, sIdx) => {
+                  const isAccepted = sug.status !== "rejected";
+                  const isEditing = editingId === sug.id;
+                  const badge = getCategoryBadge(sug.category);
+
+                  return (
+                    <div
+                      key={sug.id}
+                      className={`p-4 rounded-xl border transition-all space-y-3 ${
+                        isAccepted
+                          ? "bg-white dark:bg-gray-900 border-emerald-500/40 shadow-sm"
+                          : "bg-gray-50/80 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-75"
+                      }`}
+                    >
+                      {/* Suggestion Header */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                            Bullet {sug.bulletIndex !== undefined ? sug.bulletIndex + 1 : sIdx + 1}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badge.color}`}>
+                            {badge.label}
+                          </span>
+                          {sug.keywords && sug.keywords.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {sug.keywords.map((kw) => (
+                                <span
+                                  key={kw}
+                                  className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/20"
+                                >
+                                  +{kw}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Individual Bullet Actions */}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(sug)}
+                            className="px-2.5 py-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          >
+                            ✎ Adjust / Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSuggestion(sug.id, "rejected")}
+                            className={`px-3 py-1 text-[11px] font-bold rounded-lg border transition-all ${
+                              !isAccepted
+                                ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white border-gray-400"
+                                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            ✕ Keep Original
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSuggestion(sug.id, "accepted")}
+                            className={`px-3.5 py-1 text-[11px] font-bold rounded-lg text-white shadow transition-all ${
+                              isAccepted
+                                ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20"
+                                : "bg-cyan-600 hover:bg-cyan-500"
+                            }`}
+                          >
+                            ✓ Accept
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* AI Strategy Rationale */}
+                      {sug.reason && (
+                        <p className="text-[11px] text-gray-600 dark:text-gray-400 italic">
+                          💡 {sug.reason}
+                        </p>
+                      )}
+
+                      {/* Inline Edit Box or Diff */}
+                      {isEditing ? (
+                        <div className="space-y-2 pt-1">
+                          <textarea
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            rows={3}
+                            className="w-full p-2.5 text-xs sm:text-sm rounded-xl border border-cyan-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          />
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={handleCancelEdit}
+                              className="px-3 py-1 text-xs font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEdit(sug.id)}
+                              className="px-4 py-1 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white shadow"
+                            >
+                              Save & Accept
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {/* Original Text */}
+                          <div className="p-2.5 rounded-lg bg-rose-500/5 dark:bg-rose-950/20 border border-rose-500/20 text-xs text-gray-600 dark:text-gray-400">
+                            <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block mb-0.5">
+                              Original:
+                            </span>
+                            {sug.originalText}
+                          </div>
+
+                          {/* Proposed Enhancement */}
+                          <div
+                            className={`p-2.5 rounded-lg border text-xs sm:text-sm leading-relaxed ${
+                              isAccepted
+                                ? "bg-emerald-500/10 dark:bg-emerald-950/30 border-emerald-500/30 text-gray-900 dark:text-gray-100 font-medium"
+                                : "bg-gray-100 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 text-gray-500 line-through"
+                            }`}
+                          >
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mb-0.5">
+                              Tailored:
+                            </span>
+                            {sug.suggestedText}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Batch Section Actions Footer */}
+            <div className="pt-4 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 dark:border-gray-800">
               <button
                 type="button"
-                onClick={() => handleStartEdit(currentSug)}
-                className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                disabled={currentSectionIndex === 0}
+                onClick={handlePreviousSection}
+                className="px-4 py-2 text-xs font-semibold rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none transition-all active:scale-95"
               >
-                ✎ Adjust / Edit
+                ← Previous Section
               </button>
 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => handleToggle(currentSug.id, "rejected", true)}
-                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 ${
-                    !isCurrentAccepted
-                      ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white border-gray-400"
-                      : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100"
-                  }`}
+                  onClick={handleRejectSection}
+                  className="px-4 py-2 text-xs font-bold rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all active:scale-95"
                 >
-                  ✕ Keep My Original
+                  ↺ Keep Original Section & Continue →
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleToggle(currentSug.id, "accepted", true)}
-                  className={`px-5 py-2 text-xs font-bold rounded-xl text-white shadow-md transition-all active:scale-95 ${
-                    isCurrentAccepted
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-emerald-500/20"
-                      : "bg-cyan-600 hover:bg-cyan-500 shadow-cyan-600/20"
-                  }`}
+                  onClick={handleAcceptSection}
+                  className="px-5 py-2 text-xs font-bold rounded-xl text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-95"
                 >
-                  ✓ Accept Change →
+                  ✓ Accept Section & Continue →
                 </button>
               </div>
             </div>
@@ -484,39 +842,57 @@ export default function ResumeSuggestionReviewer({
         </div>
       )}
 
-      {/* MODE 2: ALL CHANGES LIST VIEW */}
-      {mode === "list" && (
+      {/* VIEW MODE 2: FLAT LIST OF ALL CHANGES */}
+      {viewMode === "list" && (
         <div className="space-y-3">
-          {filteredSuggestions.map((sug) => {
-            const isAccepted = sug.status !== "rejected";
-            const isActive = activeId === sug.id;
-            const badge = getCategoryBadge(sug.category);
-
-            return (
-              <div
-                key={sug.id}
-                onClick={() => onActiveSuggestionChange?.(sug.id)}
-                className={`relative rounded-xl border transition-all p-3.5 space-y-2 cursor-pointer ${
-                  isActive
-                    ? "ring-2 ring-cyan-500 border-cyan-500 bg-cyan-500/5 dark:bg-cyan-950/20 shadow-md"
-                    : isAccepted
-                    ? "bg-white dark:bg-gray-900 border-emerald-500/30 hover:border-emerald-500/60 shadow-sm"
-                    : "bg-gray-50/80 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-70"
+          {/* Category Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] px-1 scrollbar-none">
+            {["all", "keyword", "metric", "summary", "action_verb"].map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedListFilter(cat)}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 capitalize ${
+                  selectedListFilter === cat
+                    ? "bg-cyan-500 text-white shadow-xs"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
               >
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-200/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200">
-                      {sug.section}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badge.color}`}>
-                      {badge.label}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {suggestions
+            .filter((s) => {
+              if (selectedListFilter === "all") return true;
+              return s.category === selectedListFilter;
+            })
+            .map((sug) => {
+              const isAccepted = sug.status !== "rejected";
+              const badge = getCategoryBadge(sug.category);
+
+              return (
+                <div
+                  key={sug.id}
+                  className={`p-3.5 rounded-xl border transition-all space-y-2 ${
+                    isAccepted
+                      ? "bg-white dark:bg-gray-900 border-emerald-500/30 shadow-sm"
+                      : "bg-gray-50/80 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-200/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200">
+                        {sug.section}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badge.color}`}>
+                        {badge.label}
+                      </span>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => handleToggle(sug.id, isAccepted ? "rejected" : "accepted")}
+                      onClick={() => handleToggleSuggestion(sug.id, isAccepted ? "rejected" : "accepted")}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                         isAccepted
                           ? "bg-emerald-500 text-white hover:bg-emerald-600"
@@ -526,19 +902,18 @@ export default function ResumeSuggestionReviewer({
                       {isAccepted ? "✓ Accepted" : "+ Accept"}
                     </button>
                   </div>
-                </div>
 
-                <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
-                  {sug.suggestedText}
-                </p>
-                {sug.reason && (
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    💡 {sug.reason}
+                  <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                    {sug.suggestedText}
                   </p>
-                )}
-              </div>
-            );
-          })}
+                  {sug.reason && (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      💡 {sug.reason}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
         </div>
       )}
     </div>
