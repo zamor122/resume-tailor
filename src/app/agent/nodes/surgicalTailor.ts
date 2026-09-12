@@ -215,8 +215,7 @@ function extractSpecificBullets(description: string, indices: number[]): string 
 }
 
 function extractSpecificBulletsArray(description: string, indices: number[]): string[] {
-  const lines = description.split("\n");
-  const bullets = lines.filter(isBullet);
+  const bullets = getBulletsList(description);
   return indices
     .map((i) => bullets[i])
     .filter(Boolean);
@@ -227,26 +226,14 @@ function spliceRewrittenBullets(
   rewrittenBulletsText: string,
   targetIndices: number[]
 ): string {
-  const originalLines = originalDescription.split("\n");
-  const bullets: string[] = [];
-  const nonBulletPrefixes: Array<{ index: number; line: string }> = [];
-
-  originalLines.forEach((l) => {
-    if (isBullet(l)) {
-      bullets.push(l);
-    } else if (bullets.length === 0 && l.trim().length > 0) {
-      nonBulletPrefixes.push({ index: 0, line: l });
-    }
-  });
-
+  const bullets = getBulletsList(originalDescription);
   const rewrittenList = getBulletsList(rewrittenBulletsText);
 
   targetIndices.forEach((targetIdx, listIdx) => {
-    if (rewrittenList[listIdx] && bullets[targetIdx]) {
+    if (rewrittenList[listIdx] && bullets[targetIdx] !== undefined) {
       bullets[targetIdx] = rewrittenList[listIdx];
     }
   });
 
-  const prefix = nonBulletPrefixes.map((p) => p.line).join("\n");
-  return prefix ? `${prefix}\n${bullets.join("\n")}` : bullets.join("\n");
+  return bullets.join("\n");
 }

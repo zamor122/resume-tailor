@@ -47,6 +47,22 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
   };
 }
 
+function isBullet(line: string): boolean {
+  const trimmed = line.trim();
+  return /^([-*•–—]|\d+\.)\s+/.test(trimmed) || /^[-*•–—]/.test(trimmed);
+}
+
+function getBulletsList(text: string): string[] {
+  if (!text) return [];
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const bulletLines = lines.filter(isBullet);
+  if (bulletLines.length > 0) return bulletLines;
+  return lines;
+}
+
 function pickTopBulletsAcrossJobs(
   experience: Array<{ description: string }>,
   missingKeywords: string[],
@@ -55,8 +71,7 @@ function pickTopBulletsAcrossJobs(
   const candidates: Array<{ jobIndex: number; bulletIndex: number; gapScore: number }> = [];
 
   experience.forEach((job, ji) => {
-    const lines = (job.description || "").split("\n");
-    const bullets = lines.filter((l) => /^([-*•–—]|\d+\.)\s+/.test(l.trim()) || /^[-*•–—]/.test(l.trim()));
+    const bullets = getBulletsList(job.description || "");
 
     bullets.forEach((b, bi) => {
       const bLower = b.toLowerCase();

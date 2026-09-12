@@ -22,6 +22,8 @@ export async function POST(req: NextRequest) {
       improvementMetrics,
       validationResult,
       accessToken,
+      suggestions,
+      formatSpec,
     } = body;
 
     if (!originalResume || !tailoredResume) {
@@ -63,7 +65,11 @@ export async function POST(req: NextRequest) {
       content_map: obfuscationResult.contentMap,
       job_description: cleanedJobDescription,
       match_score: matchScoreForDb,
-      improvement_metrics: improvementMetrics || {},
+      improvement_metrics: {
+        ...(improvementMetrics || {}),
+        ...(suggestions ? { suggestions } : {}),
+      },
+      format_spec: formatSpec || (suggestions ? { suggestions } : null),
       free_reveal: obfuscationResult.freeReveal,
     };
 

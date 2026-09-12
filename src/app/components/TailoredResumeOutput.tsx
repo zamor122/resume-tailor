@@ -63,9 +63,8 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   matchScore = 85,
 }) => {
   const hasSuggestions = suggestions && suggestions.length > 0;
-  const [viewLayout, setViewLayout] = useState<"cockpit" | "document">(
-    hasSuggestions ? "cockpit" : "document"
-  );
+  const [viewLayout, setViewLayout] = useState<"cockpit" | "document">("cockpit");
+  const [userToggledLayout, setUserToggledLayout] = useState(false);
   const [activeSuggestionId, setActiveSuggestionId] = useState<string | null>(
     suggestions?.[0]?.id ?? null
   );
@@ -75,6 +74,12 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       setActiveSuggestionId(suggestions[0].id);
     }
   }, [hasSuggestions, suggestions, activeSuggestionId]);
+
+  React.useEffect(() => {
+    if (hasSuggestions && !userToggledLayout) {
+      setViewLayout("cockpit");
+    }
+  }, [hasSuggestions, userToggledLayout]);
 
   // Compute live active resume text from suggestions if available
   const activeResumeText = useMemo(() => {
@@ -348,7 +353,10 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
             <div className="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 shadow-inner">
               <button
                 type="button"
-                onClick={() => setViewLayout("cockpit")}
+                onClick={() => {
+                  setUserToggledLayout(true);
+                  setViewLayout("cockpit");
+                }}
                 className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
                   viewLayout === "cockpit"
                     ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
@@ -359,7 +367,10 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setViewLayout("document")}
+                onClick={() => {
+                  setUserToggledLayout(true);
+                  setViewLayout("document");
+                }}
                 className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
                   viewLayout === "document"
                     ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"

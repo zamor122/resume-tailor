@@ -224,7 +224,7 @@ export default function ResumeSuggestionReviewer({
         </div>
       </div>
 
-      {/* Category Filter Tabs & Batch Controls */}
+      {/* Mode Toggle & Batch Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <div className="flex items-center bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl border border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full">
           <button
@@ -269,6 +269,60 @@ export default function ResumeSuggestionReviewer({
             ↺ Keep All Original
           </button>
         </div>
+      </div>
+
+      {/* Category & Status Filter Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] px-1 scrollbar-none">
+        <button
+          type="button"
+          onClick={() => setSelectedFilter("all")}
+          className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
+            selectedFilter === "all"
+              ? "bg-cyan-500 text-white shadow-xs"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+          }`}
+        >
+          All ({suggestions.length})
+        </button>
+        {categoryCounts.keyword > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelectedFilter("keyword")}
+            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
+              selectedFilter === "keyword"
+                ? "bg-cyan-600 text-white shadow-xs"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
+          >
+            🎯 Keywords ({categoryCounts.keyword})
+          </button>
+        )}
+        {categoryCounts.metric > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelectedFilter("metric")}
+            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
+              selectedFilter === "metric"
+                ? "bg-emerald-600 text-white shadow-xs"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
+          >
+            📈 Metrics ({categoryCounts.metric})
+          </button>
+        )}
+        {categoryCounts.summary > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelectedFilter("summary")}
+            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
+              selectedFilter === "summary"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
+          >
+            ✨ Summary ({categoryCounts.summary})
+          </button>
+        )}
       </div>
 
       {/* MODE 1: STEP-BY-STEP CHANGE CARD */}
