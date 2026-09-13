@@ -181,4 +181,87 @@ describe("POST /api/agent/tailor-chunk", () => {
     const json = await res.json();
     expect(json.error).toContain("LLM Rate Limit Exceeded");
   });
+
+  it("parses structured 1-to-1 JSON array output matching bullet indices", async () => {
+    vi.mocked(generateWithFallback).mockResolvedValueOnce({
+      text: JSON.stringify([
+        {
+          index: 0,
+          originalText: "Built services",
+          suggestedText: "Architected resilient distributed microservices in Go",
+          status: "enhanced",
+          reason: "Added Go and microservices keywords",
+          keywords: ["Go", "Microservices"],
+        },
+        {
+          index: 1,
+          originalText: "Worked with databases",
+          suggestedText: "Optimized PostgreSQL query latency by 40%",
+          status: "enhanced",
+          reason: "Quantified query latency improvement",
+          keywords: ["PostgreSQL"],
+        },
+      ]),
+      modelUsed: "gemini-1.5-flash",
+    });
+
+    const req = new Request("http://localhost:3000/api/agent/tailor-chunk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sectionGroup: mockGroup,
+        sortedMissingKeywords: ["Go", "Microservices", "PostgreSQL"],
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    const sugs = json.sectionGroup.suggestions;
+    expect(sugs).toHaveLength(2);
+    expect(sugs[0].bulletIndex).toBe(0);
+    expect(sugs[0].suggestedText).toBe("Architected resilient distributed microservices in Go");
+    expect(sugs[0].keywords).toContain("Go");
+    expect(sugs[1].bulletIndex).toBe(1);
+    expect(sugs[1].suggestedText).toBe("Optimized PostgreSQL query latency by 40%");
+  });
+
+  it("handles markdown-fenced JSON output gracefully", async () => {
+    vi.mocked(generateWithFallback).mockResolvedValueOnce({
+      text: "```json\n" + JSON.stringify([
+        {
+          index: 0,
+          originalText: "Built services",
+          suggestedText: "Architected microservices in Go",
+          status: "enhanced",
+          reason: "Targeted keywords",
+          keywords: ["Go"],
+        },
+        {
+          index: 1,
+          originalText: "Worked with databases",
+          suggestedText: "Managed PostgreSQL databases",
+          status: "enhanced",
+          reason: "Targeted keywords",
+          keywords: ["PostgreSQL"],
+        },
+      ]) + "\n```",
+      modelUsed: "gemini-1.5-flash",
+    });
+
+    const req = new Request("http://localhost:3000/api/agent/tailor-chunk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sectionGroup: mockGroup,
+        sortedMissingKeywords: ["Go", "PostgreSQL"],
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.sectionGroup.suggestions).toHaveLength(2);
+    expect(json.sectionGroup.suggestions[0].suggestedText).toBe("Architected microservices in Go");
+  });
 });
