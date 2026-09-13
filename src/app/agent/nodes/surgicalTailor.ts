@@ -5,6 +5,7 @@ import {
   getExperienceBulletsPrompt,
 } from "@/app/prompts/tailoringSection";
 import { groupSuggestionsBySection } from "@/app/utils/resumeReassemble";
+import { parseChunkBulletsResponse } from "@/app/utils/chunkBulletParser";
 
 export async function surgicalTailorNode(
   state: AgentState
@@ -73,7 +74,6 @@ export async function surgicalTailorNode(
           dates: exp.dates,
           bulletsText,
           jobDescription: jdSnippet,
-          resumeContext: rawResume,
           preferences,
           userRequestedKeywords: sortedMissingKeywords.slice(0, 10),
         }),
@@ -123,63 +123,52 @@ export async function surgicalTailorNode(
     } else if (r.type === "bullets" && r.index !== undefined) {
       const exp = experience[r.index];
       const planItem = bulletPlan?.jobBulletChanges.find((c) => c.jobIndex === r.index);
-      
+
       if (planItem?.bulletIndices === "all") {
-        tailoredBulletsByJob[r.index] = r.text;
-        // Break into individual bullet suggestions
         const origBullets = getBulletsList(exp.description);
-        const newBullets = getBulletsList(r.text);
-        newBullets.forEach((newB, bIdx) => {
-          const origB = origBullets[bIdx] || origBullets[0] || "";
-          if (origB && newB && origB.trim() !== newB.trim()) {
-            const matchedKw = sortedMissingKeywords.filter((kw) =>
-              newB.toLowerCase().includes(kw.toLowerCase())
-            ).slice(0, 3);
-            const hasMetric = /\d+%|\$\d+|\d+x|\d+\+/i.test(newB) && !/\d+%|\$\d+|\d+x|\d+\+/i.test(origB);
-            const cat = hasMetric ? "metric" : matchedKw.length > 0 ? "keyword" : "action_verb";
-            suggestions.push({
-              id: `sug-job-${r.index}-bullet-${bIdx}`,
-              section: `${exp.company} – ${exp.title}`,
-              originalText: origB.trim(),
-              suggestedText: newB.trim(),
-              reason: planItem.reason || (hasMetric ? "Quantified impact metric for recruiter resonance" : "Targeted ATS keyword alignment and active leadership voice"),
-              keywords: matchedKw,
-              category: cat,
-              status: "accepted",
-              jobIndex: r.index,
-              bulletIndex: bIdx,
-            });
-          }
+        const { suggestions: chunkSuggestions, tailoredBullets } = parseChunkBulletsResponse({
+          llmText: r.text,
+          origBullets,
+          sectionGroupId: `section-exp-${r.index}`,
+          sectionGroupTitle: `${exp.company} – ${exp.title}`,
+          jobIndex: r.index,
+          sortedMissingKeywords,
+        });
+
+        tailoredBulletsByJob[r.index] = tailoredBullets.join("\n");
+        chunkSuggestions.forEach((sug) => {
+          suggestions.push({
+            ...sug,
+            id: `sug-job-${r.index}-bullet-${sug.bulletIndex ?? 0}`,
+            reason: planItem.reason || sug.reason,
+          });
         });
       } else if (planItem?.bulletIndices) {
+        const targetIndices = planItem.bulletIndices as number[];
+        const origBullets = extractSpecificBulletsArray(exp.description, targetIndices);
+        const { suggestions: chunkSuggestions, tailoredBullets } = parseChunkBulletsResponse({
+          llmText: r.text,
+          origBullets,
+          sectionGroupId: `section-exp-${r.index}`,
+          sectionGroupTitle: `${exp.company} – ${exp.title}`,
+          jobIndex: r.index,
+          sortedMissingKeywords,
+        });
+
         tailoredBulletsByJob[r.index] = spliceRewrittenBullets(
           experience[r.index].description,
-          r.text,
-          planItem.bulletIndices as number[]
+          tailoredBullets.join("\n"),
+          targetIndices
         );
-        const origBullets = extractSpecificBulletsArray(exp.description, planItem.bulletIndices as number[]);
-        const newBullets = getBulletsList(r.text);
-        newBullets.forEach((newB, bIdx) => {
-          const origB = origBullets[bIdx] || "";
-          if (origB && newB && origB.trim() !== newB.trim()) {
-            const matchedKw = sortedMissingKeywords.filter((kw) =>
-              newB.toLowerCase().includes(kw.toLowerCase())
-            ).slice(0, 3);
-            const hasMetric = /\d+%|\$\d+|\d+x|\d+\+/i.test(newB) && !/\d+%|\$\d+|\d+x|\d+\+/i.test(origB);
-            const cat = hasMetric ? "metric" : matchedKw.length > 0 ? "keyword" : "action_verb";
-            suggestions.push({
-              id: `sug-job-${r.index}-bullet-${planItem.bulletIndices[bIdx] ?? bIdx}`,
-              section: `${exp.company} – ${exp.title}`,
-              originalText: origB.trim(),
-              suggestedText: newB.trim(),
-              reason: planItem.reason || (hasMetric ? "Quantified impact metric for recruiter resonance" : "Targeted ATS keyword alignment and active leadership voice"),
-              keywords: matchedKw,
-              category: cat,
-              status: "accepted",
-              jobIndex: r.index,
-              bulletIndex: typeof planItem.bulletIndices === "object" ? (planItem.bulletIndices[bIdx] ?? bIdx) : bIdx,
-            });
-          }
+
+        chunkSuggestions.forEach((sug) => {
+          const originalIdx = targetIndices[sug.bulletIndex ?? 0] ?? (sug.bulletIndex ?? 0);
+          suggestions.push({
+            ...sug,
+            id: `sug-job-${r.index}-bullet-${originalIdx}`,
+            bulletIndex: originalIdx,
+            reason: planItem.reason || sug.reason,
+          });
         });
       }
     }
@@ -188,16 +177,21 @@ export async function surgicalTailorNode(
   // Group suggestions into bottom-to-top section groups
   const sectionGroups = groupSuggestionsBySection(suggestions, resumeAST, rawResume);
 
-  // Connect explicit audit rationales from bulletPlan.jobAudits
-  if (bulletPlan?.jobAudits && bulletPlan.jobAudits.length > 0) {
+  // Connect explicit audit rationales from bulletPlan.jobAudits and update tailoredContent
+  if (sectionGroups.length > 0) {
     sectionGroups.forEach((group) => {
       if (group.sectionType === "experience" && group.jobIndex !== undefined) {
-        const audit = bulletPlan.jobAudits?.find((a) => a.jobIndex === group.jobIndex);
-        if (audit) {
-          group.auditRationale = audit.auditRationale;
-          if (!audit.hasChanges && (!group.suggestions || group.suggestions.length === 0)) {
-            group.status = "unchanged";
-            group.hasChanges = false;
+        if (tailoredBulletsByJob[group.jobIndex]) {
+          group.tailoredContent = tailoredBulletsByJob[group.jobIndex];
+        }
+        if (bulletPlan?.jobAudits && bulletPlan.jobAudits.length > 0) {
+          const audit = bulletPlan.jobAudits.find((a) => a.jobIndex === group.jobIndex);
+          if (audit) {
+            group.auditRationale = audit.auditRationale;
+            if (!audit.hasChanges && (!group.suggestions || group.suggestions.length === 0)) {
+              group.status = "unchanged";
+              group.hasChanges = false;
+            }
           }
         }
       }
