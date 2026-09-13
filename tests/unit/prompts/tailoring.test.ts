@@ -81,6 +81,27 @@ describe('Tailoring Prompts', () => {
       expect(prompt).toContain('preserve job-critical terms');
     });
   });
+
+  describe('getExperienceBulletsPrompt', () => {
+    it('should isolate experience context and require structured JSON array matching bullet count', async () => {
+      const { getExperienceBulletsPrompt } = await import('@/app/prompts/tailoringSection');
+      const prompt = getExperienceBulletsPrompt({
+        jobTitle: 'Senior Software Engineer',
+        company: 'Acme Corp',
+        dates: '2021 - Present',
+        bulletsText: '- Led team of 5 engineers.\n- Built real-time pipeline in Go.',
+        jobDescription: 'Looking for Go and Kubernetes experience.',
+        userRequestedKeywords: ['Kubernetes', 'Go'],
+      });
+
+      expect(prompt).not.toContain('Full resume (for context only)');
+      expect(prompt).toContain('Output ONLY a valid JSON array');
+      expect(prompt).toContain('"originalText"');
+      expect(prompt).toContain('"suggestedText"');
+      expect(prompt).toContain('"reason"');
+      expect(prompt).toContain('"keywords"');
+    });
+  });
 });
 
 

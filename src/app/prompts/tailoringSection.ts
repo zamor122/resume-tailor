@@ -64,18 +64,18 @@ export function getExperienceBulletsPrompt(params: {
   dates: string | null;
   bulletsText: string;
   jobDescription: string;
-  resumeContext: string;
+  resumeContext?: string;
   userInstructions?: string;
   userRequestedKeywords?: string[];
   preferences?: TailoringPreferences;
 }): string {
-  const { jobTitle, company, dates, bulletsText, jobDescription, resumeContext, userInstructions, userRequestedKeywords, preferences } = params;
+  const { jobTitle, company, dates, bulletsText, jobDescription, userInstructions, userRequestedKeywords, preferences } = params;
   const userBlock = userInstructions
     ? `\nUSER-SPECIFIC INSTRUCTIONS (follow these):\n${userInstructions}\n`
     : "";
   const keywordsBlock =
     userRequestedKeywords && userRequestedKeywords.length > 0
-      ? `\nUSER-REQUESTED KEYWORDS TO WEAVE: ${userRequestedKeywords.join(", ")}\n`
+      ? `\nTARGET KEYWORDS TO WEAVE: ${userRequestedKeywords.join(", ")}\n`
       : "";
   const leverBlock = preferences ? `\n${buildLeverInstructions(preferences)}\n` : "";
   const hasUserRequests = !!(userInstructions || (userRequestedKeywords && userRequestedKeywords.length > 0) || preferences);
@@ -85,36 +85,43 @@ export function getExperienceBulletsPrompt(params: {
 HIGHEST PRIORITY – USER PREFERENCES & CONTROLS (follow these first):
 ${leverBlock}${userBlock}${keywordsBlock}`
     : "";
-  return `You are an expert resume writer. Tailor ONLY the bullet points for this job. Do NOT output the job title, company name, or dates—those are fixed.${topUserBlock}
 
-JOB CONTEXT (do not repeat in output):
+  return `You are an elite executive resume writer. Tailor the bullet points for this specific role against the target job description.
+${topUserBlock}
+TARGET ROLE METADATA (context boundary - do not repeat):
 - Title: ${jobTitle}
 - Company: ${company}
 - Dates: ${dates || "—"}
 
-RULES:
-- First bullet must be an overview: responsibilities, team size, tech stack, type of product (dashboard, data viz, etc.), methodology, scope.
-- Remaining bullets: Action (strong past-tense verb) → Ingredients (technologies, tools, metrics) → Impact (result). 2 lines per bullet when possible.
-- Use only content from the original resume; rephrase and add job-relevant keywords from the job description that describe work the candidate actually did. Never put keywords in parentheses (e.g. "REST APIs and microservices" not "(REST APIs, microservices)").
-- Omit articles. Use present participles. Resume speak.
-- Output ONLY the bullet list (each line starting with "- "). No headers, no title/company/dates.
+TARGET JOB DESCRIPTION:
+"""
+${jobDescription.slice(0, 2500)}
+"""
 
-Original bullets for this job:
+ORIGINAL BULLETS FOR THIS ROLE:
 """
 ${bulletsText}
 """
 
-Job description (weave relevant keywords into bullets):
-"""
-${jobDescription.slice(0, 3000)}
-"""
-
-Full resume (for context only):
-"""
-${resumeContext.slice(0, 4000)}
-"""
-
-Output only the tailored bullets, one per line, each starting with "- ".`;
+CRITICAL INSTRUCTIONS:
+1. STRICT 1-TO-1 MAPPING: For every original bullet, generate exactly one enhanced version. Do NOT merge bullets, split bullets, delete bullets, or create new bullets.
+2. ENHANCEMENT RULES:
+   - First bullet: Overview of responsibilities, team scope, core tech stack, product type, and methodology.
+   - Remaining bullets: Action (strong past-tense verb) → Ingredients (technologies, tools, metrics) → Impact (quantified business or technical outcome).
+   - Only weave in keywords that authentically reflect experience described in the original bullet. Never invent claims or put keywords in parentheses.
+   - Omit articles (a, an, the). Use crisp resume phrasing.
+3. OUTPUT FORMAT: Output ONLY a valid JSON array with the exact same number of items as the original bullets:
+[
+  {
+    "index": 0,
+    "originalText": "exact original bullet without leading dash",
+    "suggestedText": "tailored bullet without leading dash",
+    "status": "enhanced",
+    "reason": "Tactical justification (e.g. Quantified latency reduction, added Go/Kubernetes keywords)",
+    "keywords": ["Go", "Kubernetes"]
+  }
+]
+Output ONLY a valid JSON array. Do not include markdown code fences, headers, or any other text.`;
 }
 
 /**
