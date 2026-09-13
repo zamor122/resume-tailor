@@ -439,4 +439,24 @@ describe("ResumeSuggestionReviewer Section Studio", () => {
     // Should derive groups and render first section
     expect(screen.getByText(/Section 1 of/i)).toBeInTheDocument();
   });
+
+  it("renders 1:1 bullet comparison card with Bullet X of N, diff containers, and action buttons", () => {
+    render(
+      <ResumeSuggestionReviewer
+        originalResume="Original Resume"
+        suggestions={mockGroups.flatMap((g) => g.suggestions)}
+        sectionGroups={mockGroups}
+        onSuggestionsChange={vi.fn()}
+      />
+    );
+
+    // Chapman has 1 suggestion
+    expect(screen.getByText("Bullet 1 of 1")).toBeInTheDocument();
+    expect(screen.getByText(/Original \(Before\):/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tailored \(Enhanced\):/i)).toBeInTheDocument();
+    expect(screen.getByText("Built campus web apps")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^✓ Accept$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^✕ Keep Original$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /✎ Adjust \/ Edit/i })).toBeInTheDocument();
+  });
 });

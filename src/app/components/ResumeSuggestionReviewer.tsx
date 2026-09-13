@@ -364,6 +364,36 @@ export default function ResumeSuggestionReviewer({
     }
   };
 
+  const renderHighlightedKeywords = (text: string, keywords?: string[]) => {
+    if (!keywords || keywords.length === 0 || !text) return text;
+    const valid = keywords
+      .map((k) => k.trim())
+      .filter((k) => k.length > 1);
+    if (valid.length === 0) return text;
+
+    try {
+      const escaped = valid.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+      const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+      const parts = text.split(regex);
+      return parts.map((part, i) => {
+        const isKw = valid.some((k) => k.toLowerCase() === part.toLowerCase());
+        if (isKw) {
+          return (
+            <mark
+              key={i}
+              className="bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 px-1 py-0.5 rounded font-semibold border-b border-emerald-500/40"
+            >
+              {part}
+            </mark>
+          );
+        }
+        return part;
+      });
+    } catch {
+      return text;
+    }
+  };
+
   // Company extraction for skeleton card
   const activeCompanyName = useMemo(() => {
     if (!activeGroup?.title) return "experience";
@@ -693,7 +723,7 @@ export default function ResumeSuggestionReviewer({
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                            Bullet {sug.bulletIndex !== undefined ? sug.bulletIndex + 1 : sIdx + 1}
+                            Bullet {sug.bulletIndex !== undefined ? sug.bulletIndex + 1 : sIdx + 1} of {activeGroup.suggestions.length}
                           </span>
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badge.color}`}>
                             {badge.label}
@@ -784,7 +814,7 @@ export default function ResumeSuggestionReviewer({
                           {/* Original Text */}
                           <div className="p-2.5 rounded-lg bg-rose-500/5 dark:bg-rose-950/20 border border-rose-500/20 text-xs text-gray-600 dark:text-gray-400">
                             <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block mb-0.5">
-                              Original:
+                              Original (Before):
                             </span>
                             {sug.originalText}
                           </div>
@@ -798,9 +828,9 @@ export default function ResumeSuggestionReviewer({
                             }`}
                           >
                             <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mb-0.5">
-                              Tailored:
+                              Tailored (Enhanced):
                             </span>
-                            {sug.suggestedText}
+                            {renderHighlightedKeywords(sug.suggestedText, sug.keywords)}
                           </div>
                         </div>
                       )}
