@@ -29,6 +29,7 @@ const createResumeChain = (data: typeof mockResumes) => {
     eq: () => chain,
     order: () => chain,
     range: () => chain,
+    limit: () => chain,
     then: (resolve: (v: { data: typeof mockResumes; error: null; count: number }) => void) =>
       resolve({ data, error: null, count: data.length }),
   };
