@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import { getTierConfig } from "@/app/config/pricing";
 import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
 import { getURL } from "@/app/utils/siteUrl";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2026-01-28.clover",
-});
+import { stripe } from "@/app/lib/stripe";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -80,25 +76,6 @@ export async function POST(req: NextRequest) {
       cancel_url: cancelUrl,
       ...(email && { customer_email: email }),
     });
-
-    // #region agent log
-    fetch("http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "create-checkout/route.ts:session-created",
-        message: "Checkout session created",
-        data: {
-          tier,
-          priceId: tierConfig.priceId,
-          sessionId: session.id,
-          allowPromotionCodes: session.allow_promotion_codes,
-          hypothesisId: "A",
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (error) {

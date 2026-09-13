@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { getTierConfig } from "@/app/config/pricing";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2026-01-28.clover",
-});
+import { stripe } from "@/app/lib/stripe";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
