@@ -273,4 +273,46 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
 
     expect(onFinalize).toHaveBeenCalledTimes(1);
   });
+
+  it("filters out non-substantive (newline, whitespace, trailing punctuation) suggestions from review counts", () => {
+    const sugsWithTrivial: ResumeSuggestion[] = [
+      ...mockSuggestions,
+      {
+        id: "sug-trivial-1",
+        section: "Chapman University – Software Engineer",
+        originalText: "Managed Postgres database.",
+        suggestedText: "Managed Postgres\ndatabase",
+        reason: "Trivial newline",
+        keywords: [],
+        category: "keyword",
+        status: "pending",
+      },
+      {
+        id: "sug-trivial-2",
+        section: "Professional Summary",
+        originalText: "Experienced engineer.",
+        suggestedText: "Experienced engineer",
+        reason: "Trailing punctuation only",
+        keywords: [],
+        category: "summary",
+        status: "pending",
+      },
+    ];
+
+    render(
+      <ResumeSuggestionReviewer
+        originalResume="Original Resume"
+        suggestions={sugsWithTrivial}
+        beforeScore={50}
+        matchScore={80}
+        onSuggestionsChange={vi.fn()}
+      />
+    );
+
+    // Only 3 substantive suggestions should be counted and shown in progress bar
+    expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
+    const progressTicks = screen.getAllByRole("button", { name: /Change \d/i });
+    expect(progressTicks.length).toBe(3);
+  });
 });
+

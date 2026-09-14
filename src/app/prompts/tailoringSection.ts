@@ -106,6 +106,9 @@ ${bulletsText}
 CRITICAL INSTRUCTIONS:
 1. STRICT 1-TO-1 MAPPING: For every original bullet, generate exactly one enhanced version. Do NOT merge bullets, split bullets, delete bullets, or create new bullets.
 2. ENHANCEMENT RULES:
+   - Make ONLY substantive, meaningful improvements (adding target skills, technologies, quantified impact metrics, or stronger action verbs).
+   - NEVER make trivial formatting modifications: DO NOT insert line breaks/newlines, alter whitespace, re-wrap lines, change bullet marker symbols, or tweak trailing punctuation.
+   - If a bullet already adequately covers the role and does not require substantive tailoring, return the exact original text unchanged.
    - First bullet: Overview of responsibilities, team scope, core tech stack, product type, and methodology.
    - Remaining bullets: Action (strong past-tense verb) → Ingredients (technologies, tools, metrics) → Impact (quantified business or technical outcome).
    - Only weave in keywords that authentically reflect experience described in the original bullet. Never invent claims or put keywords in parentheses.

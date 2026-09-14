@@ -241,8 +241,21 @@ export function parseResume(resumeText: string): ParsedResume {
           location: null,
           description: '',
         };
-      } else if (currentExp && line.length > 5) {
-        currentExp.description += (currentExp.description ? '\n' : '') + (isBullet(line) ? line : `- ${line}`);
+      } else if (currentExp && line.length > 0) {
+        if (currentExp.description && !isBullet(line)) {
+          const descLines = currentExp.description.split("\n");
+          const lastLine = descLines[descLines.length - 1];
+          const isContinuation =
+            isBullet(lastLine) &&
+            (/^[a-z]/.test(line.trim()) || !/[.!?]$/.test(lastLine.trim()));
+          if (isContinuation) {
+            currentExp.description += ` ${line.trim()}`;
+            continue;
+          }
+        }
+        if (line.length > 5) {
+          currentExp.description += (currentExp.description ? '\n' : '') + (isBullet(line) ? line : `- ${line}`);
+        }
       }
     }
   }
@@ -341,8 +354,11 @@ export function parseResume(resumeText: string): ParsedResume {
   if (!summary) {
     for (let i = 0; i < Math.min(10, lines.length); i++) {
       const line = lines[i];
+      if (isSectionHeader(line)) {
+        break;
+      }
       const isContactLine = emailRegex.test(line) || /\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/.test(line);
-      if (line.length > 30 && line.length < 1000 && !isContactLine && !isSectionHeader(line)) {
+      if (line.length > 30 && line.length < 1000 && !isContactLine && !isBullet(line)) {
         summary = line;
         break;
       }

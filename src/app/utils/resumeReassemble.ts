@@ -89,15 +89,79 @@ function isBulletLine(line: string): boolean {
   return /^([-*•–—]|\d+\.)\s+/.test(trimmed) || /^[-*•–—]/.test(trimmed);
 }
 
-function getBulletsList(text: string): string[] {
+/**
+ * Normalizes text to comparable alphanumeric tokens, stripping bullet prefixes,
+ * newlines, punctuation, and case differences.
+ */
+function extractComparableTokens(text: string): string[] {
   if (!text) return [];
-  const lines = text
+  const cleaned = text
+    .replace(/^([-*•–—]|\d+\.)\s*/gm, " ")
+    .replace(/[\r\n]+/g, " ")
+    .trim()
+    .toLowerCase();
+
+  return cleaned
+    .replace(/[.,;:!?"'()[\]{}*•–—\-_/\\]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/**
+ * Determines whether a proposed text change is substantive.
+ * Returns false if:
+ * 1. Either string is empty/whitespace only (or tailored has no words)
+ * 2. Differences are only bullet markers (-, *, •), newlines (\r, \n), whitespace,
+ *    trailing punctuation (., ;, :, ,), or casing.
+ * 3. The alphanumeric word sequence is identical.
+ */
+export function isSubstantiveChange(
+  orig: string | null | undefined,
+  tailored: string | null | undefined
+): boolean {
+  if (!tailored) return false;
+
+  const tokensTailored = extractComparableTokens(tailored);
+  if (tokensTailored.length === 0) return false;
+
+  const tokensOrig = extractComparableTokens(orig || "");
+  if (tokensOrig.length === 0) {
+    return true;
+  }
+
+  return tokensOrig.join(" ") !== tokensTailored.join(" ");
+}
+
+export function getBulletsList(text: string): string[] {
+  if (!text) return [];
+  const rawLines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
-  const bulletLines = lines.filter(isBulletLine);
-  if (bulletLines.length > 0) return bulletLines;
-  return lines;
+  const hasBullets = rawLines.some(isBulletLine);
+  if (!hasBullets) return rawLines;
+
+  const bullets: string[] = [];
+  let currentBullet: string | null = null;
+
+  for (const line of rawLines) {
+    if (isBulletLine(line)) {
+      if (currentBullet !== null) {
+        bullets.push(currentBullet);
+      }
+      currentBullet = line;
+    } else if (currentBullet !== null) {
+      currentBullet += ` ${line}`;
+    } else {
+      currentBullet = line;
+    }
+  }
+
+  if (currentBullet !== null) {
+    bullets.push(currentBullet);
+  }
+
+  return bullets;
 }
 
 /**
@@ -152,16 +216,18 @@ export function deriveSuggestionsFromDiff(
 
     // Summary diff
     if (newAST.summary && newAST.summary.trim() !== (origAST?.summary || "").trim()) {
-      suggestions.push({
-        id: "sug-diff-summary",
-        section: "Professional Summary",
-        originalText: origAST?.summary?.trim() || "(New summary section added)",
-        suggestedText: newAST.summary.trim(),
-        reason: "Holistic career alignment and leadership scope",
-        keywords: [],
-        category: "summary",
-        status: "pending",
-      });
+      if (isSubstantiveChange(origAST?.summary, newAST.summary)) {
+        suggestions.push({
+          id: "sug-diff-summary",
+          section: "Professional Summary",
+          originalText: origAST?.summary?.trim() || "(New summary section added)",
+          suggestedText: newAST.summary.trim(),
+          reason: "Holistic career alignment and leadership scope",
+          keywords: [],
+          category: "summary",
+          status: "pending",
+        });
+      }
     }
 
     // Experiences diff
@@ -234,6 +300,11 @@ export function deriveSuggestionsFromDiff(
           pairedOrigText = "(New bullet added for target role keywords)";
         }
 
+        // Substantive change check: filter out trivial newline, whitespace, bullet, or punctuation diffs
+        if (!isSubstantiveChange(pairedOrigText, cleanN)) {
+          return;
+        }
+
         const hasMetric = /\d+%|\$\d+|\d+x|\d+\+/i.test(cleanN);
         suggestions.push({
           id: `sug-diff-job-${jobIdx}-b-${bulletIdx}`,
@@ -301,6 +372,10 @@ export function deriveSuggestionsFromDiff(
       pairedText = cleanBulletLine(origLines[bestOrigIdx]);
     } else {
       pairedText = "(New line added for target role)";
+    }
+
+    if (!isSubstantiveChange(pairedText, cleanN)) {
+      return;
     }
 
     const hasMetric = /\d+%|\$\d+|\d+x|\d+\+/i.test(newLine);

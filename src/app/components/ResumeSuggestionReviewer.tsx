@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
+import { isSubstantiveChange } from "@/app/utils/resumeReassemble";
 
 export interface ResumeSuggestionReviewerProps {
   originalResume: string;
@@ -48,7 +49,13 @@ export default function ResumeSuggestionReviewer({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>("");
 
-  const totalCount = suggestions.length;
+  // Topmost Layer Filtering: discard trivial newline, whitespace, and formatting changes (REQ-UBI-01)
+  const substantiveSuggestions = useMemo(
+    () => suggestions.filter((s) => isSubstantiveChange(s.originalText, s.suggestedText)),
+    [suggestions]
+  );
+
+  const totalCount = substantiveSuggestions.length;
 
   // Keep active index within bounds if suggestions list changes
   useEffect(() => {
@@ -60,27 +67,27 @@ export default function ResumeSuggestionReviewer({
   // Synchronize when external activeSuggestionId changes
   useEffect(() => {
     if (activeSuggestionId && totalCount > 0) {
-      const idx = suggestions.findIndex((s) => s.id === activeSuggestionId);
+      const idx = substantiveSuggestions.findIndex((s) => s.id === activeSuggestionId);
       if (idx !== -1 && idx !== activeIndex) {
         setActiveIndex(idx);
       }
     }
-  }, [activeSuggestionId, suggestions, totalCount, activeIndex]);
+  }, [activeSuggestionId, substantiveSuggestions, totalCount, activeIndex]);
 
-  const currentSuggestion = suggestions[activeIndex];
+  const currentSuggestion = substantiveSuggestions[activeIndex];
 
-  // Upfront score calculation divided proportionally per change (REQ-UBI-04)
+  // Upfront score calculation divided proportionally per substantive change (REQ-UBI-04)
   const acceptedCount = useMemo(
-    () => suggestions.filter((s) => s.status === "accepted").length,
-    [suggestions]
+    () => substantiveSuggestions.filter((s) => s.status === "accepted").length,
+    [substantiveSuggestions]
   );
   const dismissedCount = useMemo(
-    () => suggestions.filter((s) => s.status === "rejected").length,
-    [suggestions]
+    () => substantiveSuggestions.filter((s) => s.status === "rejected").length,
+    [substantiveSuggestions]
   );
   const remainingCount = useMemo(
-    () => suggestions.filter((s) => !s.status || s.status === "pending").length,
-    [suggestions]
+    () => substantiveSuggestions.filter((s) => !s.status || s.status === "pending").length,
+    [substantiveSuggestions]
   );
 
   const totalBoost = Math.max(0, matchScore - beforeScore);
@@ -92,7 +99,7 @@ export default function ResumeSuggestionReviewer({
   const handleSelectIndex = (idx: number) => {
     if (idx < 0 || idx >= totalCount) return;
     setActiveIndex(idx);
-    const sug = suggestions[idx];
+    const sug = substantiveSuggestions[idx];
     if (sug) {
       onActiveSuggestionChange?.(sug.id);
     }
@@ -272,7 +279,7 @@ export default function ResumeSuggestionReviewer({
         {/* Tri-Color Segmented Progress Bar (REQ-UBI-02) */}
         <div className="space-y-2">
           <div className="flex items-center gap-1 w-full h-3 rounded-full bg-gray-800/80 p-0.5 overflow-hidden">
-            {suggestions.map((s, idx) => {
+            {substantiveSuggestions.map((s, idx) => {
               const isAcc = s.status === "accepted";
               const isRej = s.status === "rejected";
               const isCur = idx === activeIndex;

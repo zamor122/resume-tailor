@@ -1,4 +1,5 @@
 import type { ResumeSuggestion } from "@/app/agent/state";
+import { isSubstantiveChange, getBulletsList } from "./resumeReassemble";
 
 export interface RawChunkBulletItem {
   index?: number;
@@ -70,9 +71,10 @@ export function parseChunkBulletsResponse(params: {
         .replace(/^([-*•–—]|\d+\.)\s*/, "")
         .trim();
 
-      tailoredBullets.push(`- ${cleanNew}`);
+      const isSubstantive = isSubstantiveChange(cleanOrig, cleanNew);
+      tailoredBullets.push(isSubstantive ? `- ${cleanNew}` : `- ${cleanOrig}`);
 
-      if (cleanOrig !== cleanNew) {
+      if (isSubstantive) {
         const matchedKw = match?.keywords && match.keywords.length > 0
           ? match.keywords
           : sortedMissingKeywords.filter((kw) =>
@@ -106,10 +108,7 @@ export function parseChunkBulletsResponse(params: {
   }
 
   // 2. Fallback: Parse raw bullet lines
-  let rawNewBullets = llmText
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => /^([-*•–—]|\d+\.)\s+/.test(l) || /^[-*•–—]/.test(l));
+  let rawNewBullets = getBulletsList(llmText);
 
   if (rawNewBullets.length === 0) {
     rawNewBullets = llmText
@@ -124,9 +123,10 @@ export function parseChunkBulletsResponse(params: {
     const rawNew = rawNewBullets[idx] || origLine;
     const cleanNew = rawNew.replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
 
-    tailoredBullets.push(`- ${cleanNew}`);
+    const isSubstantive = isSubstantiveChange(cleanOrig, cleanNew);
+    tailoredBullets.push(isSubstantive ? `- ${cleanNew}` : `- ${cleanOrig}`);
 
-    if (cleanOrig !== cleanNew) {
+    if (isSubstantive) {
       const matchedKw = sortedMissingKeywords.filter((kw) =>
         cleanNew.toLowerCase().includes(kw.toLowerCase())
       ).slice(0, 3);

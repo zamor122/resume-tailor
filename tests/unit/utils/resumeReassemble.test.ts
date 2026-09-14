@@ -3,6 +3,7 @@ import {
   deriveSuggestionsFromDiff,
   groupSuggestionsBySection,
   applySuggestionsToOriginal,
+  isSubstantiveChange,
 } from "@/app/utils/resumeReassemble";
 import type { ResumeSuggestion } from "@/app/agent/state";
 
@@ -168,6 +169,67 @@ JavaScript, TypeScript, React, Node.js, PostgreSQL, AWS, Docker
       const result = applySuggestionsToOriginal(orig, [acceptedSug]);
       expect(result).toContain("Architected enterprise React UI for 100k users.");
       expect(result).not.toContain("Built React UI for 100 users.");
+    });
+  });
+
+  describe("EARS - Substantive vs Trivial Change Filtering", () => {
+    it("isSubstantiveChange returns false for identical strings or whitespace-only changes", () => {
+      expect(isSubstantiveChange("Built React apps", "Built React apps")).toBe(false);
+      expect(isSubstantiveChange("  Built React apps  ", "Built React apps")).toBe(false);
+      expect(isSubstantiveChange("Built   React   apps", "Built React apps")).toBe(false);
+      expect(isSubstantiveChange("", "")).toBe(false);
+    });
+
+    it("isSubstantiveChange returns false for newline and line break differences", () => {
+      expect(isSubstantiveChange("Built React apps.\nProcessed data.", "Built React apps. Processed data.")).toBe(false);
+      expect(isSubstantiveChange("Built React apps\r\nProcessed data", "Built React apps Processed data")).toBe(false);
+      expect(isSubstantiveChange("- Line 1\n- Line 2", "- Line 1 - Line 2")).toBe(false);
+    });
+
+    it("isSubstantiveChange returns false for bullet character or trailing punctuation differences", () => {
+      expect(isSubstantiveChange("- Built React apps", "* Built React apps")).toBe(false);
+      expect(isSubstantiveChange("• Built React apps.", "- Built React apps")).toBe(false);
+      expect(isSubstantiveChange("Built React apps.", "Built React apps")).toBe(false);
+      expect(isSubstantiveChange("Built React apps;", "Built React apps")).toBe(false);
+    });
+
+    it("isSubstantiveChange returns false for case-only changes", () => {
+      expect(isSubstantiveChange("Built React apps", "built react apps")).toBe(false);
+    });
+
+    it("isSubstantiveChange returns true for meaningful, substantive changes", () => {
+      expect(
+        isSubstantiveChange(
+          "Built React apps",
+          "Architected enterprise React applications improving load performance by 40%"
+        )
+      ).toBe(true);
+
+      expect(
+        isSubstantiveChange(
+          "Led backend microservices",
+          "Engineered Go and Kubernetes microservices handling 10k req/sec"
+        )
+      ).toBe(true);
+    });
+
+    it("deriveSuggestionsFromDiff filters out bullets that only have newline or whitespace differences", () => {
+      const orig = `## Experience
+Acme Corp - Software Engineer
+- Built React applications.
+- Managed SQL database.`;
+
+      // Second bullet only has a newline and trailing period difference; first bullet has a real enhancement
+      const tailored = `## Experience
+Acme Corp - Software Engineer
+- Architected enterprise React applications with 99.9% uptime.
+- Managed SQL\ndatabase`;
+
+      const suggestions = deriveSuggestionsFromDiff(orig, tailored);
+
+      // Only the first bullet should be a suggestion; the second is a trivial newline diff
+      expect(suggestions.length).toBe(1);
+      expect(suggestions[0].suggestedText).toContain("Architected enterprise React");
     });
   });
 });
