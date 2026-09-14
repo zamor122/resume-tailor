@@ -118,4 +118,34 @@ describe("surgicalTailorNode with isolated chunk context and 1:1 JSON parser", (
     expect(result.suggestions![1].suggestedText).toBe("Optimized database query performance by 40%");
     expect(result.suggestions![1].category).toBe("metric");
   });
+
+  it("calls getSummaryTailoringPrompt with isolated summary chunk, NEVER the full rawResume", async () => {
+    const summarySpy = vi.spyOn(tailoringSectionPrompts, "getSummaryTailoringPrompt");
+
+    vi.mocked(generateWithFallback).mockResolvedValueOnce({
+      text: "Tailored summary with Go and cloud experience.",
+      modelUsed: "mock-model",
+    });
+
+    const stateWithSummary: AgentState = {
+      ...baseState,
+      bulletPlan: {
+        summaryChange: true,
+        jobBulletChanges: [],
+      },
+    };
+
+    const result = await surgicalTailorNode(stateWithSummary);
+
+    expect(summarySpy).toHaveBeenCalledTimes(1);
+    const calledArgs = summarySpy.mock.calls[0][0];
+    expect(calledArgs.summaryText).toBe("Experienced developer");
+    expect((calledArgs as any).resume).toBeUndefined();
+    expect(calledArgs.summaryText).not.toContain("John Doe");
+
+    expect(result.suggestions).toHaveLength(1);
+    expect(result.suggestions![0].id).toBe("sug-summary");
+    expect(result.suggestions![0].originalText).toBe("Experienced developer");
+    expect(result.suggestions![0].suggestedText).toBe("Tailored summary with Go and cloud experience.");
+  });
 });

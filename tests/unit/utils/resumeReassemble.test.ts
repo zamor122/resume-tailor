@@ -358,6 +358,27 @@ B.S. in Computer Science`;
       expect(isolatePreciseOriginalChange("(New bullet added)", "Added bullet")).toBe("");
       expect(isolatePreciseOriginalChange("(New line added)", "Added line")).toBe("");
     });
+
+    it("never leaks full resume when diffing unformatted single-string resumes with circle bullets", () => {
+      const userRawResume = `Shayne Zamora Orange County, CA | (714) 625-2593 | shaynezamora@sbcglobal.net B.S Software Engineering | Chapman University | github:zamor122 Summary ● 11+ Years of Software Engineering Leadership : Architected and scaled high-availability web, mobile, and cloud applications serving 1,000,000+ global users across complex enterprise environments. ● 3+ Years of AI Architecture & Agentic Engineering : Pioneer in deploying production-grade AI-SDLC frameworks, Spec-Driven Development (SDD), and autonomous agent workflows using modern AI tools (Claude Code, Cursor, Codex). Ticketmaster | LiveNation Technical Manager— AI Innovation Pipeline (Sponsorship) | April 2026 – Present ○ AI-SDLC Framework & SDD Standardization : Authored and operationalized the company-wide AI-Software Development Life Cycle (AI-SDLC) framework and Spec-Driven Development (SDD) skills across Ticketmaster, doubling feature delivery throughput (2x) for initial adoption teams.`;
+
+      const tailoredTicketmaster = `Shayne Zamora Orange County, CA | (714) 625-2593 | shaynezamora@sbcglobal.net
+## Summary
+- 11+ Years of Software Engineering Leadership : Architected high-availability web and cloud applications.
+- 3+ Years of AI Architecture & Agentic Engineering : Pioneer in deploying production-grade AI-SDLC frameworks.
+
+## Experience
+Ticketmaster | LiveNation Technical Manager — AI Innovation Pipeline
+April 2026 – Present
+- AI-SDLC Framework & SDD Standardization : Authored enterprise AI-SDLC framework doubling velocity by 2.5x.`;
+
+      const sugs = deriveSuggestionsFromDiff(userRawResume, tailoredTicketmaster);
+      expect(sugs.length).toBeGreaterThan(0);
+      sugs.forEach((sug) => {
+        expect(sug.originalText.length).toBeLessThan(300);
+        expect(sug.originalText).not.toContain("Chapman University");
+      });
+    });
   });
 });
 

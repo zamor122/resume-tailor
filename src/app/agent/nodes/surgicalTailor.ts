@@ -33,7 +33,7 @@ export async function surgicalTailorNode(
     promises.push(
       generateWithFallback(
         getSummaryTailoringPrompt({
-          resume: rawResume,
+          summaryText: originalSummary,
           jobDescription: jdSnippet,
           jobTitle: state.jobTitle,
           preferences,

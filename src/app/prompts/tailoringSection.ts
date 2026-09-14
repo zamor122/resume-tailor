@@ -9,14 +9,16 @@ import { buildLeverInstructions } from "./tailoringPresets";
  * Prompt to tailor only the Summary section. No contact, no experience structure—just the summary prose.
  */
 export function getSummaryTailoringPrompt(params: {
-  resume: string;
+  summaryText?: string;
+  resume?: string;
   jobDescription: string;
   jobTitle?: string;
   userInstructions?: string;
   userRequestedKeywords?: string[];
   preferences?: TailoringPreferences;
 }): string {
-  const { resume, jobDescription, jobTitle, userInstructions, userRequestedKeywords, preferences } = params;
+  const { summaryText, resume, jobDescription, jobTitle, userInstructions, userRequestedKeywords, preferences } = params;
+  const originalSummary = summaryText || resume || "";
   const jobTitleLine = jobTitle ? `\nTarget job title for the summary: "${jobTitle}". Use only in the summary (e.g. "${jobTitle} with X years...").` : "";
   const userBlock = userInstructions
     ? `\nUSER-SPECIFIC INSTRUCTIONS (follow these):\n${userInstructions}\n`
@@ -33,18 +35,18 @@ export function getSummaryTailoringPrompt(params: {
 HIGHEST PRIORITY – USER PREFERENCES & CONTROLS (follow these first):
 ${leverBlock}${userBlock}${keywordsBlock}`
     : "";
-  return `You are an expert resume writer. Tailor ONLY the Summary/Objective section for the job below.${topUserBlock}
+  return `You are an expert resume writer. Tailor ONLY the candidate's existing Summary/Objective section for the job below.${topUserBlock}
 
 RULES:
-- Output ONLY the summary text (3–4 sentences or 3–4 bullets). No headers, no "## Summary", no contact, no other sections.
-- Derive every claim from the resume. Do not add location, company name from the job posting, or domain concepts not in the resume.
+- Output ONLY the summary text (3–4 sentences or 3–4 bullets). No headers, no "## Summary", no contact, no experience, no other sections.
+- Derive every claim strictly from the candidate's existing summary below. Do NOT add company names, job titles, or experience details from outside this summary.
 - Omit articles (a, the, an). Use present participles (e.g. ", improving..." not "to improve").
 - No "passionate about", "results-driven", or reader-addressing phrases. Factual, declarative only.
 - Weave in 3–5 job-relevant keywords from the job description naturally. Do not list keywords. Never put keywords in parentheses (e.g. use "Python and Django" not "(Python, Django)").${jobTitleLine}
 
-Resume:
+Candidate's Current Summary (Context Chunk):
 """
-${resume}
+${originalSummary}
 """
 
 Job description:

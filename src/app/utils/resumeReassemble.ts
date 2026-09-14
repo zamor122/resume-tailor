@@ -1,6 +1,6 @@
 import { type ParsedOriginal, findContactEndIndex } from "./contactBlockSanitizer";
 import type { ResumeSuggestion, ResumeSectionGroup, SectionGroupType, SectionTailorStatus } from "@/app/agent/state";
-import { parseResume } from "./resumeParser";
+import { parseResume, normalizeResumeText } from "./resumeParser";
 
 /**
  * Verbatim surgical application:
@@ -143,7 +143,8 @@ export function isolatePreciseOriginalChange(
   fullResume?: string
 ): string {
   if (!originalText || !originalText.trim()) return "";
-  const text = originalText.trim();
+  const normalizedRaw = normalizeResumeText(originalText);
+  const text = normalizedRaw.trim();
   const cleanSug = suggestedText ? suggestedText.trim() : "";
 
   // Guard 0: If text is a placeholder string like "(New bullet added)", return empty
@@ -151,10 +152,9 @@ export function isolatePreciseOriginalChange(
 
   // Guard 1: Detect if text is the full resume or contains multiple document sections
   const hasFullResume = Boolean(fullResume && fullResume.trim().length >= 100);
+  const normalizedFull = fullResume ? normalizeResumeText(fullResume) : "";
   const isFullDoc =
-    (hasFullResume && (text === fullResume!.trim() || text.length >= fullResume!.trim().length * 0.6)) ||
-    text.length > 300 ||
-    text.split(/\r?\n/).filter((l) => l.trim().length > 0).length > 4 ||
+    (hasFullResume && (text === normalizedFull.trim() || text.length >= normalizedFull.trim().length * 0.6)) ||
     (text.includes("##") && text.split(/##\s+/).length > 1) ||
     (/\b(experience|work history|employment)\b/i.test(text) &&
       /\b(education|academic|skills|projects|certifications)\b/i.test(text));
@@ -163,13 +163,13 @@ export function isolatePreciseOriginalChange(
     // Search the text and full resume for the single line/bullet that best matches suggestedText
     const candidateLines = [
       ...text.split(/\r?\n/),
-      ...(fullResume ? fullResume.split(/\r?\n/) : []),
+      ...(normalizedFull ? normalizedFull.split(/\r?\n/) : []),
     ]
       .map((l) => l.trim())
       .filter((l) => {
         if (l.length < 8) return false;
         // Ignore section headers
-        if (/^(?:#+\s*|(?:##\s*)?)(summary|experience|skills|education|projects|certifications|awards|contact|work history)/i.test(l)) return false;
+        if (/^(?:#+\s*(?:summary|experience|skills|education|projects|certifications|awards|contact|work history)\b|(?:summary|experience|skills|education|projects|certifications|awards|contact|work history)\s*[:]?$)/i.test(l)) return false;
         // Ignore contact info lines
         if (/@|linkedin\.com|github\.com|\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/.test(l)) return false;
         return true;
@@ -235,7 +235,7 @@ export function isolatePreciseOriginalChange(
   }
 
   // Never return text that contains obvious section markers or header bleed
-  if (/^(?:#+\s*|(?:##\s*)?)(summary|experience|skills|education|projects|certifications)/i.test(singleLine)) {
+  if (/^(?:#+\s*(?:summary|experience|skills|education|projects|certifications)\b|(?:summary|experience|skills|education|projects|certifications)\s*[:]?$)/i.test(singleLine)) {
     return "";
   }
 
@@ -287,13 +287,16 @@ export function deriveSuggestionsFromDiff(
     return [];
   }
 
+  const normOrig = normalizeResumeText(originalResume);
+  const normNew = normalizeResumeText(newResume);
+
   const suggestions: ResumeSuggestion[] = [];
 
   let origAST: ParsedResumeForReassemble | null = null;
   let newAST: ParsedResumeForReassemble | null = null;
 
   try {
-    const pOrig = parseResume(originalResume);
+    const pOrig = parseResume(normOrig);
     origAST = {
       contactInfo: pOrig.contactInfo,
       education: pOrig.education,
@@ -307,7 +310,7 @@ export function deriveSuggestionsFromDiff(
   }
 
   try {
-    const pNew = parseResume(newResume);
+    const pNew = parseResume(normNew);
     newAST = {
       contactInfo: pNew.contactInfo,
       education: pNew.education,
@@ -330,7 +333,7 @@ export function deriveSuggestionsFromDiff(
         const cleanOrigSummary = isolatePreciseOriginalChange(
           origAST?.summary,
           newAST.summary.trim(),
-          originalResume
+          normOrig
         );
         suggestions.push({
           id: "sug-diff-summary",
@@ -414,7 +417,7 @@ export function deriveSuggestionsFromDiff(
           // Brand new bullet! Use empty string for originalText, NEVER a fake placeholder string
           pairedOrigText = "";
         }
-        pairedOrigText = isolatePreciseOriginalChange(pairedOrigText, cleanN, originalResume);
+        pairedOrigText = isolatePreciseOriginalChange(pairedOrigText, cleanN, normOrig);
 
         // Substantive change check: filter out trivial newline, whitespace, bullet, or punctuation diffs
         if (!isSubstantiveChange(pairedOrigText, cleanN)) {
@@ -446,8 +449,8 @@ export function deriveSuggestionsFromDiff(
 
   // 2. Line-by-line fallback with strict section bounds
   // (Used if AST parsing didn't detect experience entries)
-  const origLines = originalResume.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const newLines = newResume.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const origLines = normOrig.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const newLines = normNew.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
   let currentSection = "Experience";
   const usedLineIndices = new Set<number>();
@@ -489,7 +492,7 @@ export function deriveSuggestionsFromDiff(
     } else {
       pairedText = "";
     }
-    pairedText = isolatePreciseOriginalChange(pairedText, cleanN, originalResume);
+    pairedText = isolatePreciseOriginalChange(pairedText, cleanN, normOrig);
 
     if (!isSubstantiveChange(pairedText, cleanN)) {
       return;
