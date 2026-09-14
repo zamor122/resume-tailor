@@ -115,33 +115,31 @@ export default function ResumeSuggestionReviewer({
     }
   };
 
-  // Change action handlers
+  // Change action handlers: toggle status on active change without premature auto-advance
   const handleAcceptChange = (id?: string) => {
     const targetId = id || substantiveSuggestions[activeIndex]?.id;
     if (!targetId) return;
 
+    const currentSug = suggestions.find((s) => s.id === targetId);
+    const nextStatus: "pending" | "accepted" = currentSug?.status === "accepted" ? "pending" : "accepted";
+
     const updated = suggestions.map((s) =>
-      s.id === targetId ? { ...s, status: "accepted" as const } : s
+      s.id === targetId ? { ...s, status: nextStatus } : s
     );
     onSuggestionsChange(updated);
-
-    if (activeIndex < totalCount - 1) {
-      handleSelectIndex(activeIndex + 1);
-    }
   };
 
   const handleKeepOriginal = (id?: string) => {
     const targetId = id || substantiveSuggestions[activeIndex]?.id;
     if (!targetId) return;
 
+    const currentSug = suggestions.find((s) => s.id === targetId);
+    const nextStatus: "pending" | "rejected" = currentSug?.status === "rejected" ? "pending" : "rejected";
+
     const updated = suggestions.map((s) =>
-      s.id === targetId ? { ...s, status: "rejected" as const } : s
+      s.id === targetId ? { ...s, status: nextStatus } : s
     );
     onSuggestionsChange(updated);
-
-    if (activeIndex < totalCount - 1) {
-      handleSelectIndex(activeIndex + 1);
-    }
   };
 
   const handleAcceptAllRemaining = () => {
@@ -532,11 +530,17 @@ export default function ResumeSuggestionReviewer({
                   onClick={() => handleAcceptChange(currentSuggestion.id)}
                   className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 shadow-sm active:scale-95 ${
                     isAcc
-                      ? "bg-emerald-600 text-white border-emerald-600 shadow"
-                      : "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500"
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow ring-2 ring-emerald-400/30"
+                      : "bg-blue-600 hover:bg-blue-500 text-white border-blue-600 shadow-sm"
                   }`}
                 >
-                  <span>✓</span> {isAddition ? "Accept Addition" : "Accept Change"}
+                  {isAcc ? (
+                    <>
+                      <span>✓</span> {isAddition ? "Addition Accepted" : "Accepted"}
+                    </>
+                  ) : (
+                    <span>{isAddition ? "Accept Addition" : "Accept Change"}</span>
+                  )}
                 </button>
 
                 <button
@@ -544,13 +548,40 @@ export default function ResumeSuggestionReviewer({
                   onClick={() => handleKeepOriginal(currentSuggestion.id)}
                   className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 active:scale-95 ${
                     isRej
-                      ? "bg-rose-600 text-white border-rose-600 shadow"
+                      ? "bg-rose-600 text-white border-rose-600 shadow ring-2 ring-rose-400/30"
                       : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                   }`}
                 >
-                  <span>✕</span> {isAddition ? "Dismiss Addition" : "Keep Original"}
+                  {isRej ? (
+                    <>
+                      <span>✕</span> {isAddition ? "Addition Dismissed" : "Kept Original"}
+                    </>
+                  ) : (
+                    <span>{isAddition ? "Dismiss Addition" : "Keep Original"}</span>
+                  )}
                 </button>
               </div>
+
+              {activeIndex < totalCount - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => handleSelectIndex(activeIndex + 1)}
+                  className="px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors flex items-center gap-1.5 ml-auto border border-gray-200 dark:border-gray-700"
+                >
+                  <span>Next Change</span>
+                  <span>→</span>
+                </button>
+              ) : (
+                onFinalize && (
+                  <button
+                    type="button"
+                    onClick={onFinalize}
+                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow transition-all ml-auto"
+                  >
+                    Finish Review →
+                  </button>
+                )
+              )}
             </div>
           </div>
         </div>

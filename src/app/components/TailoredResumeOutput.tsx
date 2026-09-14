@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import CopyButton from "./CopyButton";
 import ResumeDownloadButton from "./ResumeDownloadButton";
 import ResumeSuggestionReviewer from "./ResumeSuggestionReviewer";
+
+const InsideListContext = React.createContext<boolean>(false);
 import { getProseFontSizeClass } from "@/app/utils/fontSize";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
 import { applySuggestionsToOriginal, deriveSuggestionsFromDiff, type ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
@@ -329,14 +331,6 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
     }
   }, [effectiveActiveSectionId]);
 
-  useEffect(() => {
-    if (suggestions && suggestions.length > 0) {
-      setInternalSuggestions(suggestions);
-    } else if (originalResume && newResume && originalResume.trim() !== newResume.trim()) {
-      setInternalSuggestions(deriveSuggestionsFromDiff(originalResume, newResume));
-    }
-  }, [suggestions, originalResume, newResume]);
-
   const effectiveSuggestions = internalSuggestions;
   const hasSuggestions = effectiveSuggestions && effectiveSuggestions.length > 0;
   const [viewLayout, setViewLayout] = useState<"cockpit" | "document">("cockpit");
@@ -350,6 +344,14 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       setActiveSuggestionId(effectiveSuggestions[0].id);
     }
   }, [hasSuggestions, effectiveSuggestions, activeSuggestionId]);
+
+  useEffect(() => {
+    if (!activeSuggestionId) return;
+    const targetElement = document.getElementById(`change-highlight-${activeSuggestionId}`);
+    if (targetElement && typeof targetElement.scrollIntoView === "function") {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [activeSuggestionId]);
 
   React.useEffect(() => {
     if (hasSuggestions && !userToggledLayout) {
@@ -467,67 +469,83 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       </h3>
     ),
     p: ({ children }: { children?: React.ReactNode }) => {
+      const isInsideList = useContext(InsideListContext);
+      if (isInsideList) {
+        return <span className="inline leading-relaxed">{children}</span>;
+      }
+
       const rawText = extractTextContent(children);
       const match = isSplit ? findMatchingSuggestion(rawText) : null;
       const isActive = match && match.suggestion.id === activeSuggestionId;
       const isAccepted = match ? match.suggestion.status === "accepted" : false;
+      const isRejected = match ? match.suggestion.status === "rejected" : false;
 
       if (match && isSplit) {
-        return (
-          <div
-            onClick={() => setActiveSuggestionId(match.suggestion.id)}
-            className={`my-2 p-3 rounded-xl transition-all duration-300 cursor-pointer ${
-              isActive
-                ? "ring-2 ring-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/40 border border-cyan-500/40 shadow-md"
-                : "hover:bg-cyan-500/5 border border-transparent rounded-lg"
-            }`}
-          >
-            <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
-                {isActive && <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />}
-                Change {match.index + 1} ({match.suggestion.section})
-              </span>
-              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const updated = effectiveSuggestions.map((s) =>
-                      s.id === match.suggestion.id ? { ...s, status: "accepted" as const } : s
-                    );
-                    handleSuggestionsUpdate(updated);
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                    isAccepted
-                      ? "bg-emerald-500 text-white shadow-xs"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
-                  }`}
-                >
-                  ✓ Accept
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const updated = effectiveSuggestions.map((s) =>
-                      s.id === match.suggestion.id ? { ...s, status: "rejected" as const } : s
-                    );
-                    handleSuggestionsUpdate(updated);
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                    !isAccepted
-                      ? "bg-gray-700 text-white shadow-xs"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
-                  }`}
-                >
-                  ✕ Keep Original
-                </button>
+        if (isActive) {
+          return (
+            <div
+              id={`change-highlight-${match.suggestion.id}`}
+              className="my-2 p-3 rounded-xl transition-all duration-300 ring-2 ring-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/40 border border-cyan-500/40 shadow-md"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                  Change {match.index + 1} ({match.suggestion.section})
+                </span>
+                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextStatus: "pending" | "accepted" = isAccepted ? "pending" : "accepted";
+                      const updated = effectiveSuggestions.map((s) =>
+                        s.id === match.suggestion.id ? { ...s, status: nextStatus } : s
+                      );
+                      handleSuggestionsUpdate(updated);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm active:scale-95 ${
+                      isAccepted
+                        ? "bg-emerald-600 text-white ring-2 ring-emerald-400/30"
+                        : "bg-blue-600 hover:bg-blue-500 text-white"
+                    }`}
+                  >
+                    {isAccepted ? "✓ Accepted" : "Accept Change"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextStatus: "pending" | "rejected" = isRejected ? "pending" : "rejected";
+                      const updated = effectiveSuggestions.map((s) =>
+                        s.id === match.suggestion.id ? { ...s, status: nextStatus } : s
+                      );
+                      handleSuggestionsUpdate(updated);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 active:scale-95 ${
+                      isRejected
+                        ? "bg-rose-600 text-white ring-2 ring-rose-400/30"
+                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {isRejected ? "✕ Kept Original" : "Keep Original"}
+                  </button>
+                </div>
               </div>
+              <p className="text-sm leading-relaxed text-gray-900 dark:text-gray-100 !my-0 whitespace-pre-line font-medium">
+                {children}
+              </p>
             </div>
-            <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-200 !my-0 whitespace-pre-line font-medium">
-              {children}
-            </p>
-          </div>
+          );
+        }
+
+        return (
+          <p
+            onClick={() => setActiveSuggestionId(match.suggestion.id)}
+            className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 !my-1.5 whitespace-pre-line cursor-pointer hover:bg-cyan-500/10 rounded px-1.5 -mx-1.5 transition-colors"
+            title={`Click to view Change ${match.index + 1}`}
+          >
+            {children}
+          </p>
         );
       }
 
@@ -547,67 +565,84 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       const match = isSplit ? findMatchingSuggestion(rawText) : null;
       const isActive = match && match.suggestion.id === activeSuggestionId;
       const isAccepted = match ? match.suggestion.status === "accepted" : false;
+      const isRejected = match ? match.suggestion.status === "rejected" : false;
+
+      const innerContent = (
+        <InsideListContext.Provider value={true}>
+          {children}
+        </InsideListContext.Provider>
+      );
 
       if (match && isSplit) {
+        if (isActive) {
+          return (
+            <li
+              id={`change-highlight-${match.suggestion.id}`}
+              className="leading-relaxed pl-0.5 transition-all duration-300 list-none -ml-5 my-2 p-3 rounded-xl ring-2 ring-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/40 border border-cyan-500/50 shadow-md font-medium text-gray-900 dark:text-white"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                  Change {match.index + 1}
+                </span>
+                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextStatus: "pending" | "accepted" = isAccepted ? "pending" : "accepted";
+                      const updated = effectiveSuggestions.map((s) =>
+                        s.id === match.suggestion.id ? { ...s, status: nextStatus } : s
+                      );
+                      handleSuggestionsUpdate(updated);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm active:scale-95 ${
+                      isAccepted
+                        ? "bg-emerald-600 text-white ring-2 ring-emerald-400/30"
+                        : "bg-blue-600 hover:bg-blue-500 text-white"
+                    }`}
+                  >
+                    {isAccepted ? "✓ Accepted" : "Accept Change"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextStatus: "pending" | "rejected" = isRejected ? "pending" : "rejected";
+                      const updated = effectiveSuggestions.map((s) =>
+                        s.id === match.suggestion.id ? { ...s, status: nextStatus } : s
+                      );
+                      handleSuggestionsUpdate(updated);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 active:scale-95 ${
+                      isRejected
+                        ? "bg-rose-600 text-white ring-2 ring-rose-400/30"
+                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {isRejected ? "✕ Kept Original" : "Keep Original"}
+                  </button>
+                </div>
+              </div>
+              <div>• {innerContent}</div>
+            </li>
+          );
+        }
+
         return (
           <li
             onClick={() => setActiveSuggestionId(match.suggestion.id)}
-            className={`leading-relaxed pl-0.5 transition-all duration-300 cursor-pointer list-none -ml-5 my-1.5 p-2.5 rounded-xl ${
-              isActive
-                ? "ring-2 ring-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/40 border border-cyan-500/50 shadow-md font-medium text-gray-900 dark:text-white"
-                : "hover:bg-cyan-500/5 border border-transparent rounded-lg text-gray-700 dark:text-gray-300"
-            }`}
+            className="leading-relaxed cursor-pointer hover:bg-cyan-500/10 rounded px-1 -mx-1 transition-colors"
+            title={`Click to view Change ${match.index + 1}`}
           >
-            <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
-                {isActive && <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />}
-                Change {match.index + 1}
-              </span>
-              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const updated = effectiveSuggestions.map((s) =>
-                      s.id === match.suggestion.id ? { ...s, status: "accepted" as const } : s
-                    );
-                    handleSuggestionsUpdate(updated);
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                    isAccepted
-                      ? "bg-emerald-500 text-white shadow-xs"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
-                  }`}
-                >
-                  ✓ Accept
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const updated = effectiveSuggestions.map((s) =>
-                      s.id === match.suggestion.id ? { ...s, status: "rejected" as const } : s
-                    );
-                    handleSuggestionsUpdate(updated);
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                    !isAccepted
-                      ? "bg-gray-700 text-white shadow-xs"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
-                  }`}
-                >
-                  ✕ Keep Original
-                </button>
-              </div>
-            </div>
-            <div>• {children}</div>
+            {innerContent}
           </li>
         );
       }
 
       return (
         <li className="leading-relaxed pl-0.5">
-          {children}
+          {innerContent}
         </li>
       );
     },

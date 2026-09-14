@@ -356,4 +356,128 @@ Go, Docker`;
     expect(exp1Section?.className).toContain("border-cyan-500");
     expect(exp1Section?.className).toContain("bg-cyan-500/10");
   });
+
+  it("only shows change controls and spotlight container for the single active change in document preview", () => {
+    const multiSuggestions: ResumeSuggestion[] = [
+      {
+        id: "sug-1",
+        section: "Google – Senior Software Engineer",
+        originalText: "Architected high-throughput microservices handling 50k RPS",
+        suggestedText: "Spearheaded fault-tolerant microservices handling 100k RPS",
+        reason: "Elevated performance metrics",
+        keywords: ["Fault-Tolerant"],
+        category: "metric",
+        status: "pending",
+        jobIndex: 0,
+        bulletIndex: 0,
+      },
+      {
+        id: "sug-2",
+        section: "Chapman University – Software Engineer",
+        originalText: "Developed and maintained campus portal used by 12,000 students",
+        suggestedText: "Engineered scalable campus portal serving 20,000 active students",
+        reason: "Enhanced scale metrics",
+        keywords: ["Scalable"],
+        category: "metric",
+        status: "pending",
+        jobIndex: 1,
+        bulletIndex: 0,
+      },
+    ];
+
+    const { container } = render(
+      <TailoredResumeOutput
+        newResume={sampleResume}
+        originalResume={sampleResume}
+        suggestions={multiSuggestions}
+        sectionGroups={mockSectionGroups}
+        loading={false}
+      />
+    );
+
+    // Initial state: Only sug-1 is active
+    const activeHighlight1 = container.querySelector("#change-highlight-sug-1");
+    expect(activeHighlight1).toBeInTheDocument();
+    expect(activeHighlight1).toHaveTextContent(/Change 1/i);
+
+    // sug-2 should NOT have a highlight container or buttons in document preview
+    const inactiveHighlight2 = container.querySelector("#change-highlight-sug-2");
+    expect(inactiveHighlight2).toBeNull();
+
+    // The document preview canvas should only have ONE set of change action buttons
+    const canvas = container.querySelector(".resume-prose");
+    const canvasAcceptButtons = canvas?.querySelectorAll("button");
+    // Only Accept Change and Keep Original for the single active change inside canvas
+    expect(canvasAcceptButtons?.length).toBe(2);
+    expect(canvasAcceptButtons?.[0]).toHaveTextContent("Accept Change");
+    expect(canvasAcceptButtons?.[0].className).toContain("bg-blue-600");
+
+    // Click the inactive second bullet text in canvas to inspect Change 2
+    const inactiveBullet = screen.getByText(/Developed and maintained campus portal used by 12,000 students/i);
+    fireEvent.click(inactiveBullet);
+
+    // Now only sug-2 is active with container and buttons!
+    expect(container.querySelector("#change-highlight-sug-2")).toBeInTheDocument();
+    expect(container.querySelector("#change-highlight-sug-1")).toBeNull();
+  });
+
+  it("transitions accept button in document preview to accepted when clicked", () => {
+    const singleSug: ResumeSuggestion[] = [
+      {
+        id: "sug-1",
+        section: "Google – Senior Software Engineer",
+        originalText: "Architected high-throughput microservices handling 50k RPS",
+        suggestedText: "Spearheaded fault-tolerant microservices handling 100k RPS",
+        reason: "Elevated performance metrics",
+        keywords: ["Fault-Tolerant"],
+        category: "metric",
+        status: "pending",
+        jobIndex: 0,
+        bulletIndex: 0,
+      },
+    ];
+
+    const onSuggestionsChange = vi.fn();
+
+    const { container, rerender } = render(
+      <TailoredResumeOutput
+        newResume={sampleResume}
+        originalResume={sampleResume}
+        suggestions={singleSug}
+        sectionGroups={mockSectionGroups}
+        onSuggestionsChange={onSuggestionsChange}
+        loading={false}
+      />
+    );
+
+    const canvas = container.querySelector(".resume-prose");
+    const acceptBtn = canvas?.querySelector("button");
+    expect(acceptBtn).toHaveTextContent("Accept Change");
+    expect(acceptBtn?.className).toContain("bg-blue-600");
+
+    // Click Accept Change
+    fireEvent.click(acceptBtn!);
+
+    expect(onSuggestionsChange).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ id: "sug-1", status: "accepted" })])
+    );
+
+    // Rerender with accepted status
+    const acceptedSug = [{ ...singleSug[0], status: "accepted" as const }];
+    rerender(
+      <TailoredResumeOutput
+        newResume={sampleResume}
+        originalResume={sampleResume}
+        suggestions={acceptedSug}
+        sectionGroups={mockSectionGroups}
+        onSuggestionsChange={onSuggestionsChange}
+        loading={false}
+      />
+    );
+
+    const canvasAfter = container.querySelector(".resume-prose");
+    const acceptedBtnAfter = canvasAfter?.querySelector("button");
+    expect(acceptedBtnAfter).toHaveTextContent("✓ Accepted");
+    expect(acceptedBtnAfter?.className).toContain("bg-emerald-600");
+  });
 });

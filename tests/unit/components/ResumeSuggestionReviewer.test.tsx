@@ -125,7 +125,7 @@ describe("ResumeSuggestionReviewer - Simplified GitHub Line-by-Line Diff Flow", 
     expect(screen.queryByText(/Spearheaded fault-tolerant cloud architecture/i)).not.toBeInTheDocument();
 
     // Navigating to Next reveals Change 2
-    const nextBtn = screen.getByRole("button", { name: /Next/i });
+    const nextBtn = screen.getByRole("button", { name: /^Next →$/i });
     fireEvent.click(nextBtn);
 
     expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe("ResumeSuggestionReviewer - Simplified GitHub Line-by-Line Diff Flow", 
       />
     );
 
-    const acceptBtns = screen.getAllByRole("button", { name: /✓ Accept Change/i });
+    const acceptBtns = screen.getAllByRole("button", { name: /Accept Change/i });
     fireEvent.click(acceptBtns[0]);
 
     expect(onSuggestionsChange).toHaveBeenCalledWith(
@@ -171,7 +171,7 @@ describe("ResumeSuggestionReviewer - Simplified GitHub Line-by-Line Diff Flow", 
       />
     );
 
-    const keepBtns = screen.getAllByRole("button", { name: /✕ Keep Original/i });
+    const keepBtns = screen.getAllByRole("button", { name: /Keep Original/i });
     fireEvent.click(keepBtns[0]);
 
     expect(onSuggestionsChange).toHaveBeenCalledWith(
@@ -195,8 +195,8 @@ describe("ResumeSuggestionReviewer - Simplified GitHub Line-by-Line Diff Flow", 
       />
     );
 
-    const prevBtn = screen.getByRole("button", { name: /Previous/i });
-    const nextBtn = screen.getByRole("button", { name: /Next/i });
+    const prevBtn = screen.getByRole("button", { name: /← Previous/i });
+    const nextBtn = screen.getByRole("button", { name: /^Next →$/i });
 
     // On change 1, previous is disabled
     expect(prevBtn).toBeDisabled();
@@ -431,7 +431,7 @@ B.S. Computer Science`;
     ).toBeInTheDocument();
   });
 
-  it("auto-advances to the next change when accepting or keeping original", () => {
+  it("visually transitions accept button to accepted without premature auto-advance and allows advancing via Next Change", () => {
     const onSuggestionsChange = vi.fn();
     const { rerender } = render(
       <ResumeSuggestionReviewer
@@ -445,8 +445,12 @@ B.S. Computer Science`;
 
     expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
 
+    // Initial state: Accept button is primary CTA "Accept Change" (not yet accepted)
+    const acceptBtn = screen.getByRole("button", { name: /^Accept Change$/i });
+    expect(acceptBtn).toBeInTheDocument();
+    expect(acceptBtn.className).toContain("bg-blue-600");
+
     // Accept change 1
-    const acceptBtn = screen.getByRole("button", { name: /✓ Accept Change/i });
     fireEvent.click(acceptBtn);
 
     expect(onSuggestionsChange).toHaveBeenCalledWith(
@@ -467,7 +471,16 @@ B.S. Computer Science`;
       />
     );
 
-    // It should automatically have advanced to Change 2 of 3!
+    // It remains on Change 1 of 3 so the user clearly sees it transitioned to Accepted
+    expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
+    const acceptedBtn = screen.getByRole("button", { name: /✓ Accepted/i });
+    expect(acceptedBtn).toBeInTheDocument();
+    expect(acceptedBtn.className).toContain("bg-emerald-600");
+
+    // User can advance to Change 2 using Next Change
+    const nextChangeBtn = screen.getByRole("button", { name: /Next Change/i });
+    fireEvent.click(nextChangeBtn);
+
     expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
     expect(screen.getByText("Led service architecture")).toBeInTheDocument();
   });
