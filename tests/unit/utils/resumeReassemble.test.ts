@@ -231,6 +231,64 @@ Acme Corp - Software Engineer
       expect(suggestions.length).toBe(1);
       expect(suggestions[0].suggestedText).toContain("Architected enterprise React");
     });
+
+    it("ensures originalText is strictly line-by-line and never leaks full document or uses fake placeholder strings", () => {
+      const orig = `SHAYNE ZAMORA
+Full Stack Engineer | shayne@example.com
+
+SUMMARY
+Full stack engineer building modern web applications.
+
+PROFESSIONAL EXPERIENCE
+Acme Software Inc. — Senior Engineer
+Jan 2021 – Present
+- Built React frontend applications.
+- Managed database queries.
+
+EDUCATION
+University of California
+B.S. in Computer Science`;
+
+      const tailored = `SHAYNE ZAMORA
+Full Stack Engineer | shayne@example.com
+
+SUMMARY
+Full stack engineer building high-availability web applications in React and Node.js.
+
+PROFESSIONAL EXPERIENCE
+Acme Software Inc. — Senior Engineer
+Jan 2021 – Present
+- Architected enterprise React frontend applications for 100k users.
+- Optimized PostgreSQL queries reducing latency by 45%.
+- Implemented automated CI/CD deployment pipelines.
+
+EDUCATION
+University of California
+B.S. in Computer Science`;
+
+      const suggestions = deriveSuggestionsFromDiff(orig, tailored);
+
+      // Verify no suggestion has the full resume as originalText
+      for (const s of suggestions) {
+        expect(s.originalText.length).toBeLessThan(250);
+        expect(s.originalText).not.toContain("PROFESSIONAL EXPERIENCE");
+        expect(s.originalText).not.toContain("EDUCATION");
+        expect(s.originalText).not.toContain("(New bullet added");
+        expect(s.originalText).not.toContain("(New line added");
+      }
+
+      // Check section name is clean and not a mangled date
+      const expSuggestions = suggestions.filter((s) => s.category !== "summary");
+      for (const s of expSuggestions) {
+        expect(s.section).toContain("Acme Software Inc.");
+        expect(s.section).not.toContain("Present – Jan 2021");
+      }
+
+      // Check the newly added bullet has empty originalText
+      const addedSug = suggestions.find((s) => s.suggestedText.includes("automated CI/CD"));
+      expect(addedSug).toBeDefined();
+      expect(addedSug?.originalText).toBe("");
+    });
   });
 });
 

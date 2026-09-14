@@ -122,11 +122,12 @@ export function isSubstantiveChange(
   if (!tailored) return false;
 
   const tokensTailored = extractComparableTokens(tailored);
-  if (tokensTailored.length === 0) return false;
+  if (tokensTailored.length < 2) return false;
 
   const tokensOrig = extractComparableTokens(orig || "");
   if (tokensOrig.length === 0) {
-    return true;
+    // Addition: must have at least 3 meaningful words and at least 15 chars to be substantive
+    return tokensTailored.length >= 3 && tailored.trim().length >= 15;
   }
 
   return tokensOrig.join(" ") !== tokensTailored.join(" ");
@@ -217,10 +218,12 @@ export function deriveSuggestionsFromDiff(
     // Summary diff
     if (newAST.summary && newAST.summary.trim() !== (origAST?.summary || "").trim()) {
       if (isSubstantiveChange(origAST?.summary, newAST.summary)) {
+        const origSummary = origAST?.summary?.trim() || "";
+        const cleanOrigSummary = origSummary.length > 250 ? origSummary.slice(0, 250).replace(/\s+\S*$/, "...") : origSummary;
         suggestions.push({
           id: "sug-diff-summary",
           section: "Professional Summary",
-          originalText: origAST?.summary?.trim() || "(New summary section added)",
+          originalText: cleanOrigSummary,
           suggestedText: newAST.summary.trim(),
           reason: "Holistic career alignment and leadership scope",
           keywords: [],
@@ -296,8 +299,8 @@ export function deriveSuggestionsFromDiff(
           usedOrigIndices.add(bestOrigIdx);
           pairedOrigText = cleanBulletLine(origBullets[bestOrigIdx]);
         } else {
-          // It's a completely new bullet! Never steal an arbitrary original bullet
-          pairedOrigText = "(New bullet added for target role keywords)";
+          // Brand new bullet! Use empty string for originalText, NEVER a fake placeholder string
+          pairedOrigText = "";
         }
 
         // Substantive change check: filter out trivial newline, whitespace, bullet, or punctuation diffs
@@ -371,7 +374,7 @@ export function deriveSuggestionsFromDiff(
       usedLineIndices.add(bestOrigIdx);
       pairedText = cleanBulletLine(origLines[bestOrigIdx]);
     } else {
-      pairedText = "(New line added for target role)";
+      pairedText = "";
     }
 
     if (!isSubstantiveChange(pairedText, cleanN)) {

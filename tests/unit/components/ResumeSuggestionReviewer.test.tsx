@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import ResumeSuggestionReviewer from "@/app/components/ResumeSuggestionReviewer";
 import type { ResumeSuggestion } from "@/app/agent/state";
 
-describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
+describe("ResumeSuggestionReviewer - Simplified GitHub Line-by-Line Diff Flow", () => {
   const mockSuggestions: ResumeSuggestion[] = [
     {
       id: "sug-1",
@@ -68,8 +68,8 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
 
     // Should display counters: 1 Accepted, 1 Kept, 1 Remaining out of 3
     expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/Accepted/i)).toBeInTheDocument();
-    expect(screen.getByText(/Kept/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Accepted/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Kept/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Remaining/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
 
@@ -101,7 +101,7 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
     expect(screen.getByText("+10%")).toBeInTheDocument();
   });
 
-  it("renders symmetrical side-by-side comparison for the active change", () => {
+  it("renders line-by-line diff with soft red (-) and soft green (+) for each change", () => {
     render(
       <ResumeSuggestionReviewer
         originalResume="Original Resume"
@@ -113,14 +113,17 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
     );
 
     expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
-    expect(screen.getByText(/Original \(Before\):/i)).toBeInTheDocument();
-    expect(screen.getByText(/Tailored \(Enhanced\):/i)).toBeInTheDocument();
+    // All 3 items should be rendered in the document view
+    expect(screen.getAllByText(/Original \(Before\):/i).length).toBe(3);
+    expect(screen.getAllByText(/Tailored \(Enhanced\):/i).length).toBe(3);
     expect(screen.getByText("Built campus web apps")).toBeInTheDocument();
+    expect(screen.getByText("Led service architecture")).toBeInTheDocument();
     expect(screen.getByText(/Engineered high-concurrency student portal/i)).toBeInTheDocument();
+    expect(screen.getByText(/Spearheaded fault-tolerant cloud architecture/i)).toBeInTheDocument();
     expect(screen.getByText(/Quantified scale with measurable user metric/i)).toBeInTheDocument();
   });
 
-  it("advances step-by-step when user clicks Accept Change", () => {
+  it("accepts a change when clicking Accept Change on that row", () => {
     const onSuggestionsChange = vi.fn();
     render(
       <ResumeSuggestionReviewer
@@ -132,8 +135,8 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
       />
     );
 
-    const acceptBtn = screen.getByRole("button", { name: /✓ Accept Change/i });
-    fireEvent.click(acceptBtn);
+    const acceptBtns = screen.getAllByRole("button", { name: /✓ Accept Change/i });
+    fireEvent.click(acceptBtns[0]);
 
     expect(onSuggestionsChange).toHaveBeenCalledWith(
       expect.arrayContaining([
@@ -143,13 +146,9 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
         }),
       ])
     );
-
-    // Automatically advances to Change 2
-    expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Google – Senior Software Engineer/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("advances step-by-step when user clicks Keep Original", () => {
+  it("keeps original when clicking Keep Original on that row", () => {
     const onSuggestionsChange = vi.fn();
     render(
       <ResumeSuggestionReviewer
@@ -161,8 +160,8 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
       />
     );
 
-    const keepBtn = screen.getByRole("button", { name: /✕ Keep Original/i });
-    fireEvent.click(keepBtn);
+    const keepBtns = screen.getAllByRole("button", { name: /✕ Keep Original/i });
+    fireEvent.click(keepBtns[0]);
 
     expect(onSuggestionsChange).toHaveBeenCalledWith(
       expect.arrayContaining([
@@ -172,12 +171,9 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
         }),
       ])
     );
-
-    // Automatically advances to Change 2
-    expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
   });
 
-  it("allows previous and next step navigation without altering state", () => {
+  it("allows previous and next step navigation in the sticky header", () => {
     render(
       <ResumeSuggestionReviewer
         originalResume="Original Resume"
@@ -194,7 +190,7 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
     // On change 1, previous is disabled
     expect(prevBtn).toBeDisabled();
 
-    // Click next -> advances to Change 2
+    // Click next -> advances activeIndex to Change 2
     fireEvent.click(nextBtn);
     expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
     expect(prevBtn).not.toBeDisabled();
@@ -235,8 +231,8 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
       />
     );
 
-    const editBtn = screen.getByRole("button", { name: /Adjust \/ Edit|Edit/i });
-    fireEvent.click(editBtn);
+    const editBtns = screen.getAllByRole("button", { name: /Adjust \/ Edit|Edit/i });
+    fireEvent.click(editBtns[0]);
 
     const textarea = screen.getByDisplayValue(/Engineered high-concurrency student portal/i);
     fireEvent.change(textarea, { target: { value: "Engineered high-concurrency portal serving 50k users" } });
@@ -272,6 +268,63 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
     fireEvent.click(finishBtn);
 
     expect(onFinalize).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders new additions with tailored addition styling and no empty red box", () => {
+    const sugsWithAddition: ResumeSuggestion[] = [
+      {
+        id: "sug-add-1",
+        section: "Google – Senior Software Engineer",
+        originalText: "", // Brand new addition!
+        suggestedText: "Spearheaded disaster recovery automation achieving zero data loss across multi-region failovers",
+        reason: "Added high-impact disaster recovery leadership bullet",
+        keywords: ["Disaster Recovery"],
+        category: "metric",
+        status: "pending",
+      },
+    ];
+
+    render(
+      <ResumeSuggestionReviewer
+        originalResume="Original Resume"
+        suggestions={sugsWithAddition}
+        beforeScore={50}
+        matchScore={80}
+        onSuggestionsChange={vi.fn()}
+      />
+    );
+
+    // Should indicate it is an addition
+    expect(screen.getByText(/Tailored \(Addition\):/i)).toBeInTheDocument();
+    expect(screen.getByText(/\+ New bullet added/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dismiss Addition/i)).toBeInTheDocument();
+
+    // Should NOT render an "Original (Before):" red box for additions
+    expect(screen.queryByText(/Original \(Before\):/i)).not.toBeInTheDocument();
+  });
+
+  it("supports bulk actions (Accept All Remaining & Keep All Remaining)", () => {
+    const onSuggestionsChange = vi.fn();
+    render(
+      <ResumeSuggestionReviewer
+        originalResume="Original Resume"
+        suggestions={mockSuggestions}
+        beforeScore={50}
+        matchScore={80}
+        onSuggestionsChange={onSuggestionsChange}
+      />
+    );
+
+    const acceptAllBtn = screen.getByRole("button", { name: /Accept All Remaining/i });
+    fireEvent.click(acceptAllBtn);
+
+    expect(onSuggestionsChange).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "sug-1", status: "accepted" }),
+        expect.objectContaining({ id: "sug-2", status: "accepted" }),
+        expect.objectContaining({ id: "sug-3", status: "accepted" }),
+      ])
+    );
   });
 
   it("filters out non-substantive (newline, whitespace, trailing punctuation) suggestions from review counts", () => {
@@ -315,4 +368,3 @@ describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
     expect(progressTicks.length).toBe(3);
   });
 });
-

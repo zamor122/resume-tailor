@@ -3,6 +3,8 @@ import {
   applySuggestionsToOriginal,
   reassembleResumeFromSections,
   buildContactFromOriginal,
+  getBulletsList,
+  isSubstantiveChange,
 } from "@/app/utils/resumeReassemble";
 import { sanitizeResumeForATS } from "@/app/utils/atsSanitizer";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
@@ -55,17 +57,29 @@ export async function reassembleAndScoreNode(
       const expList = resumeAST.experience;
       tailoredBulletsByJob.forEach((newBullets, jobIdx) => {
         const origExp = expList[jobIdx];
-        if (origExp && newBullets && newBullets.trim() !== origExp.description.trim()) {
-          activeSuggestions.push({
-            id: `sug-job-${jobIdx}-auto`,
-            section: origExp.company || "Experience",
-            originalText: origExp.description.trim(),
-            suggestedText: newBullets.trim(),
-            reason: "Targeted keyword and achievement enhancement",
-            keywords: [],
-            status: "accepted",
-          });
-        }
+        if (!origExp || !newBullets) return;
+
+        const origList = getBulletsList(origExp.description);
+        const newList = getBulletsList(newBullets);
+
+        newList.forEach((nb, bulletIdx) => {
+          const cleanN = nb.replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
+          const cleanO = (origList[bulletIdx] || "").replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
+
+          if (cleanN && isSubstantiveChange(cleanO, cleanN)) {
+            activeSuggestions.push({
+              id: `sug-job-${jobIdx}-b-${bulletIdx}-auto`,
+              section: origExp.company ? `${origExp.company} – ${origExp.title || "Role"}` : "Experience",
+              originalText: cleanO,
+              suggestedText: cleanN,
+              reason: "Targeted keyword and achievement enhancement",
+              keywords: [],
+              status: "accepted",
+              jobIndex: jobIdx,
+              bulletIndex: bulletIdx,
+            });
+          }
+        });
       });
     }
   }

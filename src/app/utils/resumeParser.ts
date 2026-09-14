@@ -109,11 +109,11 @@ export function parseResume(resumeText: string): ParsedResume {
   
   // Detect sections
   const sectionHeaders: Array<{ pattern: RegExp; name: string }> = [
-    { pattern: /^(?:#+\s*)?(?:summary|profile|professional summary|executive summary|about|about me|career objective|objective)\b/i, name: 'Summary' },
-    { pattern: /^(?:#+\s*)?(?:experience|work experience|employment history|employment|professional experience|work history|relevant experience)\b/i, name: 'Experience' },
-    { pattern: /^(?:#+\s*)?(?:education|academic background|academic|education & certifications)\b/i, name: 'Education' },
-    { pattern: /^(?:#+\s*)?(?:skills|technical skills|core competencies|skills & technologies|technical expertise)\b/i, name: 'Skills' },
-    { pattern: /^(?:#+\s*)?(?:projects|key projects|personal projects|technical projects)\b/i, name: 'Projects' },
+    { pattern: /^(?:#+\s*)?(?:summary|profile|professional summary|executive summary|about|about me|career objective|objective|personal statement|career summary|background summary|professional profile)\b/i, name: 'Summary' },
+    { pattern: /^(?:#+\s*)?(?:experience|work experience|employment history|employment|professional experience|work history|relevant experience|professional background|career history|work timeline|employment record|relevant work|work background)\b/i, name: 'Experience' },
+    { pattern: /^(?:#+\s*)?(?:education|academic background|academic|education & certifications|education & training|academic history|degrees)\b/i, name: 'Education' },
+    { pattern: /^(?:#+\s*)?(?:skills|technical skills|core competencies|skills & technologies|technical expertise|technical proficiencies|technical skills & tools|skills & abilities|areas of expertise|core strengths|technologies|tools & technologies)\b/i, name: 'Skills' },
+    { pattern: /^(?:#+\s*)?(?:projects|key projects|personal projects|technical projects|notable projects|academic projects)\b/i, name: 'Projects' },
     { pattern: /^(?:#+\s*)?(?:certifications|certificates|licenses)\b/i, name: 'Certifications' },
     { pattern: /^(?:#+\s*)?(?:awards|achievements|honors)\b/i, name: 'Awards' },
   ];
@@ -127,9 +127,14 @@ export function parseResume(resumeText: string): ParsedResume {
     });
   });
 
+  const cleanHeaderLine = (line: string): string => {
+    return line.trim().replace(/^([#*_~`>\s]+)/, "").replace(/([#*_~`:\s]+)$/, "").trim();
+  };
+
   const isSectionHeader = (line: string): string | null => {
+    const cleaned = cleanHeaderLine(line);
     for (const { pattern, name } of sectionHeaders) {
-      if (pattern.test(line.trim())) return name;
+      if (pattern.test(line.trim()) || pattern.test(cleaned)) return name;
     }
     return null;
   };
@@ -156,11 +161,23 @@ export function parseResume(resumeText: string): ParsedResume {
         inSummary = false;
         break;
       }
+      const trimmed = line.trim();
+      // Date range guard: if a date range appears, summary section has ended
+      const hasDateRange = /(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4}\s*[-–—]\s*(?:Present|Current|\d{4})/i.test(trimmed);
+      // Job header guard: Title - Company or Title at Company
+      const isJobHeader = /^(.+?)\s+[-–—]\s+(.+?)(?:\s+[-–—]\s+(.+?))?$/.test(trimmed) || /^(.+?)\s+(?:at|@)\s+(.+?)/i.test(trimmed);
+      // Safety guard: summary never bleeds into bullets, date ranges, job titles, or exceeds 4 lines
+      if (isBullet(line) || hasDateRange || isJobHeader || summaryLines.length >= 4) {
+        inSummary = false;
+        break;
+      }
       summaryLines.push(line);
     }
   }
   if (summaryLines.length > 0) {
-    summary = summaryLines.join('\n').trim();
+    const joined = summaryLines.join('\n').trim();
+    // Cap summary to 280 characters max to prevent whole-document bleed
+    summary = joined.length > 280 ? joined.slice(0, 280).replace(/\s+\S*$/, "...") : joined;
   }
 
   // Extract experience
@@ -202,13 +219,18 @@ export function parseResume(resumeText: string): ParsedResume {
         continue;
       }
 
+      // Check if line is a date range for previous job header (MUST check before dashMatch to avoid dates being parsed as jobs)
+      const dateRangeMatch = line.match(/(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4}\s*[-–—]\s*(?:Present|Current|(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4})/i);
+      if (dateRangeMatch && currentExp && !currentExp.dates && !currentExp.description) {
+        currentExp.dates = line.trim();
+        continue;
+      }
+
       // Check if line looks like a job header:
       // Pattern 1: Title - Company - Dates OR Company - Title (Dates)
       const dashMatch = line.match(/^(.+?)\s+[-–—]\s+(.+?)(?:\s+[-–—]\s+(.+?))?$/);
       // Pattern 2: Title at Company (Dates)
       const atMatch = line.match(/^(.+?)\s+(?:at|@)\s+(.+?)(?:\s*\((.+?)\))?$/i);
-      // Pattern 3: Line containing dates (e.g. April 2026 - Present, 2018 - 2022)
-      const dateRangeMatch = line.match(/(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4}\s*[-–—]\s*(?:Present|Current|(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4})/i);
 
       if (dashMatch) {
         if (currentExp) experience.push(currentExp);
