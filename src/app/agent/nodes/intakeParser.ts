@@ -1,17 +1,22 @@
 import type { AgentState } from "../state";
-import { parseResume } from "@/app/utils/resumeParser";
+import { parseResumeWithLLM } from "@/app/utils/resumeParserLLM";
 
 /**
- * Deterministic intake parser node.
- * Breaks the raw resume string into an AST containing contact info,
+ * Intake parser node.
+ * Deconstructs the raw resume string into an AST containing contact info,
  * sections, experience entries, education, skills, and summary.
- * Zero LLM calls, < 15ms execution.
+ * Uses fast LLM structured extraction by default with a max 3 attempts guard
+ * and deterministic fallback on error.
  */
 export async function intakeParserNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
   try {
-    const resumeAST = parseResume(state.rawResume);
+    const resumeAST = await parseResumeWithLLM(
+      state.rawResume,
+      state.modelKey,
+      state.sessionApiKeys
+    );
     return {
       resumeAST: {
         contactInfo: resumeAST.contactInfo,
@@ -24,7 +29,9 @@ export async function intakeParserNode(
         },
         summary: resumeAST.summary,
       },
-      logs: ["[intakeParser] Resume parsed into AST"],
+      logs: [
+        `[intakeParser] Resume parsed into AST (${resumeAST.experience.length} jobs, summary: ${resumeAST.summary ? "yes" : "no"})`,
+      ],
     };
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);

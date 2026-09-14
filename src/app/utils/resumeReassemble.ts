@@ -26,13 +26,54 @@ export function applySuggestionsToOriginal(
 
     if (!target || target === replacement) continue;
 
+    const bulletRegex = /^([-*•–—●○■▪✦★\u2022\u25cf\u25cb\u25aa\u25ab]|\d+\.)\s*/;
+    const cleanReplacement = replacement.replace(bulletRegex, "").trim();
+
     // 1. Direct exact replacement
-    if (currentText.includes(target)) {
-      currentText = currentText.replace(target, replacement);
+    const targetIdx = currentText.indexOf(target);
+    if (targetIdx !== -1) {
+      const textBefore = currentText.slice(0, targetIdx);
+      const precedingBulletMatch = textBefore.match(/([-*•–—●○■▪✦★\u2022\u25cf\u25cb\u25aa\u25ab]|\d+\.)\s*$/);
+
+      let finalReplacement = replacement;
+      if (precedingBulletMatch) {
+        finalReplacement = cleanReplacement;
+      } else if (target.match(bulletRegex)) {
+        const targetBullet = target.match(bulletRegex)![0];
+        finalReplacement = `${targetBullet}${cleanReplacement}`;
+      }
+
+      currentText = currentText.slice(0, targetIdx) + finalReplacement + currentText.slice(targetIdx + target.length);
       continue;
     }
 
-    // 2. Normalize whitespace/line-endings and try matching
+    // 1b. Whitespace-flexible substring replacement (in-place)
+    try {
+      const escapedTarget = target
+        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        .replace(/\s+/g, "\\s+");
+      const regex = new RegExp(escapedTarget);
+      const match = currentText.match(regex);
+      if (match && match.index !== undefined) {
+        const textBefore = currentText.slice(0, match.index);
+        const precedingBulletMatch = textBefore.match(/([-*•–—●○■▪✦★\u2022\u25cf\u25cb\u25aa\u25ab]|\d+\.)\s*$/);
+
+        let finalReplacement = replacement;
+        if (precedingBulletMatch) {
+          finalReplacement = cleanReplacement;
+        } else if (target.match(bulletRegex)) {
+          const targetBullet = target.match(bulletRegex)![0];
+          finalReplacement = `${targetBullet}${cleanReplacement}`;
+        }
+
+        currentText = currentText.slice(0, match.index) + finalReplacement + currentText.slice(match.index + match[0].length);
+        continue;
+      }
+    } catch {
+      // fallback
+    }
+
+    // 2. Line-based match with preserved bullet styling
     const normalizedTarget = target.replace(/\r?\n\s*/g, " ").replace(/\s+/g, " ");
     const lines = currentText.split(/\r?\n/);
     let matchedIndex = -1;
@@ -40,7 +81,7 @@ export function applySuggestionsToOriginal(
     for (let i = 0; i < lines.length; i++) {
       const normalizedLine = lines[i].replace(/\s+/g, " ").trim();
       if (
-        normalizedLine.length > 20 &&
+        normalizedLine.length > 15 &&
         (normalizedLine === normalizedTarget ||
           normalizedLine.includes(normalizedTarget) ||
           normalizedTarget.includes(normalizedLine))
@@ -52,13 +93,11 @@ export function applySuggestionsToOriginal(
 
     if (matchedIndex !== -1) {
       const origLine = lines[matchedIndex];
-      const bulletPrefix = origLine.match(/^(\s*[-*•]\s*)/)?.[1] || "";
-      const formattedReplacement =
-        replacement.startsWith("-") || replacement.startsWith("*") || replacement.startsWith("•")
-          ? replacement
-          : bulletPrefix
-          ? `${bulletPrefix}${replacement}`
-          : replacement;
+      const bulletPrefixMatch = origLine.match(bulletRegex);
+      const bulletPrefix = bulletPrefixMatch ? bulletPrefixMatch[0] : "";
+      const formattedReplacement = bulletPrefix
+        ? `${bulletPrefix}${cleanReplacement}`
+        : replacement;
       lines[matchedIndex] = formattedReplacement;
       currentText = lines.join("\n");
     }

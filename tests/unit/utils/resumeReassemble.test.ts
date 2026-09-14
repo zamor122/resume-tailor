@@ -171,6 +171,26 @@ JavaScript, TypeScript, React, Node.js, PostgreSQL, AWS, Docker
       expect(result).toContain("Architected enterprise React UI for 100k users.");
       expect(result).not.toContain("Built React UI for 100 users.");
     });
+
+    it("preserves custom circle bullets (●, ○) and exact document formatting in-place", () => {
+      const orig = `Summary\n● 11+ Years of Leadership\nTicketmaster\n○ AI-SDLC Framework & SDD Standardization : Authored company framework.`;
+      const acceptedSug: ResumeSuggestion = {
+        id: "sug-circle",
+        section: "Ticketmaster",
+        originalText: "AI-SDLC Framework & SDD Standardization : Authored company framework.",
+        suggestedText: "• AI-SDLC Framework & SDD Standardization : Architected enterprise-wide framework, 2x delivery throughput.",
+        reason: "Metric",
+        keywords: [],
+        status: "accepted",
+      };
+
+      const result = applySuggestionsToOriginal(orig, [acceptedSug]);
+      // Must preserve the original ○ bullet glyph in-place
+      expect(result).toContain("○ AI-SDLC Framework & SDD Standardization : Architected enterprise-wide framework, 2x delivery throughput.");
+      // Must preserve the summary ● bullet
+      expect(result).toContain("● 11+ Years of Leadership");
+      expect(result).not.toContain("Authored company framework.");
+    });
   });
 
   describe("EARS - Substantive vs Trivial Change Filtering", () => {
