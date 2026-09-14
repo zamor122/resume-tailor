@@ -1,6 +1,8 @@
 import type { ResumeSuggestion } from "@/app/agent/state";
 import { isSubstantiveChange, getBulletsList, isolatePreciseOriginalChange } from "./resumeReassemble";
 
+export const BULLET_PREFIX_REGEX = /^([-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]|\d+\.)\s*/;
+
 export interface RawChunkBulletItem {
   index?: number;
   originalText?: string;
@@ -32,11 +34,13 @@ export function parseChunkBulletsResponse(params: {
     sortedMissingKeywords = [],
   } = params;
 
+  console.log(`[chunkBulletParser] ▶ Parsing chunk for "${sectionGroupTitle}" (jobIndex: ${jobIndex ?? "N/A"}, inputBullets: ${origBullets.length}, rawChars: ${llmText?.length || 0})`);
+
   let parsedItems: RawChunkBulletItem[] | null = null;
 
   // 1. Try to extract and parse JSON array
   try {
-    let cleanText = llmText.trim();
+    let cleanText = (llmText || "").trim();
     // Strip markdown code fences if present (```json ... ``` or ``` ...)
     const fenceMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
     if (fenceMatch) {
@@ -51,9 +55,10 @@ export function parseChunkBulletsResponse(params: {
     const candidate = JSON.parse(cleanText);
     if (Array.isArray(candidate) && candidate.length > 0) {
       parsedItems = candidate;
+      console.log(`[chunkBulletParser] Extracted JSON array with ${parsedItems.length} items`);
     }
-  } catch {
-    // JSON parse failed, will use fallback
+  } catch (e) {
+    console.log(`[chunkBulletParser] JSON extraction skipped (${e instanceof Error ? e.message : String(e)}), using line-based parsing`);
   }
 
   const suggestions: ResumeSuggestion[] = [];
@@ -61,18 +66,43 @@ export function parseChunkBulletsResponse(params: {
 
   if (parsedItems && parsedItems.length > 0) {
     origBullets.forEach((origLine, idx) => {
-      const cleanOrig = origLine.replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
-      // Match by index or position
-      const match =
-        parsedItems!.find((p) => p.index === idx) ||
-        parsedItems![idx];
+      const cleanOrig = origLine.replace(BULLET_PREFIX_REGEX, "").trim();
+
+      // Match strategy:
+      // 1. Explicit item.index === idx
+      // 2. Text similarity against item.originalText
+      // 3. Fallback to position parsedItems[idx]
+      let match = parsedItems!.find((p) => p.index === idx);
+
+      if (!match && cleanOrig) {
+        const cleanOrigSnippet = cleanOrig.toLowerCase().slice(0, 30);
+        match = parsedItems!.find((p) => {
+          if (!p.originalText) return false;
+          const cleanItemOrig = p.originalText.replace(BULLET_PREFIX_REGEX, "").trim().toLowerCase();
+          return (
+            cleanItemOrig.includes(cleanOrigSnippet) ||
+            cleanOrig.toLowerCase().includes(cleanItemOrig.slice(0, 30))
+          );
+        });
+      }
+
+      if (!match && idx < parsedItems!.length) {
+        match = parsedItems![idx];
+      }
 
       const cleanNew = (match?.suggestedText || (match as any)?.tailored || cleanOrig)
-        .replace(/^([-*•–—]|\d+\.)\s*/, "")
+        .replace(BULLET_PREFIX_REGEX, "")
         .trim();
 
       const isSubstantive = isSubstantiveChange(cleanOrig, cleanNew);
       tailoredBullets.push(isSubstantive ? `- ${cleanNew}` : `- ${cleanOrig}`);
+
+      console.log(`[chunkBulletParser] Bullet [${idx}]: isSubstantive=${isSubstantive}`, {
+        orig: cleanOrig.slice(0, 50),
+        suggested: cleanNew.slice(0, 50),
+        matchFound: !!match,
+        matchedBy: match ? (match.index === idx ? "index" : "text/position") : "none",
+      });
 
       if (isSubstantive) {
         const matchedKw = match?.keywords && match.keywords.length > 0
@@ -104,6 +134,7 @@ export function parseChunkBulletsResponse(params: {
       }
     });
 
+    console.log(`[chunkBulletParser] ✔ Finished structured parse for "${sectionGroupTitle}": generated ${suggestions.length} suggestions from ${origBullets.length} input bullets`);
     return { suggestions, tailoredBullets };
   }
 
@@ -119,12 +150,17 @@ export function parseChunkBulletsResponse(params: {
   }
 
   origBullets.forEach((origLine, idx) => {
-    const cleanOrig = origLine.replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
+    const cleanOrig = origLine.replace(BULLET_PREFIX_REGEX, "").trim();
     const rawNew = rawNewBullets[idx] || origLine;
-    const cleanNew = rawNew.replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
+    const cleanNew = rawNew.replace(BULLET_PREFIX_REGEX, "").trim();
 
     const isSubstantive = isSubstantiveChange(cleanOrig, cleanNew);
     tailoredBullets.push(isSubstantive ? `- ${cleanNew}` : `- ${cleanOrig}`);
+
+    console.log(`[chunkBulletParser] (Fallback) Bullet [${idx}]: isSubstantive=${isSubstantive}`, {
+      orig: cleanOrig.slice(0, 50),
+      new: cleanNew.slice(0, 50),
+    });
 
     if (isSubstantive) {
       const matchedKw = sortedMissingKeywords.filter((kw) =>
@@ -152,5 +188,6 @@ export function parseChunkBulletsResponse(params: {
     }
   });
 
+  console.log(`[chunkBulletParser] ✔ Finished fallback parse for "${sectionGroupTitle}": generated ${suggestions.length} suggestions from ${origBullets.length} input bullets`);
   return { suggestions, tailoredBullets };
 }

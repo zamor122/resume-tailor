@@ -5,17 +5,24 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
   const experience = resumeAST?.experience || [];
   const { intensity, sectionsToModify } = preferences;
 
+  console.log(`[bulletPlanner] ▶ Starting planner`, {
+    intensity,
+    experienceJobsCount: experience.length,
+    missingKeywordsCount: sortedMissingKeywords.length,
+    sectionsToModify,
+  });
+
   let bulletPlan: BulletPlan;
 
   if (intensity === "minimal") {
-    // Touch at most 2 bullets across ALL jobs where missing keywords are highest
+    // Touch at most 2 bullets across jobs where missing keywords are highest
     bulletPlan = {
       summaryChange: false,
       skillsChange: false,
       jobBulletChanges: pickTopBulletsAcrossJobs(experience, sortedMissingKeywords, 2),
     };
   } else if (intensity === "targeted") {
-    // Rewrite 3–5 highest-relevance bullets + summary
+    // Rewrite 3–5 highest-relevance bullets across top jobs + summary
     bulletPlan = {
       summaryChange: sectionsToModify.summary,
       skillsChange: sectionsToModify.skills,
@@ -61,6 +68,18 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
     0
   );
 
+  console.log(`[bulletPlanner] ✔ Plan generated`, {
+    intensity,
+    summaryChange: bulletPlan.summaryChange,
+    skillsChange: bulletPlan.skillsChange,
+    totalBulletsToModify,
+    jobChanges: bulletPlan.jobBulletChanges.map((c) => ({
+      jobIndex: c.jobIndex,
+      company: experience[c.jobIndex]?.company || `Job ${c.jobIndex}`,
+      bulletIndices: c.bulletIndices,
+    })),
+  });
+
   return {
     bulletPlan,
     logs: [
@@ -71,7 +90,7 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
 
 function isBullet(line: string): boolean {
   const trimmed = line.trim();
-  return /^([-*•–—]|\d+\.)\s+/.test(trimmed) || /^[-*•–—]/.test(trimmed);
+  return /^([-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]|\d+\.)\s*/.test(trimmed) || /^[-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]/.test(trimmed);
 }
 
 function getBulletsList(text: string): string[] {
@@ -90,6 +109,8 @@ function pickTopBulletsAcrossJobs(
   missingKeywords: string[],
   maxTotal: number
 ): Array<{ jobIndex: number; bulletIndices: number[]; reason: string }> {
+  if (experience.length === 0) return [];
+
   const candidates: Array<{ jobIndex: number; bulletIndex: number; gapScore: number }> = [];
 
   experience.forEach((job, ji) => {
@@ -98,13 +119,45 @@ function pickTopBulletsAcrossJobs(
     bullets.forEach((b, bi) => {
       const bLower = b.toLowerCase();
       // Count how many missing keywords could be relevant or are missing
-      const gapScore = missingKeywords.filter((kw) => !bLower.includes(kw.toLowerCase())).length;
+      const keywordGap = missingKeywords.filter((kw) => !bLower.includes(kw.toLowerCase())).length;
+      // Recency bonus: recent roles are higher priority for recruiters
+      const recencyBonus = Math.max(0, 10 - ji * 2);
+      // Slight bonus for top bullets in a job (first 2 bullets are highest impact)
+      const positionBonus = bi === 0 ? 3 : bi === 1 ? 2 : 0;
+      const gapScore = keywordGap * 2 + recencyBonus + positionBonus;
+
       candidates.push({ jobIndex: ji, bulletIndex: bi, gapScore });
     });
   });
 
   candidates.sort((a, b) => b.gapScore - a.gapScore);
-  const selected = candidates.slice(0, maxTotal);
+
+  // Distribute across jobs rather than dumping all into job 0
+  const maxPerJob = experience.length > 1
+    ? Math.max(2, Math.ceil(maxTotal / Math.min(experience.length, 3)))
+    : maxTotal;
+
+  const jobCounts: Record<number, number> = {};
+  const selected: Array<{ jobIndex: number; bulletIndex: number }> = [];
+
+  for (const cand of candidates) {
+    if (selected.length >= maxTotal) break;
+    const currentCount = jobCounts[cand.jobIndex] || 0;
+    if (currentCount < maxPerJob) {
+      selected.push(cand);
+      jobCounts[cand.jobIndex] = currentCount + 1;
+    }
+  }
+
+  // If strict per-job cap left remaining slots, fill from top remaining candidates
+  if (selected.length < maxTotal) {
+    for (const cand of candidates) {
+      if (selected.length >= maxTotal) break;
+      if (!selected.some(s => s.jobIndex === cand.jobIndex && s.bulletIndex === cand.bulletIndex)) {
+        selected.push(cand);
+      }
+    }
+  }
 
   const byJob: Record<number, number[]> = {};
   selected.forEach(({ jobIndex, bulletIndex }) => {
@@ -114,7 +167,7 @@ function pickTopBulletsAcrossJobs(
 
   return Object.entries(byJob).map(([ji, bis]) => ({
     jobIndex: Number(ji),
-    bulletIndices: bis,
+    bulletIndices: bis.sort((a, b) => a - b),
     reason: "highest keyword gap optimization",
   }));
 }

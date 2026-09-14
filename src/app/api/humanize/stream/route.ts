@@ -281,6 +281,15 @@ export async function POST(req: NextRequest) {
           contentMapEntries: obfuscationResult.contentMap?.length || 0,
           hasFreeReveal: !!obfuscationResult.freeReveal,
           suggestionCount: agentResult.suggestions?.length || 0,
+          suggestionIds: agentResult.suggestions?.map((s: any) => s.id) || [],
+          sectionGroupsCount: agentResult.sectionGroups?.length || 0,
+          sectionGroupDetails: agentResult.sectionGroups?.map((g: any) => ({
+            id: g.id,
+            title: g.title,
+            suggestionsCount: g.suggestions?.length || 0,
+            hasChanges: g.hasChanges,
+            status: g.status,
+          })),
         });
 
         // Final completion event

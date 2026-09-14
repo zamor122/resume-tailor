@@ -88,6 +88,12 @@ HIGHEST PRIORITY – USER PREFERENCES & CONTROLS (follow these first):
 ${leverBlock}${userBlock}${keywordsBlock}`
     : "";
 
+  const bulletLines = bulletsText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const bulletCount = bulletLines.length;
+
   return `You are an elite executive resume writer. Tailor the bullet points for this specific role against the target job description.
 ${topUserBlock}
 TARGET ROLE METADATA (context boundary - do not repeat):
@@ -100,33 +106,43 @@ TARGET JOB DESCRIPTION:
 ${jobDescription.slice(0, 2500)}
 """
 
-ORIGINAL BULLETS FOR THIS ROLE:
+ORIGINAL BULLETS FOR THIS ROLE (${bulletCount} bullets total):
 """
 ${bulletsText}
 """
 
 CRITICAL INSTRUCTIONS:
-1. STRICT 1-TO-1 MAPPING: For every original bullet, generate exactly one enhanced version. Do NOT merge bullets, split bullets, delete bullets, or create new bullets.
+1. STRICT 1-TO-1 MAPPING: You are provided with EXACTLY ${bulletCount} bullets. You MUST return a JSON array containing EXACTLY ${bulletCount} items, one for every input bullet in the exact order received (with index from 0 to ${Math.max(0, bulletCount - 1)}).
+   - DO NOT stop after 1 item! You MUST include all ${bulletCount} items in your JSON array response.
+   - Do NOT merge bullets, split bullets, delete bullets, or create new bullets.
 2. ENHANCEMENT RULES:
    - Make ONLY substantive, meaningful improvements (adding target skills, technologies, quantified impact metrics, or stronger action verbs).
    - NEVER make trivial formatting modifications: DO NOT insert line breaks/newlines, alter whitespace, re-wrap lines, change bullet marker symbols, or tweak trailing punctuation.
-   - If a bullet already adequately covers the role and does not require substantive tailoring, return the exact original text unchanged.
+   - If a bullet already adequately covers the role and does not require substantive tailoring, return the exact original text unchanged with status: "unchanged".
    - First bullet: Overview of responsibilities, team scope, core tech stack, product type, and methodology.
    - Remaining bullets: Action (strong past-tense verb) → Ingredients (technologies, tools, metrics) → Impact (quantified business or technical outcome).
    - Only weave in keywords that authentically reflect experience described in the original bullet. Never invent claims or put keywords in parentheses.
    - Omit articles (a, an, the). Use crisp resume phrasing.
-3. OUTPUT FORMAT: Output ONLY a valid JSON array with the exact same number of items as the original bullets:
+3. OUTPUT FORMAT: Output ONLY a valid JSON array of ${bulletCount} objects:
 [
   {
     "index": 0,
-    "originalText": "exact original bullet without leading dash",
-    "suggestedText": "tailored bullet without leading dash",
+    "originalText": "exact original bullet 0 without leading bullet marker",
+    "suggestedText": "tailored bullet 0 without leading bullet marker",
     "status": "enhanced",
     "reason": "Tactical justification (e.g. Quantified latency reduction, added Go/Kubernetes keywords)",
     "keywords": ["Go", "Kubernetes"]
+  },
+  {
+    "index": 1,
+    "originalText": "exact original bullet 1 without leading bullet marker",
+    "suggestedText": "tailored bullet 1 without leading bullet marker",
+    "status": "enhanced",
+    "reason": "Strengthened action verb and ATS terminology",
+    "keywords": ["TypeScript", "Microservices"]
   }
 ]
-Output ONLY a valid JSON array. Do not include markdown code fences, headers, or any other text.`;
+Output ONLY the valid JSON array of ${bulletCount} objects. Do not include markdown code fences, headers, or any other text.`;
 }
 
 /**

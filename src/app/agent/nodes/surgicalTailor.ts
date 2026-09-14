@@ -27,9 +27,18 @@ export async function surgicalTailorNode(
   const promises: Promise<{ type: "summary" | "bullets"; index?: number; text: string; originalInputText: string }>[] = [];
   const suggestions: ResumeSuggestion[] = [];
 
+  console.log(`[surgicalTailor] ▶ Starting node`, {
+    intensity: preferences?.intensity,
+    summaryPlanned: !!bulletPlan?.summaryChange,
+    jobsPlanned: bulletPlan?.jobBulletChanges?.length || 0,
+    totalExperienceJobs: experience.length,
+    missingKeywords: sortedMissingKeywords.slice(0, 8),
+  });
+
   // 1. Tailor Summary if planned
   if (bulletPlan?.summaryChange) {
     const originalSummary = resumeAST?.summary || "";
+    console.log(`[surgicalTailor] Summary tailoring task dispatched (length: ${originalSummary.length})`);
     promises.push(
       generateWithFallback(
         getSummaryTailoringPrompt({
@@ -40,14 +49,17 @@ export async function surgicalTailorNode(
           userRequestedKeywords: sortedMissingKeywords.slice(0, 5),
         }),
         state.modelKey,
-        { maxTokens: 400, temperature: 0.2 },
+        { maxTokens: 800, temperature: 0.2 },
         state.sessionApiKeys
       )
-        .then((res) => ({
-          type: "summary" as const,
-          text: res.text.trim(),
-          originalInputText: originalSummary,
-        }))
+        .then((res) => {
+          console.log(`[surgicalTailor] Summary LLM response received (length: ${res.text.length})`);
+          return {
+            type: "summary" as const,
+            text: res.text.trim(),
+            originalInputText: originalSummary,
+          };
+        })
         .catch((err) => {
           console.warn("[surgicalTailor] Summary tailoring LLM failed:", err);
           return {
@@ -62,12 +74,21 @@ export async function surgicalTailorNode(
   // 2. Tailor Experience Bullets according to plan
   bulletPlan?.jobBulletChanges.forEach(({ jobIndex, bulletIndices }) => {
     const exp = experience[jobIndex];
-    if (!exp) return;
+    if (!exp) {
+      console.warn(`[surgicalTailor] Warning: jobIndex ${jobIndex} not found in resumeAST.experience`);
+      return;
+    }
 
     const bulletsText =
       bulletIndices === "all"
         ? exp.description
         : extractSpecificBullets(exp.description, bulletIndices);
+
+    const inputBulletsList = getBulletsList(bulletsText);
+    console.log(`[surgicalTailor] Job ${jobIndex} (${exp.company}) dispatched with ${inputBulletsList.length} bullets:`, {
+      bulletIndices,
+      bulletsTextSnippet: bulletsText.slice(0, 100),
+    });
 
     promises.push(
       generateWithFallback(
@@ -81,15 +102,18 @@ export async function surgicalTailorNode(
           userRequestedKeywords: sortedMissingKeywords.slice(0, 10),
         }),
         state.modelKey,
-        { maxTokens: bulletIndices === "all" ? 800 : 400, temperature: 0.2 },
+        { maxTokens: 2000, temperature: 0.2 },
         state.sessionApiKeys
       )
-        .then((res) => ({
-          type: "bullets" as const,
-          index: jobIndex,
-          text: res.text.trim(),
-          originalInputText: bulletsText,
-        }))
+        .then((res) => {
+          console.log(`[surgicalTailor] Job ${jobIndex} (${exp.company}) response received (chars: ${res.text.length})`);
+          return {
+            type: "bullets" as const,
+            index: jobIndex,
+            text: res.text.trim(),
+            originalInputText: bulletsText,
+          };
+        })
         .catch((err) => {
           console.warn(`[surgicalTailor] Job ${jobIndex} bullet tailoring LLM failed:`, err);
           return {
@@ -122,6 +146,7 @@ export async function surgicalTailorNode(
           category: "summary",
           status: "pending",
         });
+        console.log(`[surgicalTailor] Added summary suggestion`);
       }
     } else if (r.type === "bullets" && r.index !== undefined) {
       const exp = experience[r.index];
@@ -137,6 +162,8 @@ export async function surgicalTailorNode(
           jobIndex: r.index,
           sortedMissingKeywords,
         });
+
+        console.log(`[surgicalTailor] Job ${r.index} ("all") produced ${chunkSuggestions.length} suggestions from ${origBullets.length} input bullets`);
 
         tailoredBulletsByJob[r.index] = tailoredBullets.join("\n");
         chunkSuggestions.forEach((sug) => {
@@ -157,6 +184,8 @@ export async function surgicalTailorNode(
           jobIndex: r.index,
           sortedMissingKeywords,
         });
+
+        console.log(`[surgicalTailor] Job ${r.index} (${targetIndices.length} targeted bullets) produced ${chunkSuggestions.length} suggestions:`, chunkSuggestions.map(s => ({ idx: s.bulletIndex, text: s.suggestedText.slice(0, 40) })));
 
         tailoredBulletsByJob[r.index] = spliceRewrittenBullets(
           experience[r.index].description,
@@ -204,6 +233,10 @@ export async function surgicalTailorNode(
   // Set initial active section to the first section group (bottom-to-top start)
   const activeSectionId = sectionGroups[0]?.id;
 
+  console.log(`[surgicalTailor] ✔ Completed. Generated ${suggestions.length} suggestions across ${sectionGroups.length} section groups:`, {
+    suggestionIds: suggestions.map(s => s.id),
+  });
+
   return {
     tailoredSummary,
     tailoredBulletsByJob,
@@ -218,7 +251,7 @@ export async function surgicalTailorNode(
 
 function isBullet(line: string): boolean {
   const trimmed = line.trim();
-  return /^([-*•–—]|\d+\.)\s+/.test(trimmed) || /^[-*•–—]/.test(trimmed);
+  return /^([-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]|\d+\.)\s*/.test(trimmed) || /^[-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]/.test(trimmed);
 }
 
 function getBulletsList(text: string): string[] {

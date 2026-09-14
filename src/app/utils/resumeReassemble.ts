@@ -125,7 +125,10 @@ function computeWordSimilarity(a: string, b: string): number {
 
 function isBulletLine(line: string): boolean {
   const trimmed = line.trim();
-  return /^([-*•–—]|\d+\.)\s+/.test(trimmed) || /^[-*•–—]/.test(trimmed);
+  return (
+    /^([-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]|\d+\.)\s*/.test(trimmed) ||
+    /^[-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]/.test(trimmed)
+  );
 }
 
 /**
@@ -135,13 +138,13 @@ function isBulletLine(line: string): boolean {
 function extractComparableTokens(text: string): string[] {
   if (!text) return [];
   const cleaned = text
-    .replace(/^([-*•–—]|\d+\.)\s*/gm, " ")
+    .replace(/^([-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]|\d+\.)\s*/gm, " ")
     .replace(/[\r\n]+/g, " ")
     .trim()
     .toLowerCase();
 
   return cleaned
-    .replace(/[.,;:!?"'()[\]{}*•–—\-_/\\]+/g, " ")
+    .replace(/[.,;:!?"'()[\]{}*•–—●○■▪✦★◦▸\-_/\\]+/g, " ")
     .split(/\s+/)
     .filter(Boolean);
 }

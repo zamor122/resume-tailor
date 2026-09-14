@@ -18,14 +18,27 @@ export function sanitizeParsedResumeAST(data: any): ParsedResume {
 
   const experience = Array.isArray(data?.experience)
     ? data.experience
-        .filter((e: any) => e && (e.company || e.title || e.description))
-        .map((e: any) => ({
-          title: String(e.title || "Software Engineer").trim(),
-          company: String(e.company || "Company").trim(),
-          dates: e.dates ? String(e.dates).trim() : null,
-          location: e.location ? String(e.location).trim() : null,
-          description: String(e.description || "").trim(),
-        }))
+        .filter((e: any) => e && (e.company || e.title || e.description || e.bullets))
+        .map((e: any) => {
+          let description = "";
+          if (Array.isArray(e.description)) {
+            description = e.description.map((b: any) => String(b).trim()).filter(Boolean).join("\n");
+          } else if (typeof e.description === "string") {
+            description = e.description.trim();
+          } else if (Array.isArray(e.bullets)) {
+            description = e.bullets.map((b: any) => String(b).trim()).filter(Boolean).join("\n");
+          } else if (typeof e.bullets === "string") {
+            description = e.bullets.trim();
+          }
+
+          return {
+            title: String(e.title || "Software Engineer").trim(),
+            company: String(e.company || "Company").trim(),
+            dates: e.dates ? String(e.dates).trim() : null,
+            location: e.location ? String(e.location).trim() : null,
+            description,
+          };
+        })
     : [];
 
   const education = Array.isArray(data?.education)
@@ -54,8 +67,16 @@ export function sanitizeParsedResumeAST(data: any): ParsedResume {
         .filter((s: string) => s.length > 0 && s.toLowerCase() !== "null")
     : [];
 
+  const rawSummary = data?.summary;
+  let summary: string | null = null;
+  if (Array.isArray(rawSummary)) {
+    summary = rawSummary.map((s: any) => String(s).trim()).filter(Boolean).join("\n");
+  } else if (typeof rawSummary === "string" && rawSummary.trim()) {
+    summary = rawSummary.trim();
+  }
+
   const sections: string[] = [];
-  if (data?.summary) sections.push("Summary");
+  if (summary) sections.push("Summary");
   if (experience.length > 0) sections.push("Experience");
   if (technicalSkills.length > 0 || softSkills.length > 0) sections.push("Skills");
   if (education.length > 0) sections.push("Education");
@@ -71,7 +92,7 @@ export function sanitizeParsedResumeAST(data: any): ParsedResume {
       languages: [],
       certifications: [],
     },
-    summary: typeof data?.summary === "string" && data.summary.trim() ? data.summary.trim() : null,
+    summary,
   };
 }
 
@@ -93,26 +114,37 @@ export async function parseResumeWithLLM(
     return parseResume("");
   }
 
+  console.log(`[resumeParserLLM] ▶ Starting LLM resume parse (rawChars: ${rawResume.length}, model: ${modelKey || "default"})`);
+
   const prompt = getResumeParserPrompt(rawResume);
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
+      console.log(`[resumeParserLLM] Dispatching attempt ${attempt}/${maxAttempts}...`);
       const response = await generateWithFallback(
         prompt,
         modelKey,
         {
-          maxTokens: 2500,
+          maxTokens: 4000,
           temperature: 0.0,
         },
         sessionApiKeys
       );
+
+      console.log(`[resumeParserLLM] Attempt ${attempt}/${maxAttempts} returned ${response.text.length} chars`);
 
       const parsedJson = parseJSONFromText(response.text);
       if (parsedJson && (parsedJson.experience || parsedJson.summary || parsedJson.skills)) {
         const sanitized = sanitizeParsedResumeAST(parsedJson);
         // If we got at least one experience job or a summary, return the AST
         if (sanitized.experience.length > 0 || sanitized.summary) {
+          console.log(`[resumeParserLLM] ✔ Successfully parsed resume AST on attempt ${attempt}:`, {
+            jobsCount: sanitized.experience.length,
+            jobTitles: sanitized.experience.map((e) => `${e.company} (${e.title})`),
+            hasSummary: !!sanitized.summary,
+            technicalSkillsCount: sanitized.skills.technical.length,
+          });
           return sanitized;
         }
       }
@@ -126,8 +158,10 @@ export async function parseResumeWithLLM(
 
   // Fallback safety net: deterministic regex parser
   console.warn(
-    "[resumeParserLLM] All LLM attempts exhausted. Falling back to deterministic resume parser.",
+    "[resumeParserLLM] ⚠ All LLM attempts exhausted. Falling back to deterministic resume parser.",
     lastError?.message
   );
-  return parseResume(rawResume);
+  const fallbackAst = parseResume(rawResume);
+  console.log(`[resumeParserLLM] ✔ Fallback parser extracted ${fallbackAst.experience.length} jobs and summary=${!!fallbackAst.summary}`);
+  return fallbackAst;
 }
