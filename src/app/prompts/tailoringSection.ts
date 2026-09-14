@@ -38,11 +38,12 @@ ${leverBlock}${userBlock}${keywordsBlock}`
   return `You are an expert resume writer. Tailor ONLY the candidate's existing Summary/Objective section for the job below.${topUserBlock}
 
 RULES:
+- ZERO THINKING / PREAMBLE LEAK: DO NOT output thinking traces, <think> tags, chain-of-thought analysis, or introductory remarks (such as "*Analyze User Input:**"). Begin your output directly with the tailored summary text.
 - Output ONLY the summary text (3–4 sentences or 3–4 bullets). No headers, no "## Summary", no contact, no experience, no other sections.
 - Derive every claim strictly from the candidate's existing summary below. Do NOT add company names, job titles, or experience details from outside this summary.
 - Omit articles (a, the, an). Use present participles (e.g. ", improving..." not "to improve").
-- No "passionate about", "results-driven", or reader-addressing phrases. Factual, declarative only.
-- Weave in 3–5 job-relevant keywords from the job description naturally. Do not list keywords. Never put keywords in parentheses (e.g. use "Python and Django" not "(Python, Django)").${jobTitleLine}
+- BANNED REPETITIVE BUZZWORDS: Zero "passionate about", "results-driven", "leveraging", "spearheaded", "pivotal", or reader-addressing phrases. Factual, authoritative, declarative only.
+- Weave in 3–5 job-relevant keywords from the job description naturally with diverse sentence syntax. Do not list keywords. Never put keywords in parentheses (e.g. use "Python and Django" not "(Python, Django)").${jobTitleLine}
 
 Candidate's Current Summary (Context Chunk):
 """
@@ -115,14 +116,19 @@ CRITICAL INSTRUCTIONS:
 1. STRICT 1-TO-1 MAPPING: You are provided with EXACTLY ${bulletCount} bullets. You MUST return a JSON array containing EXACTLY ${bulletCount} items, one for every input bullet in the exact order received (with index from 0 to ${Math.max(0, bulletCount - 1)}).
    - DO NOT stop after 1 item! You MUST include all ${bulletCount} items in your JSON array response.
    - Do NOT merge bullets, split bullets, delete bullets, or create new bullets.
-2. ENHANCEMENT RULES:
+2. ENHANCEMENT RULES & ANTI-REPETITION MANDATE:
+   - ZERO THINKING / PREAMBLE LEAK: DO NOT output any internal thoughts, <think> tags, chain-of-thought analysis, or commentary (such as "*Analyze User Input:**"). Output ONLY the valid JSON array starting directly with [ and ending with ].
    - Make ONLY substantive, meaningful improvements (adding target skills, technologies, quantified impact metrics, or stronger action verbs).
    - NEVER make trivial formatting modifications: DO NOT insert line breaks/newlines, alter whitespace, re-wrap lines, change bullet marker symbols, or tweak trailing punctuation.
    - If a bullet already adequately covers the role and does not require substantive tailoring, return the exact original text unchanged with status: "unchanged".
-   - First bullet: Overview of responsibilities, team scope, core tech stack, product type, and methodology.
-   - Remaining bullets: Action (strong past-tense verb) → Ingredients (technologies, tools, metrics) → Impact (quantified business or technical outcome).
-   - Only weave in keywords that authentically reflect experience described in the original bullet. Never invent claims or put keywords in parentheses.
-   - Omit articles (a, an, the). Use crisp resume phrasing.
+   - NO REPETITIVE OPENING VERBS: Each enhanced bullet within this role MUST begin with a DISTINCT, varied past-tense action verb. NEVER repeat the same opening verb (e.g. do NOT use "Architected", "Spearheaded", or "Engineered" on more than one bullet). Use varied, precise verbs suited to the work: Accelerated, Benchmarked, Consolidated, Decoupled, Deployed, Standardized, Automated, Revamped, Authored, Refactored, Scaled, Designed, Instituted.
+   - NO COOKIE-CUTTER CLAUSE FORMULAS: DO NOT repeat the exact same sentence pattern across bullets. Avoid repeatedly ending bullets with ", resulting in X% [metric]" or ", driving X% [metric]" or ", achieving X% [metric]". Vary the sentence cadence:
+     * Architecture & Technical Depth: Problem solved → Architecture/tool chosen → Measurable latency/throughput result.
+     * Scale & Systems Engineering: Throughput/volume handled → Resiliency/fault tolerance standard → Business continuity win.
+     * Developer Velocity & Best Practices: Tooling instituted → Cross-functional adoption → Delivery speed impact.
+   - BANNED REPETITIVE AI FILLER: Strictly ban repetitive clichés: "leveraging", "spearheaded", "pivotal", "fostered", "testament to", "streamlined", "driving operational excellence", "seamlessly".
+   - CONTEXTUAL KEYWORD WEAVING: Weave at most 1–2 target keywords per bullet where they naturally and authentically fit. DO NOT cram the same keywords into every bullet.
+   - Omit articles (a, an, the). Use crisp, executive resume phrasing.
 3. OUTPUT FORMAT: Output ONLY a valid JSON array of ${bulletCount} objects:
 [
   {
@@ -167,10 +173,12 @@ export function getHolisticSummaryPrompt(params: {
 ${leverBlock}
 ${targetTitleLine}${keywordsLine}
 CRITICAL INSTRUCTIONS:
+- ZERO THINKING / PREAMBLE LEAK: DO NOT output any thinking trace, <think> tags, chain-of-thought analysis, or introductory remarks (such as "*Analyze User Input:**").
 - This is a HOLISTIC EXECUTIVE SUMMARY of the candidate's career as an organic whole, NOT a changelog of recent edits.
 - Synthesize their complete trajectory: years of experience, core leadership/engineering scope, and signature technical proficiencies derived directly from the assembled resume.
 - GUARANTEE ZERO CONTRADICTIONS: Every capability, tool, and achievement claimed must be 100% grounded in the vetted resume below.
-- Do NOT use fluff ("passionate", "results-driven", "team player"). Use authoritative, factual declarative sentences with present participles where appropriate.
+- BANNED BUZZWORDS: Do NOT use fluff or repetitive filler ("passionate", "results-driven", "team player", "leveraging", "spearheaded", "pivotal role"). Use authoritative, factual declarative sentences.
+- Vary sentence syntax and cadence; avoid repetitive sentence structures.
 - Output ONLY the 3–4 sentence summary paragraph. No headers, no intro, no conversational remarks.
 
 Assembled Resume:

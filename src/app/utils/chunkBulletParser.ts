@@ -1,5 +1,6 @@
 import type { ResumeSuggestion } from "@/app/agent/state";
 import { isSubstantiveChange, getBulletsList, isolatePreciseOriginalChange } from "./resumeReassemble";
+import { stripModelThinking, isThinkingOrPreamble } from "./stripModelThinking";
 
 export const BULLET_PREFIX_REGEX = /^([-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]|\d+\.)\s*/;
 
@@ -12,10 +13,64 @@ export interface RawChunkBulletItem {
   keywords?: string[];
 }
 
+const VERB_SYNONYMS: Record<string, string[]> = {
+  architected: ["Engineered", "Designed", "Constructed", "Structured", "Formulated"],
+  engineered: ["Architected", "Built", "Developed", "Constructed", "Implemented"],
+  spearheaded: ["Directed", "Championed", "Steered", "Orchestrated", "Guided"],
+  orchestrated: ["Coordinated", "Mobilized", "Harmonized", "Managed", "Executed"],
+  led: ["Directed", "Guided", "Steered", "Managed", "Headed"],
+  developed: ["Authored", "Engineered", "Implemented", "Constructed", "Delivered"],
+  built: ["Constructed", "Created", "Engineered", "Produced", "Deployed"],
+  implemented: ["Executed", "Instituted", "Deployed", "Integrated", "Standardized"],
+  designed: ["Architected", "Crafted", "Formulated", "Modeled", "Engineered"],
+  created: ["Authored", "Originated", "Established", "Produced", "Launched"],
+  managed: ["Oversaw", "Administered", "Directed", "Supervised", "Guided"],
+  improved: ["Enhanced", "Elevated", "Optimized", "Boosted", "Accelerated"],
+  optimized: ["Refined", "Streamlined", "Maximized", "Tuned", "Enhanced"],
+  enhanced: ["Elevated", "Boosted", "Amplified", "Upgraded", "Strengthened"],
+  delivered: ["Shipped", "Produced", "Dispatched", "Completed", "Executed"],
+  automated: ["Streamlined", "Programmed", "Modernized", "Accelerated", "Refactored"],
+  accelerated: ["Expedited", "Quickened", "Advanced", "Spurred", "Streamlined"],
+  standardized: ["Normalized", "Unified", "Harmonized", "Codified", "Formalized"],
+  consolidated: ["Unified", "Merged", "Integrated", "Centralized", "Streamlined"],
+  refactored: ["Restructured", "Revamped", "Overhauled", "Remodeled", "Modernized"],
+};
+
+/**
+ * Ensures opening action verbs are not repeated across consecutive bullets in the same job.
+ */
+function diversifyOpeningVerb(bulletText: string, usedVerbs: Set<string>): string {
+  const words = bulletText.trim().split(/\s+/);
+  if (words.length < 2) return bulletText;
+
+  const rawFirstWord = words[0].replace(/[^a-zA-Z]/g, "");
+  const lowerFirst = rawFirstWord.toLowerCase();
+
+  if (!usedVerbs.has(lowerFirst)) {
+    usedVerbs.add(lowerFirst);
+    return bulletText;
+  }
+
+  // If already used, try to find an unused synonym
+  const candidates = VERB_SYNONYMS[lowerFirst];
+  if (candidates) {
+    for (const syn of candidates) {
+      if (!usedVerbs.has(syn.toLowerCase())) {
+        usedVerbs.add(syn.toLowerCase());
+        const rest = bulletText.slice(words[0].length);
+        return `${syn}${rest}`;
+      }
+    }
+  }
+
+  return bulletText;
+}
+
 /**
  * Resilient 1-to-1 bullet response parser.
  * Extracts structured JSON array if present, or gracefully falls back to line-by-line pairing.
  * Guarantees that every original bullet has a corresponding 1:1 suggestion/tailored output.
+ * Strips model thinking tags and preambles, and enforces opening verb diversity.
  */
 export function parseChunkBulletsResponse(params: {
   llmText: string;
@@ -36,11 +91,14 @@ export function parseChunkBulletsResponse(params: {
 
   console.log(`[chunkBulletParser] ▶ Parsing chunk for "${sectionGroupTitle}" (jobIndex: ${jobIndex ?? "N/A"}, inputBullets: ${origBullets.length}, rawChars: ${llmText?.length || 0})`);
 
+  // Strip model thinking traces and preambles before parsing
+  const cleanLlmText = stripModelThinking(llmText || "");
+
   let parsedItems: RawChunkBulletItem[] | null = null;
 
   // 1. Try to extract and parse JSON array
   try {
-    let cleanText = (llmText || "").trim();
+    let cleanText = cleanLlmText;
     // Strip markdown code fences if present (```json ... ``` or ``` ...)
     const fenceMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
     if (fenceMatch) {
@@ -63,6 +121,7 @@ export function parseChunkBulletsResponse(params: {
 
   const suggestions: ResumeSuggestion[] = [];
   const tailoredBullets: string[] = [];
+  const usedOpeningVerbs = new Set<string>();
 
   if (parsedItems && parsedItems.length > 0) {
     origBullets.forEach((origLine, idx) => {
@@ -90,9 +149,18 @@ export function parseChunkBulletsResponse(params: {
         match = parsedItems![idx];
       }
 
-      const cleanNew = (match?.suggestedText || (match as any)?.tailored || cleanOrig)
+      let rawNew = (match?.suggestedText || (match as any)?.tailored || cleanOrig);
+      let cleanNew = stripModelThinking(rawNew)
         .replace(BULLET_PREFIX_REGEX, "")
         .trim();
+
+      // Discard invalid thinking/preamble leaks
+      if (isThinkingOrPreamble(cleanNew) || cleanNew.length < 5) {
+        cleanNew = cleanOrig;
+      } else {
+        // Enforce opening verb diversity across bullets in this job
+        cleanNew = diversifyOpeningVerb(cleanNew, usedOpeningVerbs);
+      }
 
       const isSubstantive = isSubstantiveChange(cleanOrig, cleanNew);
       tailoredBullets.push(isSubstantive ? `- ${cleanNew}` : `- ${cleanOrig}`);
@@ -139,20 +207,30 @@ export function parseChunkBulletsResponse(params: {
   }
 
   // 2. Fallback: Parse raw bullet lines
-  let rawNewBullets = getBulletsList(llmText);
+  let rawNewBullets = getBulletsList(cleanLlmText)
+    .map((l) => stripModelThinking(l).trim())
+    .filter((l) => l.length > 0 && !isThinkingOrPreamble(l));
 
   if (rawNewBullets.length === 0) {
-    rawNewBullets = llmText
+    rawNewBullets = cleanLlmText
       .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0)
+      .map((l) => stripModelThinking(l).trim())
+      .filter((l) => l.length > 0 && !isThinkingOrPreamble(l))
       .map((l) => (l.startsWith("- ") ? l : `- ${l}`));
   }
 
   origBullets.forEach((origLine, idx) => {
     const cleanOrig = origLine.replace(BULLET_PREFIX_REGEX, "").trim();
     const rawNew = rawNewBullets[idx] || origLine;
-    const cleanNew = rawNew.replace(BULLET_PREFIX_REGEX, "").trim();
+    let cleanNew = stripModelThinking(rawNew).replace(BULLET_PREFIX_REGEX, "").trim();
+
+    // Discard invalid thinking/preamble leaks
+    if (isThinkingOrPreamble(cleanNew) || cleanNew.length < 5) {
+      cleanNew = cleanOrig;
+    } else {
+      // Enforce opening verb diversity across bullets in this job
+      cleanNew = diversifyOpeningVerb(cleanNew, usedOpeningVerbs);
+    }
 
     const isSubstantive = isSubstantiveChange(cleanOrig, cleanNew);
     tailoredBullets.push(isSubstantive ? `- ${cleanNew}` : `- ${cleanOrig}`);

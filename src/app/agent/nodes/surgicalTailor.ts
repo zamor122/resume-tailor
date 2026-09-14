@@ -9,6 +9,45 @@ import {
   isolatePreciseOriginalChange,
 } from "@/app/utils/resumeReassemble";
 import { parseChunkBulletsResponse } from "@/app/utils/chunkBulletParser";
+import { stripModelThinking } from "@/app/utils/stripModelThinking";
+
+/**
+ * Contextually distributes target missing keywords across multiple career roles
+ * so each job emphasizes complementary competencies rather than repetitive keyword stuffing.
+ */
+function getJobSpecificKeywords(
+  exp: { title?: string; company?: string; description?: string },
+  sortedMissingKeywords: string[],
+  jobIndex: number
+): string[] {
+  if (!sortedMissingKeywords || sortedMissingKeywords.length <= 4) {
+    return sortedMissingKeywords || [];
+  }
+
+  const descLower = (exp.description || "").toLowerCase();
+  const titleLower = (exp.title || "").toLowerCase();
+
+  // 1. Prioritize keywords that naturally relate to this role's historical domain/text
+  const domainMatched = sortedMissingKeywords.filter((kw) => {
+    const kwLower = kw.toLowerCase();
+    return descLower.includes(kwLower) || titleLower.includes(kwLower);
+  });
+
+  // 2. Most recent role gets top high-priority target keywords
+  if (jobIndex === 0) {
+    const topKeywords = sortedMissingKeywords.slice(0, 6);
+    return Array.from(new Set([...domainMatched, ...topKeywords])).slice(0, 8);
+  }
+
+  // 3. Earlier roles receive distributed complementary keyword slices
+  const offset = (jobIndex * 3) % sortedMissingKeywords.length;
+  const distributedKeywords = [
+    ...sortedMissingKeywords.slice(offset, offset + 4),
+    ...sortedMissingKeywords.slice(0, 2),
+  ];
+
+  return Array.from(new Set([...domainMatched, ...distributedKeywords])).slice(0, 7);
+}
 
 export async function surgicalTailorNode(
   state: AgentState
@@ -53,10 +92,11 @@ export async function surgicalTailorNode(
         state.sessionApiKeys
       )
         .then((res) => {
-          console.log(`[surgicalTailor] Summary LLM response received (length: ${res.text.length})`);
+          const cleanText = stripModelThinking(res.text).trim();
+          console.log(`[surgicalTailor] Summary LLM response received (length: ${cleanText.length})`);
           return {
             type: "summary" as const,
-            text: res.text.trim(),
+            text: cleanText,
             originalInputText: originalSummary,
           };
         })
@@ -90,6 +130,8 @@ export async function surgicalTailorNode(
       bulletsTextSnippet: bulletsText.slice(0, 100),
     });
 
+    const jobKeywords = getJobSpecificKeywords(exp, sortedMissingKeywords, jobIndex);
+
     promises.push(
       generateWithFallback(
         getExperienceBulletsPrompt({
@@ -99,18 +141,19 @@ export async function surgicalTailorNode(
           bulletsText,
           jobDescription: jdSnippet,
           preferences,
-          userRequestedKeywords: sortedMissingKeywords.slice(0, 10),
+          userRequestedKeywords: jobKeywords,
         }),
         state.modelKey,
         { maxTokens: 2000, temperature: 0.2 },
         state.sessionApiKeys
       )
         .then((res) => {
-          console.log(`[surgicalTailor] Job ${jobIndex} (${exp.company}) response received (chars: ${res.text.length})`);
+          const cleanText = stripModelThinking(res.text).trim();
+          console.log(`[surgicalTailor] Job ${jobIndex} (${exp.company}) response received (chars: ${cleanText.length})`);
           return {
             type: "bullets" as const,
             index: jobIndex,
-            text: res.text.trim(),
+            text: cleanText,
             originalInputText: bulletsText,
           };
         })

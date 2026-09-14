@@ -10,6 +10,7 @@ import { GroqProvider } from './providers/groq';
 import { MistralProvider } from './providers/mistral';
 import { HuggingFaceProvider } from './providers/huggingface';
 import { OpenRouterProvider } from './providers/openrouter';
+import { stripModelThinking } from '@/app/utils/stripModelThinking';
 
 export { isRateLimitError, isModelUnavailableError } from './error-utils';
 
@@ -116,7 +117,11 @@ export async function generateContentWithFallback(
       if (!provider.isAvailable()) {
         continue;
       }
-      return await provider.generateContent(prompt, options);
+      const result = await provider.generateContent(prompt, options);
+      return {
+        ...result,
+        text: stripModelThinking(result.text),
+      };
     } catch (err) {
       console.warn(`[AIProvider] Model ${model} failed, falling back to next provider:`, err instanceof Error ? err.message : err);
       lastError = err;

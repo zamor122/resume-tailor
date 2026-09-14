@@ -129,7 +129,7 @@ describe("POST /api/agent/tailor-chunk", () => {
     expect(generateWithFallback).toHaveBeenCalledWith(
       expect.stringContaining("Amazon"),
       undefined,
-      { maxTokens: 600, temperature: 0.2 },
+      { maxTokens: 1500, temperature: 0.2 },
       undefined
     );
   });

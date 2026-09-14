@@ -125,9 +125,16 @@ function computeWordSimilarity(a: string, b: string): number {
 
 function isBulletLine(line: string): boolean {
   const trimmed = line.trim();
+  if (!trimmed) return false;
+  // Never treat thinking tags, headers, or markdown bold preambles (e.g. *Analyze User Input:**) as bullets
+  if (/^<\/?(?:think|thought|reasoning|cot)/i.test(trimmed)) return false;
+  if (/^(\*{1,3}|#{1,6})\s*Analyze/i.test(trimmed)) return false;
+  if (/^\*{1,2}[a-zA-Z0-9]/.test(trimmed)) return false; // Markdown bold/italics without whitespace
+  if (/^#{1,6}\s+/.test(trimmed)) return false; // Markdown header
+
   return (
-    /^([-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]|\d+\.)\s*/.test(trimmed) ||
-    /^[-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]/.test(trimmed)
+    /^([-*•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]|\d+[.)])\s+/.test(trimmed) ||
+    /^[•–—●○■▪✦★◦▸\u2022\u25cf\u25cb\u25aa\u25ab]/.test(trimmed)
   );
 }
 

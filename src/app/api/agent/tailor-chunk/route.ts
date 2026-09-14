@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     const llmRes = await generateWithFallback(
       prompt,
       modelKey,
-      { maxTokens: 600, temperature: 0.2 },
+      { maxTokens: 1500, temperature: 0.2 },
       sessionApiKeys
     );
 
