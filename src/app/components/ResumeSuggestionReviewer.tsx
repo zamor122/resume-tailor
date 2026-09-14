@@ -816,7 +816,13 @@ export default function ResumeSuggestionReviewer({
                             <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block mb-0.5">
                               Original (Before):
                             </span>
-                            {sug.originalText}
+                            {sug.originalText.startsWith("(") && sug.originalText.endsWith(")") ? (
+                              <span className="italic text-gray-500 dark:text-gray-400 font-medium">
+                                ➕ {sug.originalText.replace(/^\(|\)$/g, "")}
+                              </span>
+                            ) : (
+                              <span>{sug.originalText.replace(/^[-*•–—]\s*/, "")}</span>
+                            )}
                           </div>
 
                           {/* Proposed Enhancement */}

@@ -6,6 +6,7 @@ import type {
   BulletPlan,
   ImprovementMetrics,
   ResumeSuggestion,
+  ResumeSectionGroup,
 } from "./state";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
@@ -42,6 +43,9 @@ export const AgentStateAnnotation = Annotation.Root({
   baselineScore: Annotation<number | undefined>(),
 
   bulletPlan: Annotation<BulletPlan | undefined>(),
+  sectionGroups: Annotation<ResumeSectionGroup[] | undefined>(),
+  activeSectionId: Annotation<string | undefined>(),
+  sectionCache: Annotation<Record<string, ResumeSectionGroup> | undefined>(),
   tailoredSummary: Annotation<string | undefined>(),
   tailoredBulletsByJob: Annotation<string[] | undefined>(),
   tailoredSkills: Annotation<string | undefined>(),

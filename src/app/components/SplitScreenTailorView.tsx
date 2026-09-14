@@ -162,6 +162,8 @@ async function runHumanizeStream(params: {
       contentMap: completeData.contentMap,
       freeReveal: completeData.freeReveal,
       suggestions: completeData.suggestions || [],
+      sectionGroups: completeData.sectionGroups,
+      resumeAST: completeData.resumeAST,
       improvementMetrics: completeData.improvementMetrics,
       matchScore: completeData.matchScore,
       beforeScore: completeData.beforeScore,
@@ -756,8 +758,13 @@ export default function SplitScreenTailorView() {
               newResume={results.tailoredResume ?? ""}
               originalResume={resume}
               suggestions={results.suggestions || []}
+              sectionGroups={results.sectionGroups}
+              resumeAST={results.resumeAST}
               onSuggestionsChange={(updated) =>
                 setResults((prev) => (prev ? { ...prev, suggestions: updated } : null))
+              }
+              onSectionGroupsChange={(updatedGroups) =>
+                setResults((prev) => (prev ? { ...prev, sectionGroups: updatedGroups } : null))
               }
               isUnlocked={false}
               onUnlockRequest={() => setShowAuthModalMode("signup")}

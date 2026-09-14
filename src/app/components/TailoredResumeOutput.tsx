@@ -7,7 +7,7 @@ import ResumeDownloadButton from "./ResumeDownloadButton";
 import ResumeSuggestionReviewer from "./ResumeSuggestionReviewer";
 import { getProseFontSizeClass } from "@/app/utils/fontSize";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
-import { applySuggestionsToOriginal, deriveSuggestionsFromDiff } from "@/app/utils/resumeReassemble";
+import { applySuggestionsToOriginal, deriveSuggestionsFromDiff, type ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { FormatSpec } from "@/app/types/format";
 import type { ResumeSuggestion } from "@/app/types/humanize";
 import type { ResumeSectionGroup } from "@/app/agent/state";
@@ -36,6 +36,7 @@ interface TailoredResumeOutputProps {
   onActiveSectionChange?: (id: string | null) => void;
   sectionGroups?: ResumeSectionGroup[];
   onSectionGroupsChange?: (groups: ResumeSectionGroup[]) => void;
+  resumeAST?: ParsedResumeForReassemble;
 }
 
 function extractTextContent(children: React.ReactNode): string {
@@ -291,6 +292,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   onActiveSectionChange,
   sectionGroups,
   onSectionGroupsChange,
+  resumeAST,
 }) => {
   const [internalSuggestions, setInternalSuggestions] = useState<ResumeSuggestion[]>(suggestions || []);
 
@@ -728,6 +730,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
               onSectionGroupsChange={onSectionGroupsChange}
               activeSectionId={effectiveActiveSectionId}
               onActiveSectionChange={handleActiveSectionChange}
+              resumeAST={resumeAST}
             />
           </div>
 

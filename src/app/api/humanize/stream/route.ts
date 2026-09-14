@@ -287,6 +287,8 @@ export async function POST(req: NextRequest) {
         streamClosed = !sendSSE(controller, "complete", {
           tailoredResume,
           suggestions: agentResult.suggestions || [],
+          sectionGroups: agentResult.sectionGroups,
+          resumeAST: agentResult.resumeAST,
           improvementMetrics: agentResult.improvementMetrics,
           matchScore: agentResult.afterScore ?? 85,
           beforeScore: agentResult.beforeScore ?? 50,

@@ -1,5 +1,6 @@
 import { type ParsedOriginal, findContactEndIndex } from "./contactBlockSanitizer";
 import type { ResumeSuggestion, ResumeSectionGroup, SectionGroupType, SectionTailorStatus } from "@/app/agent/state";
+import { parseResume } from "./resumeParser";
 
 /**
  * Verbatim surgical application:
@@ -66,10 +67,43 @@ export function applySuggestionsToOriginal(
   return currentText;
 }
 
+function cleanBulletLine(line: string): string {
+  return line.replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
+}
+
+function computeWordSimilarity(a: string, b: string): number {
+  const wordsA = a.toLowerCase().split(/\W+/).filter((w) => w.length > 2);
+  const wordsB = b.toLowerCase().split(/\W+/).filter((w) => w.length > 2);
+  if (wordsA.length === 0 || wordsB.length === 0) return 0;
+  const setA = new Set(wordsA);
+  const setB = new Set(wordsB);
+  let common = 0;
+  setA.forEach((w) => {
+    if (setB.has(w)) common++;
+  });
+  return (common * 2) / (setA.size + setB.size);
+}
+
+function isBulletLine(line: string): boolean {
+  const trimmed = line.trim();
+  return /^([-*•–—]|\d+\.)\s+/.test(trimmed) || /^[-*•–—]/.test(trimmed);
+}
+
+function getBulletsList(text: string): string[] {
+  if (!text) return [];
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const bulletLines = lines.filter(isBulletLine);
+  if (bulletLines.length > 0) return bulletLines;
+  return lines;
+}
+
 /**
  * Derives granular suggestions by comparing original text to new text.
- * Used as a 100% reliable fallback so the Change Studio cockpit ALWAYS renders
- * even if stored records or upstream LLM responses didn't include structured suggestions.
+ * Strictly scopes bullet comparisons 1-to-1 within matching sections/jobs.
+ * Guarantees that originalText never contains whole-document bleed or mismatched lines.
  */
 export function deriveSuggestionsFromDiff(
   originalResume: string,
@@ -79,58 +113,209 @@ export function deriveSuggestionsFromDiff(
     return [];
   }
 
-  const origLines = originalResume
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  const newLines = newResume
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
   const suggestions: ResumeSuggestion[] = [];
-  let currentSection = "Professional Experience";
+
+  let origAST: ParsedResumeForReassemble | null = null;
+  let newAST: ParsedResumeForReassemble | null = null;
+
+  try {
+    const pOrig = parseResume(originalResume);
+    origAST = {
+      contactInfo: pOrig.contactInfo,
+      education: pOrig.education,
+      experience: pOrig.experience,
+      sections: pOrig.sections,
+      skills: pOrig.skills,
+      summary: pOrig.summary,
+    };
+  } catch {
+    // fallback
+  }
+
+  try {
+    const pNew = parseResume(newResume);
+    newAST = {
+      contactInfo: pNew.contactInfo,
+      education: pNew.education,
+      experience: pNew.experience,
+      sections: pNew.sections,
+      skills: pNew.skills,
+      summary: pNew.summary,
+    };
+  } catch {
+    // fallback
+  }
+
+  // 1. AST-based structural diff (when experience entries exist)
+  if (newAST?.experience && newAST.experience.length > 0) {
+    const origExperiences = origAST?.experience || [];
+
+    // Summary diff
+    if (newAST.summary && newAST.summary.trim() !== (origAST?.summary || "").trim()) {
+      suggestions.push({
+        id: "sug-diff-summary",
+        section: "Professional Summary",
+        originalText: origAST?.summary?.trim() || "(New summary section added)",
+        suggestedText: newAST.summary.trim(),
+        reason: "Holistic career alignment and leadership scope",
+        keywords: [],
+        category: "summary",
+        status: "accepted",
+      });
+    }
+
+    // Experiences diff
+    newAST.experience.forEach((newJob, jobIdx) => {
+      // Find matching original experience by company name, or by index
+      const origJob =
+        origExperiences.find(
+          (oe) => oe.company && newJob.company && oe.company.toLowerCase() === newJob.company.toLowerCase()
+        ) || origExperiences[jobIdx];
+
+      const origBullets = origJob ? getBulletsList(origJob.description) : [];
+      const newBullets = getBulletsList(newJob.description);
+
+      const usedOrigIndices = new Set<number>();
+
+      // First pass: mark identical bullets as used
+      newBullets.forEach((nb) => {
+        const cleanN = cleanBulletLine(nb);
+        origBullets.forEach((ob, oi) => {
+          if (!usedOrigIndices.has(oi) && cleanBulletLine(ob) === cleanN) {
+            usedOrigIndices.add(oi);
+          }
+        });
+      });
+
+      // Second pass: pair modified and identify new bullets
+      newBullets.forEach((nb, bulletIdx) => {
+        const cleanN = cleanBulletLine(nb);
+        if (!cleanN) return;
+
+        // If identical to an original bullet, skip
+        const isIdentical = origBullets.some((ob) => cleanBulletLine(ob) === cleanN);
+        if (isIdentical) return;
+
+        // Find best unused matching original bullet
+        let bestOrigIdx = -1;
+        let bestSim = 0;
+
+        origBullets.forEach((ob, oi) => {
+          if (usedOrigIndices.has(oi)) return;
+          const cleanO = cleanBulletLine(ob);
+          const sim = computeWordSimilarity(cleanN, cleanO);
+          const prefixMatch =
+            cleanO.length > 15 &&
+            cleanN.length > 15 &&
+            cleanO.slice(0, 15).toLowerCase() === cleanN.slice(0, 15).toLowerCase();
+          const score = prefixMatch ? Math.max(sim, 0.7) : sim;
+
+          if (score > bestSim) {
+            bestSim = score;
+            bestOrigIdx = oi;
+          }
+        });
+
+        // If no strong similarity match, check if 1:1 index alignment works (same bullet position)
+        if (bestOrigIdx === -1 && bulletIdx < origBullets.length && !usedOrigIndices.has(bulletIdx)) {
+          const directMatch = cleanBulletLine(origBullets[bulletIdx]);
+          if (directMatch) {
+            bestOrigIdx = bulletIdx;
+            bestSim = 0.3;
+          }
+        }
+
+        let pairedOrigText: string;
+        if (bestOrigIdx !== -1 && bestSim >= 0.25) {
+          usedOrigIndices.add(bestOrigIdx);
+          pairedOrigText = cleanBulletLine(origBullets[bestOrigIdx]);
+        } else {
+          // It's a completely new bullet! Never steal an arbitrary original bullet
+          pairedOrigText = "(New bullet added for target role keywords)";
+        }
+
+        const hasMetric = /\d+%|\$\d+|\d+x|\d+\+/i.test(cleanN);
+        suggestions.push({
+          id: `sug-diff-job-${jobIdx}-b-${bulletIdx}`,
+          section: `${newJob.company || "Experience"} – ${newJob.title || "Role"}`,
+          originalText: pairedOrigText,
+          suggestedText: cleanN,
+          reason: hasMetric
+            ? "Quantified operational metrics and impact for ATS resonance"
+            : "Targeted keyword and leadership action phrasing",
+          keywords: [],
+          category: hasMetric ? "metric" : "keyword",
+          status: "accepted",
+          jobIndex: jobIdx,
+          bulletIndex: bulletIdx,
+        });
+      });
+    });
+
+    if (suggestions.length > 0) {
+      return suggestions;
+    }
+  }
+
+  // 2. Line-by-line fallback with strict section bounds
+  // (Used if AST parsing didn't detect experience entries)
+  const origLines = originalResume.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const newLines = newResume.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+
+  let currentSection = "Experience";
+  const usedLineIndices = new Set<number>();
 
   newLines.forEach((newLine, idx) => {
-    // Check if line is a section header
-    const headerMatch = newLine.match(/^(?:#+\s*|(?:##\s*)?)(Summary|Experience|Skills|Education|Projects|Certifications|Work History|Professional Experience)/i);
+    const headerMatch = newLine.match(
+      /^(?:#+\s*|(?:##\s*)?)(Summary|Experience|Skills|Education|Projects|Certifications|Work History|Professional Experience)/i
+    );
     if (headerMatch) {
       currentSection = headerMatch[1];
       return;
     }
 
-    const cleanNew = newLine.replace(/^[-*•–—\d.]+\s*/, "").trim().toLowerCase();
-    if (cleanNew.length < 15) return;
+    const cleanN = cleanBulletLine(newLine);
+    if (cleanN.length < 15) return;
 
-    const existsInOrig = origLines.some((origLine) => {
-      const cleanOrig = origLine.replace(/^[-*•–—\d.]+\s*/, "").trim().toLowerCase();
-      return cleanOrig === cleanNew || cleanOrig.includes(cleanNew) || cleanNew.includes(cleanOrig);
+    // Check if line exists in orig
+    const existsInOrig = origLines.some((ol) => cleanBulletLine(ol) === cleanN);
+    if (existsInOrig) return;
+
+    // Find best matching unused line in same section
+    let bestOrigIdx = -1;
+    let bestSim = 0;
+
+    origLines.forEach((ol, oi) => {
+      if (usedLineIndices.has(oi)) return;
+      const cleanO = cleanBulletLine(ol);
+      const sim = computeWordSimilarity(cleanN, cleanO);
+      if (sim > bestSim) {
+        bestSim = sim;
+        bestOrigIdx = oi;
+      }
     });
 
-    if (!existsInOrig) {
-      // Find closest matching original line for diff
-      const origInSameSection = origLines.find((ol) => {
-        const co = ol.replace(/^[-*•–—\d.]+\s*/, "").trim().toLowerCase();
-        return co.length > 20 && (co.slice(0, 15) === cleanNew.slice(0, 15) || cleanNew.slice(0, 15) === co.slice(0, 15));
-      });
-      const closestOrig = origInSameSection || origLines[Math.min(idx, origLines.length - 1)] || newLine;
-
-      const hasMetric = /\d+%|\$\d+|\d+x|\d+\+/i.test(newLine);
-      const cat = currentSection.toLowerCase().includes("summary") ? "summary" : hasMetric ? "metric" : "keyword";
-
-      suggestions.push({
-        id: `sug-diff-${idx}`,
-        section: currentSection,
-        originalText: closestOrig.trim() || newLine.trim(),
-        suggestedText: newLine.trim(),
-        reason: hasMetric
-          ? "Quantified impact and metrics for ATS resonance"
-          : "Targeted keyword and leadership action phrasing",
-        keywords: [],
-        category: cat,
-        status: "accepted",
-      });
+    let pairedText: string;
+    if (bestOrigIdx !== -1 && bestSim >= 0.3) {
+      usedLineIndices.add(bestOrigIdx);
+      pairedText = cleanBulletLine(origLines[bestOrigIdx]);
+    } else {
+      pairedText = "(New line added for target role)";
     }
+
+    const hasMetric = /\d+%|\$\d+|\d+x|\d+\+/i.test(newLine);
+    suggestions.push({
+      id: `sug-diff-${idx}`,
+      section: currentSection,
+      originalText: pairedText,
+      suggestedText: cleanN,
+      reason: hasMetric
+        ? "Quantified impact and metrics for ATS resonance"
+        : "Targeted keyword and leadership action phrasing",
+      keywords: [],
+      category: currentSection.toLowerCase().includes("summary") ? "summary" : hasMetric ? "metric" : "keyword",
+      status: "accepted",
+    });
   });
 
   return suggestions;
@@ -469,8 +654,28 @@ export function groupSuggestionsBySection(
   resumeAST?: ParsedResumeForReassemble,
   rawResume?: string
 ): ResumeSectionGroup[] {
+  let effectiveAST = resumeAST;
+  if (!effectiveAST && rawResume) {
+    try {
+      const parsed = parseResume(rawResume);
+      effectiveAST = {
+        contactInfo: parsed.contactInfo,
+        education: parsed.education,
+        experience: parsed.experience,
+        sections: parsed.sections,
+        skills: {
+          technical: parsed.skills?.technical || [],
+          soft: parsed.skills?.soft || [],
+        },
+        summary: parsed.summary,
+      };
+    } catch {
+      // fallback
+    }
+  }
+
   const groups: ResumeSectionGroup[] = [];
-  const experiences = resumeAST?.experience || [];
+  const experiences = effectiveAST?.experience || [];
 
   // 1. Experiences in reverse chronological order (earliest at index 0 of sequence)
   // Experiences in AST are typically top-to-bottom (0 = most recent, N-1 = earliest)
@@ -502,16 +707,16 @@ export function groupSuggestionsBySection(
   }
 
   // 2. Skills section (if present)
-  if (resumeAST?.skills) {
+  if (effectiveAST?.skills) {
     const skillsSugs = suggestions.filter(
       (s) =>
         (s.category === "keyword" && s.jobIndex === undefined && s.section?.toLowerCase().includes("skill")) ||
         (s.section && s.section.toLowerCase().includes("skill"))
     );
     const skillsContent =
-      typeof resumeAST.skills === "string"
-        ? resumeAST.skills
-        : [...(resumeAST.skills.technical || []), ...(resumeAST.skills.soft || [])].join(", ");
+      typeof effectiveAST.skills === "string"
+        ? effectiveAST.skills
+        : [...(effectiveAST.skills.technical || []), ...(effectiveAST.skills.soft || [])].join(", ");
 
     groups.push({
       id: "section-skills",
@@ -543,7 +748,7 @@ export function groupSuggestionsBySection(
     status: summarySugs.length > 0 ? "ready" : "pending",
     auditRationale: "Holistic executive synthesis aligning entire career arc with target role",
     suggestions: summarySugs,
-    originalContent: resumeAST?.summary || "",
+    originalContent: effectiveAST?.summary || "",
     tailoredContent: summarySugs.length > 0 ? summarySugs[0].suggestedText : undefined,
     hasChanges: summarySugs.length > 0,
   });
