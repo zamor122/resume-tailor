@@ -5,6 +5,7 @@ import {
   buildContactFromOriginal,
   getBulletsList,
   isSubstantiveChange,
+  isolatePreciseOriginalChange,
 } from "@/app/utils/resumeReassemble";
 import { sanitizeResumeForATS } from "@/app/utils/atsSanitizer";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
@@ -46,7 +47,7 @@ export async function reassembleAndScoreNode(
       activeSuggestions.push({
         id: "sug-summary-auto",
         section: "Summary",
-        originalText: resumeAST.summary.trim(),
+        originalText: isolatePreciseOriginalChange(resumeAST.summary, tailoredSummary, rawResume),
         suggestedText: tailoredSummary.trim(),
         reason: "Keyword alignment and leadership scope",
         keywords: [],

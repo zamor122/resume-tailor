@@ -4,7 +4,10 @@ import {
   getSummaryTailoringPrompt,
   getExperienceBulletsPrompt,
 } from "@/app/prompts/tailoringSection";
-import { groupSuggestionsBySection } from "@/app/utils/resumeReassemble";
+import {
+  groupSuggestionsBySection,
+  isolatePreciseOriginalChange,
+} from "@/app/utils/resumeReassemble";
 import { parseChunkBulletsResponse } from "@/app/utils/chunkBulletParser";
 
 export async function surgicalTailorNode(
@@ -112,7 +115,7 @@ export async function surgicalTailorNode(
         suggestions.push({
           id: "sug-summary",
           section: "Professional Summary",
-          originalText: r.originalInputText.trim(),
+          originalText: isolatePreciseOriginalChange(r.originalInputText, r.text, rawResume),
           suggestedText: r.text.trim(),
           reason: `Reframed summary to highlight target role competencies, core tech stack, and leadership scope`,
           keywords: topKeywords,

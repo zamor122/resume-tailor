@@ -4,6 +4,7 @@ import {
   groupSuggestionsBySection,
   applySuggestionsToOriginal,
   isSubstantiveChange,
+  isolatePreciseOriginalChange,
 } from "@/app/utils/resumeReassemble";
 import type { ResumeSuggestion } from "@/app/agent/state";
 
@@ -288,6 +289,74 @@ B.S. in Computer Science`;
       const addedSug = suggestions.find((s) => s.suggestedText.includes("automated CI/CD"));
       expect(addedSug).toBeDefined();
       expect(addedSug?.originalText).toBe("");
+    });
+  });
+
+  describe("isolatePreciseOriginalChange", () => {
+    const fullResumeDoc = `SHAYNE ZAMORA
+Full Stack Engineer | shayne@example.com
+
+SUMMARY
+Full stack engineer building modern web applications.
+
+PROFESSIONAL EXPERIENCE
+Acme Software Inc. — Senior Engineer
+Jan 2021 – Present
+- Built React frontend applications.
+- Managed database queries.
+
+EDUCATION
+University of California
+B.S. in Computer Science`;
+
+    it("isolates the single matching bullet when passed a full resume document", () => {
+      const isolated = isolatePreciseOriginalChange(
+        fullResumeDoc,
+        "Architected enterprise React frontend applications serving 100k daily users.",
+        fullResumeDoc
+      );
+
+      expect(isolated).toBe("Built React frontend applications.");
+      expect(isolated).not.toContain("SHAYNE ZAMORA");
+      expect(isolated).not.toContain("PROFESSIONAL EXPERIENCE");
+      expect(isolated).not.toContain("EDUCATION");
+    });
+
+    it("returns empty string (treating as addition) when full resume does not match suggested text", () => {
+      const isolated = isolatePreciseOriginalChange(
+        fullResumeDoc,
+        "Spearheaded enterprise Kubernetes cluster migration with zero downtime.",
+        fullResumeDoc
+      );
+
+      expect(isolated).toBe("");
+    });
+
+    it("strips bullet prefixes and selects the matching line from multi-line text", () => {
+      const multiLine = `- Built React frontend applications.\n- Managed database queries.`;
+      const isolated = isolatePreciseOriginalChange(
+        multiLine,
+        "Optimized complex PostgreSQL queries reducing p99 latency by 50%."
+      );
+
+      expect(isolated).toBe("Managed database queries.");
+    });
+
+    it("extracts the specific sentence when original is a multi-sentence paragraph", () => {
+      const longSummary =
+        "Results-oriented Senior Software Engineer with 8+ years of extensive experience designing web applications. Proven track record leading distributed microservices and scaling database architecture. Passionate about automated testing and mentoring junior engineers.";
+      const tailoredSentence =
+        "Proven track record architecting high-throughput distributed microservices and optimizing database performance.";
+
+      const isolated = isolatePreciseOriginalChange(longSummary, tailoredSentence);
+      expect(isolated).toBe(
+        "Proven track record leading distributed microservices and scaling database architecture."
+      );
+    });
+
+    it("returns empty string for placeholder strings like (New bullet added)", () => {
+      expect(isolatePreciseOriginalChange("(New bullet added)", "Added bullet")).toBe("");
+      expect(isolatePreciseOriginalChange("(New line added)", "Added line")).toBe("");
     });
   });
 });

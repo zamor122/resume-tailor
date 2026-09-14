@@ -1,5 +1,5 @@
 import type { ResumeSuggestion } from "@/app/agent/state";
-import { isSubstantiveChange, getBulletsList } from "./resumeReassemble";
+import { isSubstantiveChange, getBulletsList, isolatePreciseOriginalChange } from "./resumeReassemble";
 
 export interface RawChunkBulletItem {
   index?: number;
@@ -88,7 +88,7 @@ export function parseChunkBulletsResponse(params: {
         suggestions.push({
           id: `${sectionGroupId}-sug-${idx}`,
           section: sectionGroupTitle,
-          originalText: cleanOrig,
+          originalText: isolatePreciseOriginalChange(cleanOrig, cleanNew),
           suggestedText: cleanNew,
           reason:
             match?.reason ||
@@ -138,7 +138,7 @@ export function parseChunkBulletsResponse(params: {
       suggestions.push({
         id: `${sectionGroupId}-sug-${idx}`,
         section: sectionGroupTitle,
-        originalText: cleanOrig,
+        originalText: isolatePreciseOriginalChange(cleanOrig, cleanNew),
         suggestedText: cleanNew,
         reason: hasMetric
           ? "Quantified operational impact metric for recruiter resonance"

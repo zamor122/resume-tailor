@@ -133,6 +133,115 @@ export function isSubstantiveChange(
   return tokensOrig.join(" ") !== tokensTailored.join(" ");
 }
 
+/**
+ * Ensures that originalText displays ONLY the precise line or sentence being changed,
+ * and NEVER the full resume, full section, or mismatched bleed.
+ */
+export function isolatePreciseOriginalChange(
+  originalText: string | null | undefined,
+  suggestedText: string | null | undefined,
+  fullResume?: string
+): string {
+  if (!originalText || !originalText.trim()) return "";
+  const text = originalText.trim();
+  const cleanSug = suggestedText ? suggestedText.trim() : "";
+
+  // Guard 0: If text is a placeholder string like "(New bullet added)", return empty
+  if (text.startsWith("(") && text.endsWith(")")) return "";
+
+  // Guard 1: Detect if text is the full resume or contains multiple document sections
+  const hasFullResume = Boolean(fullResume && fullResume.trim().length >= 100);
+  const isFullDoc =
+    (hasFullResume && (text === fullResume!.trim() || text.length >= fullResume!.trim().length * 0.6)) ||
+    text.length > 300 ||
+    text.split(/\r?\n/).filter((l) => l.trim().length > 0).length > 4 ||
+    (text.includes("##") && text.split(/##\s+/).length > 1) ||
+    (/\b(experience|work history|employment)\b/i.test(text) &&
+      /\b(education|academic|skills|projects|certifications)\b/i.test(text));
+
+  if (isFullDoc) {
+    // Search the text and full resume for the single line/bullet that best matches suggestedText
+    const candidateLines = [
+      ...text.split(/\r?\n/),
+      ...(fullResume ? fullResume.split(/\r?\n/) : []),
+    ]
+      .map((l) => l.trim())
+      .filter((l) => {
+        if (l.length < 8) return false;
+        // Ignore section headers
+        if (/^(?:#+\s*|(?:##\s*)?)(summary|experience|skills|education|projects|certifications|awards|contact|work history)/i.test(l)) return false;
+        // Ignore contact info lines
+        if (/@|linkedin\.com|github\.com|\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/.test(l)) return false;
+        return true;
+      });
+
+    let bestLine = "";
+    let bestSim = 0;
+    for (const line of candidateLines) {
+      const cleanL = line.replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
+      const sim = computeWordSimilarity(cleanL, cleanSug);
+      if (sim > bestSim) {
+        bestSim = sim;
+        bestLine = cleanL;
+      }
+    }
+
+    if (bestSim >= 0.2) {
+      return bestLine;
+    }
+    // If no line matches with reasonable similarity, this is a new addition - return empty!
+    return "";
+  }
+
+  // Guard 2: If text has multiple lines, pick the single line that best matches suggestedText
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^([-*•–—]|\d+\.)\s*/, "").trim())
+    .filter(Boolean);
+
+  if (lines.length > 1) {
+    let bestLine = "";
+    let bestSim = 0;
+    for (const l of lines) {
+      const sim = computeWordSimilarity(l, cleanSug);
+      if (sim > bestSim) {
+        bestSim = sim;
+        bestLine = l;
+      }
+    }
+    if (bestSim > 0) {
+      return bestLine;
+    }
+    return lines[0];
+  }
+
+  // Guard 3: If it's a multi-sentence paragraph (e.g. summary) and significantly longer than suggestedText,
+  // find the specific sentence that corresponds to suggestedText
+  const singleLine = lines[0] || text.replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
+  const sentences = singleLine.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 10);
+  if (sentences.length > 1 && singleLine.length > 180 && cleanSug.length < 160) {
+    let bestSentence = "";
+    let bestSim = 0;
+    for (const s of sentences) {
+      const sim = computeWordSimilarity(s, cleanSug);
+      if (sim > bestSim) {
+        bestSim = sim;
+        bestSentence = s;
+      }
+    }
+    if (bestSim >= 0.3) {
+      return bestSentence;
+    }
+  }
+
+  // Never return text that contains obvious section markers or header bleed
+  if (/^(?:#+\s*|(?:##\s*)?)(summary|experience|skills|education|projects|certifications)/i.test(singleLine)) {
+    return "";
+  }
+
+  return singleLine;
+}
+
 export function getBulletsList(text: string): string[] {
   if (!text) return [];
   const rawLines = text
@@ -218,8 +327,11 @@ export function deriveSuggestionsFromDiff(
     // Summary diff
     if (newAST.summary && newAST.summary.trim() !== (origAST?.summary || "").trim()) {
       if (isSubstantiveChange(origAST?.summary, newAST.summary)) {
-        const origSummary = origAST?.summary?.trim() || "";
-        const cleanOrigSummary = origSummary.length > 250 ? origSummary.slice(0, 250).replace(/\s+\S*$/, "...") : origSummary;
+        const cleanOrigSummary = isolatePreciseOriginalChange(
+          origAST?.summary,
+          newAST.summary.trim(),
+          originalResume
+        );
         suggestions.push({
           id: "sug-diff-summary",
           section: "Professional Summary",
@@ -302,6 +414,7 @@ export function deriveSuggestionsFromDiff(
           // Brand new bullet! Use empty string for originalText, NEVER a fake placeholder string
           pairedOrigText = "";
         }
+        pairedOrigText = isolatePreciseOriginalChange(pairedOrigText, cleanN, originalResume);
 
         // Substantive change check: filter out trivial newline, whitespace, bullet, or punctuation diffs
         if (!isSubstantiveChange(pairedOrigText, cleanN)) {
@@ -376,6 +489,7 @@ export function deriveSuggestionsFromDiff(
     } else {
       pairedText = "";
     }
+    pairedText = isolatePreciseOriginalChange(pairedText, cleanN, originalResume);
 
     if (!isSubstantiveChange(pairedText, cleanN)) {
       return;

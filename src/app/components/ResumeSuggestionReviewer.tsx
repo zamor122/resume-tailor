@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
-import { isSubstantiveChange } from "@/app/utils/resumeReassemble";
+import { isSubstantiveChange, isolatePreciseOriginalChange } from "@/app/utils/resumeReassemble";
 
 export interface ResumeSuggestionReviewerProps {
   originalResume: string;
@@ -48,7 +48,6 @@ export default function ResumeSuggestionReviewer({
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>("");
-  const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Topmost Layer Filtering: discard trivial newline, whitespace, bullet, and empty changes
   const substantiveSuggestions = useMemo(
@@ -57,23 +56,6 @@ export default function ResumeSuggestionReviewer({
   );
 
   const totalCount = substantiveSuggestions.length;
-
-  // Group substantive suggestions by section for clean document flow
-  const groupedSuggestions = useMemo(() => {
-    const groups: { section: string; items: ResumeSuggestion[] }[] = [];
-    const sectionMap = new Map<string, ResumeSuggestion[]>();
-
-    substantiveSuggestions.forEach((sug) => {
-      const sectionName = sug.section || "General Review";
-      if (!sectionMap.has(sectionName)) {
-        sectionMap.set(sectionName, []);
-        groups.push({ section: sectionName, items: sectionMap.get(sectionName)! });
-      }
-      sectionMap.get(sectionName)!.push(sug);
-    });
-
-    return groups;
-  }, [substantiveSuggestions]);
 
   // Keep active index within bounds
   useEffect(() => {
@@ -111,17 +93,13 @@ export default function ResumeSuggestionReviewer({
   const currentBoost = Math.round(acceptedCount * boostPerChange);
   const liveScore = Math.min(100, Math.round(beforeScore + currentBoost));
 
-  // Navigation and scroll-to-line handler
+  // Navigation handler
   const handleSelectIndex = (idx: number) => {
     if (idx < 0 || idx >= totalCount) return;
     setActiveIndex(idx);
     const sug = substantiveSuggestions[idx];
     if (sug) {
       onActiveSuggestionChange?.(sug.id);
-      const rowEl = rowRefs.current.get(sug.id);
-      if (rowEl && typeof rowEl.scrollIntoView === "function") {
-        rowEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
     }
   };
 
@@ -138,18 +116,32 @@ export default function ResumeSuggestionReviewer({
   };
 
   // Change action handlers
-  const handleAcceptChange = (id: string) => {
+  const handleAcceptChange = (id?: string) => {
+    const targetId = id || substantiveSuggestions[activeIndex]?.id;
+    if (!targetId) return;
+
     const updated = suggestions.map((s) =>
-      s.id === id ? { ...s, status: "accepted" as const } : s
+      s.id === targetId ? { ...s, status: "accepted" as const } : s
     );
     onSuggestionsChange(updated);
+
+    if (activeIndex < totalCount - 1) {
+      handleSelectIndex(activeIndex + 1);
+    }
   };
 
-  const handleKeepOriginal = (id: string) => {
+  const handleKeepOriginal = (id?: string) => {
+    const targetId = id || substantiveSuggestions[activeIndex]?.id;
+    if (!targetId) return;
+
     const updated = suggestions.map((s) =>
-      s.id === id ? { ...s, status: "rejected" as const } : s
+      s.id === targetId ? { ...s, status: "rejected" as const } : s
     );
     onSuggestionsChange(updated);
+
+    if (activeIndex < totalCount - 1) {
+      handleSelectIndex(activeIndex + 1);
+    }
   };
 
   const handleAcceptAllRemaining = () => {
@@ -239,7 +231,22 @@ export default function ResumeSuggestionReviewer({
     );
   }
 
-  let globalIndexCounter = 0;
+  const currentSuggestion = substantiveSuggestions[activeIndex] || substantiveSuggestions[0];
+
+  const currentOriginalText = useMemo(() => {
+    if (!currentSuggestion) return "";
+    return isolatePreciseOriginalChange(
+      currentSuggestion.originalText,
+      currentSuggestion.suggestedText,
+      originalResume
+    );
+  }, [currentSuggestion, originalResume]);
+
+  const isAddition = !currentOriginalText || !currentOriginalText.trim();
+  const isAcc = currentSuggestion?.status === "accepted";
+  const isRej = currentSuggestion?.status === "rejected";
+  const isPending = !currentSuggestion?.status || currentSuggestion?.status === "pending";
+  const isEditing = Boolean(currentSuggestion && editingId === currentSuggestion.id);
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -381,208 +388,173 @@ export default function ResumeSuggestionReviewer({
         </div>
       </div>
 
-      {/* Line-by-Line Document Diff List (Showing EVERYTHING in document order) */}
-      <div className="space-y-6">
-        {groupedSuggestions.map((group) => (
-          <div
-            key={group.section}
-            className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/90 shadow-sm overflow-hidden"
-          >
-            {/* Section Header */}
-            <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700/80 flex items-center justify-between">
-              <h4 className="text-xs font-bold tracking-wide uppercase text-gray-700 dark:text-gray-200 flex items-center gap-2">
+      {/* Focused Single-Change Card (Showing ONE change at a time) */}
+      {currentSuggestion && (
+        <div
+          className={`rounded-2xl border bg-white dark:bg-gray-900 shadow-sm overflow-hidden transition-all ${
+            isAcc
+              ? "border-emerald-500/40 dark:border-emerald-500/30"
+              : isRej
+              ? "border-rose-500/40 dark:border-rose-500/30"
+              : "border-gray-200 dark:border-gray-800"
+          }`}
+        >
+          {/* Card Header: Section, Change #, Status & Adjust/Edit */}
+          <div className="px-5 py-3.5 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700/80 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <span className="font-bold text-gray-800 dark:text-gray-200 text-xs flex items-center gap-1.5">
                 <span>📁</span>
-                <span>{group.section}</span>
-              </h4>
-              <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
-                {group.items.length} {group.items.length === 1 ? "change" : "changes"}
+                <span>{currentSuggestion.section || "Resume Section"}</span>
+              </span>
+              <span className="text-gray-300 dark:text-gray-600">•</span>
+              <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400">
+                Active Suggestion
               </span>
             </div>
 
-            {/* Section Items */}
-            <div className="divide-y divide-gray-100 dark:divide-gray-800/80">
-              {group.items.map((sug) => {
-                const currentIdx = globalIndexCounter++;
-                const isCur = currentIdx === activeIndex;
-                const isAddition = !sug.originalText || !sug.originalText.trim();
-                const isAcc = sug.status === "accepted";
-                const isRej = sug.status === "rejected";
-                const isPending = !sug.status || sug.status === "pending";
-                const isEditing = editingId === sug.id;
+            <div className="flex items-center gap-2">
+              {isPending ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                  ● Pending Choice
+                </span>
+              ) : isAcc ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                  ✓ Tailored Active
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
+                  ✕ Original Kept
+                </span>
+              )}
 
-                const statusRing = isAcc
-                  ? "border-l-4 border-l-emerald-500"
-                  : isRej
-                  ? "border-l-4 border-l-rose-500"
-                  : "border-l-4 border-l-amber-400";
-
-                return (
-                  <div
-                    key={sug.id}
-                    id={`suggestion-row-${sug.id}`}
-                    ref={(el) => {
-                      if (el) rowRefs.current.set(sug.id, el);
-                      else rowRefs.current.delete(sug.id);
-                    }}
-                    onClick={() => setActiveIndex(currentIdx)}
-                    className={`p-4 transition-all space-y-3 cursor-pointer ${statusRing} ${
-                      isCur
-                        ? "bg-cyan-50/30 dark:bg-cyan-950/15 ring-1 ring-cyan-400/40"
-                        : "hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
-                    }`}
-                  >
-                    {/* Row Header with Badge & Edit */}
-                    <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-500 dark:text-gray-400 text-[11px]">
-                          #{currentIdx + 1}
-                        </span>
-                        {isPending ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                            ● Pending Choice
-                          </span>
-                        ) : isAcc ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                            ✓ Tailored Active
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
-                            ✕ Original Kept
-                          </span>
-                        )}
-                      </div>
-
-                      {!isEditing && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStartEdit(sug);
-                          }}
-                          className="px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        >
-                          ✎ Adjust / Edit
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Inline Edit Mode */}
-                    {isEditing ? (
-                      <div className="space-y-2 pt-1" onClick={(e) => e.stopPropagation()}>
-                        <textarea
-                          value={editText}
-                          onChange={(e) => setEditText(e.target.value)}
-                          rows={3}
-                          className="w-full p-2.5 text-sm rounded-xl border border-cyan-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 leading-relaxed"
-                        />
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={handleCancelEdit}
-                            className="px-3 py-1 text-xs font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSaveEdit(sug.id)}
-                            className="px-4 py-1 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white shadow"
-                          >
-                            Save & Accept
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      /* Simplified Line Diff: Soft Red (-) & Soft Green (+) */
-                      <div className="space-y-2 font-sans">
-                        {/* Red Line: Original (Only shown if modifying an existing line) */}
-                        {!isAddition && (
-                          <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-rose-500/10 dark:bg-rose-950/25 border-l-4 border-rose-500 text-rose-950 dark:text-rose-200">
-                            <span className="font-mono font-bold text-rose-600 dark:text-rose-400 select-none shrink-0 text-sm">
-                              -
-                            </span>
-                            <div className="text-sm leading-relaxed">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 block mb-0.5">
-                                Original (Before):
-                              </span>
-                              <span>{sug.originalText.replace(/^[-*•–—]\s*/, "")}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Green Line: Tailored Replacement or Addition */}
-                        <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/25 border-l-4 border-emerald-500 text-emerald-950 dark:text-emerald-200">
-                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 select-none shrink-0 text-sm">
-                            +
-                          </span>
-                          <div className="text-sm leading-relaxed">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                                {isAddition ? "Tailored (Addition):" : "Tailored (Enhanced):"}
-                              </span>
-                              {isAddition && (
-                                <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                                  + New bullet added
-                                </span>
-                              )}
-                            </div>
-                            <span>
-                              {renderHighlightedKeywords(
-                                sug.suggestedText.replace(/^[-*•–—]\s*/, ""),
-                                sug.keywords
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Plain-English Rationale */}
-                    {sug.reason && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 italic">
-                        💡 <span className="font-medium text-gray-700 dark:text-gray-300">Why:</span> {sug.reason}
-                      </p>
-                    )}
-
-                    {/* Action Controls for this line */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-800 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAcceptChange(sug.id);
-                        }}
-                        className={`px-3.5 py-1.5 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 ${
-                          isAcc
-                            ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                            : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60"
-                        }`}
-                      >
-                        <span>✓</span> Accept Change
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleKeepOriginal(sug.id);
-                        }}
-                        className={`px-3.5 py-1.5 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 ${
-                          isRej
-                            ? "bg-rose-600 text-white border-rose-600 shadow-xs"
-                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        }`}
-                      >
-                        <span>✕</span> {isAddition ? "Dismiss Addition" : "Keep Original"}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+              {!isEditing && (
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(currentSuggestion)}
+                  className="px-2.5 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-200/60 dark:hover:bg-gray-700 transition-colors"
+                >
+                  ✎ Adjust / Edit
+                </button>
+              )}
             </div>
           </div>
-        ))}
-      </div>
+
+          {/* Card Body */}
+          <div className="p-5 space-y-4">
+            {/* Inline Edit Mode */}
+            {isEditing ? (
+              <div className="space-y-3">
+                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block">
+                  Edit tailored bullet text:
+                </label>
+                <textarea
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  rows={3}
+                  className="w-full p-3 text-sm rounded-xl border border-cyan-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 leading-relaxed"
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="px-3.5 py-1.5 text-xs font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSaveEdit(currentSuggestion.id)}
+                    className="px-4 py-1.5 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white shadow"
+                  >
+                    Save & Accept
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Simplified Line Diff: Soft Red (-) & Soft Green (+) */
+              <div className="space-y-3 font-sans">
+                {/* Red Line: Original (Only shown if modifying an existing line) */}
+                {!isAddition && (
+                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-500/10 dark:bg-rose-950/25 border-l-4 border-rose-500 text-rose-950 dark:text-rose-200">
+                    <span className="font-mono font-bold text-rose-600 dark:text-rose-400 select-none shrink-0 text-base leading-snug">
+                      -
+                    </span>
+                    <div className="text-sm leading-relaxed flex-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 block mb-1">
+                        Original (Before):
+                      </span>
+                      <span>{currentOriginalText.replace(/^[-*•–—]\s*/, "")}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Green Line: Tailored Replacement or Addition */}
+                <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/25 border-l-4 border-emerald-500 text-emerald-950 dark:text-emerald-200">
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 select-none shrink-0 text-base leading-snug">
+                    +
+                  </span>
+                  <div className="text-sm leading-relaxed flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                        {isAddition ? "Tailored (Addition):" : "Tailored (Enhanced):"}
+                      </span>
+                      {isAddition && (
+                        <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                          + New bullet added
+                        </span>
+                      )}
+                    </div>
+                    <span>
+                      {renderHighlightedKeywords(
+                        currentSuggestion.suggestedText.replace(/^[-*•–—]\s*/, ""),
+                        currentSuggestion.keywords
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Plain-English Rationale */}
+            {currentSuggestion.reason && (
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  💡 <span className="font-semibold text-gray-800 dark:text-gray-200">Why this change:</span> {currentSuggestion.reason}
+                </p>
+              </div>
+            )}
+
+            {/* Action Controls for Active Change */}
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleAcceptChange(currentSuggestion.id)}
+                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 shadow-sm active:scale-95 ${
+                    isAcc
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow"
+                      : "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500"
+                  }`}
+                >
+                  <span>✓</span> {isAddition ? "Accept Addition" : "Accept Change"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleKeepOriginal(currentSuggestion.id)}
+                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 active:scale-95 ${
+                    isRej
+                      ? "bg-rose-600 text-white border-rose-600 shadow"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  <span>✕</span> {isAddition ? "Dismiss Addition" : "Keep Original"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

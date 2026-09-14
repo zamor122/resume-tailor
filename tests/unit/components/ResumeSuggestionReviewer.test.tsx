@@ -101,7 +101,7 @@ describe("ResumeSuggestionReviewer - Simplified GitHub Line-by-Line Diff Flow", 
     expect(screen.getByText("+10%")).toBeInTheDocument();
   });
 
-  it("renders line-by-line diff with soft red (-) and soft green (+) for each change", () => {
+  it("renders only one change at a time with soft red (-) and soft green (+)", () => {
     render(
       <ResumeSuggestionReviewer
         originalResume="Original Resume"
@@ -112,15 +112,26 @@ describe("ResumeSuggestionReviewer - Simplified GitHub Line-by-Line Diff Flow", 
       />
     );
 
+    // Initial state: Change 1 of 3 is active
     expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
-    // All 3 items should be rendered in the document view
-    expect(screen.getAllByText(/Original \(Before\):/i).length).toBe(3);
-    expect(screen.getAllByText(/Tailored \(Enhanced\):/i).length).toBe(3);
+    expect(screen.getAllByText(/Original \(Before\):/i).length).toBe(1);
+    expect(screen.getAllByText(/Tailored \(Enhanced\):/i).length).toBe(1);
     expect(screen.getByText("Built campus web apps")).toBeInTheDocument();
-    expect(screen.getByText("Led service architecture")).toBeInTheDocument();
     expect(screen.getByText(/Engineered high-concurrency student portal/i)).toBeInTheDocument();
-    expect(screen.getByText(/Spearheaded fault-tolerant cloud architecture/i)).toBeInTheDocument();
     expect(screen.getByText(/Quantified scale with measurable user metric/i)).toBeInTheDocument();
+
+    // Change 2 and 3 should NOT be displayed simultaneously
+    expect(screen.queryByText("Led service architecture")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Spearheaded fault-tolerant cloud architecture/i)).not.toBeInTheDocument();
+
+    // Navigating to Next reveals Change 2
+    const nextBtn = screen.getByRole("button", { name: /Next/i });
+    fireEvent.click(nextBtn);
+
+    expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
+    expect(screen.getByText("Led service architecture")).toBeInTheDocument();
+    expect(screen.getByText(/Spearheaded fault-tolerant cloud architecture/i)).toBeInTheDocument();
+    expect(screen.queryByText("Built campus web apps")).not.toBeInTheDocument();
   });
 
   it("accepts a change when clicking Accept Change on that row", () => {
@@ -366,5 +377,98 @@ describe("ResumeSuggestionReviewer - Simplified GitHub Line-by-Line Diff Flow", 
     expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
     const progressTicks = screen.getAllByRole("button", { name: /Change \d/i });
     expect(progressTicks.length).toBe(3);
+  });
+
+  it("strictly isolates original change and never leaks full resume as original text", () => {
+    const fullResumeSample = `Jane Doe
+Senior Software Engineer
+jane@example.com
+
+## Professional Summary
+Full stack developer with 8 years building distributed systems and high scale microservices.
+
+## Experience
+Senior Engineer - Acme Corp
+- Built fault-tolerant microservices in Go
+- Mentored junior engineers across 3 squads
+- Led database migration to CockroachDB
+
+## Education
+B.S. Computer Science`;
+
+    // Suggestion where originalText mistakenly had the entire resume or section bleed
+    const suggestionWithFullResumeBleed: ResumeSuggestion[] = [
+      {
+        id: "sug-bleed-1",
+        section: "Professional Summary",
+        originalText: fullResumeSample, // Full resume erroneously passed as originalText
+        suggestedText: "Staff Distributed Systems Architect with 8+ years building enterprise microservices in Go and Kubernetes.",
+        reason: "Reframed summary for target staff architect position",
+        keywords: ["Kubernetes"],
+        category: "summary",
+        status: "pending",
+      },
+    ];
+
+    render(
+      <ResumeSuggestionReviewer
+        originalResume={fullResumeSample}
+        suggestions={suggestionWithFullResumeBleed}
+        beforeScore={50}
+        matchScore={85}
+        onSuggestionsChange={vi.fn()}
+      />
+    );
+
+    // It should NOT render the entire resume in the original text block
+    expect(screen.queryByText(/Jane Doe/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/## Experience/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/B\.S\. Computer Science/i)).not.toBeInTheDocument();
+
+    // Instead, it strictly extracted only the matching summary sentence!
+    expect(
+      screen.getByText(/Full stack developer with 8 years building distributed systems and high scale microservices/i)
+    ).toBeInTheDocument();
+  });
+
+  it("auto-advances to the next change when accepting or keeping original", () => {
+    const onSuggestionsChange = vi.fn();
+    const { rerender } = render(
+      <ResumeSuggestionReviewer
+        originalResume="Original Resume"
+        suggestions={mockSuggestions}
+        beforeScore={50}
+        matchScore={80}
+        onSuggestionsChange={onSuggestionsChange}
+      />
+    );
+
+    expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
+
+    // Accept change 1
+    const acceptBtn = screen.getByRole("button", { name: /✓ Accept Change/i });
+    fireEvent.click(acceptBtn);
+
+    expect(onSuggestionsChange).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ id: "sug-1", status: "accepted" })])
+    );
+
+    // Re-render with updated suggestions to simulate state update from parent
+    const updatedSugs = mockSuggestions.map((s) =>
+      s.id === "sug-1" ? { ...s, status: "accepted" as const } : s
+    );
+    rerender(
+      <ResumeSuggestionReviewer
+        originalResume="Original Resume"
+        suggestions={updatedSugs}
+        beforeScore={50}
+        matchScore={80}
+        onSuggestionsChange={onSuggestionsChange}
+      />
+    );
+
+    // It should automatically have advanced to Change 2 of 3!
+    expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
+    expect(screen.getByText("Led service architecture")).toBeInTheDocument();
   });
 });
