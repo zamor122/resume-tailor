@@ -1,85 +1,43 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import ResumeSuggestionReviewer from "@/app/components/ResumeSuggestionReviewer";
-import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
+import type { ResumeSuggestion } from "@/app/agent/state";
 
-describe("ResumeSuggestionReviewer Section Studio", () => {
-  const mockGroups: ResumeSectionGroup[] = [
+describe("ResumeSuggestionReviewer - Unified Step-by-Step Flow", () => {
+  const mockSuggestions: ResumeSuggestion[] = [
     {
-      id: "section-exp-1",
-      sectionType: "experience",
-      title: "Chapman University – Software Engineer",
-      subtitle: "2018 - 2021 • Orange, CA",
+      id: "sug-1",
+      section: "Chapman University – Software Engineer",
+      originalText: "Built campus web apps",
+      suggestedText: "Engineered high-concurrency student portal serving 10k users",
+      reason: "Quantified scale with measurable user metric",
+      keywords: ["Scale"],
+      category: "metric",
+      status: "pending",
       jobIndex: 1,
-      orderIndex: 0,
-      status: "ready",
-      auditRationale: "Early career foundation; highlighted student portal impact",
-      suggestions: [
-        {
-          id: "sug-chapman-1",
-          section: "Chapman University – Software Engineer",
-          originalText: "Built campus web apps",
-          suggestedText: "Engineered high-concurrency student portal serving 10k users",
-          reason: "Quantified scale",
-          keywords: ["Scale"],
-          category: "metric",
-          status: "accepted",
-          jobIndex: 1,
-          bulletIndex: 0,
-        },
-      ],
-      originalContent: "Built campus web apps\nMaintained databases",
-      hasChanges: true,
+      bulletIndex: 0,
     },
     {
-      id: "section-exp-0",
-      sectionType: "experience",
-      title: "Google – Senior Software Engineer",
-      subtitle: "2021 - Present • Mountain View, CA",
+      id: "sug-2",
+      section: "Google – Senior Software Engineer",
+      originalText: "Led service architecture",
+      suggestedText: "Spearheaded fault-tolerant cloud architecture delivering 99.99% uptime",
+      reason: "Highlighted high-availability cloud architecture",
+      keywords: ["High Availability"],
+      category: "metric",
+      status: "pending",
       jobIndex: 0,
-      orderIndex: 1,
-      status: "ready",
-      auditRationale: "Elevated distributed systems and gRPC throughput",
-      suggestions: [
-        {
-          id: "sug-google-1",
-          section: "Google – Senior Software Engineer",
-          originalText: "Led service architecture",
-          suggestedText: "Spearheaded fault-tolerant cloud architecture delivering 99.99% uptime",
-          reason: "High availability metric",
-          keywords: ["High Availability"],
-          category: "metric",
-          status: "accepted",
-          jobIndex: 0,
-          bulletIndex: 0,
-        },
-      ],
-      originalContent: "Led service architecture",
-      hasChanges: true,
+      bulletIndex: 0,
     },
     {
-      id: "section-summary",
-      sectionType: "summary",
-      title: "Professional Summary Synthesis",
-      subtitle: "Holistic Career Overview",
-      orderIndex: 2,
-      status: "ready",
-      auditRationale: "Executive synthesis aligning career arc with target cloud architect profile",
-      suggestions: [
-        {
-          id: "sug-summary-1",
-          section: "Professional Summary",
-          originalText: "Experienced engineer with passion for building apps.",
-          suggestedText: "Senior Cloud Architect with 6+ years designing resilient distributed platforms.",
-          reason: "Aligned career narrative",
-          keywords: ["Cloud Architect", "Distributed Systems"],
-          category: "summary",
-          status: "accepted",
-        },
-      ],
-      originalContent: "Experienced engineer with passion for building apps.",
-      tailoredContent: "Senior Cloud Architect with 6+ years designing resilient distributed platforms.",
-      hasChanges: true,
+      id: "sug-3",
+      section: "Professional Summary",
+      originalText: "Experienced engineer with passion for building apps.",
+      suggestedText: "Senior Cloud Architect with 6+ years designing resilient distributed platforms.",
+      reason: "Aligned career narrative with target role",
+      keywords: ["Cloud Architect"],
+      category: "summary",
+      status: "pending",
     },
   ];
 
@@ -91,197 +49,178 @@ describe("ResumeSuggestionReviewer Section Studio", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the earliest role first with audit rationale and stepper count", () => {
+  it("renders tri-color progress bar with accepted (green), kept (red), and remaining (gray) counts", () => {
+    const sugsWithStatuses: ResumeSuggestion[] = [
+      { ...mockSuggestions[0], status: "accepted" },
+      { ...mockSuggestions[1], status: "rejected" },
+      { ...mockSuggestions[2], status: "pending" },
+    ];
+
     render(
       <ResumeSuggestionReviewer
         originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
+        suggestions={sugsWithStatuses}
+        beforeScore={50}
+        matchScore={80}
         onSuggestionsChange={vi.fn()}
       />
     );
 
-    // Should display Chapman University first (orderIndex 0)
-    expect(screen.getByText(/Chapman University – Software Engineer/i)).toBeInTheDocument();
-    expect(screen.getByText(/Early career foundation; highlighted student portal impact/i)).toBeInTheDocument();
-    expect(screen.getByText(/Section 1 of 3/i)).toBeInTheDocument();
-    expect(screen.getByText(/2018 - 2021 • Orange, CA/i)).toBeInTheDocument();
+    // Should display counters: 1 Accepted, 1 Kept, 1 Remaining out of 3
+    expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Accepted/i)).toBeInTheDocument();
+    expect(screen.getByText(/Kept/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Remaining/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
+
+    // Progress bar segment indicators
+    const progressTicks = screen.getAllByRole("button", { name: /Change \d/i });
+    expect(progressTicks.length).toBe(3);
   });
 
-  it("displays tailored rationale banner for modified sections and preserved authenticity banner for unchanged sections", () => {
-    const untouchedGroup: ResumeSectionGroup = {
-      id: "section-exp-preserved",
-      sectionType: "experience",
-      title: "Early Startup – Junior Intern",
-      subtitle: "2017",
-      jobIndex: 2,
-      orderIndex: 0,
-      status: "unchanged",
-      auditRationale: "Foundational early tenure preserved to maintain genuine career history",
-      suggestions: [],
-      originalContent: "Fixed bug backlog and supported QA testing.",
-      hasChanges: false,
-    };
+  it("calculates upfront score boost divided proportionally per change", () => {
+    // 3 changes, boost is 80 - 50 = 30. Boost per change = 10%.
+    // With 1 accepted change, score should be 50 + 10 = 60%.
+    const sugsWithOneAccepted: ResumeSuggestion[] = [
+      { ...mockSuggestions[0], status: "accepted" },
+      { ...mockSuggestions[1], status: "pending" },
+      { ...mockSuggestions[2], status: "pending" },
+    ];
 
     render(
       <ResumeSuggestionReviewer
         originalResume="Original Resume"
-        suggestions={[]}
-        sectionGroups={[untouchedGroup]}
+        suggestions={sugsWithOneAccepted}
+        beforeScore={50}
+        matchScore={80}
         onSuggestionsChange={vi.fn()}
       />
     );
 
-    expect(screen.getByText(/Preserved Authenticity/i)).toBeInTheDocument();
-    expect(screen.getByText(/Foundational early tenure preserved/i)).toBeInTheDocument();
-    expect(screen.getByText(/Fixed bug backlog and supported QA testing/i)).toBeInTheDocument();
+    expect(screen.getByText("60%")).toBeInTheDocument();
+    expect(screen.getByText("+10%")).toBeInTheDocument();
   });
 
-  it("advances to the next section when clicking Accept Section & Continue", () => {
+  it("renders symmetrical side-by-side comparison for the active change", () => {
+    render(
+      <ResumeSuggestionReviewer
+        originalResume="Original Resume"
+        suggestions={mockSuggestions}
+        beforeScore={50}
+        matchScore={80}
+        onSuggestionsChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
+    expect(screen.getByText(/Original \(Before\):/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tailored \(Enhanced\):/i)).toBeInTheDocument();
+    expect(screen.getByText("Built campus web apps")).toBeInTheDocument();
+    expect(screen.getByText(/Engineered high-concurrency student portal/i)).toBeInTheDocument();
+    expect(screen.getByText(/Quantified scale with measurable user metric/i)).toBeInTheDocument();
+  });
+
+  it("advances step-by-step when user clicks Accept Change", () => {
     const onSuggestionsChange = vi.fn();
     render(
       <ResumeSuggestionReviewer
         originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
+        suggestions={mockSuggestions}
+        beforeScore={50}
+        matchScore={80}
         onSuggestionsChange={onSuggestionsChange}
       />
     );
 
-    const acceptSectionBtn = screen.getByRole("button", { name: /Accept Section & Continue/i });
-    fireEvent.click(acceptSectionBtn);
-
-    // Should call onSuggestionsChange with the active section's suggestions marked accepted
-    expect(onSuggestionsChange).toHaveBeenCalled();
-
-    // Should advance to Section 2 (Google)
-    expect(screen.getByText(/Google – Senior Software Engineer/i)).toBeInTheDocument();
-    expect(screen.getByText(/Section 2 of 3/i)).toBeInTheDocument();
-  });
-
-  it("marks suggestions as rejected and advances when clicking Keep Original Section & Continue", () => {
-    const onSuggestionsChange = vi.fn();
-    render(
-      <ResumeSuggestionReviewer
-        originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
-        onSuggestionsChange={onSuggestionsChange}
-      />
-    );
-
-    const keepOriginalBtn = screen.getByRole("button", { name: /Keep Original Section & Continue/i });
-    fireEvent.click(keepOriginalBtn);
+    const acceptBtn = screen.getByRole("button", { name: /✓ Accept Change/i });
+    fireEvent.click(acceptBtn);
 
     expect(onSuggestionsChange).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
-          id: "sug-chapman-1",
+          id: "sug-1",
+          status: "accepted",
+        }),
+      ])
+    );
+
+    // Automatically advances to Change 2
+    expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Google – Senior Software Engineer/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("advances step-by-step when user clicks Keep Original", () => {
+    const onSuggestionsChange = vi.fn();
+    render(
+      <ResumeSuggestionReviewer
+        originalResume="Original Resume"
+        suggestions={mockSuggestions}
+        beforeScore={50}
+        matchScore={80}
+        onSuggestionsChange={onSuggestionsChange}
+      />
+    );
+
+    const keepBtn = screen.getByRole("button", { name: /✕ Keep Original/i });
+    fireEvent.click(keepBtn);
+
+    expect(onSuggestionsChange).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "sug-1",
           status: "rejected",
         }),
       ])
     );
 
-    // Advances to Section 2
-    expect(screen.getByText(/Google – Senior Software Engineer/i)).toBeInTheDocument();
+    // Automatically advances to Change 2
+    expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
   });
 
-  it("allows navigating backward with Previous Section button", () => {
+  it("allows previous and next step navigation without altering state", () => {
     render(
       <ResumeSuggestionReviewer
         originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
+        suggestions={mockSuggestions}
+        beforeScore={50}
+        matchScore={80}
         onSuggestionsChange={vi.fn()}
       />
     );
 
-    // On section 1, Previous button should be disabled
-    const prevBtn = screen.getByRole("button", { name: /Previous Section/i });
+    const prevBtn = screen.getByRole("button", { name: /Previous/i });
+    const nextBtn = screen.getByRole("button", { name: /Next/i });
+
+    // On change 1, previous is disabled
     expect(prevBtn).toBeDisabled();
 
-    // Advance to section 2
-    fireEvent.click(screen.getByRole("button", { name: /Accept Section & Continue/i }));
-    expect(screen.getByText(/Section 2 of 3/i)).toBeInTheDocument();
-
-    // Click Previous Section
+    // Click next -> advances to Change 2
+    fireEvent.click(nextBtn);
+    expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
     expect(prevBtn).not.toBeDisabled();
+
+    // Click previous -> goes back to Change 1
     fireEvent.click(prevBtn);
-    expect(screen.getByText(/Section 1 of 3/i)).toBeInTheDocument();
-    expect(screen.getByText(/Chapman University – Software Engineer/i)).toBeInTheDocument();
+    expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
   });
 
-  it("allows direct navigation via clickable stepper breadcrumbs", () => {
-    const onActiveSectionChange = vi.fn();
+  it("allows direct navigation by clicking progress bar segment", () => {
     render(
       <ResumeSuggestionReviewer
         originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
-        onSuggestionsChange={vi.fn()}
-        onActiveSectionChange={onActiveSectionChange}
-      />
-    );
-
-    // Click breadcrumb for Google (section 2)
-    const googleBreadcrumb = screen.getByRole("button", { name: /Google/i });
-    fireEvent.click(googleBreadcrumb);
-
-    expect(screen.getByText(/Section 2 of 3/i)).toBeInTheDocument();
-    expect(screen.getByText(/Google – Senior Software Engineer/i)).toBeInTheDocument();
-    expect(onActiveSectionChange).toHaveBeenCalledWith("section-exp-0");
-  });
-
-  it("synchronizes current section when parent updates activeSectionId", () => {
-    const { rerender } = render(
-      <ResumeSuggestionReviewer
-        originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
-        activeSectionId="section-exp-1"
+        suggestions={mockSuggestions}
+        beforeScore={50}
+        matchScore={80}
         onSuggestionsChange={vi.fn()}
       />
     );
 
-    expect(screen.getByText(/Chapman University – Software Engineer/i)).toBeInTheDocument();
+    const progressTicks = screen.getAllByRole("button", { name: /Change \d/i });
+    // Click 3rd segment (Summary)
+    fireEvent.click(progressTicks[2]);
 
-    rerender(
-      <ResumeSuggestionReviewer
-        originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
-        activeSectionId="section-exp-0"
-        onSuggestionsChange={vi.fn()}
-      />
-    );
-
-    expect(screen.getByText(/Google – Senior Software Engineer/i)).toBeInTheDocument();
-    expect(screen.getByText(/Section 2 of 3/i)).toBeInTheDocument();
-  });
-
-  it("allows toggling individual bullet suggestions between accepted and rejected", () => {
-    const onSuggestionsChange = vi.fn();
-    render(
-      <ResumeSuggestionReviewer
-        originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
-        onSuggestionsChange={onSuggestionsChange}
-      />
-    );
-
-    // Toggle bullet to Keep Original
-    const keepOriginalBulletBtn = screen.getByRole("button", { name: /^✕ Keep Original$/i });
-    fireEvent.click(keepOriginalBulletBtn);
-
-    expect(onSuggestionsChange).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "sug-chapman-1",
-          status: "rejected",
-        }),
-      ])
-    );
+    expect(screen.getByText(/Change 3 of 3/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Professional Summary/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it("supports inline editing of suggestion text", () => {
@@ -289,13 +228,14 @@ describe("ResumeSuggestionReviewer Section Studio", () => {
     render(
       <ResumeSuggestionReviewer
         originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
+        suggestions={mockSuggestions}
+        beforeScore={50}
+        matchScore={80}
         onSuggestionsChange={onSuggestionsChange}
       />
     );
 
-    const editBtn = screen.getByRole("button", { name: /Adjust \/ Edit|Edit inline/i });
+    const editBtn = screen.getByRole("button", { name: /Adjust \/ Edit|Edit/i });
     fireEvent.click(editBtn);
 
     const textarea = screen.getByDisplayValue(/Engineered high-concurrency student portal/i);
@@ -307,7 +247,7 @@ describe("ResumeSuggestionReviewer Section Studio", () => {
     expect(onSuggestionsChange).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
-          id: "sug-chapman-1",
+          id: "sug-1",
           suggestedText: "Engineered high-concurrency portal serving 50k users",
           status: "accepted",
         }),
@@ -315,148 +255,22 @@ describe("ResumeSuggestionReviewer Section Studio", () => {
     );
   });
 
-  it("triggers background prefetch for next pending section", async () => {
-    const pendingGroups: ResumeSectionGroup[] = [
-      mockGroups[0],
-      {
-        ...mockGroups[1],
-        status: "pending",
-        suggestions: [],
-      },
-    ];
-
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        sectionGroup: {
-          ...mockGroups[1],
-          status: "ready",
-        },
-      }),
-    });
-    global.fetch = mockFetch;
-
-    render(
-      <ResumeSuggestionReviewer
-        originalResume="Original Resume Content"
-        suggestions={mockGroups[0].suggestions}
-        sectionGroups={pendingGroups}
-        onSuggestionsChange={vi.fn()}
-        jobDescription="Target Job Description"
-      />
-    );
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/agent/tailor-chunk",
-        expect.objectContaining({
-          method: "POST",
-          headers: expect.objectContaining({ "Content-Type": "application/json" }),
-          body: expect.stringContaining("section-exp-0"),
-        })
-      );
-    });
-  });
-
-  it("displays shimmer skeleton card when viewing a pending or tailoring section", () => {
-    const tailoringGroups: ResumeSectionGroup[] = [
-      {
-        id: "section-exp-tailoring",
-        sectionType: "experience",
-        title: "Netflix – Distributed Systems Engineer",
-        subtitle: "2022 - Present",
-        jobIndex: 0,
-        orderIndex: 0,
-        status: "tailoring",
-        auditRationale: "Aligning with streaming architecture requirements",
-        suggestions: [],
-        originalContent: "Worked on streaming pipelines",
-        hasChanges: true,
-      },
-    ];
-
+  it("calls onFinalize when clicking Finish Review button", () => {
+    const onFinalize = vi.fn();
     render(
       <ResumeSuggestionReviewer
         originalResume="Original Resume"
-        suggestions={[]}
-        sectionGroups={tailoringGroups}
+        suggestions={mockSuggestions}
+        beforeScore={50}
+        matchScore={80}
         onSuggestionsChange={vi.fn()}
+        onFinalize={onFinalize}
       />
     );
 
-    expect(screen.getByText(/Analyzing Netflix experience/i)).toBeInTheDocument();
-  });
+    const finishBtn = screen.getByRole("button", { name: /Finish & View Resume/i });
+    fireEvent.click(finishBtn);
 
-  it("renders Summary finale stage with re-synthesize and approve buttons", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        summaryText: "Executive Cloud Architect with 10+ years scaling high-availability microservices.",
-        rationale: "Holistic career alignment",
-        keywords: ["Microservices"],
-      }),
-    });
-    global.fetch = mockFetch;
-
-    const onSuggestionsChange = vi.fn();
-    render(
-      <ResumeSuggestionReviewer
-        originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
-        activeSectionId="section-summary"
-        onSuggestionsChange={onSuggestionsChange}
-        jobDescription="Senior Cloud Engineer"
-      />
-    );
-
-    expect(screen.getByText(/Professional Summary Synthesis/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Approve & Finalize Resume/i })).toBeInTheDocument();
-
-    const reSynthBtn = screen.getByRole("button", { name: /Re-Synthesize Summary/i });
-    fireEvent.click(reSynthBtn);
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/agent/synthesize-summary",
-        expect.objectContaining({
-          method: "POST",
-          headers: expect.objectContaining({ "Content-Type": "application/json" }),
-        })
-      );
-    });
-  });
-
-  it("dynamically derives section groups when sectionGroups prop is omitted", () => {
-    render(
-      <ResumeSuggestionReviewer
-        originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        onSuggestionsChange={vi.fn()}
-      />
-    );
-
-    // Should derive groups and render first section
-    expect(screen.getByText(/Section 1 of/i)).toBeInTheDocument();
-  });
-
-  it("renders 1:1 bullet comparison card with Bullet X of N, diff containers, and action buttons", () => {
-    render(
-      <ResumeSuggestionReviewer
-        originalResume="Original Resume"
-        suggestions={mockGroups.flatMap((g) => g.suggestions)}
-        sectionGroups={mockGroups}
-        onSuggestionsChange={vi.fn()}
-      />
-    );
-
-    // Chapman has 1 suggestion
-    expect(screen.getByText("Bullet 1 of 1")).toBeInTheDocument();
-    expect(screen.getByText(/Original \(Before\):/i)).toBeInTheDocument();
-    expect(screen.getByText(/Tailored \(Enhanced\):/i)).toBeInTheDocument();
-    expect(screen.getByText("Built campus web apps")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^✓ Accept$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^✕ Keep Original$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /✎ Adjust \/ Edit/i })).toBeInTheDocument();
+    expect(onFinalize).toHaveBeenCalledTimes(1);
   });
 });

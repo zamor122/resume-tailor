@@ -253,8 +253,8 @@ TypeScript, React, Node.js, Go, Kubernetes, PostgreSQL, GraphQL
       />
     );
 
-    // Verify Reviewer is rendered and shows Section Studio header
-    expect(screen.getAllByText(/Section Studio/i).length).toBeGreaterThan(0);
+    // Verify Reviewer is rendered and shows step-by-step header
+    expect(screen.getAllByText(/Change 1 of/i).length).toBeGreaterThan(0);
     // Verify document preview on the right also has spotlighted section-exp-0
     const exp0Section = container.querySelector('[data-section-id="section-exp-0"]');
     expect(exp0Section?.className).toContain("border-cyan-500");
