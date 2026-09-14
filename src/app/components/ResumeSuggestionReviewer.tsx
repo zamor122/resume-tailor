@@ -233,7 +233,7 @@ export default function ResumeSuggestionReviewer({
 
   // Counts and scores
   const acceptedCount = useMemo(() => {
-    return suggestions.filter((s) => s.status !== "rejected").length;
+    return suggestions.filter((s) => s.status === "accepted").length;
   }, [suggestions]);
 
   const liveScore = useMemo(() => {
@@ -706,91 +706,62 @@ export default function ResumeSuggestionReviewer({
                 </div>
 
                 {activeGroup.suggestions.map((sug, sIdx) => {
-                  const isAccepted = sug.status !== "rejected";
+                  const isAccepted = sug.status === "accepted";
+                  const isRejected = sug.status === "rejected";
+                  const isPending = !sug.status || sug.status === "pending";
                   const isEditing = editingId === sug.id;
-                  const badge = getCategoryBadge(sug.category);
 
                   return (
                     <div
                       key={sug.id}
                       className={`p-4 rounded-xl border transition-all space-y-3 ${
                         isAccepted
-                          ? "bg-white dark:bg-gray-900 border-emerald-500/40 shadow-sm"
-                          : "bg-gray-50/80 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-75"
+                          ? "bg-emerald-500/[0.03] dark:bg-emerald-950/20 border-emerald-500/40 shadow-xs"
+                          : isRejected
+                          ? "bg-sky-500/[0.03] dark:bg-sky-950/20 border-sky-500/30"
+                          : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-xs"
                       }`}
                     >
-                      {/* Suggestion Header */}
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Suggestion Card Header */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap pb-1 border-b border-gray-100 dark:border-gray-800/80">
+                        <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
                             Bullet {sug.bulletIndex !== undefined ? sug.bulletIndex + 1 : sIdx + 1} of {activeGroup.suggestions.length}
                           </span>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badge.color}`}>
-                            {badge.label}
-                          </span>
-                          {sug.keywords && sug.keywords.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {sug.keywords.map((kw) => (
-                                <span
-                                  key={kw}
-                                  className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/20"
-                                >
-                                  +{kw}
-                                </span>
-                              ))}
-                            </div>
+                          {isPending ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                              ● Choose an option
+                            </span>
+                          ) : isAccepted ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                              ✓ Tailored Applied
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30">
+                              ✓ Original Kept
+                            </span>
                           )}
                         </div>
 
-                        {/* Individual Bullet Actions */}
-                        <div className="flex items-center gap-1.5">
+                        {!isEditing && (
                           <button
                             type="button"
                             onClick={() => handleStartEdit(sug)}
-                            className="px-2.5 py-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="px-2.5 py-1 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1"
                           >
                             ✎ Adjust / Edit
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleSuggestion(sug.id, "rejected")}
-                            className={`px-3 py-1 text-[11px] font-bold rounded-lg border transition-all ${
-                              !isAccepted
-                                ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white border-gray-400"
-                                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100"
-                            }`}
-                          >
-                            ✕ Keep Original
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleSuggestion(sug.id, "accepted")}
-                            className={`px-3.5 py-1 text-[11px] font-bold rounded-lg text-white shadow transition-all ${
-                              isAccepted
-                                ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20"
-                                : "bg-cyan-600 hover:bg-cyan-500"
-                            }`}
-                          >
-                            ✓ Accept
-                          </button>
-                        </div>
+                        )}
                       </div>
 
-                      {/* AI Strategy Rationale */}
-                      {sug.reason && (
-                        <p className="text-[11px] text-gray-600 dark:text-gray-400 italic">
-                          💡 {sug.reason}
-                        </p>
-                      )}
-
-                      {/* Inline Edit Box or Diff */}
+                      {/* Inline Edit Mode */}
                       {isEditing ? (
                         <div className="space-y-2 pt-1">
                           <textarea
                             value={editText}
                             onChange={(e) => setEditText(e.target.value)}
                             rows={3}
-                            className="w-full p-2.5 text-xs sm:text-sm rounded-xl border border-cyan-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            className="w-full p-3 text-sm rounded-xl border border-cyan-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 leading-relaxed"
                           />
                           <div className="flex items-center justify-end gap-2">
                             <button
@@ -810,35 +781,113 @@ export default function ResumeSuggestionReviewer({
                           </div>
                         </div>
                       ) : (
-                        <div className="space-y-2">
-                          {/* Original Text */}
-                          <div className="p-2.5 rounded-lg bg-rose-500/5 dark:bg-rose-950/20 border border-rose-500/20 text-xs text-gray-600 dark:text-gray-400">
-                            <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block mb-0.5">
-                              Original (Before):
-                            </span>
-                            {sug.originalText.startsWith("(") && sug.originalText.endsWith(")") ? (
-                              <span className="italic text-gray-500 dark:text-gray-400 font-medium">
-                                ➕ {sug.originalText.replace(/^\(|\)$/g, "")}
-                              </span>
-                            ) : (
-                              <span>{sug.originalText.replace(/^[-*•–—]\s*/, "")}</span>
-                            )}
-                          </div>
-
-                          {/* Proposed Enhancement */}
+                        /* Symmetrical Side-by-Side Comparison (REQ-UBI-01, REQ-OPT-01) */
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                          {/* Symmetrical Card 1: Original */}
                           <div
-                            className={`p-2.5 rounded-lg border text-xs sm:text-sm leading-relaxed ${
-                              isAccepted
-                                ? "bg-emerald-500/10 dark:bg-emerald-950/30 border-emerald-500/30 text-gray-900 dark:text-gray-100 font-medium"
-                                : "bg-gray-100 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 text-gray-500 line-through"
+                            onClick={() => handleToggleSuggestion(sug.id, "rejected")}
+                            className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                              isRejected
+                                ? "bg-sky-500/10 dark:bg-sky-950/30 border-sky-500 ring-1 ring-sky-500/30 shadow-xs"
+                                : isAccepted
+                                ? "bg-gray-50/50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-60 hover:opacity-100"
+                                : "bg-gray-50/70 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700/80 hover:border-gray-400"
                             }`}
                           >
-                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mb-0.5">
-                              Tailored (Enhanced):
-                            </span>
-                            {renderHighlightedKeywords(sug.suggestedText, sug.keywords)}
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between pb-1.5 border-b border-gray-200/60 dark:border-gray-800">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                                  {isRejected && <span className="text-sky-600 dark:text-sky-400">●</span>}
+                                  Original (Before):
+                                </span>
+                                {isRejected && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-700 dark:text-sky-300">
+                                    ✓ In Resume
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-normal">
+                                {sug.originalText.startsWith("(") && sug.originalText.endsWith(")") ? (
+                                  <span className="italic text-gray-400 dark:text-gray-500">
+                                    {sug.originalText}
+                                  </span>
+                                ) : (
+                                  <span>{sug.originalText.replace(/^[-*•–—]\s*/, "")}</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="pt-3 mt-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleSuggestion(sug.id, "rejected");
+                                }}
+                                className={`w-full py-2 px-3 text-xs font-bold rounded-lg border transition-all ${
+                                  isRejected
+                                    ? "bg-sky-600 text-white border-sky-600 shadow-xs"
+                                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                }`}
+                              >
+                                ✕ Keep Original
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Symmetrical Card 2: Tailored Enhancement */}
+                          <div
+                            onClick={() => handleToggleSuggestion(sug.id, "accepted")}
+                            className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                              isAccepted
+                                ? "bg-emerald-500/10 dark:bg-emerald-950/30 border-emerald-500 ring-1 ring-emerald-500/30 shadow-xs"
+                                : isRejected
+                                ? "bg-gray-50/50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-60 hover:opacity-100"
+                                : "bg-emerald-500/[0.04] dark:bg-emerald-950/20 border-emerald-500/30 hover:border-emerald-500/70"
+                            }`}
+                          >
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between pb-1.5 border-b border-gray-200/60 dark:border-gray-800">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                                  {isAccepted && <span>●</span>}
+                                  Tailored (Enhanced):
+                                </span>
+                                {isAccepted && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                                    ✓ In Resume
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed font-normal">
+                                {renderHighlightedKeywords(sug.suggestedText.replace(/^[-*•–—]\s*/, ""), sug.keywords)}
+                              </div>
+                            </div>
+
+                            <div className="pt-3 mt-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleSuggestion(sug.id, "accepted");
+                                }}
+                                className={`w-full py-2 px-3 text-xs font-bold rounded-lg border transition-all ${
+                                  isAccepted
+                                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                    : "bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-600/20"
+                                }`}
+                              >
+                                ✓ Accept
+                              </button>
+                            </div>
                           </div>
                         </div>
+                      )}
+
+                      {/* Plain-English Rationale (REQ-UBI-03) */}
+                      {sug.reason && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 italic pt-1">
+                          💡 <span className="font-medium text-gray-700 dark:text-gray-300">Why this helps:</span> {sug.reason}
+                        </p>
                       )}
                     </div>
                   );
@@ -905,46 +954,122 @@ export default function ResumeSuggestionReviewer({
               return s.category === selectedListFilter;
             })
             .map((sug) => {
-              const isAccepted = sug.status !== "rejected";
-              const badge = getCategoryBadge(sug.category);
+              const isAccepted = sug.status === "accepted";
+              const isRejected = sug.status === "rejected";
+              const isPending = !sug.status || sug.status === "pending";
 
               return (
                 <div
                   key={sug.id}
-                  className={`p-3.5 rounded-xl border transition-all space-y-2 ${
+                  className={`p-4 rounded-xl border transition-all space-y-3 ${
                     isAccepted
-                      ? "bg-white dark:bg-gray-900 border-emerald-500/30 shadow-sm"
-                      : "bg-gray-50/80 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-70"
+                      ? "bg-emerald-500/[0.03] dark:bg-emerald-950/20 border-emerald-500/40 shadow-xs"
+                      : isRejected
+                      ? "bg-sky-500/[0.03] dark:bg-sky-950/20 border-sky-500/30"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-xs"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-200/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200">
-                        {sug.section}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badge.color}`}>
-                        {badge.label}
-                      </span>
+                  <div className="flex items-center justify-between gap-2 flex-wrap pb-1 border-b border-gray-100 dark:border-gray-800/80">
+                    <span className="px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                      {sug.section}
+                    </span>
+                    <div>
+                      {isPending ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                          ● Choose an option
+                        </span>
+                      ) : isAccepted ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                          ✓ Tailored Applied
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30">
+                          ✓ Original Kept
+                        </span>
+                      )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleSuggestion(sug.id, isAccepted ? "rejected" : "accepted")}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                        isAccepted
-                          ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                          : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      {isAccepted ? "✓ Accepted" : "+ Accept"}
-                    </button>
                   </div>
 
-                  <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
-                    {sug.suggestedText}
-                  </p>
+                  {/* Symmetrical Side-by-Side Comparison */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    {/* Card 1: Original */}
+                    <div
+                      onClick={() => handleToggleSuggestion(sug.id, "rejected")}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                        isRejected
+                          ? "bg-sky-500/10 dark:bg-sky-950/30 border-sky-500 ring-1 ring-sky-500/30 shadow-xs"
+                          : isAccepted
+                          ? "bg-gray-50/50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-60 hover:opacity-100"
+                          : "bg-gray-50/70 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700/80 hover:border-gray-400"
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
+                          Original (Before)
+                        </span>
+                        <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-normal">
+                          {sug.originalText.replace(/^[-*•–—]\s*/, "")}
+                        </p>
+                      </div>
+                      <div className="pt-2.5 mt-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleSuggestion(sug.id, "rejected");
+                          }}
+                          className={`w-full py-1.5 px-3 text-xs font-bold rounded-lg border transition-all ${
+                            isRejected
+                              ? "bg-sky-600 text-white border-sky-600 shadow-xs"
+                              : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          {isRejected ? "✓ Keeping Original" : "Keep Original"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Card 2: Tailored Enhancement */}
+                    <div
+                      onClick={() => handleToggleSuggestion(sug.id, "accepted")}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                        isAccepted
+                          ? "bg-emerald-500/10 dark:bg-emerald-950/30 border-emerald-500 ring-1 ring-emerald-500/30 shadow-xs"
+                          : isRejected
+                          ? "bg-gray-50/50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-60 hover:opacity-100"
+                          : "bg-emerald-500/[0.04] dark:bg-emerald-950/20 border-emerald-500/30 hover:border-emerald-500/70"
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">
+                          Tailored (After)
+                        </span>
+                        <p className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed font-normal">
+                          {renderHighlightedKeywords(sug.suggestedText.replace(/^[-*•–—]\s*/, ""), sug.keywords)}
+                        </p>
+                      </div>
+                      <div className="pt-2.5 mt-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleSuggestion(sug.id, "accepted");
+                          }}
+                          className={`w-full py-1.5 px-3 text-xs font-bold rounded-lg border transition-all ${
+                            isAccepted
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                              : "bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-600/20"
+                          }`}
+                        >
+                          {isAccepted ? "✓ Tailored Accepted" : "Accept Tailored"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   {sug.reason && (
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                      💡 {sug.reason}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 italic pt-1">
+                      💡 <span className="font-medium text-gray-700 dark:text-gray-300">Why this helps:</span> {sug.reason}
                     </p>
                   )}
                 </div>

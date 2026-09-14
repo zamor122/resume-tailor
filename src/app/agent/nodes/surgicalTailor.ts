@@ -117,7 +117,7 @@ export async function surgicalTailorNode(
           reason: `Reframed summary to highlight target role competencies, core tech stack, and leadership scope`,
           keywords: topKeywords,
           category: "summary",
-          status: "accepted",
+          status: "pending",
         });
       }
     } else if (r.type === "bullets" && r.index !== undefined) {

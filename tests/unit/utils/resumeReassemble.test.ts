@@ -112,4 +112,63 @@ JavaScript, TypeScript, React, Node.js, PostgreSQL, AWS, Docker
       expect(acmeGroup?.originalContent.toLowerCase()).toContain("built and maintained react");
     });
   });
+
+  describe("EARS - User-Driven Suggestion Application Lifecycle", () => {
+    it("deriveSuggestionsFromDiff initializes all suggestions with status 'pending'", () => {
+      const suggestions = deriveSuggestionsFromDiff(sampleOriginal, sampleTailored);
+      expect(suggestions.length).toBeGreaterThan(0);
+      suggestions.forEach((sug) => {
+        expect(sug.status).toBe("pending");
+      });
+    });
+
+    it("applySuggestionsToOriginal leaves original text unchanged when status is 'pending' or 'rejected'", () => {
+      const orig = "Senior Engineer\n- Built React UI for 100 users.";
+      const pendingSug: ResumeSuggestion = {
+        id: "sug-p",
+        section: "Experience",
+        originalText: "Built React UI for 100 users.",
+        suggestedText: "Architected enterprise React UI for 100k users.",
+        reason: "Scale",
+        keywords: ["React"],
+        status: "pending",
+      };
+      const rejectedSug: ResumeSuggestion = {
+        id: "sug-r",
+        section: "Experience",
+        originalText: "Built React UI for 100 users.",
+        suggestedText: "Architected enterprise React UI for 100k users.",
+        reason: "Scale",
+        keywords: ["React"],
+        status: "rejected",
+      };
+
+      // When pending, original text must be preserved
+      const pendingResult = applySuggestionsToOriginal(orig, [pendingSug]);
+      expect(pendingResult).toBe(orig);
+      expect(pendingResult).not.toContain("Architected enterprise React UI");
+
+      // When rejected, original text must be preserved
+      const rejectedResult = applySuggestionsToOriginal(orig, [rejectedSug]);
+      expect(rejectedResult).toBe(orig);
+    });
+
+    it("applySuggestionsToOriginal replaces original text ONLY when status is 'accepted'", () => {
+      const orig = "Senior Engineer\n- Built React UI for 100 users.";
+      const acceptedSug: ResumeSuggestion = {
+        id: "sug-a",
+        section: "Experience",
+        originalText: "Built React UI for 100 users.",
+        suggestedText: "Architected enterprise React UI for 100k users.",
+        reason: "Scale",
+        keywords: ["React"],
+        status: "accepted",
+      };
+
+      const result = applySuggestionsToOriginal(orig, [acceptedSug]);
+      expect(result).toContain("Architected enterprise React UI for 100k users.");
+      expect(result).not.toContain("Built React UI for 100 users.");
+    });
+  });
 });
+

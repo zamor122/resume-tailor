@@ -470,7 +470,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       const rawText = extractTextContent(children);
       const match = isSplit ? findMatchingSuggestion(rawText) : null;
       const isActive = match && match.suggestion.id === activeSuggestionId;
-      const isAccepted = match ? match.suggestion.status !== "rejected" : false;
+      const isAccepted = match ? match.suggestion.status === "accepted" : false;
 
       if (match && isSplit) {
         return (
@@ -546,7 +546,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       const rawText = extractTextContent(children);
       const match = isSplit ? findMatchingSuggestion(rawText) : null;
       const isActive = match && match.suggestion.id === activeSuggestionId;
-      const isAccepted = match ? match.suggestion.status !== "rejected" : false;
+      const isAccepted = match ? match.suggestion.status === "accepted" : false;
 
       if (match && isSplit) {
         return (

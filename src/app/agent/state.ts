@@ -53,7 +53,7 @@ export interface ResumeSuggestion {
   reason: string;
   keywords: string[];
   category?: "keyword" | "metric" | "summary" | "action_verb" | "streamline";
-  status?: "accepted" | "rejected";
+  status?: "pending" | "accepted" | "rejected";
   jobIndex?: number;
   bulletIndex?: number;
 }

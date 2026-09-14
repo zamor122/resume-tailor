@@ -95,7 +95,7 @@ export function parseChunkBulletsResponse(params: {
               : "Targeted ATS keyword alignment and active leadership voice"),
           keywords: matchedKw,
           category: hasMetric ? "metric" : matchedKw.length > 0 ? "keyword" : "action_verb",
-          status: "accepted",
+          status: "pending",
           jobIndex,
           bulletIndex: idx,
         });
@@ -145,7 +145,7 @@ export function parseChunkBulletsResponse(params: {
           : "Targeted ATS keyword alignment and active leadership voice",
         keywords: matchedKw,
         category: hasMetric ? "metric" : matchedKw.length > 0 ? "keyword" : "action_verb",
-        status: "accepted",
+        status: "pending",
         jobIndex,
         bulletIndex: idx,
       });

@@ -17,8 +17,8 @@ export function applySuggestionsToOriginal(
   let currentText = originalResume;
 
   for (const sug of suggestions) {
-    // Only apply if accepted (default to accepted if status not explicitly rejected)
-    if (sug.status === "rejected") continue;
+    // Only apply if explicitly accepted by the user
+    if (sug.status !== "accepted") continue;
     if (!sug.originalText || !sug.suggestedText) continue;
 
     const target = sug.originalText.trim();
@@ -160,7 +160,7 @@ export function deriveSuggestionsFromDiff(
         reason: "Holistic career alignment and leadership scope",
         keywords: [],
         category: "summary",
-        status: "accepted",
+        status: "pending",
       });
     }
 
@@ -245,7 +245,7 @@ export function deriveSuggestionsFromDiff(
             : "Targeted keyword and leadership action phrasing",
           keywords: [],
           category: hasMetric ? "metric" : "keyword",
-          status: "accepted",
+          status: "pending",
           jobIndex: jobIdx,
           bulletIndex: bulletIdx,
         });
@@ -314,7 +314,7 @@ export function deriveSuggestionsFromDiff(
         : "Targeted keyword and leadership action phrasing",
       keywords: [],
       category: currentSection.toLowerCase().includes("summary") ? "summary" : hasMetric ? "metric" : "keyword",
-      status: "accepted",
+      status: "pending",
     });
   });
 
