@@ -153,7 +153,35 @@ async function runHumanizeStream(params: {
       }
     }
 
-    if (!completeData) throw new Error("No result received from tailoring stream");
+    // Process any remaining data in the buffer after stream closed
+    if (!completeData && buffer.trim()) {
+      const remainingLines = buffer.split("\n");
+      for (const line of remainingLines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const parsed = JSON.parse(line.slice(6).trim());
+            if (parsed.tailoredResume) {
+              completeData = parsed;
+            }
+            if (parsed.error) {
+              throw new Error(parsed.error);
+            }
+          } catch (e) {
+            if (e instanceof Error && e.message !== "Failed to tailor resume") {
+              if (completeData) break;
+              throw e;
+            }
+          }
+        }
+      }
+    }
+
+    if (!completeData) {
+      if (controller.signal.aborted) {
+        throw new Error("Request timed out. Please try again with a shorter resume or job description.");
+      }
+      throw new Error("No result received from tailoring stream");
+    }
 
     return {
       originalResume: resume,

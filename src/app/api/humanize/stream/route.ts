@@ -181,20 +181,22 @@ export async function POST(req: NextRequest) {
 
         const tailoredResume = agentResult.finalResumeText || resume;
 
-        // Stream sections
-        const sections = tailoredResume.split(/\n(?=#|\n)/);
-        sections.forEach((section: string, index: number) => {
-          if (section.trim()) {
-            if (streamClosed) return;
-            streamClosed = !sendSSE(controller, "section", {
-              index: index + 1,
-              total: sections.length,
-              content: section.trim(),
-              sectionName: section.split("\n")[0].replace(/^#+\s*/, ""),
-            });
-          }
-        });
-        if (streamClosed) return;
+        // Stream sections (best-effort progressive rendering)
+        try {
+          const sections = tailoredResume.split(/\n(?=#|\n)/);
+          sections.forEach((section: string, index: number) => {
+            if (section.trim() && !streamClosed) {
+              sendSSE(controller, "section", {
+                index: index + 1,
+                total: sections.length,
+                content: section.trim(),
+                sectionName: section.split("\n")[0].replace(/^#+\s*/, ""),
+              });
+            }
+          });
+        } catch (e) {
+          console.warn("[Stream API] Section progressive streaming error (continuing to complete payload):", e);
+        }
 
         // Obfuscate for unauthorized / teaser view
         const obfuscationResult = obfuscateResume(resume, tailoredResume);

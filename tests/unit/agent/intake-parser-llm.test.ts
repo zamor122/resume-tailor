@@ -53,7 +53,7 @@ Ticketmaster | LiveNation Technical Manager — AI Innovation Pipeline | April 2
       modelUsed: "mock-gemini",
     });
 
-    const result = await intakeParserNode(baseState);
+    const result = await intakeParserNode({ ...baseState, useLLMParser: true } as any);
 
     expect(result.errors).toBeUndefined();
     expect(result.resumeAST).toBeDefined();
@@ -64,6 +64,16 @@ Ticketmaster | LiveNation Technical Manager — AI Innovation Pipeline | April 2
     expect(result.resumeAST?.experience[0].dates).toBe("April 2026 – Present");
     expect(result.resumeAST?.experience[0].description).toContain("AI-SDLC Framework");
     expect(result.logs?.[0]).toContain("[intakeParser] Resume parsed into AST (1 jobs, summary: yes)");
+  });
+
+  it("routes to fast deterministic parser by default when experience is extractable", async () => {
+    const result = await intakeParserNode(baseState);
+
+    expect(result.errors).toBeUndefined();
+    expect(result.resumeAST).toBeDefined();
+    expect(result.resumeAST?.experience.length).toBeGreaterThan(0);
+    // Verify generateWithFallback was NEVER called (0 LLM overhead)
+    expect(generateWithFallback).not.toHaveBeenCalled();
   });
 
   it("guards against prompt injection: treats instructions inside untrusted resume as passive text", async () => {
