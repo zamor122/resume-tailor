@@ -67,4 +67,38 @@ describe("Universal Seniority & Success Pillar Classifier (REQ-UBI-01, REQ-EVT-0
     expect(engPillars).toContain("System Reliability & Architecture Scale");
     expect(engPillars).toContain("Delivery Velocity & Automation");
   });
+
+  it("resolves title collisions for sales IC and support roles (Account Executive, Executive Assistant)", () => {
+    expect(classifySeniorityTier("Account Executive", "Manage mid-market accounts and quota")).toBe("mid");
+    expect(classifySeniorityTier("Senior Account Executive", "Drive enterprise accounts")).toBe("senior");
+    expect(classifySeniorityTier("Executive Assistant", "Coordinate executive calendars and travel")).toBe("entry");
+  });
+
+  it("differentiates non-tech staff titles from tech senior staff titles", () => {
+    expect(classifySeniorityTier("Staff Nurse", "Provide bedside care in telemetry")).toBe("mid");
+    expect(classifySeniorityTier("Staff Accountant", "Prepare quarterly balance sheets")).toBe("mid");
+    expect(classifySeniorityTier("Staff Writer", "Publish weekly newsletter articles")).toBe("mid");
+    expect(classifySeniorityTier("Staff Assistant", "Provide front desk support")).toBe("entry");
+    expect(classifySeniorityTier("Staff Software Engineer", "Set technical direction for cloud platform")).toBe("senior");
+  });
+
+  it("pads pillars up to at least 2 when JD matches only 1 category (REQ-EVT-01 2-4 pillar constraint)", () => {
+    const singleMatchJd = "Responsible for managing departmental operating budgets and financial variance analysis.";
+    const pillars = extractSuccessPillars(singleMatchJd);
+    expect(pillars.length).toBeGreaterThanOrEqual(2);
+    expect(pillars.length).toBeLessThanOrEqual(4);
+    expect(pillars).toContain("Fiscal Governance & Margin Optimization");
+    expect(pillars.some(p => /operational execution|cross-functional collaboration|stakeholder delivery/i.test(p))).toBe(true);
+  });
+
+  it("distinguishes clinical compliance from general regulatory compliance", () => {
+    const clinicalJd = "Maintain clinical compliance with JCAHO and HIPAA hospital standards.";
+    const clinicalPillars = extractSuccessPillars(clinicalJd);
+    expect(clinicalPillars).toContain("Regulatory Standards & Clinical Compliance");
+
+    const financialJd = "Ensure regulatory compliance with SEC guidelines and audit standards.";
+    const financialPillars = extractSuccessPillars(financialJd);
+    expect(financialPillars).toContain("Regulatory Compliance & Quality Standards");
+    expect(financialPillars).not.toContain("Regulatory Standards & Clinical Compliance");
+  });
 });

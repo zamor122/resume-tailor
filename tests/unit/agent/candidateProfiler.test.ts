@@ -55,6 +55,31 @@ describe("candidateProfilerNode (REQ-UBI-01, REQ-EVT-01)", () => {
     expect(result.jobTitle).toBe("Director of Clinical Operations");
   });
 
+  it("prioritizes state.jobTitle over candidate past title from resume for target role leveling", async () => {
+    vi.mocked(generateWithFallback).mockResolvedValueOnce({
+      text: JSON.stringify({
+        primaryTitle: "Junior Analyst",
+        seniorityLevel: "entry",
+        topSkills: ["Excel", "Data Analysis"],
+        domain: "Finance",
+        searchQuery: "Junior Analyst jobs",
+      }),
+      modelUsed: "cerebras-llama3.3-70b",
+    });
+
+    const result = await candidateProfilerNode({
+      ...baseState,
+      jobTitle: "VP of Finance",
+      rawJobDescription: "Drive global enterprise revenue and fiscal governance.",
+    });
+
+    // state.jobTitle ("VP of Finance") must take precedence over candidate's historical "Junior Analyst"
+    expect(result.jobTitle).toBe("VP of Finance");
+    expect(result.candidateProfile?.primaryTitle).toBe("VP of Finance");
+    expect(result.candidateProfile?.seniorityTier).toBe("executive");
+    expect(result.candidateProfile?.seniorityLevel).toBe("executive");
+  });
+
   it("falls back gracefully when LLM generation fails, retaining seniority tier and career arc", async () => {
     vi.mocked(generateWithFallback).mockRejectedValueOnce(new Error("API timeout"));
 

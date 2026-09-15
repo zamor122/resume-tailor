@@ -39,30 +39,31 @@ export async function candidateProfilerNode(
 
     const parsedProfile = parseJSONFromText<CandidateProfile>(result.text);
 
-    const primaryTitle = parsedProfile?.primaryTitle || state.jobTitle || "Professional";
-    const seniorityTier: SeniorityTier = classifySeniorityTier(primaryTitle, jd);
-    const successPillars = extractSuccessPillars(jd, primaryTitle);
+    // Prioritize target jobTitle over candidate's historical resume title for role classification
+    const targetTitle = state.jobTitle || parsedProfile?.primaryTitle || "Professional";
+    const seniorityTier: SeniorityTier = classifySeniorityTier(targetTitle, jd);
+    const successPillars = extractSuccessPillars(jd, targetTitle);
     const careerArc = buildCareerArcContext(state.resumeAST?.experience, parsedProfile?.domain);
 
     const profile: CandidateProfile = {
-      primaryTitle,
+      primaryTitle: targetTitle,
       seniorityLevel: seniorityTier,
       seniorityTier,
       topSkills: parsedProfile?.topSkills || [],
       domain: parsedProfile?.domain || "General",
-      searchQuery: parsedProfile?.searchQuery || `${primaryTitle} job opening`,
+      searchQuery: parsedProfile?.searchQuery || `${targetTitle} job opening`,
       successPillars,
       careerArc,
     };
 
     return {
       candidateProfile: profile,
-      jobTitle: parsedProfile?.primaryTitle || state.jobTitle,
+      jobTitle: state.jobTitle || parsedProfile?.primaryTitle,
       seniorityTier,
       successPillars,
       careerArc,
       logs: [
-        `[candidateProfiler] Profile extracted: ${profile.primaryTitle} (${profile.seniorityLevel})`,
+        `[candidateProfiler] Profile extracted: ${targetTitle} (${profile.seniorityLevel})`,
       ],
     };
   } catch (error) {
@@ -83,6 +84,7 @@ export async function candidateProfilerNode(
         successPillars,
         careerArc,
       },
+      jobTitle: state.jobTitle,
       seniorityTier,
       successPillars,
       careerArc,

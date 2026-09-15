@@ -9,11 +9,14 @@ export function classifySeniorityTier(title: string = "", jd: string = ""): Seni
   const safeJd = (jd || "").slice(0, 1500).toLowerCase();
   const combined = `${safeTitle} ${safeJd}`.trim();
 
+  // Exclude sales IC titles ("account executive") and administrative support ("executive assistant")
+  const isExcludedExecutive = /\b(account executive|executive assistant)\b/i.test(safeTitle);
+
   // 1. Executive / Director / VP / Head / Principal
-  if (/\b(vp|vice president|c-level|chief|director|head of|executive|partner|general manager)\b/i.test(safeTitle)) {
+  if (!isExcludedExecutive && /\b(vp|vice president|c-level|chief|director|head of|executive|partner|general manager)\b/i.test(safeTitle)) {
     return "executive";
   }
-  if (/\b(executive leadership|p&l responsibility|organizational strategy|board of directors)\b/i.test(combined)) {
+  if (!isExcludedExecutive && /\b(executive leadership|p&l responsibility|organizational strategy|board of directors)\b/i.test(combined)) {
     return "executive";
   }
 
@@ -26,7 +29,14 @@ export function classifySeniorityTier(title: string = "", jd: string = ""): Seni
   }
 
   // 3. Senior
-  if (/\b(senior|sr\.?|staff|lead specialist|advanced)\b/i.test(safeTitle)) {
+  // Exclude non-tech "staff" titles (e.g. staff nurse, staff accountant, staff writer, staff assistant)
+  // where "staff" denotes a general employee / IC role rather than tech seniority
+  const isNonTechStaff = /\bstaff\s+(nurse|rn|accountant|writer|assistant|attorney|pharmacist|therapist|educator)\b/i.test(safeTitle);
+
+  if (/\b(senior|sr\.?|advanced)\b/i.test(safeTitle)) {
+    return "senior";
+  }
+  if (!isNonTechStaff && /\bstaff\b/i.test(safeTitle)) {
     return "senior";
   }
   if (/\b(senior-level|strategic decision|cross-functional initiative|mentorship)\b/i.test(combined)) {
@@ -42,7 +52,7 @@ export function classifySeniorityTier(title: string = "", jd: string = ""): Seni
 }
 
 /**
- * Extracts 2 to 4 domain-agnostic success pillars from the job description text (REQ-UBI-01).
+ * Extracts 2 to 4 domain-agnostic success pillars from the job description text (REQ-UBI-01, REQ-EVT-01).
  * Covers healthcare, sales, finance, operations, engineering, and general management.
  */
 export function extractSuccessPillars(jd: string = "", title?: string): string[] {
@@ -57,8 +67,15 @@ export function extractSuccessPillars(jd: string = "", title?: string): string[]
   if (/\b(patient care|clinical|triage|nursing|healthcare|acuity)\b/i.test(jdLower)) {
     pillars.push("Patient Care & Clinical Excellence");
   }
-  if (/\b(compliance|jcaho|hipaa|regulatory|accreditation)\b/i.test(jdLower)) {
-    pillars.push("Regulatory Standards & Clinical Compliance");
+
+  // Compliance & Regulatory (distinguish clinical vs general/corporate)
+  if (/\b(compliance|jcaho|hipaa|regulatory|accreditation|audit standards)\b/i.test(jdLower)) {
+    const isClinical = /\b(clinical|patient care|hospital|nursing|healthcare|jcaho|hipaa|medical)\b/i.test(jdLower);
+    pillars.push(
+      isClinical
+        ? "Regulatory Standards & Clinical Compliance"
+        : "Regulatory Compliance & Quality Standards"
+    );
   }
 
   // Sales / GTM
@@ -85,8 +102,17 @@ export function extractSuccessPillars(jd: string = "", title?: string): string[]
     pillars.push("Delivery Velocity & Automation");
   }
 
-  if (pillars.length === 0) {
-    pillars.push("Core Operational Execution", "Cross-Functional Collaboration");
+  // Ensure REQ-EVT-01 2-4 pillar constraint: pad with universal fallbacks if < 2
+  const generalFallbacks = [
+    "Core Operational Execution",
+    "Cross-Functional Collaboration",
+    "Stakeholder Delivery",
+  ];
+  for (const fallback of generalFallbacks) {
+    if (pillars.length >= 2) break;
+    if (!pillars.includes(fallback)) {
+      pillars.push(fallback);
+    }
   }
 
   return pillars.slice(0, 4);
