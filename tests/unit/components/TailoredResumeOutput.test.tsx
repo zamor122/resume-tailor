@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import TailoredResumeOutput from "@/app/components/TailoredResumeOutput";
 import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
 
@@ -357,7 +357,7 @@ Go, Docker`;
     expect(exp1Section?.className).toContain("bg-cyan-500/10");
   });
 
-  it("only shows change controls and spotlight container for the single active change in document preview", () => {
+  it("renders clean, non-interactive paper-style canvas without embedded action buttons (REQ-UBI-03, REQ-STA-04)", () => {
     const multiSuggestions: ResumeSuggestion[] = [
       {
         id: "sug-1",
@@ -395,33 +395,30 @@ Go, Docker`;
       />
     );
 
-    // Initial state: Only sug-1 is active
+    // Initial state: Only sug-1 has active focus
     const activeHighlight1 = container.querySelector("#change-highlight-sug-1");
     expect(activeHighlight1).toBeInTheDocument();
-    expect(activeHighlight1).toHaveTextContent(/Change 1/i);
+    expect(activeHighlight1?.className).toContain("ring-cyan-500");
 
-    // sug-2 should NOT have a highlight container or buttons in document preview
+    // sug-2 should NOT have an active highlight container
     const inactiveHighlight2 = container.querySelector("#change-highlight-sug-2");
     expect(inactiveHighlight2).toBeNull();
 
-    // The document preview canvas should only have ONE set of change action buttons
+    // The document preview canvas should NOT contain embedded interactive buttons (REQ-UBI-03)
     const canvas = container.querySelector(".resume-prose");
-    const canvasAcceptButtons = canvas?.querySelectorAll("button");
-    // Only Accept Change and Keep Original for the single active change inside canvas
-    expect(canvasAcceptButtons?.length).toBe(2);
-    expect(canvasAcceptButtons?.[0]).toHaveTextContent("Accept Change");
-    expect(canvasAcceptButtons?.[0].className).toContain("bg-blue-600");
+    const canvasButtons = canvas?.querySelectorAll("button");
+    expect(canvasButtons?.length).toBe(0);
 
-    // Click the inactive second bullet text in canvas to inspect Change 2
+    // Click the inactive second bullet text in canvas to shift focus to Change 2
     const inactiveBullet = screen.getByText(/Developed and maintained campus portal used by 12,000 students/i);
     fireEvent.click(inactiveBullet);
 
-    // Now only sug-2 is active with container and buttons!
+    // Now only sug-2 is active
     expect(container.querySelector("#change-highlight-sug-2")).toBeInTheDocument();
     expect(container.querySelector("#change-highlight-sug-1")).toBeNull();
   });
 
-  it("transitions accept button in document preview to accepted when clicked", () => {
+  it("updates document preview text live when suggestions are accepted vs original (REQ-EVT-01, REQ-EVT-02, REQ-STA-01, REQ-STA-02)", () => {
     const singleSug: ResumeSuggestion[] = [
       {
         id: "sug-1",
@@ -451,18 +448,21 @@ Go, Docker`;
     );
 
     const canvas = container.querySelector(".resume-prose");
-    const acceptBtn = canvas?.querySelector("button");
-    expect(acceptBtn).toHaveTextContent("Accept Change");
-    expect(acceptBtn?.className).toContain("bg-blue-600");
+    expect(canvas).toBeInTheDocument();
 
-    // Click Accept Change
-    fireEvent.click(acceptBtn!);
+    // Initially with pending suggestion: Preview renders original text and shows original version in badge (REQ-STA-01, REQ-STA-05)
+    expect(within(canvas as HTMLElement).getByText(/Architected high-throughput microservices handling 50k RPS/i)).toBeInTheDocument();
+    expect(screen.getByTestId("live-sync-badge")).toHaveTextContent(/Original version/i);
+
+    // Accept change via reviewer panel (left side)
+    const reviewerAcceptBtn = screen.getByRole("button", { name: /Accept Change/i });
+    fireEvent.click(reviewerAcceptBtn);
 
     expect(onSuggestionsChange).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ id: "sug-1", status: "accepted" })])
     );
 
-    // Rerender with accepted status
+    // Rerender with accepted status: Preview updates live to tailored text and updates badge (REQ-EVT-01, REQ-STA-02, REQ-STA-05)
     const acceptedSug = [{ ...singleSug[0], status: "accepted" as const }];
     rerender(
       <TailoredResumeOutput
@@ -475,9 +475,93 @@ Go, Docker`;
       />
     );
 
-    const canvasAfter = container.querySelector(".resume-prose");
-    const acceptedBtnAfter = canvasAfter?.querySelector("button");
-    expect(acceptedBtnAfter).toHaveTextContent("✓ Accepted");
-    expect(acceptedBtnAfter?.className).toContain("bg-emerald-600");
+    const canvasAccepted = container.querySelector(".resume-prose");
+    expect(within(canvasAccepted as HTMLElement).getByText(/Spearheaded fault-tolerant microservices handling 100k RPS/i)).toBeInTheDocument();
+    expect(screen.getByTestId("live-sync-badge")).toHaveTextContent(/1 change applied/i);
+
+    // Rerender with rejected / kept original: Preview reverts back to original text (REQ-EVT-02, REQ-STA-03)
+    const rejectedSug = [{ ...singleSug[0], status: "rejected" as const }];
+    rerender(
+      <TailoredResumeOutput
+        newResume={sampleResume}
+        originalResume={sampleResume}
+        suggestions={rejectedSug}
+        sectionGroups={mockSectionGroups}
+        onSuggestionsChange={onSuggestionsChange}
+        loading={false}
+      />
+    );
+
+    const canvasRejected = container.querySelector(".resume-prose");
+    expect(within(canvasRejected as HTMLElement).getByText(/Architected high-throughput microservices handling 50k RPS/i)).toBeInTheDocument();
+    expect(screen.getByTestId("live-sync-badge")).toHaveTextContent(/Original version/i);
+  });
+
+  it("synchronizes document preview when external suggestions prop changes (REQ-EVT-04)", () => {
+    const initialSug: ResumeSuggestion[] = [
+      {
+        id: "sug-1",
+        section: "Google – Senior Software Engineer",
+        originalText: "Architected high-throughput microservices handling 50k RPS",
+        suggestedText: "Spearheaded fault-tolerant microservices handling 100k RPS",
+        reason: "Elevated metrics",
+        keywords: ["Fault-Tolerant"],
+        category: "metric",
+        status: "pending",
+        jobIndex: 0,
+        bulletIndex: 0,
+      },
+    ];
+
+    const { container, rerender } = render(
+      <TailoredResumeOutput
+        newResume={sampleResume}
+        originalResume={sampleResume}
+        suggestions={initialSug}
+        sectionGroups={mockSectionGroups}
+        loading={false}
+      />
+    );
+
+    const canvas = container.querySelector(".resume-prose") as HTMLElement;
+    expect(within(canvas).getByText(/Architected high-throughput microservices handling 50k RPS/i)).toBeInTheDocument();
+
+    // External suggestions update with accepted status
+    const updatedSug: ResumeSuggestion[] = [
+      {
+        ...initialSug[0],
+        status: "accepted",
+      },
+    ];
+
+    rerender(
+      <TailoredResumeOutput
+        newResume={sampleResume}
+        originalResume={sampleResume}
+        suggestions={updatedSug}
+        sectionGroups={mockSectionGroups}
+        loading={false}
+      />
+    );
+
+    const canvasUpdated = container.querySelector(".resume-prose") as HTMLElement;
+    expect(within(canvasUpdated).getByText(/Spearheaded fault-tolerant microservices handling 100k RPS/i)).toBeInTheDocument();
+    expect(screen.getByTestId("live-sync-badge")).toHaveTextContent(/1 change applied/i);
+  });
+
+  it("falls back to newResume when originalResume is absent (REQ-ERR-01)", () => {
+    const tailoredOnlyResume = `# Jane Doe
+## Experience
+- Spearheaded fault-tolerant microservices handling 100k RPS
+`;
+    const { container } = render(
+      <TailoredResumeOutput
+        newResume={tailoredOnlyResume}
+        loading={false}
+      />
+    );
+
+    const canvas = container.querySelector(".resume-prose") as HTMLElement;
+    expect(within(canvas).getByText(/Spearheaded fault-tolerant microservices handling 100k RPS/i)).toBeInTheDocument();
   });
 });

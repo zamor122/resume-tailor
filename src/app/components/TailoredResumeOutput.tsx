@@ -298,6 +298,24 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
 }) => {
   const [internalSuggestions, setInternalSuggestions] = useState<ResumeSuggestion[]>(suggestions || []);
 
+  useEffect(() => {
+    if (suggestions && suggestions.length > 0) {
+      const isDifferent =
+        suggestions.length !== internalSuggestions.length ||
+        suggestions.some(
+          (s, idx) =>
+            s.id !== internalSuggestions[idx]?.id ||
+            s.status !== internalSuggestions[idx]?.status ||
+            s.suggestedText !== internalSuggestions[idx]?.suggestedText
+        );
+      if (isDifferent) {
+        setInternalSuggestions(suggestions);
+      }
+    } else if (suggestions && suggestions.length === 0 && internalSuggestions.length > 0) {
+      setInternalSuggestions([]);
+    }
+  }, [suggestions, internalSuggestions]);
+
   const [internalActiveSectionId, setInternalActiveSectionId] = useState<string | null>(
     activeSectionId ?? null
   );
@@ -333,6 +351,9 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
 
   const effectiveSuggestions = internalSuggestions;
   const hasSuggestions = effectiveSuggestions && effectiveSuggestions.length > 0;
+  const acceptedCount = useMemo(() => {
+    return (effectiveSuggestions || []).filter((s) => s.status === "accepted").length;
+  }, [effectiveSuggestions]);
   const [viewLayout, setViewLayout] = useState<"cockpit" | "document">("cockpit");
   const [userToggledLayout, setUserToggledLayout] = useState(false);
   const [activeSuggestionId, setActiveSuggestionId] = useState<string | null>(
@@ -478,71 +499,20 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       const match = isSplit ? findMatchingSuggestion(rawText) : null;
       const isActive = match && match.suggestion.id === activeSuggestionId;
       const isAccepted = match ? match.suggestion.status === "accepted" : false;
-      const isRejected = match ? match.suggestion.status === "rejected" : false;
 
       if (match && isSplit) {
-        if (isActive) {
-          return (
-            <div
-              id={`change-highlight-${match.suggestion.id}`}
-              className="my-2 p-3 rounded-xl transition-all duration-300 ring-2 ring-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/40 border border-cyan-500/40 shadow-md"
-            >
-              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                  Change {match.index + 1} ({match.suggestion.section})
-                </span>
-                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const nextStatus: "pending" | "accepted" = isAccepted ? "pending" : "accepted";
-                      const updated = effectiveSuggestions.map((s) =>
-                        s.id === match.suggestion.id ? { ...s, status: nextStatus } : s
-                      );
-                      handleSuggestionsUpdate(updated);
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm active:scale-95 ${
-                      isAccepted
-                        ? "bg-emerald-600 text-white ring-2 ring-emerald-400/30"
-                        : "bg-blue-600 hover:bg-blue-500 text-white"
-                    }`}
-                  >
-                    {isAccepted ? "✓ Accepted" : "Accept Change"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const nextStatus: "pending" | "rejected" = isRejected ? "pending" : "rejected";
-                      const updated = effectiveSuggestions.map((s) =>
-                        s.id === match.suggestion.id ? { ...s, status: nextStatus } : s
-                      );
-                      handleSuggestionsUpdate(updated);
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 active:scale-95 ${
-                      isRejected
-                        ? "bg-rose-600 text-white ring-2 ring-rose-400/30"
-                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    }`}
-                  >
-                    {isRejected ? "✕ Kept Original" : "Keep Original"}
-                  </button>
-                </div>
-              </div>
-              <p className="text-sm leading-relaxed text-gray-900 dark:text-gray-100 !my-0 whitespace-pre-line font-medium">
-                {children}
-              </p>
-            </div>
-          );
-        }
+        const highlightClasses = isActive
+          ? "bg-cyan-500/10 dark:bg-cyan-950/40 ring-1 ring-cyan-500/40 rounded-lg -mx-2 px-2 py-1 font-medium text-gray-900 dark:text-gray-100 shadow-xs"
+          : isAccepted
+          ? "bg-emerald-500/5 dark:bg-emerald-950/20 border-l-2 border-emerald-500 rounded-r-md -mx-2 pl-2 pr-2 py-0.5 text-gray-900 dark:text-gray-100"
+          : "hover:bg-cyan-500/5 rounded -mx-1 px-1";
 
         return (
           <p
+            id={isActive ? `change-highlight-${match.suggestion.id}` : undefined}
             onClick={() => setActiveSuggestionId(match.suggestion.id)}
-            className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 !my-1.5 whitespace-pre-line cursor-pointer hover:bg-cyan-500/10 rounded px-1.5 -mx-1.5 transition-colors"
-            title={`Click to view Change ${match.index + 1}`}
+            className={`text-sm leading-relaxed text-gray-700 dark:text-gray-300 !my-1.5 whitespace-pre-line cursor-pointer transition-all duration-200 ${highlightClasses}`}
+            title={`Change ${match.index + 1}${isAccepted ? " (Accepted)" : ""}`}
           >
             {children}
           </p>
@@ -565,7 +535,6 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       const match = isSplit ? findMatchingSuggestion(rawText) : null;
       const isActive = match && match.suggestion.id === activeSuggestionId;
       const isAccepted = match ? match.suggestion.status === "accepted" : false;
-      const isRejected = match ? match.suggestion.status === "rejected" : false;
 
       const innerContent = (
         <InsideListContext.Provider value={true}>
@@ -574,66 +543,18 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       );
 
       if (match && isSplit) {
-        if (isActive) {
-          return (
-            <li
-              id={`change-highlight-${match.suggestion.id}`}
-              className="leading-relaxed pl-0.5 transition-all duration-300 list-none -ml-5 my-2 p-3 rounded-xl ring-2 ring-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/40 border border-cyan-500/50 shadow-md font-medium text-gray-900 dark:text-white"
-            >
-              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                  Change {match.index + 1}
-                </span>
-                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const nextStatus: "pending" | "accepted" = isAccepted ? "pending" : "accepted";
-                      const updated = effectiveSuggestions.map((s) =>
-                        s.id === match.suggestion.id ? { ...s, status: nextStatus } : s
-                      );
-                      handleSuggestionsUpdate(updated);
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm active:scale-95 ${
-                      isAccepted
-                        ? "bg-emerald-600 text-white ring-2 ring-emerald-400/30"
-                        : "bg-blue-600 hover:bg-blue-500 text-white"
-                    }`}
-                  >
-                    {isAccepted ? "✓ Accepted" : "Accept Change"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const nextStatus: "pending" | "rejected" = isRejected ? "pending" : "rejected";
-                      const updated = effectiveSuggestions.map((s) =>
-                        s.id === match.suggestion.id ? { ...s, status: nextStatus } : s
-                      );
-                      handleSuggestionsUpdate(updated);
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 active:scale-95 ${
-                      isRejected
-                        ? "bg-rose-600 text-white ring-2 ring-rose-400/30"
-                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    }`}
-                  >
-                    {isRejected ? "✕ Kept Original" : "Keep Original"}
-                  </button>
-                </div>
-              </div>
-              <div>• {innerContent}</div>
-            </li>
-          );
-        }
+        const highlightClasses = isActive
+          ? "bg-cyan-500/10 dark:bg-cyan-950/40 ring-1 ring-cyan-500/40 rounded-lg -mx-2 px-2 py-1 font-medium text-gray-900 dark:text-gray-100 shadow-xs"
+          : isAccepted
+          ? "bg-emerald-500/5 dark:bg-emerald-950/20 border-l-2 border-emerald-500 rounded-r-md -mx-2 pl-2 pr-2 py-0.5 text-gray-900 dark:text-gray-100"
+          : "hover:bg-cyan-500/5 rounded -mx-1 px-1";
 
         return (
           <li
+            id={isActive ? `change-highlight-${match.suggestion.id}` : undefined}
             onClick={() => setActiveSuggestionId(match.suggestion.id)}
-            className="leading-relaxed cursor-pointer hover:bg-cyan-500/10 rounded px-1 -mx-1 transition-colors"
-            title={`Click to view Change ${match.index + 1}`}
+            className={`leading-relaxed cursor-pointer transition-all duration-200 ${highlightClasses}`}
+            title={`Change ${match.index + 1}${isAccepted ? " (Accepted)" : ""}`}
           >
             {innerContent}
           </li>
@@ -770,19 +691,30 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
           </div>
 
           {/* Right Live Resume Canvas */}
-          <div className="xl:col-span-7 bg-gray-50/70 dark:bg-gray-950/70 p-4 sm:p-6 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-inner">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-200 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400">
-              <span className="font-semibold flex items-center gap-1.5 text-gray-800 dark:text-gray-200">
-                <span>📄 Live Document Preview</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-                  Interactive
+          <div className="xl:col-span-7 flex flex-col">
+            <div className="flex items-center justify-between pb-3 mb-3 px-1 border-b border-gray-200/80 dark:border-gray-800 text-xs">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+                  <span>📄</span>
+                  <span>Live Document Preview</span>
                 </span>
-              </span>
-              <span className="text-[11px] text-gray-500">
-                Click any highlighted bullet to inspect
+                <span
+                  data-testid="live-sync-badge"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {acceptedCount > 0
+                    ? `${acceptedCount} change${acceptedCount === 1 ? "" : "s"} applied`
+                    : "Original version"}
+                </span>
+              </div>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                Live sync
               </span>
             </div>
-            {renderMarkdownCanvas(true)}
+            <div className="bg-white dark:bg-gray-900/95 p-6 sm:p-10 rounded-2xl border border-gray-200/90 dark:border-gray-800 shadow-xl ring-1 ring-black/5 dark:ring-white/5 transition-all">
+              {renderMarkdownCanvas(true)}
+            </div>
           </div>
         </div>
       ) : (
