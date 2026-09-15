@@ -47,19 +47,20 @@ describe("Bullet Planner Node", () => {
     expect(totalBullets).toBeLessThanOrEqual(2);
   });
 
-  test("targeted intensity selects 3-5 bullets and updates summary", () => {
+  test("targeted intensity targets all bullets for every job entry with recency tiers and updates summary", () => {
     const state: AgentState = {
       ...sampleState,
       preferences: { ...DEFAULT_PREFERENCES, intensity: "targeted" },
     };
     const result = bulletPlannerNode(state);
     expect(result.bulletPlan?.summaryChange).toBe(true);
-    const totalBullets = (result.bulletPlan?.jobBulletChanges || []).reduce(
-      (sum, c) => sum + (c.bulletIndices === "all" ? 99 : c.bulletIndices.length),
-      0
-    );
-    expect(totalBullets).toBeGreaterThan(0);
-    expect(totalBullets).toBeLessThanOrEqual(5);
+    expect(result.bulletPlan?.jobBulletChanges.length).toBe(2);
+    expect(result.bulletPlan?.jobBulletChanges[0].bulletIndices).toBe("all");
+    expect(result.bulletPlan?.jobBulletChanges[1].bulletIndices).toBe("all");
+    expect(result.bulletPlan?.jobBulletChanges[0].recencyTier).toBe("recent_deep");
+    expect(result.bulletPlan?.jobBulletChanges[1].recencyTier).toBe("recent_deep");
+    expect(result.bulletPlan?.jobAudits?.[0].recencyTier).toBe("recent_deep");
+    expect(result.bulletPlan?.jobAudits?.[1].recencyTier).toBe("recent_deep");
   });
 
   test("overhaul intensity targets all bullets for every job entry", () => {
@@ -72,5 +73,48 @@ describe("Bullet Planner Node", () => {
     expect(result.bulletPlan?.jobBulletChanges.length).toBe(2);
     expect(result.bulletPlan?.jobBulletChanges[0].bulletIndices).toBe("all");
     expect(result.bulletPlan?.jobBulletChanges[1].bulletIndices).toBe("all");
+  });
+
+  test("processes all jobs with recency-graduated depth across any resume length (REQ-EVT-02, REQ-STA-01)", () => {
+    const mockExp = [
+      { company: "Alpha Health", description: "- Led ICU nursing team\n- Cut readmissions 12%" },
+      { company: "Beta Clinic", description: "- Provided acute care\n- Mentored staff" },
+      { company: "Gamma Center", description: "- Administered medication\n- Maintained charts" },
+    ];
+    const state: any = {
+      preferences: { intensity: "targeted", sectionsToModify: { summary: true, experience: true, skills: true } },
+      resumeAST: { experience: mockExp },
+      sortedMissingKeywords: ["Compliance", "JCAHO", "Triage"],
+    };
+
+    const { bulletPlan } = bulletPlannerNode(state);
+    expect(bulletPlan).toBeDefined();
+    expect(bulletPlan?.jobBulletChanges.length).toBe(3); // Every job chunk is processed!
+    expect(bulletPlan?.jobAudits?.[0].recencyTier).toBe("recent_deep");
+    expect(bulletPlan?.jobAudits?.[1].recencyTier).toBe("recent_deep");
+    expect(bulletPlan?.jobAudits?.[2].recencyTier).toBe("mid_career");
+  });
+
+  test("assigns foundational recency tier for jobs at index 4 and beyond", () => {
+    const mockExp = [
+      { company: "Job 0", description: "- Bullet 1" },
+      { company: "Job 1", description: "- Bullet 2" },
+      { company: "Job 2", description: "- Bullet 3" },
+      { company: "Job 3", description: "- Bullet 4" },
+      { company: "Job 4", description: "- Bullet 5" },
+    ];
+    const state: any = {
+      preferences: { intensity: "targeted", sectionsToModify: { summary: true, experience: true, skills: true } },
+      resumeAST: { experience: mockExp },
+      sortedMissingKeywords: ["Keyword"],
+    };
+
+    const { bulletPlan } = bulletPlannerNode(state);
+    expect(bulletPlan?.jobBulletChanges.length).toBe(5);
+    expect(bulletPlan?.jobAudits?.[0].recencyTier).toBe("recent_deep");
+    expect(bulletPlan?.jobAudits?.[1].recencyTier).toBe("recent_deep");
+    expect(bulletPlan?.jobAudits?.[2].recencyTier).toBe("mid_career");
+    expect(bulletPlan?.jobAudits?.[3].recencyTier).toBe("mid_career");
+    expect(bulletPlan?.jobAudits?.[4].recencyTier).toBe("foundational");
   });
 });

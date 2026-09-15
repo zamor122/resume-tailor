@@ -22,20 +22,26 @@ export interface DiscoveredJob {
   snippet: string;
 }
 
+export type RecencyTier = "recent_deep" | "mid_career" | "foundational";
+
 export interface JobAudit {
   jobIndex: number;
   hasChanges: boolean;
   bulletIndices: number[] | 'all';
   auditRationale: string;
+  recencyTier?: RecencyTier;
+}
+
+export interface JobBulletChange {
+  jobIndex: number;
+  bulletIndices: number[] | 'all';
+  reason: string;
+  recencyTier?: RecencyTier;
 }
 
 export interface BulletPlan {
   summaryChange: boolean;
-  jobBulletChanges: Array<{
-    jobIndex: number;
-    bulletIndices: number[] | 'all';
-    reason: string;
-  }>;
+  jobBulletChanges: JobBulletChange[];
   jobAudits?: JobAudit[];
   skillsChange: boolean;
 }

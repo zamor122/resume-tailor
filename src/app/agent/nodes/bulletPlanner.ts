@@ -1,4 +1,27 @@
-import type { AgentState, BulletPlan, JobAudit } from "../state";
+import type { AgentState, BulletPlan, JobAudit, JobBulletChange, RecencyTier } from "../state";
+
+export function getRecencyTier(jobIndex: number): RecencyTier {
+  if (jobIndex === 0 || jobIndex === 1) {
+    return "recent_deep";
+  }
+  if (jobIndex === 2 || jobIndex === 3) {
+    return "mid_career";
+  }
+  return "foundational";
+}
+
+export function getRecencyRationale(tier: RecencyTier, jobIndex: number): string {
+  switch (tier) {
+    case "recent_deep":
+      return jobIndex === 0
+        ? "Target role leadership, strategic scope, and detailed outcomes"
+        : "Recent tenure strategic ownership and high-impact delivery";
+    case "mid_career":
+      return "Mid-career transferable competencies and proven milestones";
+    case "foundational":
+      return "Foundational career authenticity and core execution baseline";
+  }
+}
 
 export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
   const { preferences, resumeAST, sortedMissingKeywords = [] } = state;
@@ -16,39 +39,65 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
 
   if (intensity === "minimal") {
     // Touch at most 2 bullets across jobs where missing keywords are highest
+    const topChanges = sectionsToModify?.experience !== false
+      ? pickTopBulletsAcrossJobs(experience, sortedMissingKeywords, 2).map((c) => ({
+          ...c,
+          recencyTier: getRecencyTier(c.jobIndex),
+        }))
+      : [];
     bulletPlan = {
       summaryChange: false,
       skillsChange: false,
-      jobBulletChanges: pickTopBulletsAcrossJobs(experience, sortedMissingKeywords, 2),
+      jobBulletChanges: topChanges,
     };
   } else if (intensity === "targeted") {
-    // Rewrite 3–5 highest-relevance bullets across top jobs + summary
+    // Universal Recency-Graduated Pipeline: process every job chunk with recency-graduated depth
+    const jobChanges: JobBulletChange[] = sectionsToModify?.experience !== false
+      ? experience.map((_, i) => {
+          const tier = getRecencyTier(i);
+          return {
+            jobIndex: i,
+            bulletIndices: "all" as const,
+            reason: getRecencyRationale(tier, i),
+            recencyTier: tier,
+          };
+        })
+      : [];
     bulletPlan = {
-      summaryChange: sectionsToModify.summary,
-      skillsChange: sectionsToModify.skills,
-      jobBulletChanges: pickTopBulletsAcrossJobs(experience, sortedMissingKeywords, 5),
+      summaryChange: Boolean(sectionsToModify?.summary),
+      skillsChange: Boolean(sectionsToModify?.skills),
+      jobBulletChanges: jobChanges,
     };
   } else {
     // Complete Overhaul: all bullets across all jobs
+    const jobChanges: JobBulletChange[] = sectionsToModify?.experience !== false
+      ? experience.map((_, i) => {
+          const tier = getRecencyTier(i);
+          return {
+            jobIndex: i,
+            bulletIndices: "all" as const,
+            reason: "complete overhaul mode",
+            recencyTier: tier,
+          };
+        })
+      : [];
     bulletPlan = {
-      summaryChange: sectionsToModify.summary,
-      skillsChange: sectionsToModify.skills,
-      jobBulletChanges: experience.map((_, i) => ({
-        jobIndex: i,
-        bulletIndices: "all",
-        reason: "complete overhaul mode",
-      })),
+      summaryChange: Boolean(sectionsToModify?.summary),
+      skillsChange: Boolean(sectionsToModify?.skills),
+      jobBulletChanges: jobChanges,
     };
   }
 
   const jobAudits: JobAudit[] = experience.map((job, idx) => {
+    const tier = getRecencyTier(idx);
     const planChange = bulletPlan.jobBulletChanges.find((c) => c.jobIndex === idx);
     if (planChange) {
       return {
         jobIndex: idx,
         hasChanges: true,
         bulletIndices: planChange.bulletIndices,
-        auditRationale: planChange.reason || "Targeted impact metric and ATS keyword alignment",
+        auditRationale: planChange.reason || getRecencyRationale(tier, idx),
+        recencyTier: tier,
       };
     }
     return {
@@ -58,6 +107,7 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
       auditRationale: idx === experience.length - 1
         ? "Foundational early tenure preserved to maintain genuine career history"
         : "Role already satisfies target profile baseline; preserved as-is",
+      recencyTier: tier,
     };
   });
 
