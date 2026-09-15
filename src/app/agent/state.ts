@@ -1,6 +1,7 @@
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { JDInterpreterResult } from "@/app/utils/keyword-extraction";
+import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
 
 export interface CandidateProfile {
   primaryTitle: string;
@@ -8,6 +9,9 @@ export interface CandidateProfile {
   topSkills: string[];
   domain: string;
   searchQuery: string;
+  seniorityTier?: SeniorityTier;
+  successPillars?: string[];
+  careerArc?: string;
 }
 
 export interface DiscoveredJob {
@@ -96,6 +100,9 @@ export interface AgentState {
   // Parsed Structures
   resumeAST?: ParsedResumeForReassemble;
   candidateProfile?: CandidateProfile;
+  careerArc?: string;
+  seniorityTier?: SeniorityTier;
+  successPillars?: string[];
 
   // Job Target
   selectedJobDescription?: string;

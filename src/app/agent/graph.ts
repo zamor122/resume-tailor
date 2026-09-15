@@ -11,6 +11,7 @@ import type {
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { JDInterpreterResult } from "@/app/utils/keyword-extraction";
+import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
 
 import { intakeParserNode } from "./nodes/intakeParser";
 import { candidateProfilerNode } from "./nodes/candidateProfiler";
@@ -33,6 +34,9 @@ export const AgentStateAnnotation = Annotation.Root({
 
   resumeAST: Annotation<ParsedResumeForReassemble | undefined>(),
   candidateProfile: Annotation<CandidateProfile | undefined>(),
+  careerArc: Annotation<string | undefined>(),
+  seniorityTier: Annotation<SeniorityTier | undefined>(),
+  successPillars: Annotation<string[] | undefined>(),
   selectedJobDescription: Annotation<string | undefined>(),
   discoveredJobs: Annotation<DiscoveredJob[] | undefined>(),
   companyResearch: Annotation<any>(),
