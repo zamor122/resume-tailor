@@ -506,4 +506,91 @@ describe("surgicalTailorNode two-phase recency tailoring (REQ-EVT-04, REQ-UBI-02
     expect(result.tailoredBulletsByJob![0]).toContain("Unified customer dashboards serving 40 stakeholders");
     expect(result.tailoredBulletsByJob![1]).toContain("Compiled weekly reports across 12 teams");
   });
+
+  it("derives an employer across a line break without capturing the newline, then scrubs it (REQ-UBI-02)", async () => {
+    const bulletSpy = vi.spyOn(tailoringSectionPrompts, "getExperienceBulletsPrompt");
+
+    // A pasted/scraped JD that wraps after the employer name. Capturing the newline previously built an
+    // unmatchable scrub regex ("TargetCorp\nApply"), leaking the employer verbatim into the output.
+    const jd = "We are hiring a Senior Product Analyst\nat TargetCorp\nApply today.";
+
+    vi.mocked(generateWithFallback).mockResolvedValueOnce({
+      text: bulletJson(PHASE_ONE_SUGGESTED),
+      modelUsed: "mock-model",
+    });
+
+    const result = await surgicalTailorNode({
+      ...baseState,
+      selectedJobDescription: jd,
+      bulletPlan: { ...baseState.bulletPlan!, summaryChange: false },
+    });
+
+    expect(bulletSpy.mock.calls[0][0].targetCompany).toBe("TargetCorp");
+    expect(bulletSpy.mock.calls[0][0].targetCompany).not.toMatch(/[\r\n]/);
+
+    // The scrub must actually take effect end-to-end.
+    expect(result.tailoredBulletsByJob![0]).not.toContain("TargetCorp");
+    expect(result.tailoredBulletsByJob![0]).toContain("the organization");
+  });
+
+  it("derives dotted and digit-leading employers while rejecting bare numerics (REQ-UBI-02)", async () => {
+    const bulletSpy = vi.spyOn(tailoringSectionPrompts, "getExperienceBulletsPrompt");
+
+    const cases: Array<[string, string, string | undefined]> = [
+      ["dotted abbreviation", "We are hiring at U.S. Bank for our payments team.", "U.S. Bank"],
+      ["digit-leading employer", "Join us at 3M building the future of work", "3M"],
+      ["hyphenated employer", "We are hiring at Hewlett-Packard in storage.", "Hewlett-Packard"],
+      ["ampersand employer", "Join us at AT&T as a network engineer.", "AT&T"],
+      ["un-dotted sentence period is NOT extended", "We are hiring at Meta. Apply today.", "Meta"],
+      ["rejection guard: acronym period is NOT extended", "Join us at BP. Apply now.", "BP"],
+      ["bare numeric is not an employer", "We are hiring at 3 people for the team.", undefined],
+    ];
+
+    for (const [label, jd, expected] of cases) {
+      bulletSpy.mockClear();
+      vi.mocked(generateWithFallback).mockResolvedValueOnce({
+        text: bulletJson(PHASE_ONE_SUGGESTED),
+        modelUsed: "mock-model",
+      });
+
+      await surgicalTailorNode({
+        ...baseState,
+        selectedJobDescription: jd,
+        bulletPlan: { ...baseState.bulletPlan!, summaryChange: false },
+      });
+
+      expect(bulletSpy.mock.calls[0][0].targetCompany, `unexpected company for ${label}: "${jd}"`).toBe(expected);
+    }
+  });
+
+  it("rejects idiom and generic-scope false positives that would globally corrupt resume text (REQ-UBI-02)", async () => {
+    const bulletSpy = vi.spyOn(tailoringSectionPrompts, "getExperienceBulletsPrompt");
+
+    // A false positive is SEVERE: the scrubber replaces the token across every bullet and the summary,
+    // so deriving "Scale" or "AI" would rewrite legitimate resume wording to "the organization".
+    const negativeJds: Array<[string, string]> = [
+      ["scale idiom after a hiring cue", "We are hiring engineers who love Data at Scale is our craft."],
+      ["AI-scope idiom", "Join our team to build models that operate at AI scale."],
+      ["bare location after a hiring cue", "We are hiring a Senior Data Analyst at Denver."],
+      ["generic level phrase", "We need a leader at Senior Manager level to drive delivery."],
+      ["forefront idiom", "We are at the forefront of innovation."],
+      ["partner idiom", "Partner with us at scale to accelerate growth."],
+    ];
+
+    for (const [label, jd] of negativeJds) {
+      bulletSpy.mockClear();
+      vi.mocked(generateWithFallback).mockResolvedValueOnce({
+        text: bulletJson(PHASE_ONE_SUGGESTED),
+        modelUsed: "mock-model",
+      });
+
+      await surgicalTailorNode({
+        ...baseState,
+        selectedJobDescription: jd,
+        bulletPlan: { ...baseState.bulletPlan!, summaryChange: false },
+      });
+
+      expect(bulletSpy.mock.calls[0][0].targetCompany, `unexpected company for ${label}: "${jd}"`).toBeUndefined();
+    }
+  });
 });
