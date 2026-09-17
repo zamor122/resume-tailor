@@ -119,8 +119,8 @@ describe("surgicalTailorNode with isolated chunk context and 1:1 JSON parser", (
     expect(result.suggestions![1].category).toBe("metric");
   });
 
-  it("calls getSummaryTailoringPrompt with isolated summary chunk, NEVER the full rawResume", async () => {
-    const summarySpy = vi.spyOn(tailoringSectionPrompts, "getSummaryTailoringPrompt");
+  it("synthesizes summary after bullets resolve via getHolisticSummaryPrompt, NEVER from the full rawResume", async () => {
+    const summarySpy = vi.spyOn(tailoringSectionPrompts, "getHolisticSummaryPrompt");
 
     vi.mocked(generateWithFallback).mockResolvedValueOnce({
       text: "Tailored summary with Go and cloud experience.",
@@ -139,9 +139,11 @@ describe("surgicalTailorNode with isolated chunk context and 1:1 JSON parser", (
 
     expect(summarySpy).toHaveBeenCalledTimes(1);
     const calledArgs = summarySpy.mock.calls[0][0];
-    expect(calledArgs.summaryText).toBe("Experienced developer");
+    // Preserves the original intent: the holistic summary is assembled from isolated experience
+    // content, never from the full raw resume.
+    expect(calledArgs.assembledResume).not.toContain(baseState.rawResume);
     expect((calledArgs as any).resume).toBeUndefined();
-    expect(calledArgs.summaryText).not.toContain("John Doe");
+    expect(calledArgs.assembledResume).toContain("- Built backend APIs");
 
     expect(result.suggestions).toHaveLength(1);
     expect(result.suggestions![0].id).toBe("sug-summary");
