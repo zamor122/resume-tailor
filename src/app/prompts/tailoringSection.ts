@@ -3,7 +3,89 @@
  * Used when section-based tailoring is enabled: title/company/dates are copy-pasted; only bullets and summary are AI-tailored.
  */
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
+import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
 import { buildLeverInstructions } from "./tailoringPresets";
+
+/**
+ * Tier-appropriate calibration guidance for universal level-calibrated prompting (REQ-UBI-01).
+ * Returns an empty string when no tier is supplied so existing callers see no change.
+ */
+function buildSeniorityCalibration(seniorityTier?: SeniorityTier): string {
+  if (!seniorityTier) return "";
+  const tierGuidance: Record<SeniorityTier, string> = {
+    executive:
+      "Emphasize enterprise-level workflow orchestration, executive stakeholder alignment, resource governance, and the full scope of team leadership. Frame outcomes as organizational strategy and P&L-level accountability.",
+    lead_manager:
+      "Emphasize workflow orchestration, stakeholder alignment, resource governance, and team leadership scope (headcount, scheduling, performance, cross-department coordination).",
+    senior:
+      "Emphasize strategic trade-offs, mentoring and developing others, risk mitigation, and personal ownership of end-to-end outcomes.",
+    mid: "Emphasize execution rigor, procedural delivery, and dependable hands-on contribution within established workflows.",
+    entry:
+      "Emphasize execution rigor, procedural delivery, and hands-on contribution that demonstrates readiness to grow.",
+  };
+  return `SENIORITY CALIBRATION — TARGET TIER: ${seniorityTier}
+- Calibrate every claim to the "${seniorityTier}" level; do not overstate or understate scope.
+- ${tierGuidance[seniorityTier]}`;
+}
+
+/**
+ * Depth guidance graduated by how recent a role is (REQ-EVT-02).
+ * Returns an empty string when no tier is supplied so existing callers see no change.
+ */
+function buildRecencyDepthGuidance(recencyTier?: string): string {
+  if (!recencyTier) return "";
+  const tierGuidance: Record<string, string> = {
+    recent_deep:
+      "Give these achievements maximum depth: highlight strategic scope, leadership ownership, and detailed, substantiated outcomes.",
+    mid_career:
+      "Keep these achievements concise, emphasizing transferable competencies and proven milestones.",
+    foundational:
+      "Keep these achievements brief and authentic: baseline execution, core responsibilities, and early-career milestones.",
+  };
+  const guidance =
+    tierGuidance[recencyTier] ||
+    "Match depth to the recency of the role: more detail for recent roles, less for older ones.";
+  return `RECENCY-ADJUSTED DEPTH — TIER: ${recencyTier}
+- ${guidance}`;
+}
+
+/**
+ * Background positioning context describing the candidate's career arc (REQ-EVT-03).
+ * Returns an empty string when no arc is supplied so existing callers see no change.
+ */
+function buildCareerArcBlock(careerArc?: string): string {
+  if (!careerArc) return "";
+  return `CAREER ARC CONTEXT (background positioning only — do NOT quote verbatim into bullets):
+${careerArc}`;
+}
+
+/**
+ * Absolute prohibition on leaking the target employer's name into generated copy (REQ-UBI-02, REQ-ERR-01).
+ * Returns an empty string when no target company is supplied so existing callers see no change.
+ */
+function buildCompanyPrivacyBlock(targetCompany?: string): string {
+  const trimmedTarget = (targetCompany || "").trim();
+  if (!trimmedTarget) return "";
+  return `STRICT COMPANY PRIVACY MANDATE:
+- DO NOT mention "${trimmedTarget}" anywhere in your output. The target employer is NOT part of the candidate's work history.
+- The ONLY company names permitted in your output are the candidate's actual employers listed in their experience history.
+- Never imply the candidate worked at, was employed by, or was contracted to the target employer.
+- When organizational context is required, refer to "the organization" or a neutral description instead.`;
+}
+
+/**
+ * Universal mandate that achievements read as transferable professional excellence (REQ-UBI-03).
+ */
+const REUSABLE_ACCOMPLISHMENTS_BLOCK = `REUSABLE PROFESSIONAL ACCOMPLISHMENTS:
+- Frame all achievements as industry-standard excellence reusable for similar roles across employers.
+- Do NOT tailor wording so narrowly that it only makes sense for one specific employer; express achievements at the role and industry level.`;
+
+/**
+ * Universal ban on invented percentage metrics in favor of authentic, verifiable scope.
+ */
+const AUTHENTIC_METRICS_BLOCK = `AUTHENTIC METRICS ONLY:
+- Do NOT invent artificial percentage metrics (e.g. "by 35%", "increased revenue 40%") unless the original text states them.
+- Instead quantify with authentic scope, volume, headcount, compliance standards, or concrete operational outcomes.`;
 
 /**
  * Prompt to tailor only the Summary section. No contact, no experience structure—just the summary prose.
@@ -71,8 +153,25 @@ export function getExperienceBulletsPrompt(params: {
   userInstructions?: string;
   userRequestedKeywords?: string[];
   preferences?: TailoringPreferences;
+  seniorityTier?: SeniorityTier;
+  recencyTier?: string;
+  careerArc?: string;
+  targetCompany?: string;
 }): string {
-  const { jobTitle, company, dates, bulletsText, jobDescription, userInstructions, userRequestedKeywords, preferences } = params;
+  const {
+    jobTitle,
+    company,
+    dates,
+    bulletsText,
+    jobDescription,
+    userInstructions,
+    userRequestedKeywords,
+    preferences,
+    seniorityTier,
+    recencyTier,
+    careerArc,
+    targetCompany,
+  } = params;
   const userBlock = userInstructions
     ? `\nUSER-SPECIFIC INSTRUCTIONS (follow these):\n${userInstructions}\n`
     : "";
@@ -89,6 +188,17 @@ HIGHEST PRIORITY – USER PREFERENCES & CONTROLS (follow these first):
 ${leverBlock}${userBlock}${keywordsBlock}`
     : "";
 
+  const governingBlock = [
+    buildSeniorityCalibration(seniorityTier),
+    buildRecencyDepthGuidance(recencyTier),
+    buildCareerArcBlock(careerArc),
+    buildCompanyPrivacyBlock(targetCompany),
+    REUSABLE_ACCOMPLISHMENTS_BLOCK,
+    AUTHENTIC_METRICS_BLOCK,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
   const bulletLines = bulletsText
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -96,6 +206,8 @@ ${leverBlock}${userBlock}${keywordsBlock}`
   const bulletCount = bulletLines.length;
 
   return `You are an elite executive resume writer. Tailor the bullet points for this specific role against the target job description.
+
+${governingBlock}
 ${topUserBlock}
 TARGET ROLE METADATA (context boundary - do not repeat):
 - Title: ${jobTitle}
@@ -162,16 +274,18 @@ export function getHolisticSummaryPrompt(params: {
   jobTitle?: string;
   userRequestedKeywords?: string[];
   preferences?: TailoringPreferences;
+  seniorityTier?: SeniorityTier;
 }): string {
-  const { assembledResume, jobDescription, jobTitle, userRequestedKeywords = [], preferences } = params;
+  const { assembledResume, jobDescription, jobTitle, userRequestedKeywords = [], preferences, seniorityTier } = params;
   const targetTitleLine = jobTitle ? `Target Role Title: "${jobTitle}"\n` : "";
   const keywordsLine =
     userRequestedKeywords.length > 0 ? `Target Keywords: ${userRequestedKeywords.join(", ")}\n` : "";
   const leverBlock = preferences ? `\n${buildLeverInstructions(preferences)}\n` : "";
+  const seniorityBlock = seniorityTier ? `\n${buildSeniorityCalibration(seniorityTier)}\n` : "";
 
   return `You are an elite executive resume writer. Write a cohesive, holistic Professional Summary (3–4 sentences) representing the candidate's ENTIRE career arc, tailored for the target role below.
 ${leverBlock}
-${targetTitleLine}${keywordsLine}
+${targetTitleLine}${keywordsLine}${seniorityBlock}
 CRITICAL INSTRUCTIONS:
 - ZERO THINKING / PREAMBLE LEAK: DO NOT output any thinking trace, <think> tags, chain-of-thought analysis, or introductory remarks (such as "*Analyze User Input:**").
 - This is a HOLISTIC EXECUTIVE SUMMARY of the candidate's career as an organic whole, NOT a changelog of recent edits.
