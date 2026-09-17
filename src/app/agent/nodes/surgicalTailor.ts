@@ -479,8 +479,13 @@ const GENERIC_TARGET_TOKENS = new Set([
   "high",
   "low",
   "times",
+  "global",
+  "enterprise",
+  "masters",
+  "strategic",
   // high-frequency JD geographies (bounded, non-exhaustive)
   "denver",
+  "riverside",
   "boston",
   "new york",
   "seattle",
@@ -525,51 +530,6 @@ function isPlausibleCompanyName(candidate: string): boolean {
 }
 
 /**
- * Hiring-intent cues that legitimise an "at <Capitalized>" match inside a job description.
- * Without a cue (or a sentence-initial match), a capitalized word after "at" is far more likely to be
- * JD prose ("at scale", "at speed", an unlisted city) than an employer name.
- */
-const HIRING_ANCHOR_PATTERN =
-  /\b(?:hiring|hire|join|role|position|opening|opportunit|seek\w*|looking for|recruit\w*|employer|company|team|job)\b/i;
-
-/** Maximum distance (chars) the hiring cue may sit before the "at <Company>" match. */
-const MAX_ANCHOR_WINDOW = 80;
-
-/** Punctuation that ends an employer-context segment for anchor purposes. */
-const SENTENCE_TERMINATORS = new Set([".", "!", "?", ";"]);
-
-/**
- * Decides whether an "at <Capitalized>" match has genuine employer context (REQ-UBI-02).
- *
- * Returns `true` when either:
- * (a) the match is sentence-initial ("At Salesforce, we build customer success."), which is an
- *     explicit employer mention with no preceding cue to find; or
- * (b) a hiring-intent cue appears in the same sentence immediately before the match, within
- *     `MAX_ANCHOR_WINDOW` characters.
- *
- * Newlines are deliberately NOT treated as sentence terminators here: pasted/scraped job
- * descriptions wrap lines mid-sentence, and treating `\n` as a boundary would drop the anchor and
- * silently disable the privacy scrub for those postings.
- */
-function hasEmployerContext(jd: string, matchIndex: number): boolean {
-  const windowStart = Math.max(0, matchIndex - MAX_ANCHOR_WINDOW);
-
-  let segmentStart = windowStart;
-  for (let i = matchIndex - 1; i >= windowStart; i--) {
-    if (SENTENCE_TERMINATORS.has(jd[i])) {
-      segmentStart = i + 1;
-      break;
-    }
-  }
-
-  const segment = jd.slice(segmentStart, matchIndex);
-  // (a) Sentence-initial employer mention.
-  if (segment.trim().length === 0) return true;
-  // (b) Hiring cue in the same sentence.
-  return HIRING_ANCHOR_PATTERN.test(segment);
-}
-
-/**
  * Extends a truncated abbreviation-style capture across its final period ("U.S" + ". Bank" -> "U.S. Bank").
  *
  * A regex alone cannot distinguish "U.S. Bank" from "IBM. Apply" — both are `Word. Word`. The only
@@ -586,7 +546,7 @@ function extendAbbreviatedCompany(jd: string, matchEnd: number, captured: string
 
   // Only extend across a single "." that is followed by a new capitalized word.
   if (jd[matchEnd] !== ".") return captured;
-  const nextWords = jd.slice(matchEnd + 1).match(/^[ \t]+([A-Z0-9][A-Za-z0-9&'-]*)/);
+  const nextWords = jd.slice(matchEnd + 1).match(/^[ ]+([A-Z0-9][A-Za-z0-9&'-]*)/);
   return nextWords ? `${captured}. ${nextWords[1]}` : captured;
 }
 
@@ -604,12 +564,18 @@ function extendAbbreviatedCompany(jd: string, matchEnd: number, captured: string
  * treats the target company as genuinely absent instead of scrubbing against an empty string.
  *
  * Residual limitation (accepted, bounded): step 3 is a last-resort heuristic. A capitalized
- * non-company proper noun (an unlisted city, product, or team name) that follows a hiring cue can
- * still be mis-derived. This asymmetry is deliberate — a FALSE POSITIVE corrupts legitimate text
- * globally because `sanitizeCompanyReferences` replaces the token across every bullet and the
- * summary, whereas a FALSE NEGATIVE merely leaves `REQ-UBI-02` to the Task-4 prompt-level mandate
- * ("DO NOT mention ...") plus opportunistic scrubbing. The stoplist and anchor check above shrink
- * the false-positive surface without enumerating every world city or adding an NLP dependency.
+ * non-company proper noun (an unlisted city, product, or team name) following "at" can still be
+ * mis-derived. This asymmetry is deliberate — a FALSE POSITIVE corrupts legitimate text globally
+ * because `sanitizeCompanyReferences` replaces the token across every bullet and the summary,
+ * whereas a FALSE NEGATIVE merely leaves `REQ-UBI-02` to the Task-4 prompt-level mandate
+ * ("DO NOT mention ...") plus opportunistic scrubbing. The `GENERIC_TARGET_TOKENS` stoplist is the
+ * primary defence and is deliberately the extension point for new false positives; no NLP
+ * dependency or exhaustive city enumeration is used.
+ *
+ * NOTE: an earlier revision additionally required a "hiring cue" near the match. That was reverted —
+ * requiring a cue silently disabled BOTH privacy layers (prompt mandate + scrubber) for extremely
+ * common JD phrasings such as "you will work at X", "opportunity at X", "based at X" and
+ * "headquartered at X", which is a far worse failure than the false positives it prevented.
  */
 function deriveTargetCompany(state: AgentState): string | undefined {
   const research = state.companyResearch;
@@ -631,22 +597,20 @@ function deriveTargetCompany(state: AgentState): string | undefined {
   //   sentence-final period can never be captured ("...at Kaiser Permanente. Apply today." must not
   //   yield "Kaiser Permanente. Apply", which would build an unmatchable scrub regex and silently
   //   leak the target employer — REQ-UBI-02).
-  // - `[ \t]+` (NOT `\s+`) separates words so the capture can never cross a line break. A `\n` inside
-  //   the captured name produced "TargetCorp\nApply", whose scrub regex could never match, leaking
-  //   the employer verbatim into persisted bullets and the summary.
+  // - Words inside the name are separated by SPACES ONLY (`[ ]+`). Tabs and newlines terminate the
+  //   capture. Any non-space whitespace inside the captured name (a line wrap or a column break)
+  //   would rebuild an unmatchable scrub regex — "TargetCorp\nApply" or "TargetCorp\tApply" — and
+  //   leak the employer verbatim into persisted bullets and the summary.
   const jd = state.selectedJobDescription || "";
   const jdPattern =
-    /\b[Aa]t[ \t]+([A-Z0-9][A-Za-z0-9&'-]*(?:\.[A-Za-z0-9][A-Za-z0-9&'-]*)*(?:[ \t]+[A-Z0-9][A-Za-z0-9&'-]*(?:\.[A-Za-z0-9][A-Za-z0-9&'-]*)*)*)/g;
+    /\b[Aa]t[ \t]+([A-Z0-9][A-Za-z0-9&'-]*(?:\.[A-Za-z0-9][A-Za-z0-9&'-]*)*(?:[ ]+[A-Z0-9][A-Za-z0-9&'-]*(?:\.[A-Za-z0-9][A-Za-z0-9&'-]*)*)*)/g;
 
-  // Scan every "at <Capitalized>" candidate and return the first one that is both in genuine
-  // employer context and not a stoplisted generic token. Returning on the first regex hit alone would
-  // give up too early on a JD that mentions a non-employer capitalized phrase before the real one
-  // (e.g. "At Scale we operate. Role at TargetCorp.").
+  // Scan every "at <Capitalized>" candidate and return the first one that is not a stoplisted generic
+  // token. Returning on the first regex hit alone would give up too early on a JD that mentions a
+  // non-employer capitalized phrase before the real one ("At Scale we operate. Role at TargetCorp.").
   for (const match of jd.matchAll(jdPattern)) {
     if (match.index === undefined) continue;
-    if (!hasEmployerContext(jd, match.index)) continue;
 
-    // Collapse any surviving horizontal whitespace run; never emit a newline inside a company name.
     const base = match[1]?.replace(/[ \t]+/g, " ").trim();
     if (!base) continue;
 

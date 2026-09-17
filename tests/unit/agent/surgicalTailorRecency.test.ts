@@ -593,4 +593,65 @@ describe("surgicalTailorNode two-phase recency tailoring (REQ-EVT-04, REQ-UBI-02
       expect(bulletSpy.mock.calls[0][0].targetCompany, `unexpected company for ${label}: "${jd}"`).toBeUndefined();
     }
   });
+
+  it("derives the employer for common JD phrasings that carry no hiring-cue keyword (REQ-UBI-02)", async () => {
+    const bulletSpy = vi.spyOn(tailoringSectionPrompts, "getExperienceBulletsPrompt");
+
+    // Regression guard: a previous revision required a "hiring cue" near the match, which silently
+    // disabled BOTH privacy layers (the prompt-level mandate and the scrubber) for these very common
+    // phrasings. Dropping the derived company is worse than the idioms it was meant to filter.
+    const cases: Array<[string, string, string]> = [
+      ["work at", "As a Clinical Operations Manager you will work at Mercy Health in Denver.", "Mercy Health"],
+      ["opportunity at", "This is an exciting opportunity at Northwind Traders.", "Northwind Traders"],
+      ["based at", "You will be based at Northwind Traders.", "Northwind Traders"],
+      ["headquartered at", "We are headquartered at Northwind Traders.", "Northwind Traders"],
+      ["reports to at", "Location: Remote. Reports to the VP at Northwind Traders.", "Northwind Traders"],
+    ];
+
+    for (const [label, jd, expected] of cases) {
+      bulletSpy.mockClear();
+      vi.mocked(generateWithFallback).mockResolvedValueOnce({
+        text: bulletJson(PHASE_ONE_SUGGESTED),
+        modelUsed: "mock-model",
+      });
+
+      await surgicalTailorNode({
+        ...baseState,
+        selectedJobDescription: jd,
+        bulletPlan: { ...baseState.bulletPlan!, summaryChange: false },
+      });
+
+      expect(bulletSpy.mock.calls[0][0].targetCompany, `unexpected company for ${label}: "${jd}"`).toBe(expected);
+    }
+  });
+
+  it("never captures an employer name across a tab or a line break (REQ-UBI-02)", async () => {
+    const bulletSpy = vi.spyOn(tailoringSectionPrompts, "getExperienceBulletsPrompt");
+
+    // A tab or newline inside the derived name rebuilds an unmatchable scrub regex
+    // ("TargetCorp\tApply"), leaking the employer verbatim into bullets and the summary.
+    const separators: Array<[string, string]> = [
+      ["tab", "\t"],
+      ["newline", "\n"],
+      ["carriage return + newline", "\r\n"],
+    ];
+
+    for (const [label, separator] of separators) {
+      bulletSpy.mockClear();
+      vi.mocked(generateWithFallback).mockResolvedValueOnce({
+        text: bulletJson(PHASE_ONE_SUGGESTED),
+        modelUsed: "mock-model",
+      });
+
+      await surgicalTailorNode({
+        ...baseState,
+        selectedJobDescription: `We are hiring at TargetCorp${separator}Apply today.`,
+        bulletPlan: { ...baseState.bulletPlan!, summaryChange: false },
+      });
+
+      const derived = bulletSpy.mock.calls[0][0].targetCompany;
+      expect(derived, `unexpected company for ${label}`).toBe("TargetCorp");
+      expect(derived, `${label} leaked into the derived name`).not.toMatch(/[\r\n\t]/);
+    }
+  });
 });
