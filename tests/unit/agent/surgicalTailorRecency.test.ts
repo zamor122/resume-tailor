@@ -544,6 +544,7 @@ describe("surgicalTailorNode two-phase recency tailoring (REQ-EVT-04, REQ-UBI-02
       ["un-dotted sentence period is NOT extended", "We are hiring at Meta. Apply today.", "Meta"],
       ["rejection guard: acronym period is NOT extended", "Join us at BP. Apply now.", "BP"],
       ["bare numeric is not an employer", "We are hiring at 3 people for the team.", undefined],
+      ["multi-digit numeric is not an employer", "We are hiring at 20 locations nationwide.", undefined],
     ];
 
     for (const [label, jd, expected] of cases) {

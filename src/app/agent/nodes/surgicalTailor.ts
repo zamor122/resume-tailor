@@ -520,6 +520,10 @@ function isPlausibleCompanyName(candidate: string): boolean {
   const trimmed = candidate.trim();
   if (trimmed.length <= 1) return false;
 
+  // A purely numeric capture ("at 20 locations", "at 5 sites") is never an employer, and scrubbing the
+  // bare number would corrupt every numeric mention throughout the resume.
+  if (/^\d+$/.test(trimmed)) return false;
+
   const lower = trimmed.toLowerCase();
   if (GENERIC_TARGET_TOKENS.has(lower)) return false;
 
