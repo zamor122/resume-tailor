@@ -31,7 +31,7 @@
 - Consumes: `resumeAST.experience` (for vetted employer list), `targetCompany` (optional string from JD/metadata), and `text` (bullet or summary string).
 - Produces: `sanitizeCompanyReferences(text: string, vettedEmployers: string[], targetCompany?: string): string`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/utils/companyPrivacyGuard.test.ts
@@ -72,12 +72,12 @@ describe("Company Privacy Guard (REQ-UBI-02, REQ-ERR-01)", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/unit/utils/companyPrivacyGuard.test.ts`  
 Expected: FAIL with "Cannot find module '@/app/utils/companyPrivacyGuard'".
 
-- [ ] **Step 3: Implement `companyPrivacyGuard.ts`**
+- [x] **Step 3: Implement `companyPrivacyGuard.ts`**
 
 ```typescript
 // src/app/utils/companyPrivacyGuard.ts
@@ -134,12 +134,12 @@ export function sanitizeCompanyReferences(
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/unit/utils/companyPrivacyGuard.test.ts`  
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/utils/companyPrivacyGuard.ts tests/unit/utils/companyPrivacyGuard.test.ts
@@ -160,7 +160,7 @@ git commit -m "feat(privacy): add company privacy guard with vetted employer whi
 - Produces: `classifySeniorityTier(title: string, jd: string): SeniorityTier`, `extractSuccessPillars(jd: string, title?: string): string[]`.
 - Type `SeniorityTier = "entry" | "mid" | "senior" | "lead_manager" | "executive"`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/utils/seniorityClassifier.test.ts
@@ -207,12 +207,12 @@ describe("Universal Seniority & Success Pillar Classifier (REQ-UBI-01, REQ-EVT-0
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/unit/utils/seniorityClassifier.test.ts`  
 Expected: FAIL with "Cannot find module '@/app/utils/seniorityClassifier'".
 
-- [ ] **Step 3: Implement `seniorityClassifier.ts` & update `candidateProfiler.ts`**
+- [x] **Step 3: Implement `seniorityClassifier.ts` & update `candidateProfiler.ts`**
 
 ```typescript
 // src/app/utils/seniorityClassifier.ts
@@ -318,12 +318,12 @@ export function buildCareerArcContext(
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/unit/utils/seniorityClassifier.test.ts`  
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/utils/seniorityClassifier.ts tests/unit/utils/seniorityClassifier.test.ts
@@ -345,7 +345,7 @@ git commit -m "feat(profiler): add universal seniority tiering and domain succes
   - Jobs 2–3: Recency Tier 2 (`mid_career`, moderate, transferable).
   - Jobs 4+: Recency Tier 3 (`foundational`, concise baseline).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // Update tests/unit/bullet-planner.test.ts to test full-document recency-graduated chunking
@@ -369,12 +369,12 @@ it("processes all jobs with recency-graduated depth across any resume length (RE
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/unit/bullet-planner.test.ts`  
 Expected: FAIL with missing `recencyTier` or un-chunked jobs.
 
-- [ ] **Step 3: Modify `bulletPlanner.ts`**
+- [x] **Step 3: Modify `bulletPlanner.ts`**
 
 Update `bulletPlannerNode` to configure full-document chunking:
 1. Iterate across all `experience` entries.
@@ -384,12 +384,12 @@ Update `bulletPlannerNode` to configure full-document chunking:
    - `jobIndex >= 4`: `"foundational"` (concise baseline authenticity).
 3. Set `bulletIndices: "all"` for all processed jobs so every bullet receives appropriate level-calibrated refinement.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/unit/bullet-planner.test.ts`  
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/agent/nodes/bulletPlanner.ts tests/unit/bullet-planner.test.ts
@@ -408,7 +408,7 @@ git commit -m "feat(planner): implement full-resume recency-graduated chunking"
 - Consumes: `recencyTier`, `seniorityTier`, `careerArc`, `successPillars`, `jobTitle`, `company`, `dates`, `bulletsText`, `jobDescription`.
 - Produces: Level-calibrated, reusable bullet prompt instructions with strict prohibition of target company names and fabricated percentages.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/prompts/tailoringSection.test.ts
@@ -448,12 +448,12 @@ describe("Universal Level-Calibrated Prompting (REQ-UBI-01, REQ-UBI-02, REQ-UBI-
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/unit/prompts/tailoringSection.test.ts`  
 Expected: FAIL with missing parameters or string checks.
 
-- [ ] **Step 3: Update `tailoringSection.ts`**
+- [x] **Step 3: Update `tailoringSection.ts`**
 
 1. Add `seniorityTier?: SeniorityTier`, `recencyTier?: string`, `careerArc?: string`, `targetCompany?: string` to prompt parameter types.
 2. In `getExperienceBulletsPrompt`, inject:
@@ -463,12 +463,12 @@ Expected: FAIL with missing parameters or string checks.
    - Reusability mandate: *"Frame all achievements as industry-standard excellence reusable for similar roles across employers."*
    - Ban on fake percentages: *"Do NOT invent artificial percentage metrics (e.g., 'by 35%'). State authentic scope, volume, compliance standards, or operational outcomes."*
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/unit/prompts/tailoringSection.test.ts`  
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/prompts/tailoringSection.ts tests/unit/prompts/tailoringSection.test.ts
@@ -489,7 +489,7 @@ git commit -m "feat(prompts): add universal seniority calibration and company pr
 - Phase 2: Dispatches `getHolisticSummaryPrompt` **after** all bullets resolve, feeding newly tailored experience.
 - Post-process: Sanitizes summary output through `sanitizeCompanyReferences`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // tests/unit/agent/surgicalTailorRecency.test.ts
@@ -523,12 +523,12 @@ describe("Two-Phase Surgical Tailor (REQ-EVT-04, REQ-ERR-01)", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/unit/agent/surgicalTailorRecency.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 3: Modify `surgicalTailor.ts`**
+- [x] **Step 3: Modify `surgicalTailor.ts`**
 
 1. Restructure execution into two clean sequential phases:
    - **Phase 1**: Run all job bullet tailoring tasks in parallel with `Promise.all(jobPromises)`.
@@ -538,12 +538,12 @@ Expected: FAIL.
    - Apply `sanitizeCompanyReferences` to the synthesized summary.
 2. Package all substantive suggestions into `sectionGroups`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/unit/agent/surgicalTailorRecency.test.ts`  
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/agent/nodes/surgicalTailor.ts tests/unit/agent/surgicalTailorRecency.test.ts
@@ -558,16 +558,16 @@ git commit -m "feat(tailor): implement two-phase execution with post-tailor summ
 - Modify: `src/app/agent/nodes/reassembleAndScore.ts`
 - Test: Run entire test suite (`npm test`)
 
-- [ ] **Step 1: Verify Reassemble & Scoring Node handles universal domains and recency tiers**
+- [x] **Step 1: Verify Reassemble & Scoring Node handles universal domains and recency tiers**
 
 Ensure `reassembleAndScoreNode` accurately calculates score improvements across non-technical domains and generates cohesive final resumes.
 
-- [ ] **Step 2: Run complete project test suite**
+- [x] **Step 2: Run complete project test suite**
 
 Run: `npm test`  
 Expected: All 61+ test files and 420+ tests PASS with zero regressions.
 
-- [ ] **Step 3: Commit integration updates**
+- [x] **Step 3: Commit integration updates**
 
 ```bash
 git add src/app/agent/nodes/reassembleAndScore.ts
