@@ -6,12 +6,33 @@ import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
 import { buildLeverInstructions } from "./tailoringPresets";
 
+/** Upper bound for an untrusted target company name injected into the privacy mandate. */
+const MAX_COMPANY_NAME_LENGTH = 80;
+/** Upper bound for the untrusted career arc context (longer than a company name, still bounded). */
+const MAX_CAREER_ARC_LENGTH = 400;
+
+/**
+ * Neutralize an untrusted upstream/LLM string before interpolating it into a governing prompt block.
+ * Collapses every whitespace run (newlines, tabs, etc.) into a single space, strips quote-like and
+ * escape characters that could break out of the surrounding quoted instruction slot, and caps the
+ * length so a pasted blob cannot dominate the prompt. Returns an empty string for non-string and
+ * whitespace-only input so callers treat the value as absent.
+ */
+function sanitizeInjectedValue(value: string | undefined, maxLength: number): string {
+  if (typeof value !== "string") return "";
+  const collapsed = value.replace(/\s+/g, " ").replace(/["'`\\]/g, "").trim();
+  if (!collapsed) return "";
+  return collapsed.length > maxLength ? collapsed.slice(0, maxLength).trim() : collapsed;
+}
+
 /**
  * Tier-appropriate calibration guidance for universal level-calibrated prompting (REQ-UBI-01).
- * Returns an empty string when no tier is supplied so existing callers see no change.
+ * Returns an empty string when no tier is supplied (or only whitespace/an unknown tier) so existing
+ * callers see no change and no dangling header is emitted.
  */
 function buildSeniorityCalibration(seniorityTier?: SeniorityTier): string {
-  if (!seniorityTier) return "";
+  const tier = typeof seniorityTier === "string" ? seniorityTier.trim() : "";
+  if (!tier) return "";
   const tierGuidance: Record<SeniorityTier, string> = {
     executive:
       "Emphasize enterprise-level workflow orchestration, executive stakeholder alignment, resource governance, and the full scope of team leadership. Frame outcomes as organizational strategy and P&L-level accountability.",
@@ -23,17 +44,21 @@ function buildSeniorityCalibration(seniorityTier?: SeniorityTier): string {
     entry:
       "Emphasize execution rigor, procedural delivery, and hands-on contribution that demonstrates readiness to grow.",
   };
-  return `SENIORITY CALIBRATION — TARGET TIER: ${seniorityTier}
-- Calibrate every claim to the "${seniorityTier}" level; do not overstate or understate scope.
-- ${tierGuidance[seniorityTier]}`;
+  const guidance = tierGuidance[tier as SeniorityTier];
+  if (!guidance) return "";
+  return `SENIORITY CALIBRATION — TARGET TIER: ${tier}
+- Calibrate every claim to the "${tier}" level; do not overstate or understate scope.
+- ${guidance}`;
 }
 
 /**
  * Depth guidance graduated by how recent a role is (REQ-EVT-02).
- * Returns an empty string when no tier is supplied so existing callers see no change.
+ * Returns an empty string when no tier is supplied (or only whitespace) so existing callers see no
+ * change and no dangling header is emitted.
  */
 function buildRecencyDepthGuidance(recencyTier?: string): string {
-  if (!recencyTier) return "";
+  const tier = typeof recencyTier === "string" ? recencyTier.trim() : "";
+  if (!tier) return "";
   const tierGuidance: Record<string, string> = {
     recent_deep:
       "Give these achievements maximum depth: highlight strategic scope, leadership ownership, and detailed, substantiated outcomes.",
@@ -43,31 +68,35 @@ function buildRecencyDepthGuidance(recencyTier?: string): string {
       "Keep these achievements brief and authentic: baseline execution, core responsibilities, and early-career milestones.",
   };
   const guidance =
-    tierGuidance[recencyTier] ||
+    tierGuidance[tier] ||
     "Match depth to the recency of the role: more detail for recent roles, less for older ones.";
-  return `RECENCY-ADJUSTED DEPTH — TIER: ${recencyTier}
+  return `RECENCY-ADJUSTED DEPTH — TIER: ${tier}
 - ${guidance}`;
 }
 
 /**
  * Background positioning context describing the candidate's career arc (REQ-EVT-03).
  * Returns an empty string when no arc is supplied so existing callers see no change.
+ * The arc is upstream/LLM-derived, so it is neutralized before interpolation.
  */
 function buildCareerArcBlock(careerArc?: string): string {
-  if (!careerArc) return "";
+  const safeArc = sanitizeInjectedValue(careerArc, MAX_CAREER_ARC_LENGTH);
+  if (!safeArc) return "";
   return `CAREER ARC CONTEXT (background positioning only — do NOT quote verbatim into bullets):
-${careerArc}`;
+${safeArc}`;
 }
 
 /**
  * Absolute prohibition on leaking the target employer's name into generated copy (REQ-UBI-02, REQ-ERR-01).
  * Returns an empty string when no target company is supplied so existing callers see no change.
+ * The company name is JD-derived, so quotes/newlines/escapes are stripped and the length capped before
+ * it is interpolated into this governing block; benign names pass through byte-identical.
  */
 function buildCompanyPrivacyBlock(targetCompany?: string): string {
-  const trimmedTarget = (targetCompany || "").trim();
-  if (!trimmedTarget) return "";
+  const safeTarget = sanitizeInjectedValue(targetCompany, MAX_COMPANY_NAME_LENGTH);
+  if (!safeTarget) return "";
   return `STRICT COMPANY PRIVACY MANDATE:
-- DO NOT mention "${trimmedTarget}" anywhere in your output. The target employer is NOT part of the candidate's work history.
+- DO NOT mention "${safeTarget}" anywhere in your output. The target employer is NOT part of the candidate's work history.
 - The ONLY company names permitted in your output are the candidate's actual employers listed in their experience history.
 - Never imply the candidate worked at, was employed by, or was contracted to the target employer.
 - When organizational context is required, refer to "the organization" or a neutral description instead.`;
@@ -281,7 +310,8 @@ export function getHolisticSummaryPrompt(params: {
   const keywordsLine =
     userRequestedKeywords.length > 0 ? `Target Keywords: ${userRequestedKeywords.join(", ")}\n` : "";
   const leverBlock = preferences ? `\n${buildLeverInstructions(preferences)}\n` : "";
-  const seniorityBlock = seniorityTier ? `\n${buildSeniorityCalibration(seniorityTier)}\n` : "";
+  const seniorityCalibration = buildSeniorityCalibration(seniorityTier);
+  const seniorityBlock = seniorityCalibration ? `\n${seniorityCalibration}\n` : "";
 
   return `You are an elite executive resume writer. Write a cohesive, holistic Professional Summary (3–4 sentences) representing the candidate's ENTIRE career arc, tailored for the target role below.
 ${leverBlock}
