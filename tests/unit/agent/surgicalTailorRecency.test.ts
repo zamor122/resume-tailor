@@ -234,6 +234,204 @@ describe("surgicalTailorNode two-phase recency tailoring (REQ-EVT-04, REQ-UBI-02
     expect(bulletSpy.mock.calls[0][0].targetCompany).toBeUndefined();
   });
 
+  it("derives a sentence-final employer WITHOUT swallowing the trailing period, then scrubs it everywhere (PERIOD-LEAK, REQ-UBI-02)", async () => {
+    const bulletSpy = vi.spyOn(tailoringSectionPrompts, "getExperienceBulletsPrompt");
+
+    // KissMetrics-style JD: the employer name is followed by a sentence-boundary period.
+    const jd = "We are hiring a Clinical Operations Manager at Kaiser Permanente. Apply today.";
+    const leakyBullet = "- Partnered with Kaiser Permanente on cloud migration";
+    const leakySummary = "Clinical Operations Manager driving outcomes at Kaiser Permanente.";
+
+    vi.mocked(generateWithFallback)
+      .mockResolvedValueOnce({
+        text: JSON.stringify([
+          {
+            index: 0,
+            originalText: PRE_TAILOR_BULLET,
+            suggestedText: leakyBullet,
+            status: "enhanced",
+            reason: "Reframed around target employer",
+            keywords: ["Clinical Operations"],
+          },
+        ]),
+        modelUsed: "mock-model",
+      })
+      .mockResolvedValueOnce({ text: leakySummary, modelUsed: "mock-model" });
+
+    const result = await surgicalTailorNode({
+      ...baseState,
+      selectedJobDescription: jd,
+      jobTitle: "Clinical Operations Manager",
+    });
+
+    // The heuristic must capture EXACTLY the company name — no trailing sentence punctuation, no next word.
+    expect(bulletSpy).toHaveBeenCalledTimes(1);
+    expect(bulletSpy.mock.calls[0][0].targetCompany).toBe("Kaiser Permanente");
+
+    // Persisted outputs must not leak the target employer.
+    expect(result.tailoredBulletsByJob![0]).not.toContain("Kaiser Permanente");
+    expect(result.tailoredBulletsByJob![0]).toContain("the organization");
+    expect(result.tailoredSummary).not.toContain("Kaiser Permanente");
+    expect(result.tailoredSummary).toContain("the organization");
+    result.suggestions!.forEach((sug) => {
+      expect(sug.suggestedText).not.toContain("Kaiser Permanente");
+    });
+  });
+
+  it("derives a capitalized sentence-initial employer and does not swallow the trailing comma (REQ-UBI-02)", async () => {
+    const bulletSpy = vi.spyOn(tailoringSectionPrompts, "getExperienceBulletsPrompt");
+
+    vi.mocked(generateWithFallback).mockResolvedValueOnce({
+      text: bulletJson(PHASE_ONE_SUGGESTED),
+      modelUsed: "mock-model",
+    });
+
+    await surgicalTailorNode({
+      ...baseState,
+      selectedJobDescription: "At Salesforce, we build customer success.",
+      bulletPlan: { ...baseState.bulletPlan!, summaryChange: false },
+    });
+
+    // Capitalized "At" must still anchor a match, and the trailing comma must be excluded.
+    expect(bulletSpy.mock.calls[0][0].targetCompany).toBe("Salesforce");
+  });
+
+  it("rejects location and role-phrase false positives that would corrupt legitimate content (REQ-UBI-02)", async () => {
+    const bulletSpy = vi.spyOn(tailoringSectionPrompts, "getExperienceBulletsPrompt");
+
+    // Negative corpus: a false positive is SEVERE because the scrubber replaces the token globally.
+    const negativeJds: Array<[string, string]> = [
+      ["sentence-initial geography", "We are hiring a Senior Data Analyst at Denver."],
+      ["another geography", "Join our team at Boston to grow the business."],
+      ["generic level phrase", "We need a leader at Senior Manager level to drive delivery."],
+      ["forefront idiom", "We are at the forefront of innovation."],
+      ["scale idiom", "Partner with us at scale to accelerate growth."],
+    ];
+
+    for (const [label, jd] of negativeJds) {
+      bulletSpy.mockClear();
+      vi.mocked(generateWithFallback).mockResolvedValueOnce({
+        text: bulletJson(PHASE_ONE_SUGGESTED),
+        modelUsed: "mock-model",
+      });
+
+      await surgicalTailorNode({
+        ...baseState,
+        selectedJobDescription: jd,
+        bulletPlan: { ...baseState.bulletPlan!, summaryChange: false },
+      });
+
+      expect(bulletSpy.mock.calls[0][0].targetCompany, `unexpected company for ${label}: "${jd}"`).toBeUndefined();
+    }
+  });
+
+  it("scrubs acronym employers (IBM/SAP/GM) instead of letting them leak unscrubbed (REQ-UBI-02)", async () => {
+    const bulletSpy = vi.spyOn(tailoringSectionPrompts, "getExperienceBulletsPrompt");
+
+    vi.mocked(generateWithFallback).mockResolvedValueOnce({
+      text: bulletJson(PHASE_ONE_SUGGESTED),
+      modelUsed: "mock-model",
+    });
+
+    await surgicalTailorNode({
+      ...baseState,
+      selectedJobDescription: "Join us at IBM",
+      bulletPlan: { ...baseState.bulletPlan!, summaryChange: false },
+    });
+
+    // 2-3 char real employers must clear the plausibility floor (consistent with the > 1 scrubber threshold).
+    expect(bulletSpy.mock.calls[0][0].targetCompany).toBe("IBM");
+  });
+
+  it("scrubs the explicit-array bulletIndices seam and maps bulletIndex back to ORIGINAL indices (REQ-UBI-02)", async () => {
+    // Three bullets; only indices 0 and 2 are planned for rewrite.
+    const origDescription = [
+      "- Built customer dashboards",
+      "- Managed vendor relationships",
+      "- Reduced reporting time",
+    ].join("\n");
+
+    vi.mocked(generateWithFallback).mockResolvedValueOnce({
+      text: JSON.stringify([
+        {
+          index: 0,
+          originalText: "- Built customer dashboards",
+          suggestedText: "- Unified customer dashboards at TargetCorp",
+          status: "enhanced",
+          reason: "Unified reporting",
+          keywords: ["Dashboards"],
+        },
+        {
+          index: 1,
+          originalText: "- Reduced reporting time",
+          suggestedText: "- Reduced reporting time by 30% at TargetCorp",
+          status: "enhanced",
+          reason: "Quantified impact",
+          keywords: ["Reporting"],
+        },
+      ]),
+      modelUsed: "mock-model",
+    });
+
+    const result = await surgicalTailorNode({
+      ...baseState,
+      selectedJobDescription: "Role at TargetCorp looking for Senior Product Analyst",
+      resumeAST: {
+        ...baseState.resumeAST!,
+        experience: [
+          {
+            title: "Product Analyst",
+            company: "Acme Corp",
+            dates: "2021 - Present",
+            description: origDescription,
+          },
+        ],
+      },
+      bulletPlan: {
+        summaryChange: false,
+        skillsChange: false,
+        jobBulletChanges: [
+          { jobIndex: 0, bulletIndices: [0, 2], reason: "Sharpen top and bottom bullets", recencyTier: "recent_deep" },
+        ],
+        jobAudits: [
+          {
+            jobIndex: 0,
+            hasChanges: true,
+            bulletIndices: [0, 2],
+            auditRationale: "Recent role carries the strongest target alignment",
+            recencyTier: "recent_deep",
+          },
+        ],
+      },
+    });
+
+    const tailored = result.tailoredBulletsByJob![0];
+    // Seam must scrub the rewritten bullets...
+    expect(tailored).not.toContain("TargetCorp");
+    expect(tailored).toContain("the organization");
+    // ...while the unplanned middle bullet is preserved verbatim.
+    expect(tailored).toContain("Managed vendor relationships");
+
+    // Suggestions map back to the ORIGINAL indices (0 and 2), never the compacted list positions (0 and 1).
+    const jobSuggestions = result.suggestions!.filter((s) => s.jobIndex === 0);
+    expect(jobSuggestions.map((s) => s.bulletIndex).sort()).toEqual([0, 2]);
+  });
+
+  it("honors the original summary and emits NO phantom summary suggestion when synthesis fails (REQ-EVT-04)", async () => {
+    vi.mocked(generateWithFallback)
+      .mockResolvedValueOnce({ text: bulletJson(PHASE_ONE_SUGGESTED), modelUsed: "mock-model" })
+      .mockRejectedValueOnce(new Error("summary synthesis exploded"));
+
+    const result = await surgicalTailorNode(baseState);
+
+    // Fallback honored.
+    expect(result.tailoredSummary).toBe("Old summary");
+    // A suggestion claiming a change that never happened must NOT be emitted.
+    expect(result.suggestions!.find((s) => s.id === "sug-summary")).toBeUndefined();
+    // Phase-1 bullet suggestions are still present.
+    expect(result.suggestions!.find((s) => s.id === "sug-job-0-bullet-0")).toBeDefined();
+  });
+
   it("routes each job its own recencyTier and falls back to the audit tier (REQ-EVT-02)", async () => {
     const bulletSpy = vi.spyOn(tailoringSectionPrompts, "getExperienceBulletsPrompt");
 

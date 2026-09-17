@@ -365,10 +365,25 @@ function spliceRewrittenBullets(
 }
 
 /**
- * Generic role/level/scope words that must never be mistaken for an employer name by the
- * job-description heuristic below (e.g. "Role at Senior level" must NOT yield "Senior").
+ * Tokens that must never be mistaken for an employer name by the job-description heuristic.
+ *
+ * Two families, both of which compensate for the LOW length floor in `isPlausibleCompanyName`
+ * (that floor is deliberately `> 1` so genuine 2–3 character employers such as IBM, SAP, GM, EA,
+ * BP and 3M are scrubbed consistently with `sanitizeCompanyReferences`):
+ *
+ * 1. Generic role/level/scope/function words and short JD abbreviations that commonly follow "at"
+ *    in real postings ("at scale", "at all levels", "at Senior Manager level", "at our core",
+ *    "at HR", "at QA").
+ * 2. A COMPACT, deliberately non-exhaustive set of high-frequency JD geography names
+ *    ("at Denver", "at Boston"). A false positive is severe because the scrubber replaces the
+ *    token GLOBALLY across every bullet and the summary, so a small curated list is worth the trade.
+ *
+ * Bounded mitigation only — this is intentionally NOT an enumeration of world cities, and does not
+ * attempt to cover every non-company token. See the residual-limitation note on
+ * `isPlausibleCompanyName`.
  */
 const GENERIC_TARGET_TOKENS = new Set([
+  // role / level / scope / seniority prose
   "senior",
   "junior",
   "staff",
@@ -377,25 +392,114 @@ const GENERIC_TARGET_TOKENS = new Set([
   "manager",
   "director",
   "intern",
+  "associate",
+  "specialist",
+  "analyst",
+  "engineer",
+  "consultant",
+  "coordinator",
   "remote",
   "hybrid",
   "onsite",
   "contract",
   "level",
+  // determiners / pronouns / prepositions / quantifiers that head generic prose
   "the",
   "this",
+  "that",
+  "these",
+  "those",
+  "a",
+  "an",
+  "and",
+  "or",
+  "of",
+  "in",
+  "on",
+  "to",
+  "for",
+  "by",
+  "with",
+  "within",
+  "all",
+  "any",
+  "each",
+  "every",
+  "some",
+  "no",
+  "not",
+  "top",
+  "new",
+  "we",
+  "us",
+  "you",
   "our",
   "your",
+  "their",
+  "its",
+  "it",
+  // short JD abbreviations / generic function words
+  "hr",
+  "qa",
+  "pm",
+  "vp",
+  "ceo",
+  "cto",
+  "cfo",
+  "coo",
+  "sr",
+  "jr",
+  "job",
+  "role",
+  "team",
+  "work",
+  "company",
+  "employer",
+  "organization",
+  "organisation",
+  // high-frequency JD geographies (bounded, non-exhaustive)
+  "denver",
+  "boston",
+  "new york",
+  "seattle",
+  "austin",
+  "chicago",
+  "atlanta",
+  "san francisco",
+  "los angeles",
+  "dallas",
+  "london",
+  "toronto",
+  "berlin",
 ]);
 
 /**
  * Guards the job-description heuristic against over-capturing generic prose. Errs toward returning
  * nothing (a missed scrub is far less harmful than scrubbing a legitimate word out of every bullet).
+ *
+ * Length-floor rationale: the threshold is `> 1`, intentionally IDENTICAL to the floor in
+ * `sanitizeCompanyReferences` (`src/app/utils/companyPrivacyGuard.ts`). A higher floor of 4 silently
+ * disabled the scrub for real acronym employers (IBM, SAP, GM, EA, BP, 3M), letting them leak into
+ * persisted bullets and the summary. The extra false-positive risk a low floor introduces is
+ * compensated by the expanded `GENERIC_TARGET_TOKENS` stoplist above and the leading-token check
+ * below — NOT by raising the floor again.
+ *
+ * Residual limitation (accepted, bounded): the stoplist cannot enumerate every world city,
+ * non-company proper noun or JD idiom, so a capitalized non-company token that follows "at" and is
+ * NOT listed can still be mis-derived (and then scrubbed globally). We deliberately avoid growing
+ * the stoplist into hundreds of entries or adding an NLP dependency.
  */
 function isPlausibleCompanyName(candidate: string): boolean {
   const trimmed = candidate.trim();
-  if (trimmed.length < 4) return false;
-  return !GENERIC_TARGET_TOKENS.has(trimmed.toLowerCase());
+  if (trimmed.length <= 1) return false;
+
+  const lower = trimmed.toLowerCase();
+  if (GENERIC_TARGET_TOKENS.has(lower)) return false;
+
+  // Multi-word captures inherit the generic-ness of their LEADING token, e.g. "Senior Manager" or
+  // "New York" must be rejected even though the full phrase is not itself a stoplist entry.
+  const leadingToken = lower.split(/\s+/)[0];
+  return !GENERIC_TARGET_TOKENS.has(leadingToken);
 }
 
 /**
@@ -427,8 +531,16 @@ function deriveTargetCompany(state: AgentState): string | undefined {
     return discovered.trim();
   }
 
+  // Heuristic: a capitalized organisation token anchored on an "at" boundary.
+  //
+  // `.` is deliberately EXCLUDED from the token character classes: including it made the capture
+  // cross sentence boundaries and retain trailing periods (e.g. "at Kaiser Permanente. Apply today."
+  // yielded "Kaiser Permanente. Apply"), which built an unmatchable scrub regex and silently leaked
+  // the target employer into persisted bullets and the summary (REQ-UBI-02).
+  // `[Aa]t` also accepts the sentence-initial form ("At Salesforce, we build ...") which previously
+  // derived `undefined`. Commas and other sentence punctuation therefore terminate the capture.
   const jdMatch = (state.selectedJobDescription || "").match(
-    /\bat\s+([A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*)*)/
+    /\b[Aa]t\s+([A-Z][A-Za-z0-9&'-]*(?:\s+[A-Z][A-Za-z0-9&'-]*)*)/
   );
   const jdCandidate = jdMatch?.[1]?.trim();
   if (jdCandidate && isPlausibleCompanyName(jdCandidate)) return jdCandidate;
