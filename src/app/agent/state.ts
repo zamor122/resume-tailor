@@ -2,6 +2,7 @@ import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { JDInterpreterResult } from "@/app/utils/keyword-extraction";
 import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
+import type { JevJudgeResult } from "@/app/services/jev";
 
 export interface CandidateProfile {
   primaryTitle: string;
@@ -66,6 +67,7 @@ export interface ResumeSuggestion {
   status?: "pending" | "accepted" | "rejected";
   jobIndex?: number;
   bulletIndex?: number;
+  jevJudge?: JevJudgeResult;
 }
 
 export type SectionGroupType = "experience" | "skills" | "summary" | "other";

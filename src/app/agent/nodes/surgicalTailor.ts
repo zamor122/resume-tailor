@@ -14,6 +14,11 @@ import {
 } from "@/app/utils/resumeReassemble";
 import { parseChunkBulletsResponse } from "@/app/utils/chunkBulletParser";
 import { stripModelThinking } from "@/app/utils/stripModelThinking";
+import {
+  diagnoseChunkWithJev,
+  judgeSuggestionWithJev,
+  type JevJudgeResult,
+} from "@/app/services/jev";
 
 /**
  * Contextually distributes target missing keywords across multiple career roles
@@ -122,25 +127,43 @@ export async function surgicalTailorNode(
     const jobKeywords = getJobSpecificKeywords(exp, sortedMissingKeywords, jobIndex);
 
     bulletPromises.push(
-      generateWithFallback(
-        getExperienceBulletsPrompt({
-          jobTitle: exp.title,
-          company: exp.company,
-          dates: exp.dates,
-          bulletsText,
-          jobDescription: jdSnippet,
-          preferences,
-          userRequestedKeywords: jobKeywords,
-          seniorityTier: state.seniorityTier,
-          careerArc: state.careerArc,
-          targetCompany,
-          recencyTier: resolvedRecencyTier,
-        }),
-        state.modelKey,
-        { maxTokens: 2000, temperature: 0.2 },
-        state.sessionApiKeys
-      )
-        .then((res) => {
+      (async () => {
+        let diagnosis;
+        try {
+          diagnosis = await diagnoseChunkWithJev(
+            {
+              title: exp.title,
+              company: exp.company,
+              bulletsText,
+            },
+            jdSnippet,
+            state.jobTitle,
+            state.sessionApiKeys?.['TYPESAFE_API_KEY']
+          );
+        } catch (diagErr) {
+          console.warn(`[surgicalTailor] Jev pre-diagnosis failed for jobIndex ${jobIndex}:`, diagErr);
+        }
+
+        try {
+          const res = await generateWithFallback(
+            getExperienceBulletsPrompt({
+              jobTitle: exp.title,
+              company: exp.company,
+              dates: exp.dates,
+              bulletsText,
+              jobDescription: jdSnippet,
+              preferences,
+              userRequestedKeywords: jobKeywords,
+              seniorityTier: state.seniorityTier,
+              careerArc: state.careerArc,
+              targetCompany,
+              recencyTier: resolvedRecencyTier,
+              diagnosis,
+            }),
+            state.modelKey,
+            { maxTokens: 2000, temperature: 0.2 },
+            state.sessionApiKeys
+          );
           const cleanText = stripModelThinking(res.text).trim();
           console.log(`[surgicalTailor] Job ${jobIndex} (${exp.company}) response received (chars: ${cleanText.length})`);
           return {
@@ -149,8 +172,7 @@ export async function surgicalTailorNode(
             text: cleanText,
             originalInputText: bulletsText,
           };
-        })
-        .catch((err) => {
+        } catch (err) {
           console.warn(`[surgicalTailor] Job ${jobIndex} bullet tailoring LLM failed:`, err);
           return {
             type: "bullets" as const,
@@ -158,7 +180,8 @@ export async function surgicalTailorNode(
             text: bulletsText,
             originalInputText: bulletsText,
           };
-        })
+        }
+      })()
     );
   });
 
@@ -167,10 +190,10 @@ export async function surgicalTailorNode(
   let tailoredSummary = resumeAST?.summary || "";
   const tailoredBulletsByJob: string[] = experience.map((e) => e.description);
 
-  results.forEach((r) => {
+  for (const r of results) {
     const exp = experience[r.index];
     const planItem = bulletPlan?.jobBulletChanges.find((c) => c.jobIndex === r.index);
-    if (!exp) return;
+    if (!exp) continue;
 
     if (planItem?.bulletIndices === "all") {
       const origBullets = getBulletsList(exp.description);
@@ -190,14 +213,48 @@ export async function surgicalTailorNode(
         sanitizeCompanyReferences(bullet, vettedEmployers, targetCompany)
       );
 
-      tailoredBulletsByJob[r.index] = sanitizedBullets.join("\n");
-      sanitizedSuggestions.forEach((sug) => {
-        suggestions.push({
-          ...sug,
-          id: `sug-job-${r.index}-bullet-${sug.bulletIndex ?? 0}`,
-          reason: planItem.reason || sug.reason,
-        });
+      // Evaluate suggestions with Jev quality gate
+      const judgedChunkSuggestions = await Promise.all(
+        sanitizedSuggestions.map(async (sug) => {
+          const origBullet = sug.originalText;
+          const newBullet = sug.suggestedText;
+          try {
+            const judge = await judgeSuggestionWithJev(
+              origBullet,
+              newBullet,
+              jdSnippet,
+              state.sessionApiKeys?.['TYPESAFE_API_KEY']
+            );
+            return { sug, judge };
+          } catch (judgeErr) {
+            console.warn(`[surgicalTailor] Jev judge failed for suggestion ${sug.id}:`, judgeErr);
+            return { sug, judge: undefined };
+          }
+        })
+      );
+
+      judgedChunkSuggestions.forEach(({ sug, judge }) => {
+        const bulletIdx = sug.bulletIndex ?? 0;
+        if (judge && (judge.isAuthentic === false || judge.isBetterThanOriginal === false)) {
+          console.log(`[surgicalTailor] Suggestion rejected by Jev gatekeeper:`, {
+            id: sug.id,
+            isAuthentic: judge.isAuthentic,
+            isBetterThanOriginal: judge.isBetterThanOriginal,
+          });
+          if (origBullets[bulletIdx] !== undefined) {
+            sanitizedBullets[bulletIdx] = origBullets[bulletIdx];
+          }
+        } else {
+          suggestions.push({
+            ...sug,
+            id: `sug-job-${r.index}-bullet-${bulletIdx}`,
+            reason: planItem.reason || sug.reason,
+            ...(judge ? { jevJudge: judge } : {}),
+          });
+        }
       });
+
+      tailoredBulletsByJob[r.index] = sanitizedBullets.join("\n");
     } else if (planItem?.bulletIndices) {
       const targetIndices = planItem.bulletIndices as number[];
       const origBullets = extractSpecificBulletsArray(exp.description, targetIndices);
@@ -217,23 +274,57 @@ export async function surgicalTailorNode(
         sanitizeCompanyReferences(bullet, vettedEmployers, targetCompany)
       );
 
+      // Evaluate suggestions with Jev quality gate
+      const judgedChunkSuggestions = await Promise.all(
+        sanitizedSuggestions.map(async (sug) => {
+          const origBullet = sug.originalText;
+          const newBullet = sug.suggestedText;
+          try {
+            const judge = await judgeSuggestionWithJev(
+              origBullet,
+              newBullet,
+              jdSnippet,
+              state.sessionApiKeys?.['TYPESAFE_API_KEY']
+            );
+            return { sug, judge };
+          } catch (judgeErr) {
+            console.warn(`[surgicalTailor] Jev judge failed for suggestion ${sug.id}:`, judgeErr);
+            return { sug, judge: undefined };
+          }
+        })
+      );
+
+      judgedChunkSuggestions.forEach(({ sug, judge }) => {
+        const localIdx = sug.bulletIndex ?? 0;
+        const originalIdx = targetIndices[localIdx] ?? localIdx;
+
+        if (judge && (judge.isAuthentic === false || judge.isBetterThanOriginal === false)) {
+          console.log(`[surgicalTailor] Suggestion rejected by Jev gatekeeper:`, {
+            id: sug.id,
+            isAuthentic: judge.isAuthentic,
+            isBetterThanOriginal: judge.isBetterThanOriginal,
+          });
+          if (origBullets[localIdx] !== undefined) {
+            sanitizedBullets[localIdx] = origBullets[localIdx];
+          }
+        } else {
+          suggestions.push({
+            ...sug,
+            id: `sug-job-${r.index}-bullet-${originalIdx}`,
+            bulletIndex: originalIdx,
+            reason: planItem.reason || sug.reason,
+            ...(judge ? { jevJudge: judge } : {}),
+          });
+        }
+      });
+
       tailoredBulletsByJob[r.index] = spliceRewrittenBullets(
         experience[r.index].description,
         sanitizedBullets.join("\n"),
         targetIndices
       );
-
-      sanitizedSuggestions.forEach((sug) => {
-        const originalIdx = targetIndices[sug.bulletIndex ?? 0] ?? (sug.bulletIndex ?? 0);
-        suggestions.push({
-          ...sug,
-          id: `sug-job-${r.index}-bullet-${originalIdx}`,
-          bulletIndex: originalIdx,
-          reason: planItem.reason || sug.reason,
-        });
-      });
     }
-  });
+  }
 
   // PHASE 2 — synthesize the holistic summary strictly AFTER all Phase-1 bullets resolved (REQ-EVT-04).
   // The prompt is assembled from the already-tailored bullets so the summary reflects final state.
@@ -266,22 +357,39 @@ export async function surgicalTailorNode(
       const synthesizedSummary = enforceBriefSummary(rawSynthesizedSummary);
       console.log(`[surgicalTailor] Holistic summary synthesized after ${results.length} bullet task(s) (length: ${synthesizedSummary.length})`);
 
-      if (synthesizedSummary.trim()) {
-        tailoredSummary = synthesizedSummary;
-      }
-
       if (originalSummary.trim() && synthesizedSummary.trim() && originalSummary.trim() !== synthesizedSummary.trim()) {
-        suggestions.push({
-          id: "sug-summary",
-          section: "Professional Summary",
-          originalText: isolatePreciseOriginalChange(originalSummary, synthesizedSummary, rawResume),
-          suggestedText: synthesizedSummary.trim(),
-          reason: `Reframed summary to highlight target role competencies, core tech stack, and leadership scope`,
-          keywords: sortedMissingKeywords.slice(0, 4),
-          category: "summary",
-          status: "pending",
-        });
-        console.log(`[surgicalTailor] Added summary suggestion`);
+        let judge: JevJudgeResult | undefined;
+        try {
+          judge = await judgeSuggestionWithJev(
+            originalSummary,
+            synthesizedSummary,
+            jdSnippet,
+            state.sessionApiKeys?.['TYPESAFE_API_KEY']
+          );
+        } catch (judgeErr) {
+          console.warn("[surgicalTailor] Jev judge failed for summary:", judgeErr);
+        }
+
+        if (judge && (judge.isAuthentic === false || judge.isBetterThanOriginal === false)) {
+          console.log("[surgicalTailor] Summary suggestion rejected by Jev gatekeeper:", judge);
+          tailoredSummary = originalSummary;
+        } else {
+          tailoredSummary = synthesizedSummary;
+          suggestions.push({
+            id: "sug-summary",
+            section: "Professional Summary",
+            originalText: isolatePreciseOriginalChange(originalSummary, synthesizedSummary, rawResume),
+            suggestedText: synthesizedSummary.trim(),
+            reason: `Reframed summary to highlight target role competencies, core tech stack, and leadership scope`,
+            keywords: sortedMissingKeywords.slice(0, 4),
+            category: "summary",
+            status: "pending",
+            ...(judge ? { jevJudge: judge } : {}),
+          });
+          console.log(`[surgicalTailor] Added summary suggestion`);
+        }
+      } else if (synthesizedSummary.trim()) {
+        tailoredSummary = synthesizedSummary;
       }
     } catch (err) {
       console.warn("[surgicalTailor] Holistic summary synthesis failed, keeping original summary:", err);
