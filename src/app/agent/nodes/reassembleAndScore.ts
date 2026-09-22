@@ -16,6 +16,7 @@ import {
   replaceContactBlock,
 } from "@/app/utils/contactBlockSanitizer";
 import { computeKeywordGap } from "../utils/keywordGap";
+import { evaluateResumeAlignmentWithJev } from "@/app/services/jev";
 
 export async function reassembleAndScoreNode(
   state: AgentState
@@ -105,7 +106,28 @@ export async function reassembleAndScoreNode(
   const matchRatio = Math.min(1, foundCount / Math.max(1, totalKeywords));
 
   const targetBoost = preferences.intensity === "minimal" ? 15 : preferences.intensity === "targeted" ? 25 : 35;
-  const afterScore = Math.min(98, Math.max(baselineScore + 10, Math.round(baselineScore + targetBoost * matchRatio)));
+  let beforeScore = baselineScore;
+  let afterScore = Math.min(98, Math.max(baselineScore + 10, Math.round(baselineScore + targetBoost * matchRatio)));
+
+  const jd = state.selectedJobDescription?.trim();
+  if (jd && rawResume) {
+    try {
+      const apiKey = state.sessionApiKeys?.['TYPESAFE_API_KEY'];
+      const beforeEval = await evaluateResumeAlignmentWithJev(rawResume, jd, apiKey);
+      const afterEval = await evaluateResumeAlignmentWithJev(finalResume, jd, apiKey);
+      if (
+        beforeEval &&
+        typeof beforeEval.matchScore === "number" &&
+        afterEval &&
+        typeof afterEval.matchScore === "number"
+      ) {
+        beforeScore = beforeEval.matchScore;
+        afterScore = Math.max(beforeScore + 5, afterEval.matchScore);
+      }
+    } catch (err) {
+      console.warn("[reassembleAndScore] Jev alignment evaluation failed, falling back to token scoring:", err);
+    }
+  }
 
   // 5. Count metrics and modifications
   const placeholderCount = (finalResume.match(/\[[^\]]+\]/g) || []).length;
@@ -117,20 +139,20 @@ export async function reassembleAndScoreNode(
   const improvementMetrics: ImprovementMetrics = {
     bulletsRewritten: totalBulletsModified,
     keywordsAdded: keywordGap.foundInResume.length,
-    scoreImprovement: afterScore - baselineScore,
+    scoreImprovement: afterScore - beforeScore,
     intensityApplied: preferences.intensity,
     metricsInjected: placeholderCount,
   };
 
   return {
     finalResumeText: finalResume,
-    beforeScore: baselineScore,
+    beforeScore,
     afterScore,
     keywordGap,
     suggestions: activeSuggestions,
     improvementMetrics,
     logs: [
-      `[reassembleAndScore] Reassembled resume | Match score: ${baselineScore}% -> ${afterScore}% (+${afterScore - baselineScore}%) | Suggestions: ${activeSuggestions.length}`,
+      `[reassembleAndScore] Reassembled resume | Match score: ${beforeScore}% -> ${afterScore}% (+${afterScore - beforeScore}%) | Suggestions: ${activeSuggestions.length}`,
     ],
   };
 }
