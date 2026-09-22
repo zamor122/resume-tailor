@@ -63,7 +63,8 @@ function getJobSpecificKeywords(
  */
 export function enforceBriefSummary(summary: string): string {
   if (!summary) return "";
-  const sentences = summary.match(/[^.!?]+[.!?]+/g) || [summary];
+  const trimmed = summary.trim();
+  const sentences = trimmed.split(/(?<=[.!?])\s+/).filter(Boolean);
   return sentences.slice(0, 3).map((s) => s.trim()).join(" ").trim();
 }
 

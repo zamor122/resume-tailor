@@ -23,7 +23,7 @@ export interface JevAlignmentScoreResult {
 }
 
 const DEFAULT_JEV_API_URL = 'https://api.typesafe.ai/v1/systemone';
-const JEV_TIMEOUT_MS = 1200;
+const JEV_TIMEOUT_MS = 1500;
 
 function getJevApiUrl(): string {
   const url = process.env.TYPESAFE_API_URL;
