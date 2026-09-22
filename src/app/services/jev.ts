@@ -139,14 +139,17 @@ export async function judgeSuggestionWithJev(
         },
       };
       const response = await postJevWithTimeout(getJevApiUrl(), payload, key);
-      return {
-        isAuthentic: response.isAuthentic !== false,
-        contentMatchScore: Number(response.contentMatchScore) || 4,
-        toneOfVoiceRating: response.toneOfVoiceRating || 'strong_authentic',
-        isBetterThanOriginal: response.isBetterThanOriginal !== false,
-        overallImpactScore: Number(response.overallImpactScore) || 4,
-        scoreDeltaPercent: Number(response.scoreDeltaPercent) || 25,
-      };
+        const parsedContentMatch = Number(response.contentMatchScore);
+        const parsedImpact = Number(response.overallImpactScore);
+        const parsedDelta = Number(response.scoreDeltaPercent);
+        return {
+          isAuthentic: response.isAuthentic !== false,
+          contentMatchScore: Number.isFinite(parsedContentMatch) ? parsedContentMatch : 4,
+          toneOfVoiceRating: response.toneOfVoiceRating || 'strong_authentic',
+          isBetterThanOriginal: response.isBetterThanOriginal !== false,
+          overallImpactScore: Number.isFinite(parsedImpact) ? parsedImpact : 4,
+          scoreDeltaPercent: Number.isFinite(parsedDelta) ? parsedDelta : 25,
+        };
     } catch (err) {
       console.warn('[jev] judgeSuggestionWithJev call failed, using graceful fallback:', err);
     }
@@ -190,8 +193,9 @@ export async function evaluateResumeAlignmentWithJev(
         },
       };
       const response = await postJevWithTimeout(getJevApiUrl(), payload, key);
+      const parsedMatch = Number(response.matchScore);
       return {
-        matchScore: Math.min(100, Math.max(0, Number(response.matchScore) || 60)),
+        matchScore: Number.isFinite(parsedMatch) ? Math.min(100, Math.max(0, parsedMatch)) : 60,
         confidence: Number(response.confidence) || 0.9,
       };
     } catch (err) {
