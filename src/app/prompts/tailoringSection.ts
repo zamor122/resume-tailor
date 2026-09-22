@@ -2,6 +2,7 @@
  * Section-level tailoring prompts for summary and experience bullets only.
  * Used when section-based tailoring is enabled: title/company/dates are copy-pasted; only bullets and summary are AI-tailored.
  */
+import type { JevDiagnosticResult } from "@/app/services/jev";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
 import { buildLeverInstructions } from "./tailoringPresets";
@@ -30,7 +31,7 @@ function sanitizeInjectedValue(value: string | undefined, maxLength: number): st
  * Returns an empty string when no tier is supplied (or only whitespace/an unknown tier) so existing
  * callers see no change and no dangling header is emitted.
  */
-function buildSeniorityCalibration(seniorityTier?: SeniorityTier): string {
+function buildSeniorityCalibration(seniorityTier?: SeniorityTier | string): string {
   const tier = typeof seniorityTier === "string" ? seniorityTier.trim() : "";
   if (!tier) return "";
   const tierGuidance: Record<SeniorityTier, string> = {
@@ -170,37 +171,92 @@ Output only the summary text, nothing else.`;
 }
 
 /**
- * Prompt to tailor only the bullets for one job. Title, company, and dates are fixed and must not appear in your output.
+ * Options for configuring experience bullet prompt generation.
  */
-export function getExperienceBulletsPrompt(params: {
-  jobTitle: string;
-  company: string;
-  dates: string | null;
-  bulletsText: string;
-  jobDescription: string;
-  resumeContext?: string;
+export interface ExperiencePromptOptions {
+  recencyTier?: 'tier1_recent' | 'tier2_mid' | 'tier3_foundational' | string;
+  seniorityTier?: string;
+  successPillars?: string[];
+  careerArc?: string;
+  intensity?: string;
+  relevantKeywords?: string[];
+  vettedEmployers?: string[];
+  targetCompany?: string;
+  diagnosis?: JevDiagnosticResult;
   userInstructions?: string;
   userRequestedKeywords?: string[];
   preferences?: TailoringPreferences;
-  seniorityTier?: SeniorityTier;
-  recencyTier?: string;
-  careerArc?: string;
-  targetCompany?: string;
-}): string {
-  const {
-    jobTitle,
-    company,
-    dates,
-    bulletsText,
-    jobDescription,
-    userInstructions,
-    userRequestedKeywords,
-    preferences,
-    seniorityTier,
-    recencyTier,
-    careerArc,
-    targetCompany,
-  } = params;
+}
+
+export interface ExperiencePromptTarget {
+  title?: string;
+  jobTitle?: string;
+  company?: string;
+  dates?: string | null;
+  description?: string;
+  bulletsText?: string;
+}
+
+export type ExperienceBulletsPromptParams = ExperiencePromptOptions & {
+  jobTitle?: string;
+  title?: string;
+  company?: string;
+  dates?: string | null;
+  bulletsText?: string;
+  description?: string;
+  jobDescription?: string;
+  resumeContext?: string;
+};
+
+/**
+ * Prompt to tailor only the bullets for one job. Title, company, and dates are fixed and must not appear in your output.
+ */
+export function getExperienceBulletsPrompt(
+  exp: ExperiencePromptTarget,
+  jobDescription: string,
+  options?: ExperiencePromptOptions
+): string;
+export function getExperienceBulletsPrompt(
+  params: ExperienceBulletsPromptParams
+): string;
+export function getExperienceBulletsPrompt(
+  expOrParams: ExperiencePromptTarget | ExperienceBulletsPromptParams,
+  maybeJobDescription?: string,
+  maybeOptions?: ExperiencePromptOptions
+): string {
+  let jobTitle = "";
+  let company = "";
+  let dates: string | null = null;
+  let bulletsText = "";
+  let jobDescription = "";
+  let options: ExperiencePromptOptions = {};
+
+  if (typeof maybeJobDescription === "string") {
+    const exp = expOrParams as ExperiencePromptTarget;
+    jobTitle = exp.title || exp.jobTitle || "";
+    company = exp.company || "";
+    dates = exp.dates || null;
+    bulletsText = exp.description || exp.bulletsText || "";
+    jobDescription = maybeJobDescription;
+    options = maybeOptions || {};
+  } else {
+    const params = expOrParams as ExperienceBulletsPromptParams;
+    jobTitle = params.jobTitle || params.title || "";
+    company = params.company || "";
+    dates = params.dates || null;
+    bulletsText = params.bulletsText || params.description || "";
+    jobDescription = params.jobDescription || "";
+    options = params;
+  }
+
+  const userInstructions = options.userInstructions;
+  const userRequestedKeywords = options.userRequestedKeywords || options.relevantKeywords;
+  const preferences = options.preferences;
+  const seniorityTier = options.seniorityTier as SeniorityTier | undefined;
+  const recencyTier = options.recencyTier;
+  const careerArc = options.careerArc;
+  const targetCompany = options.targetCompany;
+
   const userBlock = userInstructions
     ? `\nUSER-SPECIFIC INSTRUCTIONS (follow these):\n${userInstructions}\n`
     : "";
@@ -229,15 +285,26 @@ ${leverBlock}${userBlock}${keywordsBlock}`
     .join("\n\n");
 
   const bulletLines = bulletsText
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
+    ? bulletsText
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+    : [];
   const bulletCount = bulletLines.length;
 
   return `You are an elite executive resume writer. Tailor the bullet points for this specific role against the target job description.
 
 ${governingBlock}
-${topUserBlock}
+${
+  options?.diagnosis
+    ? `
+=== JEV SYSTEM 1 DIAGNOSTIC DIRECTIVES ===
+- Primary Focus Directive: ${options.diagnosis.enhancementFocus}
+- High-Priority Competencies to Highlight (if supported by background): ${options.diagnosis.missingSkills && options.diagnosis.missingSkills.length > 0 ? options.diagnosis.missingSkills.join(', ') : 'Align with JD priorities'}
+- Historical Scope Calibration: Match Rating ${options.diagnosis.seniorityScore}/5 for target ${options.seniorityTier || 'role'}
+`
+    : ''
+}${topUserBlock}
 TARGET ROLE METADATA (context boundary - do not repeat):
 - Title: ${jobTitle}
 - Company: ${company}
