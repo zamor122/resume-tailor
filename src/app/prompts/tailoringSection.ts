@@ -359,30 +359,124 @@ CRITICAL INSTRUCTIONS:
 Output ONLY the valid JSON array of ${bulletCount} objects. Do not include markdown code fences, headers, or any other text.`;
 }
 
-/**
- * Prompt to synthesize a holistic career summary from the assembled resume.
- * Focuses on full career arc, core leadership scope, and signature competencies.
- * Zero contradictions with vetted experience, never a changelog of edits.
- */
-export function getHolisticSummaryPrompt(params: {
-  assembledResume: string;
-  jobDescription: string;
+export interface HolisticSummaryPromptParams {
+  assembledResume?: string;
+  originalSummary?: string;
+  tailoredBullets?: string[] | string;
+  jobDescription?: string;
   jobTitle?: string;
   userRequestedKeywords?: string[];
   preferences?: TailoringPreferences;
-  seniorityTier?: SeniorityTier;
-}): string {
-  const { assembledResume, jobDescription, jobTitle, userRequestedKeywords = [], preferences, seniorityTier } = params;
+  seniorityTier?: SeniorityTier | string;
+  recencyTier?: string;
+  careerArc?: string;
+  targetCompany?: string;
+}
+
+/**
+ * Prompt to synthesize a holistic career summary from the assembled resume or tailored accomplishments.
+ * Focuses on full career arc, core leadership scope, and signature competencies.
+ * Zero contradictions with vetted experience, never a changelog of edits.
+ * Strictly constrained to 2 to 3 concise, punchy sentences (REQ-UBI-02, REQ-EVT-03).
+ */
+export function getHolisticSummaryPrompt(params: HolisticSummaryPromptParams): string;
+export function getHolisticSummaryPrompt(
+  originalSummary: string,
+  tailoredBullets: string[] | string,
+  targetJD: string,
+  options?: {
+    seniorityTier?: SeniorityTier | string;
+    careerArc?: string;
+    targetCompany?: string;
+    preferences?: TailoringPreferences;
+    jobTitle?: string;
+    userRequestedKeywords?: string[];
+    recencyTier?: string;
+  }
+): string;
+export function getHolisticSummaryPrompt(
+  arg1: HolisticSummaryPromptParams | string,
+  arg2?: string[] | string,
+  arg3?: string,
+  arg4?: {
+    seniorityTier?: SeniorityTier | string;
+    careerArc?: string;
+    targetCompany?: string;
+    preferences?: TailoringPreferences;
+    jobTitle?: string;
+    userRequestedKeywords?: string[];
+    recencyTier?: string;
+  }
+): string {
+  let assembledResume = "";
+  let originalSummary = "";
+  let tailoredBullets: string[] | string = [];
+  let jobDescription = "";
+  let jobTitle: string | undefined;
+  let userRequestedKeywords: string[] = [];
+  let preferences: TailoringPreferences | undefined;
+  let seniorityTier: SeniorityTier | string | undefined;
+  let recencyTier: string | undefined;
+  let careerArc: string | undefined;
+  let targetCompany: string | undefined;
+
+  if (typeof arg1 === "string") {
+    originalSummary = arg1;
+    tailoredBullets = arg2 || [];
+    jobDescription = arg3 || "";
+    if (arg4) {
+      seniorityTier = arg4.seniorityTier;
+      careerArc = arg4.careerArc;
+      targetCompany = arg4.targetCompany;
+      preferences = arg4.preferences;
+      jobTitle = arg4.jobTitle;
+      userRequestedKeywords = arg4.userRequestedKeywords || [];
+      recencyTier = arg4.recencyTier;
+    }
+  } else {
+    assembledResume = arg1.assembledResume || "";
+    originalSummary = arg1.originalSummary || "";
+    tailoredBullets = arg1.tailoredBullets || [];
+    jobDescription = arg1.jobDescription || "";
+    jobTitle = arg1.jobTitle;
+    userRequestedKeywords = arg1.userRequestedKeywords || [];
+    preferences = arg1.preferences;
+    seniorityTier = arg1.seniorityTier;
+    recencyTier = arg1.recencyTier;
+    careerArc = arg1.careerArc;
+    targetCompany = arg1.targetCompany;
+  }
+
   const targetTitleLine = jobTitle ? `Target Role Title: "${jobTitle}"\n` : "";
   const keywordsLine =
     userRequestedKeywords.length > 0 ? `Target Keywords: ${userRequestedKeywords.join(", ")}\n` : "";
   const leverBlock = preferences ? `\n${buildLeverInstructions(preferences)}\n` : "";
   const seniorityCalibration = buildSeniorityCalibration(seniorityTier);
   const seniorityBlock = seniorityCalibration ? `\n${seniorityCalibration}\n` : "";
+  const careerArcBlock = buildCareerArcBlock(careerArc);
+  const careerArcSection = careerArcBlock ? `\n${careerArcBlock}\n` : "";
+  const companyPrivacyBlock = buildCompanyPrivacyBlock(targetCompany);
+  const companyPrivacySection = companyPrivacyBlock ? `\n${companyPrivacyBlock}\n` : "";
 
-  return `You are an elite executive resume writer. Write a cohesive, holistic Professional Summary (3–4 sentences) representing the candidate's ENTIRE career arc, tailored for the target role below.
+  const bulletsText = Array.isArray(tailoredBullets)
+    ? tailoredBullets.join("\n")
+    : tailoredBullets;
+
+  let resumeContent = assembledResume;
+  if (!resumeContent) {
+    const parts: string[] = [];
+    if (originalSummary) {
+      parts.push(`Original Summary:\n${originalSummary}`);
+    }
+    if (bulletsText) {
+      parts.push(`Tailored Accomplishments:\n${bulletsText}`);
+    }
+    resumeContent = parts.join("\n\n");
+  }
+
+  return `You are an elite executive resume writer. Write a cohesive, holistic Professional Summary (2–3 sentences) representing the candidate's ENTIRE career arc, tailored for the target role below.
 ${leverBlock}
-${targetTitleLine}${keywordsLine}${seniorityBlock}
+${targetTitleLine}${keywordsLine}${seniorityBlock}${careerArcSection}${companyPrivacySection}
 CRITICAL INSTRUCTIONS:
 - ZERO THINKING / PREAMBLE LEAK: DO NOT output any thinking trace, <think> tags, chain-of-thought analysis, or introductory remarks (such as "*Analyze User Input:**").
 - This is a HOLISTIC EXECUTIVE SUMMARY of the candidate's career as an organic whole, NOT a changelog of recent edits.
@@ -390,16 +484,22 @@ CRITICAL INSTRUCTIONS:
 - GUARANTEE ZERO CONTRADICTIONS: Every capability, tool, and achievement claimed must be 100% grounded in the vetted resume below.
 - BANNED BUZZWORDS: Do NOT use fluff or repetitive filler ("passionate", "results-driven", "team player", "leveraging", "spearheaded", "pivotal role"). Use authoritative, factual declarative sentences.
 - Vary sentence syntax and cadence; avoid repetitive sentence structures.
-- Output ONLY the 3–4 sentence summary paragraph. No headers, no intro, no conversational remarks.
+- Output ONLY the 2–3 sentence summary paragraph. No headers, no intro, no conversational remarks.
+
+STRICT RULES & CONSTRAINTS:
+1. STRICT LENGTH CONSTRAINT: Write exactly 2 to 3 concise, punchy sentences (maximum 60 words total).
+2. Content Focus: Explicitly highlight the candidate's most relevant qualifications, primary domain authority, and proven accomplishments matching the target role.
+3. Prohibit generic fluff, filler adjectives, or cliché openings ("Passionate, results-driven professional..."). Open directly with domain impact.
+4. Strictly ground every claim in the provided tailored accomplishments. Do not invent unmentioned skills or statistics.
 
 Assembled Resume:
 """
-${assembledResume}
+${resumeContent}
 """
 
 Target Job Description:
 """
-${jobDescription.slice(0, 3000)}
+${(jobDescription || "").slice(0, 3000)}
 """
 
 Output only the summary text:`;

@@ -53,6 +53,15 @@ function getJobSpecificKeywords(
   return Array.from(new Set([...domainMatched, ...distributedKeywords])).slice(0, 7);
 }
 
+/**
+ * Safety trimmer to guarantee the generated summary never exceeds 3 sentences (REQ-UBI-02).
+ */
+export function enforceBriefSummary(summary: string): string {
+  if (!summary) return "";
+  const sentences = summary.match(/[^.!?]+[.!?]+/g) || [summary];
+  return sentences.slice(0, 3).map((s) => s.trim()).join(" ").trim();
+}
+
 export async function surgicalTailorNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
@@ -241,17 +250,20 @@ export async function surgicalTailorNode(
           userRequestedKeywords: sortedMissingKeywords.slice(0, 5),
           preferences,
           seniorityTier: state.seniorityTier,
+          careerArc: state.careerArc,
+          targetCompany,
         }),
         state.modelKey,
         { maxTokens: 800, temperature: 0.2 },
         state.sessionApiKeys
       );
 
-      const synthesizedSummary = sanitizeCompanyReferences(
+      const rawSynthesizedSummary = sanitizeCompanyReferences(
         stripModelThinking(res.text).trim(),
         vettedEmployers,
         targetCompany
       );
+      const synthesizedSummary = enforceBriefSummary(rawSynthesizedSummary);
       console.log(`[surgicalTailor] Holistic summary synthesized after ${results.length} bullet task(s) (length: ${synthesizedSummary.length})`);
 
       if (synthesizedSummary.trim()) {
