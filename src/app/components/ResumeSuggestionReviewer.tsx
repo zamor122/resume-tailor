@@ -5,11 +5,11 @@ import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
 import { isSubstantiveChange, isolatePreciseOriginalChange } from "@/app/utils/resumeReassemble";
 
 export interface ResumeSuggestionReviewerProps {
-  originalResume: string;
+  originalResume?: string;
   suggestions: ResumeSuggestion[];
   sectionGroups?: ResumeSectionGroup[];
   onSectionGroupsChange?: (groups: ResumeSectionGroup[]) => void;
-  onSuggestionsChange: (suggestions: ResumeSuggestion[]) => void;
+  onSuggestionsChange?: (suggestions: ResumeSuggestion[]) => void;
   activeSectionId?: string | null;
   onActiveSectionChange?: (sectionId: string | null) => void;
   beforeScore?: number;
@@ -23,10 +23,13 @@ export interface ResumeSuggestionReviewerProps {
   onActiveSuggestionChange?: (suggestionId: string | null) => void;
   className?: string;
   onFinalize?: () => void;
+  onAcceptSuggestion?: (id: string) => void;
+  onRejectSuggestion?: (id: string) => void;
+  onResetAll?: () => void;
 }
 
 export default function ResumeSuggestionReviewer({
-  originalResume,
+  originalResume = "",
   suggestions = [],
   sectionGroups,
   onSectionGroupsChange,
@@ -44,6 +47,9 @@ export default function ResumeSuggestionReviewer({
   onActiveSuggestionChange,
   className = "",
   onFinalize,
+  onAcceptSuggestion,
+  onRejectSuggestion,
+  onResetAll,
 }: ResumeSuggestionReviewerProps) {
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -120,40 +126,42 @@ export default function ResumeSuggestionReviewer({
     const targetId = id || substantiveSuggestions[activeIndex]?.id;
     if (!targetId) return;
 
+    onAcceptSuggestion?.(targetId);
     const currentSug = suggestions.find((s) => s.id === targetId);
     const nextStatus: "pending" | "accepted" = currentSug?.status === "accepted" ? "pending" : "accepted";
 
     const updated = suggestions.map((s) =>
       s.id === targetId ? { ...s, status: nextStatus } : s
     );
-    onSuggestionsChange(updated);
+    onSuggestionsChange?.(updated);
   };
 
   const handleKeepOriginal = (id?: string) => {
     const targetId = id || substantiveSuggestions[activeIndex]?.id;
     if (!targetId) return;
 
+    onRejectSuggestion?.(targetId);
     const currentSug = suggestions.find((s) => s.id === targetId);
     const nextStatus: "pending" | "rejected" = currentSug?.status === "rejected" ? "pending" : "rejected";
 
     const updated = suggestions.map((s) =>
       s.id === targetId ? { ...s, status: nextStatus } : s
     );
-    onSuggestionsChange(updated);
+    onSuggestionsChange?.(updated);
   };
 
   const handleAcceptAllRemaining = () => {
     const updated = suggestions.map((s) =>
       !s.status || s.status === "pending" ? { ...s, status: "accepted" as const } : s
     );
-    onSuggestionsChange(updated);
+    onSuggestionsChange?.(updated);
   };
 
   const handleKeepAllRemaining = () => {
     const updated = suggestions.map((s) =>
       !s.status || s.status === "pending" ? { ...s, status: "rejected" as const } : s
     );
-    onSuggestionsChange(updated);
+    onSuggestionsChange?.(updated);
   };
 
   // Inline editing
@@ -166,7 +174,7 @@ export default function ResumeSuggestionReviewer({
     const updated = suggestions.map((s) =>
       s.id === id ? { ...s, suggestedText: editText.trim(), status: "accepted" as const } : s
     );
-    onSuggestionsChange(updated);
+    onSuggestionsChange?.(updated);
     setEditingId(null);
   };
 
@@ -399,15 +407,36 @@ export default function ResumeSuggestionReviewer({
         >
           {/* Card Header: Section, Change #, Status & Adjust/Edit */}
           <div className="px-5 py-3.5 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700/80 flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <span className="font-bold text-gray-800 dark:text-gray-200 text-xs flex items-center gap-1.5">
-                <span>📁</span>
-                <span>{currentSuggestion.section || "Resume Section"}</span>
-              </span>
-              <span className="text-gray-300 dark:text-gray-600">•</span>
-              <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400">
-                Active Suggestion
-              </span>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <span className="font-bold text-gray-800 dark:text-gray-200 text-xs flex items-center gap-1.5">
+                  <span>📁</span>
+                  <span>{currentSuggestion.section || "Resume Section"}</span>
+                </span>
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400">
+                  Active Suggestion
+                </span>
+              </div>
+              {currentSuggestion.jevJudge && (
+                <div className="flex flex-wrap items-center gap-2 mt-1 mb-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Jev Verified
+                  </span>
+                  <span className="text-xs text-emerald-400 font-semibold">
+                    +{currentSuggestion.jevJudge.scoreDeltaPercent}% Match
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    • {currentSuggestion.jevJudge.toneOfVoiceRating === 'strong_authentic' ? 'Authentic Tone' : 'Professional Tone'}
+                  </span>
+                  <span className="text-xs text-amber-400 font-medium">
+                    • {currentSuggestion.jevJudge.overallImpactScore}/5 Impact
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
