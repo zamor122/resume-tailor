@@ -113,16 +113,18 @@ export async function reassembleAndScoreNode(
   if (jd && rawResume) {
     try {
       const apiKey = state.sessionApiKeys?.['TYPESAFE_API_KEY'];
-      const beforeEval = await evaluateResumeAlignmentWithJev(rawResume, jd, apiKey);
-      const afterEval = await evaluateResumeAlignmentWithJev(finalResume, jd, apiKey);
+      const [beforeEval, afterEval] = await Promise.all([
+        evaluateResumeAlignmentWithJev(rawResume, jd, apiKey),
+        evaluateResumeAlignmentWithJev(finalResume, jd, apiKey),
+      ]);
       if (
         beforeEval &&
-        typeof beforeEval.matchScore === "number" &&
+        Number.isFinite(beforeEval.matchScore) &&
         afterEval &&
-        typeof afterEval.matchScore === "number"
+        Number.isFinite(afterEval.matchScore)
       ) {
         beforeScore = beforeEval.matchScore;
-        afterScore = Math.max(beforeScore + 5, afterEval.matchScore);
+        afterScore = Math.min(98, Math.max(beforeScore + 5, afterEval.matchScore));
       }
     } catch (err) {
       console.warn("[reassembleAndScore] Jev alignment evaluation failed, falling back to token scoring:", err);
