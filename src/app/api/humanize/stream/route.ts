@@ -129,8 +129,8 @@ export async function POST(req: NextRequest) {
         // Step 1: Initial event
         streamClosed = !sendSSE(controller, "status", {
           stage: "preprocessing",
-          message: "Agent initializing resume intake...",
-          progress: 10,
+          message: "Analyzing your career experience and target role...",
+          progress: 15,
         });
         if (streamClosed) return;
 
@@ -139,9 +139,9 @@ export async function POST(req: NextRequest) {
         const graph = buildResumeAgentGraph();
 
         streamClosed = !sendSSE(controller, "agent_step", {
-          step: "parsing",
-          message: "Parsing resume AST and extracting structure...",
-          progress: 20,
+          step: "analyzing",
+          message: "Reviewing career milestones, skills, and key accomplishments...",
+          progress: 25,
         });
         if (streamClosed) return;
 
@@ -174,8 +174,8 @@ export async function POST(req: NextRequest) {
 
         streamClosed = !sendSSE(controller, "agent_step", {
           step: "tailoring",
-          message: `Applying ${preferences.intensity.toUpperCase()} transformation...`,
-          progress: 70,
+          message: "Elevating accomplishment bullets and verifying authenticity with Jev AI...",
+          progress: 75,
         });
         if (streamClosed) return;
 

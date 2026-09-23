@@ -369,7 +369,7 @@ export default function SplitScreenTailorView() {
     setError(null);
     setResults(null);
     setHasStartedTailoring(true);
-    setAgentMessage("Initializing LangGraph agent...");
+    setAgentMessage("Analyzing your resume and target job requirements...");
     setAgentProgress(10);
 
     const source = prefillResumeId ? "prefill" : (resume.trim().length > 0 ? "return_visit" : "blank");
