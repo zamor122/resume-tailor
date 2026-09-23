@@ -36,7 +36,7 @@
   - `export function getDomainTaxonomy(category?: string | IndustryCategory): DomainTaxonomyConfig`
   - `export function detectIndustryCategory(title?: string, description?: string): IndustryCategory`
 
-- [ ] **Step 1: Write the failing unit tests for domain taxonomy**
+- [x] **Step 1: Write the failing unit tests for domain taxonomy**
   In `tests/unit/config/domainTaxonomy.test.ts`:
   - Test detection of Healthcare titles (e.g. "Nurse Manager", "Surgeon", "Medical Assistant").
   - Test detection of Hospitality titles (e.g. "Waiter", "Head Bartender", "Sous Chef").
@@ -47,16 +47,16 @@
   - Test that `getDomainTaxonomy` returns category-specific verbs (e.g. Healthcare includes "Administered", "Triaged"; Aviation includes "Commanded", "Navigated"; Custodial includes "Sanitized", "Maintained").
   - Test fallback to `general_business` when title is ambiguous.
 
-- [ ] **Step 2: Run test to confirm it fails**
+- [x] **Step 2: Run test to confirm it fails**
   Run: `npx vitest run tests/unit/config/domainTaxonomy.test.ts` (Red).
 
-- [ ] **Step 3: Implement domain taxonomy in `src/app/config/domainTaxonomy.ts`**
+- [x] **Step 3: Implement domain taxonomy in `src/app/config/domainTaxonomy.ts`**
   Implement the 10 domain taxonomy categories with rich, curated action verbs, authentic operational metric dimensions, and keyword patterns.
 
-- [ ] **Step 4: Run test to confirm it passes**
+- [x] **Step 4: Run test to confirm it passes**
   Run: `npx vitest run tests/unit/config/domainTaxonomy.test.ts` (Green).
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
   `git commit -m "feat(taxonomy): add universal domain taxonomy matrix and industry detection engine"`
 
 ---
@@ -75,27 +75,27 @@
   - `export async function getOrSynthesizeJobKnowledge(title: string, jobDescription?: string, apiKey?: string): Promise<JobRoleKnowledge>`
   - `export function resolveCanonicalTitle(title: string, category: IndustryCategory): string`
 
-- [ ] **Step 1: Write database migration SQL**
+- [x] **Step 1: Write database migration SQL**
   In `supabase/migrations/20260923_job_role_knowledge.sql`:
   - `CREATE TABLE IF NOT EXISTS job_role_knowledge (...)` with `pg_trgm` extension and indices.
 
-- [ ] **Step 2: Write failing tests for job knowledge service**
+- [x] **Step 2: Write failing tests for job knowledge service**
   In `tests/unit/services/jobKnowledge.test.ts`:
   - Test canonical title normalization (e.g. "Nursing Lead" -> "Nurse Manager / Clinical Lead").
   - Test cache hit retrieval from Supabase.
   - Test fallback to in-band LLM synthesis / domain taxonomy on cache miss or Supabase error.
   - Test that latency is < 15ms on cache hit.
 
-- [ ] **Step 3: Run test to confirm failure**
+- [x] **Step 3: Run test to confirm failure**
   Run: `npx vitest run tests/unit/services/jobKnowledge.test.ts` (Red).
 
-- [ ] **Step 4: Implement `src/app/services/jobKnowledge.ts`**
+- [x] **Step 4: Implement `src/app/services/jobKnowledge.ts`**
   Implement cache lookup using `supabaseAdmin`, canonical normalization, LLM fallback synthesis, and asynchronous caching.
 
-- [ ] **Step 5: Run test to confirm it passes**
+- [x] **Step 5: Run test to confirm it passes**
   Run: `npx vitest run tests/unit/services/jobKnowledge.test.ts` (Green).
 
-- [ ] **Step 6: Commit changes**
+- [x] **Step 6: Commit changes**
   `git commit -m "feat(knowledge): add job role knowledge cache and canonical resolution service"`
 
 ---
@@ -114,22 +114,22 @@
   - `AgentState.canonicalRole?: string`
   - `AgentState.jobKnowledge?: JobRoleKnowledge`
 
-- [ ] **Step 1: Write failing tests for candidate profiler**
+- [x] **Step 1: Write failing tests for candidate profiler**
   In `tests/unit/agent/candidateProfiler-universal.test.ts`:
   - Verify `candidateProfilerNode` attaches `industryCategory`, `canonicalRole`, and `jobKnowledge` to `AgentState`.
   - Verify diverse titles (e.g. "Commercial Airline Pilot", "Head Custodian", "ICU Staff Nurse") receive correct categories.
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
   Run: `npx vitest run tests/unit/agent/candidateProfiler-universal.test.ts` (Red).
 
-- [ ] **Step 3: Update `src/app/agent/state.ts` and `candidateProfiler.ts`**
+- [x] **Step 3: Update `src/app/agent/state.ts` and `candidateProfiler.ts`**
   - Add fields to `AgentState` and `AgentStateAnnotation`.
   - In `candidateProfilerNode`, resolve industry category and job knowledge.
 
-- [ ] **Step 4: Run test to confirm it passes**
+- [x] **Step 4: Run test to confirm it passes**
   Run: `npx vitest run tests/unit/agent/candidateProfiler-universal.test.ts` (Green).
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
   `git commit -m "feat(agent): wire canonical role and domain taxonomy into candidateProfilerNode"`
 
 ---
@@ -144,7 +144,7 @@
 - Consumes: `DomainTaxonomyConfig`, `JobRoleKnowledge`
 - Updates: `getExperienceBulletsPrompt` to accept optional `domainTaxonomy?: DomainTaxonomyConfig` and `jobKnowledge?: JobRoleKnowledge`.
 
-- [ ] **Step 1: Write failing tests for prompt generation**
+- [x] **Step 1: Write failing tests for prompt generation**
   In `tests/unit/prompts/universal-tailoringSection.test.ts`:
   - Test that for Healthcare roles, the prompt injects healthcare verbs (*"Administered"*, *"Triaged"*) and bans tech verbs.
   - Test that for Custodial/Facilities roles, the prompt injects facilities verbs (*"Sanitized"*, *"Maintained"*).
@@ -152,17 +152,17 @@
   - Test that the prompt instructs the Google X-Y-Z framework (*Accomplished [X], as measured by [Y], by doing [Z]*).
   - Test that the prompt mandates distinct opening verbs for each bullet.
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
   Run: `npx vitest run tests/unit/prompts/universal-tailoringSection.test.ts` (Red).
 
-- [ ] **Step 3: Implement prompt updates in `src/app/prompts/tailoringSection.ts`**
+- [x] **Step 3: Implement prompt updates in `src/app/prompts/tailoringSection.ts`**
   - Build `buildDomainDirectivesBlock(taxonomy, jobKnowledge)` helper.
   - Inject domain-native verbs, authentic metric dimensions, and strict Google X-Y-Z rules into `getExperienceBulletsPrompt`.
 
-- [ ] **Step 4: Run test to confirm it passes**
+- [x] **Step 4: Run test to confirm it passes**
   Run: `npx vitest run tests/unit/prompts/universal-tailoringSection.test.ts` (Green).
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
   `git commit -m "feat(prompts): inject domain-native verbs, Google X-Y-Z framework, and anti-passive mandates into experience prompt"`
 
 ---
@@ -177,21 +177,21 @@
 - Consumes: `state.industryCategory`, `state.jobKnowledge`, `getDomainTaxonomy`
 - Supplies: Domain taxonomy and job knowledge to `getExperienceBulletsPrompt`.
 
-- [ ] **Step 1: Write failing tests for surgical tailor**
+- [x] **Step 1: Write failing tests for surgical tailor**
   In `tests/unit/agent/surgicalTailor-universal.test.ts`:
   - Verify that `surgicalTailorNode` passes domain taxonomy to `getExperienceBulletsPrompt`.
   - Verify bounded concurrency (limit 2) and Jev judging continue to work seamlessly.
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
   Run: `npx vitest run tests/unit/agent/surgicalTailor-universal.test.ts` (Red).
 
-- [ ] **Step 3: Update `src/app/agent/nodes/surgicalTailor.ts`**
+- [x] **Step 3: Update `src/app/agent/nodes/surgicalTailor.ts`**
   Resolve domain taxonomy from state and pass to prompt constructor.
 
-- [ ] **Step 4: Run test to confirm it passes**
+- [x] **Step 4: Run test to confirm it passes**
   Run: `npx vitest run tests/unit/agent/surgicalTailor-universal.test.ts` (Green).
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
   `git commit -m "feat(agent): wire domain taxonomy and role knowledge through surgicalTailorNode"`
 
 ---
@@ -201,7 +201,7 @@
 **Files:**
 - Create: `tests/unit/agent/universal-domains-e2e.test.ts`
 
-- [ ] **Step 1: Write end-to-end multi-industry tests**
+- [x] **Step 1: Write end-to-end multi-industry tests**
   Test full mock execution for 6 distinct professions:
   1. **Healthcare**: Nurse Manager
   2. **Hospitality**: Restaurant Waiter / Server
@@ -213,21 +213,21 @@
   - Assert zero passive starters (*"Responsible for"*, *"Assisted with"*).
   - Assert Google X-Y-Z pattern presence.
 
-- [ ] **Step 2: Run test suite**
+- [x] **Step 2: Run test suite**
   Run: `npx vitest run tests/unit/agent/universal-domains-e2e.test.ts`.
 
-- [ ] **Step 3: Commit changes**
+- [x] **Step 3: Commit changes**
   `git commit -m "test(universal): add multi-industry end-to-end verification test suite"`
 
 ---
 
 ### Task 7: Full Verification & Preview Deployment
 
-- [ ] **Step 1: Run full test suite**
+- [x] **Step 1: Run full test suite**
   Run: `npm test` (all 77+ suites must pass 100%).
-- [ ] **Step 2: Run Next.js production build**
+- [x] **Step 2: Run Next.js production build**
   Run: `npm run build` (zero type, lint, or bundling errors).
-- [ ] **Step 3: Push to preview branch**
+- [x] **Step 3: Push to preview branch**
   Run: `npm run push:preview`.
-- [ ] **Step 4: Verify Vercel deployment**
+- [x] **Step 4: Verify Vercel deployment**
   Inspect Vercel build status and confirm `● Ready`.
