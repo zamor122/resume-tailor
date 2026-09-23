@@ -564,4 +564,57 @@ Go, Docker`;
     const canvas = container.querySelector(".resume-prose") as HTMLElement;
     expect(within(canvas).getByText(/Spearheaded fault-tolerant microservices handling 100k RPS/i)).toBeInTheDocument();
   });
+
+  it("structures unformatted plain text into clean sections instead of raw text blobs", () => {
+    const rawBlobResume = `Jane Doe
+jane.doe@email.com | 555-0199 | San Francisco, CA
+
+Professional Summary
+Senior Software Engineer leading distributed systems.
+
+Work Experience
+Google – Senior Software Engineer
+2021 - Present • Mountain View, CA
+• Architected high-throughput microservices handling 50k RPS
+
+Technical Skills
+TypeScript, React, Node.js, Go
+`;
+
+    const { container } = render(
+      <TailoredResumeOutput
+        newResume={rawBlobResume}
+        originalResume={rawBlobResume}
+        loading={false}
+      />
+    );
+
+    // Should have parsed distinct section IDs instead of lump sum
+    const summarySection = container.querySelector('[data-section-id="section-summary"]');
+    const exp0Section = container.querySelector('[data-section-id="section-exp-0"]');
+    const skillsSection = container.querySelector('[data-section-id="section-skills"]');
+
+    expect(summarySection).toBeInTheDocument();
+    expect(exp0Section).toBeInTheDocument();
+    expect(skillsSection).toBeInTheDocument();
+
+    // Verify H1, H2, H3 elements are rendered
+    expect(container.querySelector("h1")).toHaveTextContent("Jane Doe");
+    expect(container.querySelector("h2")).toBeInTheDocument();
+  });
+
+  it("renders immediate download (PDF, Markdown) and copy actions by default", () => {
+    const { container } = render(
+      <TailoredResumeOutput
+        newResume={sampleResume}
+        originalResume={sampleResume}
+        loading={false}
+      />
+    );
+
+    // Download PDF button present
+    expect(screen.getByRole("button", { name: /PDF/i })).toBeInTheDocument();
+    // Copy button present
+    expect(container.querySelector('[aria-label="Copy resume to clipboard"]') || screen.getByText(/Copy/i)).toBeInTheDocument();
+  });
 });

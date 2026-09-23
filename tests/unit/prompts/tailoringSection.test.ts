@@ -40,6 +40,30 @@ describe("Universal Level-Calibrated Prompting (REQ-UBI-01, REQ-UBI-02, REQ-UBI-
     expect(prompt).toContain("HOLISTIC EXECUTIVE SUMMARY");
     expect(prompt).toContain("ZERO CONTRADICTIONS");
   });
+
+  it("mandates high-impact Google X-Y-Z framing, executive ownership verbs, and bans weak/passive phrasing in experience prompt", () => {
+    const prompt = getExperienceBulletsPrompt(BASE_BULLET_PARAMS);
+
+    // High impact and Google X-Y-Z framing
+    expect(prompt).toContain("HIGH-IMPACT GOOGLE X-Y-Z STRUCTURE");
+    expect(prompt).toContain("Accomplished [X]");
+    // Ban weak/passive phrasing
+    expect(prompt).toContain("BAN WEAK & PASSIVE PHRASING");
+    expect(prompt).toContain("Assisted with");
+    // Substantive elevation mandate
+    expect(prompt).toContain("BAN SUPERFICIAL WORD SWAPS");
+  });
+
+  it("instructs commanding executive identity hook and peak impact in holistic summary prompt", () => {
+    const prompt = getHolisticSummaryPrompt({
+      assembledResume: "# Jane Doe\n## Experience\n- Spearheaded clinical workflows",
+      jobDescription: "Operations Lead",
+      seniorityTier: "lead_manager",
+    });
+
+    expect(prompt).toContain("COMMANDING EXECUTIVE IDENTITY HOOK");
+    expect(prompt).toContain("PROVEN PEAK IMPACT");
+  });
 });
 
 describe("Injection hardening for interpolated governing blocks", () => {

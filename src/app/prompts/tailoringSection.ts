@@ -324,13 +324,16 @@ CRITICAL INSTRUCTIONS:
 1. STRICT 1-TO-1 MAPPING: You are provided with EXACTLY ${bulletCount} bullets. You MUST return a JSON array containing EXACTLY ${bulletCount} items, one for every input bullet in the exact order received (with index from 0 to ${Math.max(0, bulletCount - 1)}).
    - DO NOT stop after 1 item! You MUST include all ${bulletCount} items in your JSON array response.
    - Do NOT merge bullets, split bullets, delete bullets, or create new bullets.
-2. ENHANCEMENT RULES & ANTI-REPETITION MANDATE:
+2. ENHANCEMENT RULES & MAXIMUM IMPACT MANDATE:
    - ZERO THINKING / PREAMBLE LEAK: DO NOT output any internal thoughts, <think> tags, chain-of-thought analysis, or commentary (such as "*Analyze User Input:**"). Output ONLY the valid JSON array starting directly with [ and ending with ].
-   - Make ONLY substantive, meaningful improvements (adding target skills, technologies, quantified impact metrics, or stronger action verbs).
-   - NEVER make trivial formatting modifications: DO NOT insert line breaks/newlines, alter whitespace, re-wrap lines, change bullet marker symbols, or tweak trailing punctuation.
+   - HIGH-IMPACT GOOGLE X-Y-Z STRUCTURE: Reframe candidate achievements into the high-impact pattern: Accomplished [X], as measured by [Y], by doing [Z]. State what was achieved, the measurable scale/metric/operational impact, and the exact strategic action taken.
+   - BAN WEAK & PASSIVE PHRASING: NEVER use weak, subordinate, or passive phrasing such as "Assisted with", "Helped", "Worked on", "Responsible for", "Participated in", "Contributed to", "Handled", or "Supported". Every enhanced bullet MUST position the candidate as the primary driver and decisive owner of the result.
+   - EXECUTIVE OWNERSHIP ACTION VERBS: Open each enhanced bullet with a powerful, authoritative past-tense action verb (e.g. Orchestrated, Architected, Engineered, Overhauled, Scaled, Standardized, Automated, Deployed, Revamped, Authored, Refactored, Delivered, Designed, Instituted, Accelerated).
+   - BAN SUPERFICIAL WORD SWAPS: DO NOT make cosmetic, low-value synonym swaps (e.g. replacing "used" with "utilized"). Enhancements must substantively elevate the candidate's seniority, technical/business scope, operational scale, or target competency alignment.
+   - AUTHENTIC QUANTIFICATION: Quantify using concrete scope, volume, throughput, latency, headcount, compliance standards, or business impact derived from the context. Do NOT fabricate artificial percentages or fictitious employers.
    - If a bullet already adequately covers the role and does not require substantive tailoring, return the exact original text unchanged with status: "unchanged".
-   - NO REPETITIVE OPENING VERBS: Each enhanced bullet within this role MUST begin with a DISTINCT, varied past-tense action verb. NEVER repeat the same opening verb (e.g. do NOT use "Architected", "Spearheaded", or "Engineered" on more than one bullet). Use varied, precise verbs suited to the work: Accelerated, Benchmarked, Consolidated, Decoupled, Deployed, Standardized, Automated, Revamped, Authored, Refactored, Scaled, Designed, Instituted.
-   - NO COOKIE-CUTTER CLAUSE FORMULAS: DO NOT repeat the exact same sentence pattern across bullets. Avoid repeatedly ending bullets with ", resulting in X% [metric]" or ", driving X% [metric]" or ", achieving X% [metric]". Vary the sentence cadence:
+   - NO REPETITIVE OPENING VERBS: Each enhanced bullet within this role MUST begin with a DISTINCT, varied past-tense action verb. NEVER repeat the same opening verb across bullets. Use varied, precise verbs suited to the work.
+   - NO COOKIE-CUTTER CLAUSE FORMULAS: DO NOT repeat the exact same sentence pattern across bullets. Avoid repeatedly ending bullets with ", resulting in X% [metric]" or ", driving X% [metric]". Vary the sentence cadence:
      * Scope & Ownership Depth: Problem addressed → Approach or method chosen → Measurable outcome.
      * Scale & Volume: Volume or scale handled → Standard or reliability level maintained → Continuity or service win.
      * Efficiency & Process Improvement: Process or tooling instituted → Cross-functional adoption → Time, cost, or quality impact.
@@ -488,9 +491,12 @@ CRITICAL INSTRUCTIONS:
 
 STRICT RULES & CONSTRAINTS:
 1. STRICT LENGTH CONSTRAINT: Write exactly 2 to 3 concise, punchy sentences (maximum 60 words total).
-2. Content Focus: Explicitly highlight the candidate's most relevant qualifications, primary domain authority, and proven accomplishments matching the target role.
-3. Prohibit generic fluff, filler adjectives, or cliché openings ("Passionate, results-driven professional..."). Open directly with domain impact.
-4. Strictly ground every claim in the provided tailored accomplishments. Do not invent unmentioned skills or statistics.
+2. COMMANDING EXECUTIVE IDENTITY HOOK: Open sentence 1 directly with the candidate's target professional/executive identity and core domain authority (e.g. "[Target Title / Specialty] with [X]+ years directing [core domain scope]...").
+3. PROVEN PEAK IMPACT: Sentence 2 highlights the candidate's highest-impact, quantified achievement or primary operational transformation directly relevant to the target job description.
+4. FORWARD-LOOKING CAPABILITY ALIGNMENT: Sentence 3 reinforces their signature strategic capabilities and technical proficiencies positioned to deliver immediate impact in the target role.
+5. Content Focus: Explicitly highlight the candidate's most relevant qualifications, primary domain authority, and proven accomplishments matching the target role.
+6. Prohibit generic fluff, filler adjectives, or cliché openings ("Passionate, results-driven professional..."). Open directly with domain impact.
+7. Strictly ground every claim in the provided tailored accomplishments. Do not invent unmentioned skills or statistics.
 
 Assembled Resume:
 """

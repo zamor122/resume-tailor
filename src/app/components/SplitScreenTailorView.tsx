@@ -799,7 +799,8 @@ export default function SplitScreenTailorView() {
               beforeScore={results.beforeScore ?? 50}
               matchScore={results.matchScore ?? 85}
               loading={false}
-              showDownload={false}
+              showDownload={true}
+              downloadJobTitle={detectedJobTitle ?? undefined}
             />
             {results.matchScore != null && (
               <p className="text-sm text-gray-600 dark:text-gray-400">

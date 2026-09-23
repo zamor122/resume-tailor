@@ -9,6 +9,7 @@ import ResumeSuggestionReviewer from "./ResumeSuggestionReviewer";
 const InsideListContext = React.createContext<boolean>(false);
 import { getProseFontSizeClass } from "@/app/utils/fontSize";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
+import { normalizeResumeMarkdown } from "@/app/utils/resumeMarkdownNormalizer";
 import { applySuggestionsToOriginal, deriveSuggestionsFromDiff, type ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { FormatSpec } from "@/app/types/format";
 import type { ResumeSuggestion } from "@/app/types/humanize";
@@ -24,7 +25,7 @@ interface TailoredResumeOutputProps {
   error?: string;
   fontSize?: "small" | "medium" | "large";
   formatSpec?: FormatSpec | null;
-  /** Show PDF / Markdown download buttons (MLA-style margins). */
+  /** Show PDF / Markdown download buttons (defaults to true). */
   showDownload?: boolean;
   /** Job title for download filename. */
   downloadJobTitle?: string;
@@ -283,7 +284,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   error,
   fontSize = "medium",
   formatSpec = null,
-  showDownload = false,
+  showDownload = true,
   downloadJobTitle,
   resumeId,
   isUnlocked = true,
@@ -395,24 +396,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
 
   const displayResume = useMemo(() => {
     const deduped = deduplicateResumeSections(activeResumeText);
-    // Ensure every line has proper markdown newline formatting so it never collapses into a single paragraph
-    return deduped
-      .split("\n")
-      .map((line) => {
-        const trimmed = line.trim();
-        if (/^[-*•–—]\s+/.test(trimmed)) {
-          return `- ${trimmed.replace(/^[-*•–—]\s+/, "")}`;
-        }
-        if (
-          /^(Summary|Experience|Skills|Education|Projects|Certifications|Awards)\b/i.test(trimmed) &&
-          trimmed.split(/\s+/).length <= 4 &&
-          !trimmed.startsWith("#")
-        ) {
-          return `\n## ${trimmed}\n`;
-        }
-        return line;
-      })
-      .join("\n\n");
+    return normalizeResumeMarkdown(deduped);
   }, [activeResumeText]);
 
   const documentSections = useMemo(() => {
