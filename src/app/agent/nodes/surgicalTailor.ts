@@ -19,6 +19,7 @@ import {
   judgeSuggestionWithJev,
   type JevJudgeResult,
 } from "@/app/services/jev";
+import { getDomainTaxonomy } from "@/app/config/domainTaxonomy";
 
 /**
  * Contextually distributes target missing keywords across multiple career roles
@@ -88,6 +89,9 @@ export async function surgicalTailorNode(
   const vettedEmployers = extractVettedEmployers(experience);
   const targetCompany = deriveTargetCompany(state);
   const summaryPlanned = !!bulletPlan?.summaryChange;
+  const domainTaxonomy = state.industryCategory
+    ? getDomainTaxonomy(state.industryCategory)
+    : undefined;
 
   console.log(`[surgicalTailor] ▶ Starting node`, {
     intensity: preferences?.intensity,
@@ -179,6 +183,8 @@ export async function surgicalTailorNode(
             targetCompany,
             recencyTier: resolvedRecencyTier,
             diagnosis,
+            domainTaxonomy,
+            jobKnowledge: state.jobKnowledge,
           }),
           state.modelKey,
           { maxTokens: 2000, temperature: 0.2 },
