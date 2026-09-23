@@ -1,4 +1,5 @@
 // src/app/services/jev.ts
+import { TypeSafeClient, choice, score, noul } from '@typesafe-ai/sdk';
 
 export interface JevDiagnosticResult {
   matchedSkills: string[];
@@ -22,35 +23,25 @@ export interface JevAlignmentScoreResult {
   confidence: number;
 }
 
-const DEFAULT_JEV_API_URL = 'https://api.typesafe.ai/v1/systemone';
+const DEFAULT_JEV_BASE_URL = 'https://api.typesafe.ai';
 const JEV_TIMEOUT_MS = 1500;
 
-function getJevApiUrl(): string {
-  const url = process.env.TYPESAFE_API_URL;
-  return url && url !== 'undefined' ? url : DEFAULT_JEV_API_URL;
+function getJevBaseUrl(): string {
+  const url = process.env.TYPESAFE_API_URL || process.env.TYPESAFE_BASE_URL;
+  if (url && url !== 'undefined') {
+    return url.replace(/\/v1\/systemone\/?$/, '');
+  }
+  return DEFAULT_JEV_BASE_URL;
 }
 
-async function postJevWithTimeout(endpoint: string, payload: any, apiKey: string): Promise<any> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), JEV_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      throw new Error(`Jev API returned HTTP ${res.status}`);
-    }
-    return await res.json();
-  } finally {
-    clearTimeout(timeout);
-  }
+function createClient(apiKey: string): TypeSafeClient {
+  return new TypeSafeClient({
+    apiKey,
+    baseURL: getJevBaseUrl(),
+    timeout: JEV_TIMEOUT_MS,
+    retry: { maxRetries: 0 },
+    dangerouslyAllowBrowser: true,
+  });
 }
 
 /**
@@ -66,7 +57,8 @@ export async function diagnoseChunkWithJev(
 
   if (key) {
     try {
-      const payload = {
+      const client = createClient(key);
+      const response = await client.systemOne({
         state: {
           roleTitle: chunk.title || '',
           company: chunk.company || '',
@@ -74,22 +66,33 @@ export async function diagnoseChunkWithJev(
           targetTitle: targetTitle || '',
           jobDescriptionSnippet: jobDescription.slice(0, 1500),
         },
-        task: 'diagnose_experience_chunk',
         questions: {
-          seniorityScore: { type: 'score', range: [1, 5] },
-          enhancementFocus: {
-            type: 'choice',
-            options: ['elevate_ownership', 'clarify_outcomes', 'highlight_transferable_competencies', 'showcase_scale'],
-          },
+          seniorityScore: score("Rate how closely this role matches the target seniority level:", [
+            "No match / entry level task work",
+            "Junior independent contributor",
+            "Mid-level autonomous delivery",
+            "Senior technical ownership and leadership",
+            "Principal or executive level scope",
+          ]),
+          enhancementFocus: choice("What should be the primary enhancement focus when tailoring this role?", {
+            elevate_ownership: "Emphasize technical ownership and leadership",
+            clarify_outcomes: "Clarify tangible business outcomes and impact",
+            highlight_transferable_competencies: "Highlight transferable competencies",
+            showcase_scale: "Showcase operational scale and complexity",
+          }),
         },
-      };
-      const response = await postJevWithTimeout(getJevApiUrl(), payload, key);
+      });
+
+      const seniority = Math.round(Number(response.answers.seniorityScore?.score) + 1) || 3;
+      const focus = (response.answers.enhancementFocus?.choice as any) || 'elevate_ownership';
+      const confidence = Number(response.answers.enhancementFocus?.confidence) || 0.9;
+
       return {
-        matchedSkills: response.matchedSkills || [],
-        missingSkills: response.missingSkills || [],
-        seniorityScore: Number(response.seniorityScore) || 3,
-        enhancementFocus: response.enhancementFocus || 'elevate_ownership',
-        confidence: response.confidence || 0.9,
+        matchedSkills: [],
+        missingSkills: [],
+        seniorityScore: Math.min(5, Math.max(1, seniority)),
+        enhancementFocus: focus,
+        confidence,
       };
     } catch (err) {
       console.warn('[jev] diagnoseChunkWithJev API call failed, using graceful fallback:', err);
@@ -121,35 +124,51 @@ export async function judgeSuggestionWithJev(
 
   if (key) {
     try {
-      const payload = {
+      const client = createClient(key);
+      const response = await client.systemOne({
         state: {
           originalText,
           suggestedText,
           jobDescriptionSnippet: jobDescription.slice(0, 1000),
         },
-        task: 'judge_suggestion_quality',
         questions: {
-          isAuthentic: { type: 'noul' },
-          isBetterThanOriginal: { type: 'noul' },
-          overallImpactScore: { type: 'score', range: [1, 5] },
-          toneOfVoiceRating: {
-            type: 'choice',
-            options: ['strong_authentic', 'neutral', 'buzzword_heavy'],
-          },
+          isAuthentic: noul("Does this suggestion preserve truthful scope without fabricating unbacked numbers, false percentages, or unverified claims?"),
+          isBetterThanOriginal: noul("Is this suggestion substantively more impactful and better aligned to the role than the original text?"),
+          overallImpactScore: score("Rate the overall professional impact of this rewrite:", [
+            "Worse or destructive edit",
+            "Trivial or cosmetic change",
+            "Minor polish with slight improvement",
+            "Strong improvement with clear impact",
+            "Exceptional accomplishment framing",
+          ]),
+          toneOfVoiceRating: choice("Evaluate the tone of voice of this suggested rewrite:", {
+            strong_authentic: "Authoritative and authentic",
+            neutral: "Standard phrasing",
+            buzzword_heavy: "Excessive buzzwords",
+          }),
         },
+      });
+
+      const authNoul = Number(response.answers.isAuthentic?.noul);
+      const isAuthentic = Number.isFinite(authNoul) ? authNoul >= 0.5 : true;
+
+      const betterNoul = Number(response.answers.isBetterThanOriginal?.noul);
+      const isBetterThanOriginal = Number.isFinite(betterNoul) ? betterNoul >= 0.5 : true;
+
+      const rawImpact = Number(response.answers.overallImpactScore?.score);
+      const overallImpactScore = Number.isFinite(rawImpact) ? Math.min(5, Math.max(1, Math.round(rawImpact + 1))) : 4;
+
+      const tone = (response.answers.toneOfVoiceRating?.choice as any) || 'strong_authentic';
+      const scoreDeltaPercent = Math.round((betterNoul || 0.8) * 30);
+
+      return {
+        isAuthentic,
+        contentMatchScore: overallImpactScore,
+        toneOfVoiceRating: tone,
+        isBetterThanOriginal,
+        overallImpactScore,
+        scoreDeltaPercent: Math.max(10, scoreDeltaPercent),
       };
-      const response = await postJevWithTimeout(getJevApiUrl(), payload, key);
-        const parsedContentMatch = Number(response.contentMatchScore);
-        const parsedImpact = Number(response.overallImpactScore);
-        const parsedDelta = Number(response.scoreDeltaPercent);
-        return {
-          isAuthentic: response.isAuthentic !== false,
-          contentMatchScore: Number.isFinite(parsedContentMatch) ? parsedContentMatch : 4,
-          toneOfVoiceRating: response.toneOfVoiceRating || 'strong_authentic',
-          isBetterThanOriginal: response.isBetterThanOriginal !== false,
-          overallImpactScore: Number.isFinite(parsedImpact) ? parsedImpact : 4,
-          scoreDeltaPercent: Number.isFinite(parsedDelta) ? parsedDelta : 25,
-        };
     } catch (err) {
       console.warn('[jev] judgeSuggestionWithJev call failed, using graceful fallback:', err);
     }
@@ -182,22 +201,30 @@ export async function evaluateResumeAlignmentWithJev(
 
   if (key) {
     try {
-      const payload = {
+      const client = createClient(key);
+      const response = await client.systemOne({
         state: {
           resumeSnippet: resumeText.slice(0, 3000),
           jobDescriptionSnippet: jobDescription.slice(0, 2000),
         },
-        task: 'evaluate_overall_alignment',
         questions: {
-          matchScore: { type: 'score', range: [0, 100] },
+          matchScore: score("Rate the candidate's qualification alignment for this job on a 0-4 scale:", [
+            "Unqualified / completely disjoint domain",
+            "Marginal match with major capability gaps",
+            "Moderate match meeting baseline requirements",
+            "Strong match with direct relevant experience",
+            "Exceptional top-tier candidate alignment",
+          ]),
         },
-      };
-      const response = await postJevWithTimeout(getJevApiUrl(), payload, key);
-      const parsedMatch = Number(response.matchScore);
-      return {
-        matchScore: Number.isFinite(parsedMatch) ? Math.min(100, Math.max(0, parsedMatch)) : 60,
-        confidence: Number(response.confidence) || 0.9,
-      };
+      });
+
+      const rawScore = Number(response.answers.matchScore?.score);
+      const confidence = Number(response.answers.matchScore?.confidence) || 0.85;
+      const matchScore = Number.isFinite(rawScore)
+        ? Math.min(98, Math.max(20, Math.round((rawScore / 4) * 100)))
+        : 60;
+
+      return { matchScore, confidence };
     } catch (err) {
       console.warn('[jev] evaluateResumeAlignmentWithJev failed, using fallback:', err);
     }
@@ -213,7 +240,7 @@ export async function evaluateResumeAlignmentWithJev(
     if (wordsResume.has(w)) matchCount++;
   });
   const ratio = matchCount / Math.min(wordsJD.size, 50);
-  const score = Math.min(95, Math.max(40, Math.round(ratio * 100)));
+  const scoreVal = Math.min(95, Math.max(40, Math.round(ratio * 100)));
 
-  return { matchScore: score, confidence: 0.7 };
+  return { matchScore: scoreVal, confidence: 0.7 };
 }

@@ -79,16 +79,22 @@ describe("Jev Service Layer (REQ-UBI-01, REQ-ERR-01)", () => {
     process.env.TYPESAFE_API_KEY = "test-key";
 
     // Mock global fetch for Jev System 1 endpoint
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        matchedSkills: ["React", "Node.js"],
-        missingSkills: ["AWS"],
-        seniorityScore: 4,
-        enhancementFocus: "elevate_ownership",
-        confidence: 0.95,
-      }),
-    } as any);
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          model: "jev-latest",
+          answers: {
+            seniorityScore: { type: "score", score: 3, confidence: 0.95 },
+            enhancementFocus: {
+              type: "choice",
+              choice: "elevate_ownership",
+              confidence: 0.95,
+            },
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
 
     const chunk = {
       title: "Senior Dev",
@@ -99,8 +105,8 @@ describe("Jev Service Layer (REQ-UBI-01, REQ-ERR-01)", () => {
     expect(result.enhancementFocus).toBe("elevate_ownership");
     expect(result.seniorityScore).toBe(4);
     expect(result.confidence).toBe(0.95);
-    expect(result.matchedSkills).toEqual(["React", "Node.js"]);
-    expect(result.missingSkills).toEqual(["AWS"]);
+    expect(result.matchedSkills).toEqual([]);
+    expect(result.missingSkills).toEqual([]);
     expect(global.fetch).toHaveBeenCalledWith(
       "https://api.typesafe.ai/v1/systemone",
       expect.objectContaining({
@@ -113,17 +119,24 @@ describe("Jev Service Layer (REQ-UBI-01, REQ-ERR-01)", () => {
   });
 
   it("parses valid Jev REST API response correctly for judge suggestion", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        isAuthentic: true,
-        contentMatchScore: 5,
-        toneOfVoiceRating: "strong_authentic",
-        isBetterThanOriginal: true,
-        overallImpactScore: 5,
-        scoreDeltaPercent: 30,
-      }),
-    } as any);
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          model: "jev-latest",
+          answers: {
+            isAuthentic: { type: "noul", noul: 0.99 },
+            isBetterThanOriginal: { type: "noul", noul: 1.0 },
+            overallImpactScore: { type: "score", score: 4, confidence: 0.9 },
+            toneOfVoiceRating: {
+              type: "choice",
+              choice: "strong_authentic",
+              confidence: 0.95,
+            },
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
     global.fetch = fetchMock;
 
     const result = await judgeSuggestionWithJev(
@@ -150,13 +163,17 @@ describe("Jev Service Layer (REQ-UBI-01, REQ-ERR-01)", () => {
   });
 
   it("parses valid Jev REST API response correctly for resume alignment", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        matchScore: 88,
-        confidence: 0.92,
-      }),
-    } as any);
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          model: "jev-latest",
+          answers: {
+            matchScore: { type: "score", score: 3.52, confidence: 0.92 },
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
 
     const result = await evaluateResumeAlignmentWithJev(
       "Full stack engineer resume",
@@ -172,16 +189,22 @@ describe("Jev Service Layer (REQ-UBI-01, REQ-ERR-01)", () => {
     process.env.TYPESAFE_API_KEY = "test-key";
     process.env.TYPESAFE_API_URL = "https://custom-proxy.internal/v1/systemone";
 
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        matchedSkills: ["React"],
-        missingSkills: [],
-        seniorityScore: 3,
-        enhancementFocus: "clarify_outcomes",
-        confidence: 0.9,
-      }),
-    } as any);
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          model: "jev-latest",
+          answers: {
+            seniorityScore: { type: "score", score: 2, confidence: 0.9 },
+            enhancementFocus: {
+              type: "choice",
+              choice: "clarify_outcomes",
+              confidence: 0.9,
+            },
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
     global.fetch = fetchMock;
 
     await diagnoseChunkWithJev(
