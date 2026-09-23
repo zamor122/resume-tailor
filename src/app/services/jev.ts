@@ -57,8 +57,9 @@ export async function diagnoseChunkWithJev(
 
   if (key) {
     try {
+      console.log(`[jev] diagnoseChunkWithJev: calling TypeSafe AI System 1...`);
       const client = createClient(key);
-      const response = await client.systemOne({
+      const { data: response, requestId } = await client.systemOne({
         state: {
           roleTitle: chunk.title || '',
           company: chunk.company || '',
@@ -81,11 +82,19 @@ export async function diagnoseChunkWithJev(
             showcase_scale: "Showcase operational scale and complexity",
           }),
         },
-      });
+      }).withResponse();
 
       const seniority = Math.round(Number(response.answers.seniorityScore?.score) + 1) || 3;
       const focus = (response.answers.enhancementFocus?.choice as any) || 'elevate_ownership';
       const confidence = Number(response.answers.enhancementFocus?.confidence) || 0.9;
+
+      console.log(`[jev] diagnoseChunkWithJev succeeded:`, {
+        requestId,
+        model: response.model,
+        tokens: response.usage,
+        seniorityScore: seniority,
+        enhancementFocus: focus,
+      });
 
       return {
         matchedSkills: [],
@@ -97,6 +106,8 @@ export async function diagnoseChunkWithJev(
     } catch (err) {
       console.warn('[jev] diagnoseChunkWithJev API call failed, using graceful fallback:', err);
     }
+  } else {
+    console.log('[jev] diagnoseChunkWithJev: No TYPESAFE_API_KEY provided or configured, using local fallback');
   }
 
   // Graceful deterministic fallback
@@ -124,8 +135,9 @@ export async function judgeSuggestionWithJev(
 
   if (key) {
     try {
+      console.log(`[jev] judgeSuggestionWithJev: evaluating suggestion with TypeSafe AI...`);
       const client = createClient(key);
-      const response = await client.systemOne({
+      const { data: response, requestId } = await client.systemOne({
         state: {
           originalText,
           suggestedText,
@@ -147,19 +159,31 @@ export async function judgeSuggestionWithJev(
             buzzword_heavy: "Excessive buzzwords",
           }),
         },
-      });
+      }).withResponse();
 
       const authNoul = Number(response.answers.isAuthentic?.noul);
-      const isAuthentic = Number.isFinite(authNoul) ? authNoul >= 0.5 : true;
+      const isAuthentic = Number.isFinite(authNoul) ? authNoul >= 0.35 : true;
 
       const betterNoul = Number(response.answers.isBetterThanOriginal?.noul);
-      const isBetterThanOriginal = Number.isFinite(betterNoul) ? betterNoul >= 0.5 : true;
+      const isBetterThanOriginal = Number.isFinite(betterNoul) ? betterNoul >= 0.25 : true;
 
       const rawImpact = Number(response.answers.overallImpactScore?.score);
       const overallImpactScore = Number.isFinite(rawImpact) ? Math.min(5, Math.max(1, Math.round(rawImpact + 1))) : 4;
 
       const tone = (response.answers.toneOfVoiceRating?.choice as any) || 'strong_authentic';
       const scoreDeltaPercent = Math.round((betterNoul || 0.8) * 30);
+
+      console.log(`[jev] judgeSuggestionWithJev succeeded:`, {
+        requestId,
+        model: response.model,
+        tokens: response.usage,
+        authNoul,
+        isAuthentic,
+        betterNoul,
+        isBetterThanOriginal,
+        overallImpactScore,
+        tone,
+      });
 
       return {
         isAuthentic,
@@ -172,6 +196,8 @@ export async function judgeSuggestionWithJev(
     } catch (err) {
       console.warn('[jev] judgeSuggestionWithJev call failed, using graceful fallback:', err);
     }
+  } else {
+    console.log('[jev] judgeSuggestionWithJev: No TYPESAFE_API_KEY provided or configured, using local fallback');
   }
 
   // Graceful deterministic fallback
@@ -201,8 +227,9 @@ export async function evaluateResumeAlignmentWithJev(
 
   if (key) {
     try {
+      console.log(`[jev] evaluateResumeAlignmentWithJev: evaluating alignment with TypeSafe AI...`);
       const client = createClient(key);
-      const response = await client.systemOne({
+      const { data: response, requestId } = await client.systemOne({
         state: {
           resumeSnippet: resumeText.slice(0, 3000),
           jobDescriptionSnippet: jobDescription.slice(0, 2000),
@@ -216,7 +243,7 @@ export async function evaluateResumeAlignmentWithJev(
             "Exceptional top-tier candidate alignment",
           ]),
         },
-      });
+      }).withResponse();
 
       const rawScore = Number(response.answers.matchScore?.score);
       const confidence = Number(response.answers.matchScore?.confidence) || 0.85;
@@ -224,10 +251,20 @@ export async function evaluateResumeAlignmentWithJev(
         ? Math.min(98, Math.max(20, Math.round((rawScore / 4) * 100)))
         : 60;
 
+      console.log(`[jev] evaluateResumeAlignmentWithJev succeeded:`, {
+        requestId,
+        model: response.model,
+        tokens: response.usage,
+        matchScore,
+        confidence,
+      });
+
       return { matchScore, confidence };
     } catch (err) {
       console.warn('[jev] evaluateResumeAlignmentWithJev failed, using fallback:', err);
     }
+  } else {
+    console.log('[jev] evaluateResumeAlignmentWithJev: No TYPESAFE_API_KEY provided or configured, using local fallback');
   }
 
   // Deterministic token overlap fallback
