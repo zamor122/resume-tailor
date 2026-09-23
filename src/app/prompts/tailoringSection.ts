@@ -5,6 +5,8 @@
 import type { JevDiagnosticResult } from "@/app/services/jev";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
+import type { DomainTaxonomyConfig } from "@/app/config/domainTaxonomy";
+import type { JobRoleKnowledge } from "@/app/services/jobKnowledge";
 import { buildLeverInstructions } from "./tailoringPresets";
 
 /** Upper bound for an untrusted target company name injected into the privacy mandate. */
@@ -113,9 +115,56 @@ const REUSABLE_ACCOMPLISHMENTS_BLOCK = `REUSABLE PROFESSIONAL ACCOMPLISHMENTS:
 /**
  * Universal ban on invented percentage metrics in favor of authentic, verifiable scope.
  */
-const AUTHENTIC_METRICS_BLOCK = `AUTHENTIC METRICS ONLY:
+function buildAuthenticMetricsBlock(
+  domainTaxonomy?: DomainTaxonomyConfig,
+  jobKnowledge?: JobRoleKnowledge
+): string {
+  const metricExamples = jobKnowledge?.authenticMetricTypes?.length
+    ? jobKnowledge.authenticMetricTypes.slice(0, 5).join(", ")
+    : domainTaxonomy?.authenticMetricExamples?.length
+    ? domainTaxonomy.authenticMetricExamples.slice(0, 5).join(", ")
+    : "";
+
+  const exampleSuffix = metricExamples ? ` (e.g. ${metricExamples})` : "";
+
+  return `AUTHENTIC METRICS ONLY:
 - Do NOT invent artificial percentage metrics (e.g. "by 35%", "increased revenue 40%") unless the original text states them.
-- Instead quantify with authentic scope, volume, headcount, compliance standards, or concrete operational outcomes.`;
+- Instead quantify with authentic scope, volume, headcount, compliance standards, or concrete operational outcomes${exampleSuffix}.`;
+}
+
+const AUTHENTIC_METRICS_BLOCK = buildAuthenticMetricsBlock();
+
+/**
+ * Role and domain taxonomy calibration guidance ensuring native vocabulary and zero tech jargon bias.
+ */
+function buildDomainCalibrationBlock(
+  domainTaxonomy?: DomainTaxonomyConfig,
+  jobKnowledge?: JobRoleKnowledge
+): string {
+  if (!domainTaxonomy && !jobKnowledge) return "";
+
+  const category = jobKnowledge?.industryCategory || domainTaxonomy?.category || "general_business";
+  const title = jobKnowledge?.canonicalTitle || domainTaxonomy?.displayName || "the profession";
+  const isTechRole = category === "technology_engineering";
+
+  const lines: string[] = [`DOMAIN-SPECIFIC CALIBRATION (${domainTaxonomy?.displayName || title}):`];
+
+  if (!isTechRole) {
+    lines.push(
+      `- CRITICAL DOMAIN VOCABULARY GUARDRAIL: DO NOT use software-engineering or tech jargon (such as "architected", "refactored", "automated software", "microservices", "codebase") for this non-technical role. Ground all phrasing strictly in ${title}'s authentic operational environment.`
+    );
+  }
+
+  if (domainTaxonomy?.evaluationDirectives && domainTaxonomy.evaluationDirectives.length > 0) {
+    lines.push(`- Role Directives: ${domainTaxonomy.evaluationDirectives.join("; ")}.`);
+  }
+
+  if (jobKnowledge?.coreCompetencies && jobKnowledge.coreCompetencies.length > 0) {
+    lines.push(`- Target Core Competencies: ${jobKnowledge.coreCompetencies.slice(0, 6).join(", ")}.`);
+  }
+
+  return lines.join("\n");
+}
 
 /**
  * Prompt to tailor only the Summary section. No contact, no experience structure—just the summary prose.
@@ -186,6 +235,8 @@ export interface ExperiencePromptOptions {
   userInstructions?: string;
   userRequestedKeywords?: string[];
   preferences?: TailoringPreferences;
+  domainTaxonomy?: DomainTaxonomyConfig;
+  jobKnowledge?: JobRoleKnowledge;
 }
 
 export interface ExperiencePromptTarget {
@@ -273,16 +324,33 @@ HIGHEST PRIORITY – USER PREFERENCES & CONTROLS (follow these first):
 ${leverBlock}${userBlock}${keywordsBlock}`
     : "";
 
+  const domainTaxonomy = options.domainTaxonomy;
+  const jobKnowledge = options.jobKnowledge;
+
   const governingBlock = [
     buildSeniorityCalibration(seniorityTier),
     buildRecencyDepthGuidance(recencyTier),
     buildCareerArcBlock(careerArc),
     buildCompanyPrivacyBlock(targetCompany),
+    buildDomainCalibrationBlock(domainTaxonomy, jobKnowledge),
     REUSABLE_ACCOMPLISHMENTS_BLOCK,
-    AUTHENTIC_METRICS_BLOCK,
+    buildAuthenticMetricsBlock(domainTaxonomy, jobKnowledge),
   ]
     .filter(Boolean)
     .join("\n\n");
+
+  const hasDomainVerbs = Boolean(
+    (jobKnowledge?.powerVerbs && jobKnowledge.powerVerbs.length > 0) ||
+    (domainTaxonomy?.primaryVerbs && domainTaxonomy.primaryVerbs.length > 0)
+  );
+
+  const verbsExample = hasDomainVerbs
+    ? (jobKnowledge?.powerVerbs?.length ? jobKnowledge.powerVerbs : domainTaxonomy!.primaryVerbs).slice(0, 14).join(", ")
+    : "Orchestrated, Architected, Engineered, Overhauled, Scaled, Standardized, Automated, Deployed, Revamped, Authored, Refactored, Delivered, Designed, Instituted, Accelerated";
+
+  const domainBanned = domainTaxonomy?.bannedClichés?.length
+    ? `, and domain clichés: ${domainTaxonomy.bannedClichés.map((c) => `"${c}"`).join(", ")}`
+    : "";
 
   const bulletLines = bulletsText
     ? bulletsText
@@ -328,7 +396,7 @@ CRITICAL INSTRUCTIONS:
    - ZERO THINKING / PREAMBLE LEAK: DO NOT output any internal thoughts, <think> tags, chain-of-thought analysis, or commentary (such as "*Analyze User Input:**"). Output ONLY the valid JSON array starting directly with [ and ending with ].
    - HIGH-IMPACT GOOGLE X-Y-Z STRUCTURE: Reframe candidate achievements into the high-impact pattern: Accomplished [X], as measured by [Y], by doing [Z]. State what was achieved, the measurable scale/metric/operational impact, and the exact strategic action taken.
    - BAN WEAK & PASSIVE PHRASING: NEVER use weak, subordinate, or passive phrasing such as "Assisted with", "Helped", "Worked on", "Responsible for", "Participated in", "Contributed to", "Handled", or "Supported". Every enhanced bullet MUST position the candidate as the primary driver and decisive owner of the result.
-   - EXECUTIVE OWNERSHIP ACTION VERBS: Open each enhanced bullet with a powerful, authoritative past-tense action verb (e.g. Orchestrated, Architected, Engineered, Overhauled, Scaled, Standardized, Automated, Deployed, Revamped, Authored, Refactored, Delivered, Designed, Instituted, Accelerated).
+   - EXECUTIVE OWNERSHIP ACTION VERBS: Open each enhanced bullet with a powerful, authoritative past-tense action verb (e.g. ${verbsExample}).
    - BAN SUPERFICIAL WORD SWAPS: DO NOT make cosmetic, low-value synonym swaps (e.g. replacing "used" with "utilized"). Enhancements must substantively elevate the candidate's seniority, technical/business scope, operational scale, or target competency alignment.
    - AUTHENTIC QUANTIFICATION: Quantify using concrete scope, volume, throughput, latency, headcount, compliance standards, or business impact derived from the context. Do NOT fabricate artificial percentages or fictitious employers.
    - If a bullet already adequately covers the role and does not require substantive tailoring, return the exact original text unchanged with status: "unchanged".
@@ -337,7 +405,7 @@ CRITICAL INSTRUCTIONS:
      * Scope & Ownership Depth: Problem addressed → Approach or method chosen → Measurable outcome.
      * Scale & Volume: Volume or scale handled → Standard or reliability level maintained → Continuity or service win.
      * Efficiency & Process Improvement: Process or tooling instituted → Cross-functional adoption → Time, cost, or quality impact.
-   - BANNED REPETITIVE AI FILLER: Strictly ban repetitive clichés: "leveraging", "spearheaded", "pivotal", "fostered", "testament to", "streamlined", "driving operational excellence", "seamlessly".
+   - BANNED REPETITIVE AI FILLER: Strictly ban repetitive clichés: "leveraging", "spearheaded", "pivotal", "fostered", "testament to", "streamlined", "driving operational excellence", "seamlessly"${domainBanned}.
    - CONTEXTUAL KEYWORD WEAVING: Weave at most 1–2 target keywords per bullet where they naturally and authentically fit. DO NOT cram the same keywords into every bullet.
    - Omit articles (a, an, the). Use crisp, executive resume phrasing.
 3. OUTPUT FORMAT: Output ONLY a valid JSON array of ${bulletCount} objects:
