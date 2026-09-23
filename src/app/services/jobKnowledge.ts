@@ -183,27 +183,29 @@ export async function getOrSynthesizeJobKnowledge(
 
     // 2. Cache miss: Save synthesized baseline asynchronously for all future users
     console.log(`[jobKnowledge] 🔍 Cache MISS for role "${canonicalTitle}". Persisting baseline to Supabase...`);
-    supabaseAdmin
-      .from("job_role_knowledge")
-      .insert({
-        canonical_title: canonicalTitle,
-        industry_category: industryCategory,
-        alternate_titles: [title],
-        power_verbs: domainConfig.primaryVerbs,
-        authentic_metric_types: domainConfig.authenticMetricExamples,
-        core_competencies: [domainConfig.displayName, ...domainConfig.evaluationDirectives],
-        usage_count: 1,
-      })
-      .then(({ error: insertErr }) => {
+    (async () => {
+      try {
+        const { error: insertErr } = await supabaseAdmin
+          .from("job_role_knowledge")
+          .insert({
+            canonical_title: canonicalTitle,
+            industry_category: industryCategory,
+            alternate_titles: [title],
+            power_verbs: domainConfig.primaryVerbs,
+            authentic_metric_types: domainConfig.authenticMetricExamples,
+            core_competencies: [domainConfig.displayName, ...domainConfig.evaluationDirectives],
+            usage_count: 1,
+          });
+
         if (insertErr) {
           console.warn("[jobKnowledge] Async role cache insert skipped:", insertErr.message);
         } else {
           console.log(`[jobKnowledge] ✔ Role knowledge persisted for "${canonicalTitle}"`);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.warn("[jobKnowledge] Async role cache insert failed:", err);
-      });
+      }
+    })();
 
     return fallbackKnowledge;
   } catch (err) {
