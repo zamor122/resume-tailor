@@ -180,7 +180,7 @@ async function runHumanizeStream(params: {
       if (controller.signal.aborted) {
         throw new Error("Request timed out. Please try again with a shorter resume or job description.");
       }
-      throw new Error("No result received from tailoring stream");
+      throw new Error("The tailoring connection was interrupted before completion. Please try tailoring again.");
     }
 
     return {

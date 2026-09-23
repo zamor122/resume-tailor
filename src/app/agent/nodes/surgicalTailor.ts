@@ -101,92 +101,108 @@ export async function surgicalTailorNode(
 
   // PHASE 1 — dispatch every job bullet task in parallel. The summary is intentionally NOT queued
   // here: it can only be synthesized after these bullets resolve (REQ-EVT-04).
-  type BulletTaskResult = { type: "bullets"; index: number; text: string; originalInputText: string };
-  const bulletPromises: Promise<BulletTaskResult>[] = [];
+  // Bounded concurrency helper: process tasks with a worker pool of size `limit`
+  // preventing Gemini API 429 quota exhaustion when many jobs exist.
+  async function runWithConcurrencyLimit<T, R>(
+    items: T[],
+    limit: number,
+    fn: (item: T, idx: number) => Promise<R>
+  ): Promise<R[]> {
+    const output: R[] = new Array(items.length);
+    let currentIndex = 0;
 
-  bulletPlan?.jobBulletChanges.forEach(({ jobIndex, bulletIndices, recencyTier }) => {
-    const exp = experience[jobIndex];
-    if (!exp) {
-      console.warn(`[surgicalTailor] Warning: jobIndex ${jobIndex} not found in resumeAST.experience`);
-      return;
-    }
-
-    const bulletsText =
-      bulletIndices === "all"
-        ? exp.description
-        : extractSpecificBullets(exp.description, bulletIndices);
-
-    const inputBulletsList = getBulletsList(bulletsText);
-    const auditTier = bulletPlan?.jobAudits?.find((a) => a.jobIndex === jobIndex)?.recencyTier;
-    const resolvedRecencyTier = recencyTier ?? auditTier;
-    console.log(`[surgicalTailor] Job ${jobIndex} (${exp.company}) dispatched with ${inputBulletsList.length} bullets:`, {
-      bulletIndices,
-      recencyTier: resolvedRecencyTier || "(none)",
-      bulletsTextSnippet: bulletsText.slice(0, 100),
+    const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (currentIndex < items.length) {
+        const idx = currentIndex++;
+        output[idx] = await fn(items[idx], idx);
+      }
     });
 
-    const jobKeywords = getJobSpecificKeywords(exp, sortedMissingKeywords, jobIndex);
+    await Promise.all(workers);
+    return output;
+  }
 
-    bulletPromises.push(
-      (async () => {
-        let diagnosis;
-        try {
-          diagnosis = await diagnoseChunkWithJev(
-            {
-              title: exp.title,
-              company: exp.company,
-              bulletsText,
-            },
-            jdSnippet,
-            state.jobTitle,
-            state.sessionApiKeys?.['TYPESAFE_API_KEY']
-          );
-        } catch (diagErr) {
-          console.warn(`[surgicalTailor] Jev pre-diagnosis failed for jobIndex ${jobIndex}:`, diagErr);
-        }
+  type BulletTaskResult = { type: "bullets"; index: number; text: string; originalInputText: string };
+  const jobChanges = bulletPlan?.jobBulletChanges || [];
+  const results: BulletTaskResult[] = (
+    await runWithConcurrencyLimit(jobChanges, 2, async ({ jobIndex, bulletIndices, recencyTier }) => {
+      const exp = experience[jobIndex];
+      if (!exp) {
+        console.warn(`[surgicalTailor] Warning: jobIndex ${jobIndex} not found in resumeAST.experience`);
+        return null;
+      }
 
-        try {
-          const res = await generateWithFallback(
-            getExperienceBulletsPrompt({
-              jobTitle: exp.title,
-              company: exp.company,
-              dates: exp.dates,
-              bulletsText,
-              jobDescription: jdSnippet,
-              preferences,
-              userRequestedKeywords: jobKeywords,
-              seniorityTier: state.seniorityTier,
-              careerArc: state.careerArc,
-              targetCompany,
-              recencyTier: resolvedRecencyTier,
-              diagnosis,
-            }),
-            state.modelKey,
-            { maxTokens: 2000, temperature: 0.2 },
-            state.sessionApiKeys
-          );
-          const cleanText = stripModelThinking(res.text).trim();
-          console.log(`[surgicalTailor] Job ${jobIndex} (${exp.company}) response received (chars: ${cleanText.length})`);
-          return {
-            type: "bullets" as const,
-            index: jobIndex,
-            text: cleanText,
-            originalInputText: bulletsText,
-          };
-        } catch (err) {
-          console.warn(`[surgicalTailor] Job ${jobIndex} bullet tailoring LLM failed:`, err);
-          return {
-            type: "bullets" as const,
-            index: jobIndex,
-            text: bulletsText,
-            originalInputText: bulletsText,
-          };
-        }
-      })()
-    );
-  });
+      const bulletsText =
+        bulletIndices === "all"
+          ? exp.description
+          : extractSpecificBullets(exp.description, bulletIndices);
 
-  const results = await Promise.all(bulletPromises);
+      const inputBulletsList = getBulletsList(bulletsText);
+      const auditTier = bulletPlan?.jobAudits?.find((a) => a.jobIndex === jobIndex)?.recencyTier;
+      const resolvedRecencyTier = recencyTier ?? auditTier;
+      console.log(`[surgicalTailor] Job ${jobIndex} (${exp.company}) dispatched with ${inputBulletsList.length} bullets:`, {
+        bulletIndices,
+        recencyTier: resolvedRecencyTier || "(none)",
+        bulletsTextSnippet: bulletsText.slice(0, 100),
+      });
+
+      const jobKeywords = getJobSpecificKeywords(exp, sortedMissingKeywords, jobIndex);
+
+      let diagnosis;
+      try {
+        diagnosis = await diagnoseChunkWithJev(
+          {
+            title: exp.title,
+            company: exp.company,
+            bulletsText,
+          },
+          jdSnippet,
+          state.jobTitle,
+          state.sessionApiKeys?.['TYPESAFE_API_KEY']
+        );
+      } catch (diagErr) {
+        console.warn(`[surgicalTailor] Jev pre-diagnosis failed for jobIndex ${jobIndex}:`, diagErr);
+      }
+
+      try {
+        const res = await generateWithFallback(
+          getExperienceBulletsPrompt({
+            jobTitle: exp.title,
+            company: exp.company,
+            dates: exp.dates,
+            bulletsText,
+            jobDescription: jdSnippet,
+            preferences,
+            userRequestedKeywords: jobKeywords,
+            seniorityTier: state.seniorityTier,
+            careerArc: state.careerArc,
+            targetCompany,
+            recencyTier: resolvedRecencyTier,
+            diagnosis,
+          }),
+          state.modelKey,
+          { maxTokens: 2000, temperature: 0.2 },
+          state.sessionApiKeys
+        );
+        const cleanText = stripModelThinking(res.text).trim();
+        console.log(`[surgicalTailor] Job ${jobIndex} (${exp.company}) response received (chars: ${cleanText.length})`);
+        return {
+          type: "bullets" as const,
+          index: jobIndex,
+          text: cleanText,
+          originalInputText: bulletsText,
+        };
+      } catch (err) {
+        console.warn(`[surgicalTailor] Job ${jobIndex} bullet tailoring LLM failed:`, err);
+        return {
+          type: "bullets" as const,
+          index: jobIndex,
+          text: bulletsText,
+          originalInputText: bulletsText,
+        };
+      }
+    })
+  ).filter(Boolean) as BulletTaskResult[];
 
   let tailoredSummary = resumeAST?.summary || "";
   const tailoredBulletsByJob: string[] = experience.map((e) => e.description);
@@ -214,9 +230,11 @@ export async function surgicalTailorNode(
         sanitizeCompanyReferences(bullet, vettedEmployers, targetCompany)
       );
 
-      // Evaluate suggestions with Jev quality gate
-      const judgedChunkSuggestions = await Promise.all(
-        sanitizedSuggestions.map(async (sug) => {
+      // Evaluate suggestions with Jev quality gate (concurrency bounded to 3)
+      const judgedChunkSuggestions = await runWithConcurrencyLimit(
+        sanitizedSuggestions,
+        3,
+        async (sug) => {
           const origBullet = sug.originalText;
           const newBullet = sug.suggestedText;
           try {
@@ -231,7 +249,7 @@ export async function surgicalTailorNode(
             console.warn(`[surgicalTailor] Jev judge failed for suggestion ${sug.id}:`, judgeErr);
             return { sug, judge: undefined };
           }
-        })
+        }
       );
 
       judgedChunkSuggestions.forEach(({ sug, judge }) => {

@@ -2,14 +2,23 @@ import { ModelConfig } from '@/app/types/model';
 
 export const MODEL_CONFIGS: Record<string, ModelConfig> = {
   // Gemini Models
-  'gemini:gemini-2.5-flash-lite': {
+  'gemini:gemini-1.5-flash': {
     provider: 'gemini',
-    modelId: 'gemini-2.5-flash-lite',
-    name: 'Gemini 2.5 Flash Lite',
-    freeTierLimit: '1,000 requests/day',
+    modelId: 'gemini-1.5-flash',
+    name: 'Gemini 1.5 Flash',
+    freeTierLimit: '15 requests/min',
     requiresApiKey: true,
     apiKeyEnvVar: 'GEMINI_API_KEY',
     description: 'Fast and efficient model for high-volume tasks',
+  },
+  'gemini:gemini-2.5-flash-lite': {
+    provider: 'gemini',
+    modelId: 'gemini-1.5-flash', // Fallback alias to working 1.5-flash
+    name: 'Gemini 2.5 Flash Lite',
+    freeTierLimit: '15 requests/min',
+    requiresApiKey: true,
+    apiKeyEnvVar: 'GEMINI_API_KEY',
+    description: 'Fast and efficient model (mapped to Gemini 1.5 Flash)',
   },
   'gemini:gemini-2.5-flash': {
     provider: 'gemini',
@@ -277,9 +286,9 @@ export const DEFAULT_MODEL =
 
 export const FALLBACK_MODELS = [
   'gemini:gemini-2.5-flash',
-  'gemini:gemini-2.5-flash-lite',
+  'gemini:gemini-1.5-flash',
+  'groq:llama-3.3-70b-versatile',
   'groq:openai/gpt-oss-120b',
-  'groq:qwen/qwen3.6-27b',
   'openai:gpt-4o-mini',
 ];
 

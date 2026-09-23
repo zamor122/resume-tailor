@@ -7,7 +7,7 @@ export class GeminiProvider implements AIProvider {
   public provider = 'gemini';
 
   constructor(
-    private modelId: string = 'gemini-2.5-flash-lite',
+    private modelId: string = 'gemini-1.5-flash',
     apiKey?: string
   ) {
     const key = apiKey || process.env.GEMINI_API_KEY;

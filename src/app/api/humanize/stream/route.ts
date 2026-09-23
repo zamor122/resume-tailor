@@ -9,10 +9,59 @@ import { checkAndRecordAnonymousTailor } from "@/app/utils/anonymousTailorAllowa
 import { buildResumeAgentGraph } from "@/app/agent/graph";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
+import type { AgentState } from "@/app/agent/state";
 
 export const runtime = "nodejs";
 export const preferredRegion = "auto";
 export const maxDuration = 60;
+
+const NODE_PROGRESS_MAP: Record<string, { progress: number; message: string; step: string }> = {
+  intakeParser: {
+    progress: 25,
+    message: "Analyzing career experience, roles, and skills...",
+    step: "analyzing",
+  },
+  candidateProfiler: {
+    progress: 40,
+    message: "Determining career narrative and seniority level...",
+    step: "profiling",
+  },
+  jobDiscovery: {
+    progress: 48,
+    message: "Discovering target role requirements and qualifications...",
+    step: "discovery",
+  },
+  keywordAnalyzer: {
+    progress: 55,
+    message: "Aligning competencies and qualifications to target role...",
+    step: "matching",
+  },
+  bulletPlanner: {
+    progress: 68,
+    message: "Formulating accomplishment enhancement strategy...",
+    step: "planning",
+  },
+  surgicalTailor: {
+    progress: 90,
+    message: "Elevating accomplishment bullets & verifying authenticity with Jev AI...",
+    step: "tailoring",
+  },
+  reassembleAndScore: {
+    progress: 96,
+    message: "Finalizing tailored resume and measuring score boost...",
+    step: "finalizing",
+  },
+};
+
+function getHeartbeatStatus(progress: number): string {
+  if (progress < 30) return "Reviewing career milestones, work experience, and accomplishments...";
+  if (progress < 45) return "Analyzing career narrative, leadership trajectory, and core strengths...";
+  if (progress < 60) return "Identifying high-priority competencies employers look for...";
+  if (progress < 70) return "Planning strategic accomplishment framing for each role...";
+  if (progress < 80) return "Elevating accomplishment bullets with quantified business outcomes...";
+  if (progress < 90) return "Verifying bullet truthfulness and authentic tone with Jev AI...";
+  return "Synthesizing executive summary and measuring match score boost...";
+}
 
 /**
  * Send SSE event to client
@@ -108,9 +157,15 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       let streamClosed = false;
+      let heartbeatTimer: NodeJS.Timeout | null = null;
+      let currentProgress = 15;
 
       req.signal?.addEventListener?.("abort", () => {
         streamClosed = true;
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
         try {
           controller.close();
         } catch {}
@@ -130,33 +185,78 @@ export async function POST(req: NextRequest) {
         streamClosed = !sendSSE(controller, "status", {
           stage: "preprocessing",
           message: "Analyzing your career experience and target role...",
-          progress: 15,
+          progress: currentProgress,
         });
         if (streamClosed) return;
 
-        // Build and execute LangGraph Agent
+        // Build and execute LangGraph Agent with real-time update streaming
         const startTime = Date.now();
         const graph = buildResumeAgentGraph();
 
         streamClosed = !sendSSE(controller, "agent_step", {
           step: "analyzing",
           message: "Reviewing career milestones, skills, and key accomplishments...",
-          progress: 25,
+          progress: 20,
         });
         if (streamClosed) return;
 
-        // Execute graph with initial state
-        const agentResult = await graph.invoke({
-          rawResume: resume,
-          rawJobDescription: jobDescription,
-          sessionId,
-          userId: authenticatedUserId ?? undefined,
-          parentResumeId,
-          preferences,
-          modelKey: selectedModel,
-          sessionApiKeys,
-          jobTitle: clientJobTitle,
-        });
+        // Start heartbeat keepalive & progressive tick timer (every 2.5s)
+        heartbeatTimer = setInterval(() => {
+          if (streamClosed) return;
+          if (currentProgress < 94) {
+            currentProgress += 1;
+            sendSSE(controller, "agent_step", {
+              step: "processing",
+              message: getHeartbeatStatus(currentProgress),
+              progress: currentProgress,
+            });
+          } else {
+            try {
+              controller.enqueue(new TextEncoder().encode(": keepalive\n\n"));
+            } catch {}
+          }
+        }, 2500);
+
+        // Execute graph with initial state and node-by-node update streaming
+        let agentResult: AgentState = {} as AgentState;
+        const streamIterable = await graph.stream(
+          {
+            rawResume: resume,
+            rawJobDescription: jobDescription,
+            sessionId,
+            userId: authenticatedUserId ?? undefined,
+            parentResumeId,
+            preferences,
+            modelKey: selectedModel,
+            sessionApiKeys,
+            jobTitle: clientJobTitle,
+          },
+          { streamMode: ["updates", "values"] }
+        );
+
+        for await (const [mode, payload] of streamIterable) {
+          if (streamClosed) break;
+
+          if (mode === "values") {
+            agentResult = payload as AgentState;
+          } else if (mode === "updates" && payload && typeof payload === "object") {
+            const finishedNode = Object.keys(payload)[0];
+            const meta = NODE_PROGRESS_MAP[finishedNode];
+            if (meta) {
+              currentProgress = Math.max(currentProgress, meta.progress);
+              sendSSE(controller, "agent_step", {
+                step: meta.step,
+                message: meta.message,
+                progress: currentProgress,
+              });
+            }
+          }
+        }
+
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
 
         const elapsedMs = Date.now() - startTime;
         console.log(`[Stream API] ✔ Agent graph completed in ${elapsedMs}ms`, {
@@ -172,10 +272,11 @@ export async function POST(req: NextRequest) {
           sendSSE(controller, "jobs_found", { jobs: agentResult.discoveredJobs });
         }
 
+        currentProgress = 98;
         streamClosed = !sendSSE(controller, "agent_step", {
-          step: "tailoring",
-          message: "Elevating accomplishment bullets and verifying authenticity with Jev AI...",
-          progress: 75,
+          step: "finalizing",
+          message: "Formatting your tailored resume and computing your match improvement...",
+          progress: currentProgress,
         });
         if (streamClosed) return;
 
@@ -317,6 +418,10 @@ export async function POST(req: NextRequest) {
         if (streamClosed) return;
         controller.close();
       } catch (error: any) {
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
         console.error("[Stream API] ❌ Agent Graph Execution Error:", {
           message: error?.message,
           status: error?.status,
@@ -335,6 +440,11 @@ export async function POST(req: NextRequest) {
           canRetry: error?.status === 429,
           userId: authenticatedUserId ?? "anonymous",
         });
+      } finally {
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
       }
     },
   });

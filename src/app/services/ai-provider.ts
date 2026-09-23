@@ -90,7 +90,8 @@ export async function generateContentWithFallback(
     DEFAULT_MODEL,
     ...(fallbackModels || FALLBACK_MODELS),
     'gemini:gemini-2.5-flash',
-    'gemini:gemini-2.5-flash-lite',
+    'gemini:gemini-1.5-flash',
+    'groq:llama-3.3-70b-versatile',
     'groq:openai/gpt-oss-120b',
     'openai:gpt-4o-mini',
   ].filter(Boolean) as string[];
