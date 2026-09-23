@@ -124,15 +124,29 @@ export function resolveCanonicalTitle(title: string, category: IndustryCategory)
  * Retrieves role knowledge from Supabase cache, or synthesizes using domain taxonomy.
  * Guaranteed sub-15ms response on cache hits with graceful fallback on database errors.
  */
-export async function getOrSynthesizeJobKnowledge(params: {
-  title: string;
-  jobDescription?: string;
-  apiKey?: string;
-  sessionApiKeys?: Record<string, string>;
-  modelKey?: string;
-}): Promise<JobRoleKnowledge> {
-  const { title, jobDescription = "" } = params;
-  const industryCategory = detectIndustryCategory(title, jobDescription);
+export async function getOrSynthesizeJobKnowledge(
+  titleOrParams:
+    | string
+    | {
+        title: string;
+        jobDescription?: string;
+        apiKey?: string;
+        sessionApiKeys?: Record<string, string>;
+        modelKey?: string;
+      },
+  jobDescription?: string,
+  apiKey?: string,
+  sessionApiKeys?: Record<string, string>,
+  modelKey?: string
+): Promise<JobRoleKnowledge> {
+  const title = typeof titleOrParams === "string" ? titleOrParams : titleOrParams.title;
+  const jd = typeof titleOrParams === "string" ? (jobDescription || "") : (titleOrParams.jobDescription || "");
+  const effectiveApiKey = typeof titleOrParams === "string" ? apiKey : titleOrParams.apiKey;
+  const effectiveSessionApiKeys =
+    typeof titleOrParams === "string" ? sessionApiKeys : titleOrParams.sessionApiKeys;
+  const effectiveModelKey = typeof titleOrParams === "string" ? modelKey : titleOrParams.modelKey;
+
+  const industryCategory = detectIndustryCategory(title, jd);
   const canonicalTitle = resolveCanonicalTitle(title, industryCategory);
   const domainConfig = getDomainTaxonomy(industryCategory);
 

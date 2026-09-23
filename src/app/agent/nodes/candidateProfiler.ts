@@ -7,6 +7,8 @@ import {
   buildCareerArcContext,
   type SeniorityTier,
 } from "@/app/utils/seniorityClassifier";
+import { detectIndustryCategory } from "@/app/config/domainTaxonomy";
+import { getOrSynthesizeJobKnowledge, resolveCanonicalTitle } from "@/app/services/jobKnowledge";
 
 const PROFILE_PROMPT = (resumeSnippet: string) => `
 You are analyzing a resume to extract candidate profile information.
@@ -45,8 +47,23 @@ export async function candidateProfilerNode(
     const successPillars = extractSuccessPillars(jd, targetTitle);
     const careerArc = buildCareerArcContext(state.resumeAST?.experience, parsedProfile?.domain);
 
+    const industryCategory = detectIndustryCategory(targetTitle, jd);
+    const canonicalRole = resolveCanonicalTitle(targetTitle, industryCategory);
+    let jobKnowledge = undefined;
+    try {
+      jobKnowledge = await getOrSynthesizeJobKnowledge(
+        targetTitle,
+        jd,
+        state.sessionApiKeys?.["GOOGLE_GENERATIVE_AI_API_KEY"] || state.sessionApiKeys?.["GEMINI_API_KEY"]
+      );
+    } catch {
+      // Fallback silently if knowledge resolution fails
+    }
+
     const profile: CandidateProfile = {
       primaryTitle: targetTitle,
+      canonicalRole,
+      industryCategory,
       seniorityLevel: seniorityTier,
       seniorityTier,
       topSkills: parsedProfile?.topSkills || [],
@@ -54,16 +71,20 @@ export async function candidateProfilerNode(
       searchQuery: parsedProfile?.searchQuery || `${targetTitle} job opening`,
       successPillars,
       careerArc,
+      jobKnowledge,
     };
 
     return {
       candidateProfile: profile,
       jobTitle: state.jobTitle || parsedProfile?.primaryTitle,
+      canonicalRole,
+      industryCategory,
+      jobKnowledge,
       seniorityTier,
       successPillars,
       careerArc,
       logs: [
-        `[candidateProfiler] Profile extracted: ${targetTitle} (${profile.seniorityLevel})`,
+        `[candidateProfiler] Profile extracted: ${targetTitle} (${profile.seniorityLevel}, ${industryCategory})`,
       ],
     };
   } catch (error) {
@@ -72,10 +93,24 @@ export async function candidateProfilerNode(
     const seniorityTier: SeniorityTier = classifySeniorityTier(fallbackTitle, jd);
     const successPillars = extractSuccessPillars(jd, fallbackTitle);
     const careerArc = buildCareerArcContext(state.resumeAST?.experience);
+    const industryCategory = detectIndustryCategory(fallbackTitle, jd);
+    const canonicalRole = resolveCanonicalTitle(fallbackTitle, industryCategory);
+    let jobKnowledge = undefined;
+    try {
+      jobKnowledge = await getOrSynthesizeJobKnowledge(
+        fallbackTitle,
+        jd,
+        state.sessionApiKeys?.["GOOGLE_GENERATIVE_AI_API_KEY"] || state.sessionApiKeys?.["GEMINI_API_KEY"]
+      );
+    } catch {
+      // Fallback silently if knowledge resolution fails
+    }
 
     return {
       candidateProfile: {
         primaryTitle: fallbackTitle,
+        canonicalRole,
+        industryCategory,
         seniorityLevel: seniorityTier,
         seniorityTier,
         topSkills: [],
@@ -83,8 +118,12 @@ export async function candidateProfilerNode(
         searchQuery: `${fallbackTitle} job opening`,
         successPillars,
         careerArc,
+        jobKnowledge,
       },
       jobTitle: state.jobTitle,
+      canonicalRole,
+      industryCategory,
+      jobKnowledge,
       seniorityTier,
       successPillars,
       careerArc,

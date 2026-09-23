@@ -3,9 +3,13 @@ import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { JDInterpreterResult } from "@/app/utils/keyword-extraction";
 import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
 import type { JevJudgeResult } from "@/app/services/jev";
+import type { IndustryCategory } from "@/app/config/domainTaxonomy";
+import type { JobRoleKnowledge } from "@/app/services/jobKnowledge";
 
 export interface CandidateProfile {
   primaryTitle: string;
+  canonicalRole?: string;
+  industryCategory?: IndustryCategory;
   seniorityLevel: string;
   topSkills: string[];
   domain: string;
@@ -13,6 +17,7 @@ export interface CandidateProfile {
   seniorityTier?: SeniorityTier;
   successPillars?: string[];
   careerArc?: string;
+  jobKnowledge?: JobRoleKnowledge;
 }
 
 export interface DiscoveredJob {
@@ -117,6 +122,9 @@ export interface AgentState {
   discoveredJobs?: DiscoveredJob[];
   companyResearch?: any;
   jobTitle?: string;
+  canonicalRole?: string;
+  industryCategory?: IndustryCategory;
+  jobKnowledge?: JobRoleKnowledge;
 
   // Keyword Analysis
   keywordResult?: JDInterpreterResult;

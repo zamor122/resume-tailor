@@ -12,6 +12,8 @@ import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { JDInterpreterResult } from "@/app/utils/keyword-extraction";
 import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
+import type { IndustryCategory } from "@/app/config/domainTaxonomy";
+import type { JobRoleKnowledge } from "@/app/services/jobKnowledge";
 
 import { intakeParserNode } from "./nodes/intakeParser";
 import { candidateProfilerNode } from "./nodes/candidateProfiler";
@@ -41,6 +43,9 @@ export const AgentStateAnnotation = Annotation.Root({
   discoveredJobs: Annotation<DiscoveredJob[] | undefined>(),
   companyResearch: Annotation<any>(),
   jobTitle: Annotation<string | undefined>(),
+  canonicalRole: Annotation<string | undefined>(),
+  industryCategory: Annotation<IndustryCategory | undefined>(),
+  jobKnowledge: Annotation<JobRoleKnowledge | undefined>(),
 
   keywordResult: Annotation<JDInterpreterResult | undefined>(),
   sortedMissingKeywords: Annotation<string[] | undefined>(),
