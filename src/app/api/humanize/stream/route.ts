@@ -13,7 +13,7 @@ import type { AgentState } from "@/app/agent/state";
 
 export const runtime = "nodejs";
 export const preferredRegion = "auto";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const NODE_PROGRESS_MAP: Record<string, { progress: number; message: string; step: string }> = {
   intakeParser: {
