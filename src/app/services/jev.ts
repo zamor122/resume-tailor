@@ -119,9 +119,11 @@ export async function diagnoseChunkWithJev(
             requestId,
             model: response.model,
             tokens: response.usage ? {
-              prompt: response.usage.prompt_tokens,
-              completion: response.usage.completion_tokens,
-              total: response.usage.total_tokens,
+              prompt: response.usage.input_tokens ?? (response.usage as any).prompt_tokens,
+              completion: response.usage.output_tokens ?? (response.usage as any).completion_tokens,
+              total: (response.usage.input_tokens !== undefined && response.usage.output_tokens !== undefined)
+                ? response.usage.input_tokens + response.usage.output_tokens
+                : (response.usage as any).total_tokens,
             } : undefined,
             scores: {
               overallImpactScore: seniority,
@@ -272,9 +274,11 @@ export async function judgeSuggestionWithJev(
             requestId,
             model: response.model,
             tokens: response.usage ? {
-              prompt: response.usage.prompt_tokens,
-              completion: response.usage.completion_tokens,
-              total: response.usage.total_tokens,
+              prompt: response.usage.input_tokens ?? (response.usage as any).prompt_tokens,
+              completion: response.usage.output_tokens ?? (response.usage as any).completion_tokens,
+              total: (response.usage.input_tokens !== undefined && response.usage.output_tokens !== undefined)
+                ? response.usage.input_tokens + response.usage.output_tokens
+                : (response.usage as any).total_tokens,
             } : undefined,
             scores: {
               isAuthentic,
@@ -409,9 +413,11 @@ export async function evaluateResumeAlignmentWithJev(
             requestId,
             model: response.model,
             tokens: response.usage ? {
-              prompt: response.usage.prompt_tokens,
-              completion: response.usage.completion_tokens,
-              total: response.usage.total_tokens,
+              prompt: response.usage.input_tokens ?? (response.usage as any).prompt_tokens,
+              completion: response.usage.output_tokens ?? (response.usage as any).completion_tokens,
+              total: (response.usage.input_tokens !== undefined && response.usage.output_tokens !== undefined)
+                ? response.usage.input_tokens + response.usage.output_tokens
+                : (response.usage as any).total_tokens,
             } : undefined,
             scores: {
               overallImpactScore: matchScore,

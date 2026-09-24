@@ -58,7 +58,7 @@ describe("Jev Telemetry Instrumentation", () => {
       new Response(
         JSON.stringify({
           model: "jev-system-1",
-          usage: { prompt_tokens: 45, completion_tokens: 15, total_tokens: 60 },
+          usage: { input_tokens: 45, output_tokens: 15, prompt_tokens: 45, completion_tokens: 15, total_tokens: 60 },
           answers: {
             isAuthentic: { type: "noul", noul: 0.95 },
             isBetterThanOriginal: { type: "noul", noul: 0.8 },
