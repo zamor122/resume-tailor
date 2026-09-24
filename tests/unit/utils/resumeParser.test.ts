@@ -103,4 +103,23 @@ B.S. Computer Science - University of California
     expect(parsed.experience[0].dates).toContain("Jan 2021 – Present");
     expect(parsed.experience[1].company).toContain("Beta Tech");
   });
+
+  it("@EARS-SUM-03 does not classify personal title, credentials, or header lines as summary when no summary header exists", () => {
+    const resumeWithoutSummary = `Shayne Zamora
+Senior Software Engineer & AI Architect | Distributed Systems
+Orange County, CA | (714) 625-2593 | shaynezamora@sbcglobal.net
+github:zamor122 | B.S. Software Engineering | Chapman University
+
+## Experience
+Acme Corp - Lead Engineer
+Jan 2022 – Present
+- Built high-throughput distributed microservices in Go.
+- Led squad of 6 engineers across Agile releases.`;
+
+    const parsed = parseResume(resumeWithoutSummary);
+    // Must NOT extract the title or credentials as summary!
+    expect(parsed.summary).toBeNull();
+    expect(parsed.experience.length).toBe(1);
+    expect(parsed.experience[0].company).toContain("Acme Corp");
+  });
 });

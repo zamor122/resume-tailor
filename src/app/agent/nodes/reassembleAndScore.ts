@@ -7,7 +7,7 @@ import {
   isSubstantiveChange,
   isolatePreciseOriginalChange,
 } from "@/app/utils/resumeReassemble";
-import { sanitizeResumeForATS } from "@/app/utils/atsSanitizer";
+import { lightSanitizeForATS } from "@/app/utils/atsSanitizer";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
 import { rewriteParentheticalKeywords } from "@/app/utils/keywordParenthesesCleaner";
 import { validateOrFixEducationBlock } from "@/app/utils/educationValidator";
@@ -48,7 +48,7 @@ export async function reassembleAndScoreNode(
       activeSuggestions.push({
         id: "sug-summary-auto",
         section: "Summary",
-        originalText: isolatePreciseOriginalChange(resumeAST.summary, tailoredSummary, rawResume),
+        originalText: resumeAST.summary.trim(),
         suggestedText: tailoredSummary.trim(),
         reason: "Keyword alignment and leadership scope",
         keywords: [],
@@ -94,7 +94,7 @@ export async function reassembleAndScoreNode(
   }
 
   // 2. Deterministic ATS formatting hygiene (normalize bullet glyphs and date separators)
-  finalResume = sanitizeResumeForATS(finalResume);
+  finalResume = lightSanitizeForATS(finalResume);
   finalResume = rewriteParentheticalKeywords(finalResume);
 
   // 3. Compute final keyword gap

@@ -88,7 +88,7 @@ export async function surgicalTailorNode(
   // Privacy guard inputs are computed ONCE and reused for every persisted output (REQ-UBI-02, REQ-ERR-01).
   const vettedEmployers = extractVettedEmployers(experience);
   const targetCompany = deriveTargetCompany(state);
-  const summaryPlanned = !!bulletPlan?.summaryChange;
+  const summaryPlanned = !!bulletPlan?.summaryChange && !!resumeAST?.summary?.trim();
   const domainTaxonomy = state.industryCategory
     ? getDomainTaxonomy(state.industryCategory)
     : undefined;
@@ -210,7 +210,7 @@ export async function surgicalTailorNode(
     })
   ).filter(Boolean) as BulletTaskResult[];
 
-  let tailoredSummary = resumeAST?.summary || "";
+  let tailoredSummary: string | undefined = resumeAST?.summary?.trim() || undefined;
   const tailoredBulletsByJob: string[] = experience.map((e) => e.description);
 
   for (const r of results) {
@@ -354,7 +354,7 @@ export async function surgicalTailorNode(
   // PHASE 2 — synthesize the holistic summary strictly AFTER all Phase-1 bullets resolved (REQ-EVT-04).
   // The prompt is assembled from the already-tailored bullets so the summary reflects final state.
   if (summaryPlanned) {
-    const originalSummary = resumeAST?.summary || "";
+    const originalSummary = resumeAST?.summary?.trim() || "";
     const assembledResume = buildAssembledResume(experience, tailoredBulletsByJob);
 
     try {
@@ -382,7 +382,7 @@ export async function surgicalTailorNode(
       const synthesizedSummary = enforceBriefSummary(rawSynthesizedSummary);
       console.log(`[surgicalTailor] Holistic summary synthesized after ${results.length} bullet task(s) (length: ${synthesizedSummary.length})`);
 
-      if (originalSummary.trim() && synthesizedSummary.trim() && originalSummary.trim() !== synthesizedSummary.trim()) {
+      if (originalSummary && synthesizedSummary && originalSummary !== synthesizedSummary) {
         let judge: JevJudgeResult | undefined;
         try {
           judge = await judgeSuggestionWithJev(
@@ -403,7 +403,7 @@ export async function surgicalTailorNode(
           suggestions.push({
             id: "sug-summary",
             section: "Professional Summary",
-            originalText: isolatePreciseOriginalChange(originalSummary, synthesizedSummary, rawResume),
+            originalText: originalSummary,
             suggestedText: synthesizedSummary.trim(),
             reason: `Reframed summary to highlight target role competencies, core tech stack, and leadership scope`,
             keywords: sortedMissingKeywords.slice(0, 4),
@@ -413,12 +413,12 @@ export async function surgicalTailorNode(
           });
           console.log(`[surgicalTailor] Added summary suggestion`);
         }
-      } else if (synthesizedSummary.trim()) {
+      } else if (synthesizedSummary && originalSummary) {
         tailoredSummary = synthesizedSummary;
       }
     } catch (err) {
       console.warn("[surgicalTailor] Holistic summary synthesis failed, keeping original summary:", err);
-      tailoredSummary = originalSummary;
+      tailoredSummary = originalSummary || undefined;
     }
   }
 

@@ -112,4 +112,40 @@ describe("bulletPlannerNode - Job Audits", () => {
     const result = bulletPlannerNode(state);
     expect(result.bulletPlan?.jobAudits).toEqual([]);
   });
+
+  it("@EARS-EVT-02 sets summaryChange to false when resumeAST has no summary even if sectionsToModify.summary is true", () => {
+    const stateWithoutSummary: AgentState = {
+      ...threeJobState,
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        intensity: "targeted",
+        sectionsToModify: { summary: true, experience: true, skills: true },
+      },
+      resumeAST: {
+        ...threeJobState.resumeAST!,
+        summary: null,
+      },
+    };
+
+    const result = bulletPlannerNode(stateWithoutSummary);
+    expect(result.bulletPlan?.summaryChange).toBe(false);
+  });
+
+  it("@EARS-EVT-01 sets summaryChange to true when resumeAST has summary and sectionsToModify.summary is true", () => {
+    const stateWithSummary: AgentState = {
+      ...threeJobState,
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        intensity: "targeted",
+        sectionsToModify: { summary: true, experience: true, skills: true },
+      },
+      resumeAST: {
+        ...threeJobState.resumeAST!,
+        summary: "Senior software engineer with 10 years experience",
+      },
+    };
+
+    const result = bulletPlannerNode(stateWithSummary);
+    expect(result.bulletPlan?.summaryChange).toBe(true);
+  });
 });

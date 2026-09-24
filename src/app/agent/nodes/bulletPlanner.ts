@@ -36,6 +36,8 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
   });
 
   let bulletPlan: BulletPlan;
+  const hasOriginalSummary = Boolean(resumeAST?.summary && resumeAST.summary.trim().length > 0);
+  const planSummaryChange = Boolean(sectionsToModify?.summary) && hasOriginalSummary;
 
   if (intensity === "minimal") {
     // Touch at most 2 bullets across jobs where missing keywords are highest
@@ -64,7 +66,7 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
         })
       : [];
     bulletPlan = {
-      summaryChange: Boolean(sectionsToModify?.summary),
+      summaryChange: planSummaryChange,
       skillsChange: Boolean(sectionsToModify?.skills),
       jobBulletChanges: jobChanges,
     };
@@ -82,7 +84,7 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
         })
       : [];
     bulletPlan = {
-      summaryChange: Boolean(sectionsToModify?.summary),
+      summaryChange: planSummaryChange,
       skillsChange: Boolean(sectionsToModify?.skills),
       jobBulletChanges: jobChanges,
     };

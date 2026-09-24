@@ -150,4 +150,26 @@ describe("surgicalTailorNode with isolated chunk context and 1:1 JSON parser", (
     expect(result.suggestions![0].originalText).toBe("Experienced developer");
     expect(result.suggestions![0].suggestedText).toBe("Tailored summary with Go and cloud experience.");
   });
+
+  it("@EARS-EVT-02: skips holistic summary synthesis completely when resumeAST has no summary", async () => {
+    const summarySpy = vi.spyOn(tailoringSectionPrompts, "getHolisticSummaryPrompt");
+
+    const stateWithoutSummary: AgentState = {
+      ...baseState,
+      resumeAST: {
+        ...baseState.resumeAST!,
+        summary: null,
+      },
+      bulletPlan: {
+        summaryChange: true, // Should be guarded
+        jobBulletChanges: [],
+      },
+    };
+
+    const result = await surgicalTailorNode(stateWithoutSummary);
+
+    expect(summarySpy).not.toHaveBeenCalled();
+    expect(result.suggestions).toHaveLength(0);
+    expect(result.tailoredSummary).toBeUndefined();
+  });
 });

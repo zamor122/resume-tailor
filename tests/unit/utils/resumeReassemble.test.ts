@@ -5,7 +5,10 @@ import {
   applySuggestionsToOriginal,
   isSubstantiveChange,
   isolatePreciseOriginalChange,
+  buildContactFromOriginal,
+  reassembleResumeFromSections,
 } from "@/app/utils/resumeReassemble";
+import { sanitizeContactBlock } from "@/app/utils/contactBlockSanitizer";
 import type { ResumeSuggestion } from "@/app/agent/state";
 
 describe("resumeReassemble - Section-Scoped 1:1 Diff & Grouping", () => {
@@ -398,6 +401,111 @@ April 2026 – Present
         expect(sug.originalText.length).toBeLessThan(300);
         expect(sug.originalText).not.toContain("Chapman University");
       });
+    });
+  });
+
+  describe("EARS Requirements: Summary Injection & Personal Info Preservation", () => {
+    const rawResumeWithFullHeader = `Shayne Zamora
+Senior Software Engineer & AI Architect | Distributed Systems
+Orange County, CA | (714) 625-2593 | shaynezamora@sbcglobal.net
+github:zamor122 | portfolio.dev | B.S. Software Engineering | Chapman University
+Security Clearance: Secret | US Citizen
+
+## Experience
+Acme Corp — Lead Engineer
+Jan 2022 – Present
+- Built high-availability distributed systems in Go.
+- Optimized query latency by 45%.`;
+
+    it("@EARS-SUM-02 & @EARS-EVT-04: buildContactFromOriginal preserves 100% of original preamble without dropping links or truncating", () => {
+      const contact = buildContactFromOriginal(rawResumeWithFullHeader, {
+        contactInfo: {
+          name: "Shayne Zamora",
+          email: "shaynezamora@sbcglobal.net",
+          phone: "(714) 625-2593",
+          location: "Orange County, CA",
+        },
+      });
+
+      // Must preserve GitHub, portfolio, clearance, title, degrees
+      expect(contact).toContain("Senior Software Engineer & AI Architect | Distributed Systems");
+      expect(contact).toContain("github:zamor122");
+      expect(contact).toContain("portfolio.dev");
+      expect(contact).toContain("B.S. Software Engineering | Chapman University");
+      expect(contact).toContain("Security Clearance: Secret | US Citizen");
+    });
+
+    it("@EARS-SUM-01 & @EARS-EVT-02: reassembleResumeFromSections does NOT inject a Summary section when original resume had no summary", () => {
+      const result = reassembleResumeFromSections({
+        originalResume: rawResumeWithFullHeader,
+        parsed: {
+          contactInfo: { name: "Shayne Zamora" },
+          experience: [
+            {
+              company: "Acme Corp",
+              title: "Lead Engineer",
+              dates: "Jan 2022 – Present",
+              description: "- Built high-availability distributed systems in Go.",
+            },
+          ],
+          summary: null, // No summary in original!
+        },
+        tailoredSummary: "Synthesized executive summary that should NOT be injected.",
+        tailoredBulletsByJob: ["- Built high-availability distributed systems in Go."],
+      });
+
+      expect(result).not.toContain("## Summary");
+      expect(result).not.toContain("Synthesized executive summary");
+      expect(result).toContain("## Experience");
+      expect(result).toContain("github:zamor122");
+    });
+
+    it("@EARS-EVT-03: groupSuggestionsBySection omits section-summary when AST has no summary and no summary suggestions exist", () => {
+      const groups = groupSuggestionsBySection(
+        [
+          {
+            id: "sug-exp-0",
+            section: "Acme Corp – Lead Engineer",
+            originalText: "Built high-availability distributed systems in Go.",
+            suggestedText: "Architected high-availability distributed systems in Go.",
+            status: "accepted",
+            jobIndex: 0,
+          },
+        ],
+        {
+          experience: [
+            {
+              company: "Acme Corp",
+              title: "Lead Engineer",
+              dates: "Jan 2022 – Present",
+              description: "- Built high-availability distributed systems in Go.",
+            },
+          ],
+          summary: null, // No original summary
+        }
+      );
+
+      const summaryGroup = groups.find((g) => g.sectionType === "summary" || g.id === "section-summary");
+      expect(summaryGroup).toBeUndefined();
+    });
+
+    it("@EARS-ERR-02: sanitizeContactBlock does NOT delete lines with state abbreviations like Boston, MA or credentials", () => {
+      const resumeWithMA = `Jane Doe
+Senior Full Stack Engineer
+Boston, MA | (555) 123-4567 | jane@example.com
+B.S. Computer Science | MIT
+
+## Experience
+Acme Tech - Lead Engineer
+2020 - Present
+- Built web apps`;
+
+      const sanitized = sanitizeContactBlock(resumeWithMA, {
+        contactInfo: { location: "Boston, MA" },
+        education: [{ institution: "MIT", degree: "B.S." }],
+      });
+
+      expect(sanitized).toContain("Boston, MA");
     });
   });
 });

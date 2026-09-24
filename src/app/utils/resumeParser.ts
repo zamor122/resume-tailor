@@ -500,21 +500,6 @@ export function parseResume(resumeText: string): ParsedResume {
     }
   }
 
-  // Fallback summary if not found under Summary header: first paragraph
-  if (!summary) {
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
-      const line = lines[i];
-      if (isSectionHeader(line)) {
-        break;
-      }
-      const isContactLine = emailRegex.test(line) || /\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/.test(line);
-      if (line.length > 30 && line.length < 1000 && !isContactLine && !isBullet(line)) {
-        summary = line;
-        break;
-      }
-    }
-  }
-  
   const phoneValue = phoneMatch ? (phoneMatch[1] ?? phoneMatch[0]) : null;
   return {
     contactInfo: {

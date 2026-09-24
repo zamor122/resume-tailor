@@ -612,25 +612,19 @@ export function buildContactFromOriginal(
   originalResume: string,
   parsed?: ParsedOriginal | null
 ): string {
-  const c = parsed?.contactInfo;
-  const hasParsedContact =
-    c && (c.name?.trim() || c.email?.trim() || c.phone?.trim());
-  if (hasParsedContact) {
-    return buildContactFromParsed(parsed as ParsedResumeForReassemble);
-  }
+  if (!originalResume) return "";
   const lines = originalResume.split(/\r?\n/);
   const contactEndIndex = findContactEndIndex(lines);
-  if (contactEndIndex === 0) return "";
-  const firstBlock = lines.slice(0, contactEndIndex).join("\n");
-  const normalized = firstBlock
-    .replace(/\|[^|]*\|/g, " ")
-    .replace(/\s*\|\s*/g, " ")
-    .replace(/^[-*•]\s*/gm, "")
-    .replace(/\n{2,}/g, "\n")
-    .trim();
-  const asLines = normalized.split("\n").map((l) => l.trim()).filter(Boolean);
-  if (asLines.length <= 2) return asLines.join("\n");
-  return asLines.slice(0, 2).join("\n");
+  if (contactEndIndex > 0) {
+    const originalContactBlock = lines.slice(0, contactEndIndex).join("\n").trim();
+    if (originalContactBlock) {
+      return originalContactBlock;
+    }
+  }
+  if (parsed?.contactInfo) {
+    return buildContactFromParsed(parsed as ParsedResumeForReassemble);
+  }
+  return "";
 }
 
 const ALL_SECTION_HEADERS = [
@@ -851,8 +845,9 @@ export function reassembleResumeFromSections(params: {
     parts.push(contactBlock.trim());
   }
 
+  const hasOriginalSummary = Boolean(parsed.summary?.trim());
   const summaryText = (tailoredSummary || parsed.summary || "").trim();
-  if (summaryText) {
+  if (hasOriginalSummary && summaryText) {
     parts.push("## Summary\n\n" + summaryText);
   }
 
@@ -983,19 +978,21 @@ export function groupSuggestionsBySection(
   const summarySugs = suggestions.filter(
     (s) => s.category === "summary" || (s.section && s.section.toLowerCase().includes("summary"))
   );
-  groups.push({
-    id: "section-summary",
-    sectionType: "summary",
-    title: "Professional Summary Synthesis",
-    subtitle: "Holistic Career Overview",
-    orderIndex: groups.length,
-    status: summarySugs.length > 0 ? "ready" : "pending",
-    auditRationale: "Holistic executive synthesis aligning entire career arc with target role",
-    suggestions: summarySugs,
-    originalContent: effectiveAST?.summary || "",
-    tailoredContent: summarySugs.length > 0 ? summarySugs[0].suggestedText : undefined,
-    hasChanges: summarySugs.length > 0,
-  });
+  if (effectiveAST?.summary?.trim() || summarySugs.length > 0) {
+    groups.push({
+      id: "section-summary",
+      sectionType: "summary",
+      title: "Professional Summary Synthesis",
+      subtitle: "Holistic Career Overview",
+      orderIndex: groups.length,
+      status: summarySugs.length > 0 ? "ready" : "pending",
+      auditRationale: "Holistic executive synthesis aligning entire career arc with target role",
+      suggestions: summarySugs,
+      originalContent: effectiveAST?.summary || "",
+      tailoredContent: summarySugs.length > 0 ? summarySugs[0].suggestedText : undefined,
+      hasChanges: summarySugs.length > 0,
+    });
+  }
 
   return groups;
 }
