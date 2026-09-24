@@ -1,5 +1,6 @@
 // src/app/services/jev.ts
 import { TypeSafeClient, choice, score, noul } from '@typesafe-ai/sdk';
+import { traceHub } from '@/app/services/observability/traceHub';
 
 export interface JevDiagnosticResult {
   matchedSkills: string[];
@@ -26,6 +27,10 @@ export interface JevAlignmentScoreResult {
 const DEFAULT_JEV_BASE_URL = 'https://api.typesafe.ai';
 const JEV_TIMEOUT_MS = 1500;
 
+function generateSpanId(prefix: string = "jev"): string {
+  return `span-${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+}
+
 function getJevBaseUrl(): string {
   const url = process.env.TYPESAFE_API_URL || process.env.TYPESAFE_BASE_URL;
   if (url && url !== 'undefined') {
@@ -51,13 +56,15 @@ export async function diagnoseChunkWithJev(
   chunk: { title?: string; company?: string; bulletsText: string },
   jobDescription: string,
   targetTitle?: string,
-  apiKey?: string
+  apiKey?: string,
+  traceId?: string
 ): Promise<JevDiagnosticResult> {
+  const startTime = performance.now();
   const key = apiKey || process.env.TYPESAFE_API_KEY;
 
   if (key) {
     try {
-      console.log(`[jev] diagnoseChunkWithJev: calling TypeSafe AI System 1...`);
+      console.log(`[Trace:${traceId || "untraced"}:jev:diagnoseChunk] calling TypeSafe AI System 1...`);
       const client = createClient(key);
       const { data: response, requestId } = await client.systemOne({
         state: {
@@ -87,14 +94,42 @@ export async function diagnoseChunkWithJev(
       const seniority = Math.round(Number(response.answers.seniorityScore?.score) + 1) || 3;
       const focus = (response.answers.enhancementFocus?.choice as any) || 'elevate_ownership';
       const confidence = Number(response.answers.enhancementFocus?.confidence) || 0.9;
+      const latencyMs = Math.round(performance.now() - startTime);
 
-      console.log(`[jev] diagnoseChunkWithJev succeeded:`, {
+      console.log(`[Trace:${traceId || "untraced"}:jev:diagnoseChunk] succeeded in ${latencyMs}ms:`, {
         requestId,
         model: response.model,
         tokens: response.usage,
         seniorityScore: seniority,
         enhancementFocus: focus,
       });
+
+      if (traceId) {
+        traceHub.recordSpan(traceId, {
+          id: generateSpanId("diag"),
+          type: "jev",
+          name: "diagnoseChunkWithJev",
+          timestamp: new Date().toISOString(),
+          durationMs: latencyMs,
+          data: {
+            operation: "diagnoseChunk",
+            target: chunk.title ? `${chunk.title} (${chunk.company || "unknown"})` : "work_experience_chunk",
+            mode: "live_api",
+            latencyMs,
+            requestId,
+            model: response.model,
+            tokens: response.usage ? {
+              prompt: response.usage.prompt_tokens,
+              completion: response.usage.completion_tokens,
+              total: response.usage.total_tokens,
+            } : undefined,
+            scores: {
+              overallImpactScore: seniority,
+            },
+            verdict: "accepted",
+          },
+        });
+      }
 
       return {
         matchedSkills: [],
@@ -104,14 +139,35 @@ export async function diagnoseChunkWithJev(
         confidence,
       };
     } catch (err) {
-      console.warn('[jev] diagnoseChunkWithJev API call failed, using graceful fallback:', err);
+      console.warn(`[Trace:${traceId || "untraced"}:jev:diagnoseChunk] API call failed, using graceful fallback:`, err);
     }
   } else {
-    console.log('[jev] diagnoseChunkWithJev: No TYPESAFE_API_KEY provided or configured, using local fallback');
+    console.log(`[Trace:${traceId || "untraced"}:jev:diagnoseChunk] No TYPESAFE_API_KEY provided or configured, using local fallback`);
   }
 
   // Graceful deterministic fallback
   const isSenior = /senior|lead|head|principal|director/i.test(targetTitle || '') || /senior|lead/i.test(chunk.title || '');
+  const latencyMs = Math.round(performance.now() - startTime);
+
+  if (traceId) {
+    traceHub.recordSpan(traceId, {
+      id: generateSpanId("diag"),
+      type: "jev",
+      name: "diagnoseChunkWithJev",
+      timestamp: new Date().toISOString(),
+      durationMs: latencyMs,
+      data: {
+        operation: "diagnoseChunk",
+        target: chunk.title ? `${chunk.title} (${chunk.company || "unknown"})` : "work_experience_chunk",
+        mode: "local_fallback",
+        latencyMs,
+        scores: {
+          overallImpactScore: isSenior ? 4 : 3,
+        },
+        verdict: "accepted",
+      },
+    });
+  }
 
   return {
     matchedSkills: [],
@@ -129,13 +185,15 @@ export async function judgeSuggestionWithJev(
   originalText: string,
   suggestedText: string,
   jobDescription: string,
-  apiKey?: string
+  apiKey?: string,
+  traceId?: string
 ): Promise<JevJudgeResult> {
+  const startTime = performance.now();
   const key = apiKey || process.env.TYPESAFE_API_KEY;
 
   if (key) {
     try {
-      console.log(`[jev] judgeSuggestionWithJev: evaluating suggestion with TypeSafe AI...`);
+      console.log(`[Trace:${traceId || "untraced"}:jev:judgeSuggestion] evaluating suggestion with TypeSafe AI...`);
       const client = createClient(key);
       const { data: response, requestId } = await client.systemOne({
         state: {
@@ -172,11 +230,25 @@ export async function judgeSuggestionWithJev(
 
       const tone = (response.answers.toneOfVoiceRating?.choice as any) || 'strong_authentic';
       const scoreDeltaPercent = Math.round((betterNoul || 0.8) * 30);
+      const latencyMs = Math.round(performance.now() - startTime);
 
-      console.log(`[jev] judgeSuggestionWithJev succeeded:`, {
+      let verdict: "accepted" | "rejected" = "accepted";
+      let rejectionReason: string | undefined = undefined;
+
+      if (!isAuthentic) {
+        verdict = "rejected";
+        rejectionReason = "Rejected: suspected hallucination or lack of authenticity (isAuthentic=false)";
+      } else if (!isBetterThanOriginal) {
+        verdict = "rejected";
+        rejectionReason = "Rejected: suggestion not better than original (isBetterThanOriginal=false)";
+      }
+
+      console.log(`[Trace:${traceId || "untraced"}:jev:judgeSuggestion] succeeded in ${latencyMs}ms:`, {
         requestId,
         model: response.model,
         tokens: response.usage,
+        verdict,
+        rejectionReason,
         authNoul,
         isAuthentic,
         betterNoul,
@@ -184,6 +256,38 @@ export async function judgeSuggestionWithJev(
         overallImpactScore,
         tone,
       });
+
+      if (traceId) {
+        traceHub.recordSpan(traceId, {
+          id: generateSpanId("judge"),
+          type: "jev",
+          name: "judgeSuggestionWithJev",
+          timestamp: new Date().toISOString(),
+          durationMs: latencyMs,
+          data: {
+            operation: "judgeSuggestion",
+            target: suggestedText.slice(0, 60),
+            mode: "live_api",
+            latencyMs,
+            requestId,
+            model: response.model,
+            tokens: response.usage ? {
+              prompt: response.usage.prompt_tokens,
+              completion: response.usage.completion_tokens,
+              total: response.usage.total_tokens,
+            } : undefined,
+            scores: {
+              isAuthentic,
+              isBetterThanOriginal,
+              overallImpactScore,
+              toneOfVoiceRating: tone,
+              scoreDeltaPercent: Math.max(10, scoreDeltaPercent),
+            },
+            verdict,
+            rejectionReason,
+          },
+        });
+      }
 
       return {
         isAuthentic,
@@ -194,16 +298,44 @@ export async function judgeSuggestionWithJev(
         scoreDeltaPercent: Math.max(10, scoreDeltaPercent),
       };
     } catch (err) {
-      console.warn('[jev] judgeSuggestionWithJev call failed, using graceful fallback:', err);
+      console.warn(`[Trace:${traceId || "untraced"}:jev:judgeSuggestion] call failed, using graceful fallback:`, err);
     }
   } else {
-    console.log('[jev] judgeSuggestionWithJev: No TYPESAFE_API_KEY provided or configured, using local fallback');
+    console.log(`[Trace:${traceId || "untraced"}:jev:judgeSuggestion] No TYPESAFE_API_KEY provided or configured, using local fallback`);
   }
 
   // Graceful deterministic fallback
   const cleanOrig = originalText.trim();
   const cleanSugg = suggestedText.trim();
   const isBetter = cleanSugg.length > 10 && cleanSugg !== cleanOrig;
+  const verdict: "accepted" | "rejected" = isBetter ? "accepted" : "rejected";
+  const rejectionReason = isBetter ? undefined : "Rejected: suggestion is identical or too short";
+  const latencyMs = Math.round(performance.now() - startTime);
+
+  if (traceId) {
+    traceHub.recordSpan(traceId, {
+      id: generateSpanId("judge"),
+      type: "jev",
+      name: "judgeSuggestionWithJev",
+      timestamp: new Date().toISOString(),
+      durationMs: latencyMs,
+      data: {
+        operation: "judgeSuggestion",
+        target: suggestedText.slice(0, 60),
+        mode: "local_fallback",
+        latencyMs,
+        scores: {
+          isAuthentic: true,
+          isBetterThanOriginal: isBetter,
+          overallImpactScore: 4,
+          toneOfVoiceRating: 'strong_authentic',
+          scoreDeltaPercent: 20,
+        },
+        verdict,
+        rejectionReason,
+      },
+    });
+  }
 
   return {
     isAuthentic: true,
@@ -221,13 +353,15 @@ export async function judgeSuggestionWithJev(
 export async function evaluateResumeAlignmentWithJev(
   resumeText: string,
   jobDescription: string,
-  apiKey?: string
+  apiKey?: string,
+  traceId?: string
 ): Promise<JevAlignmentScoreResult> {
+  const startTime = performance.now();
   const key = apiKey || process.env.TYPESAFE_API_KEY;
 
   if (key) {
     try {
-      console.log(`[jev] evaluateResumeAlignmentWithJev: evaluating alignment with TypeSafe AI...`);
+      console.log(`[Trace:${traceId || "untraced"}:jev:evaluateAlignment] evaluating alignment with TypeSafe AI...`);
       const client = createClient(key);
       const { data: response, requestId } = await client.systemOne({
         state: {
@@ -250,8 +384,9 @@ export async function evaluateResumeAlignmentWithJev(
       const matchScore = Number.isFinite(rawScore)
         ? Math.min(98, Math.max(20, Math.round((rawScore / 4) * 100)))
         : 60;
+      const latencyMs = Math.round(performance.now() - startTime);
 
-      console.log(`[jev] evaluateResumeAlignmentWithJev succeeded:`, {
+      console.log(`[Trace:${traceId || "untraced"}:jev:evaluateAlignment] succeeded in ${latencyMs}ms:`, {
         requestId,
         model: response.model,
         tokens: response.usage,
@@ -259,25 +394,78 @@ export async function evaluateResumeAlignmentWithJev(
         confidence,
       });
 
+      if (traceId) {
+        traceHub.recordSpan(traceId, {
+          id: generateSpanId("align"),
+          type: "jev",
+          name: "evaluateResumeAlignmentWithJev",
+          timestamp: new Date().toISOString(),
+          durationMs: latencyMs,
+          data: {
+            operation: "evaluateAlignment",
+            target: "resume-alignment",
+            mode: "live_api",
+            latencyMs,
+            requestId,
+            model: response.model,
+            tokens: response.usage ? {
+              prompt: response.usage.prompt_tokens,
+              completion: response.usage.completion_tokens,
+              total: response.usage.total_tokens,
+            } : undefined,
+            scores: {
+              overallImpactScore: matchScore,
+            },
+            verdict: "accepted",
+          },
+        });
+      }
+
       return { matchScore, confidence };
     } catch (err) {
-      console.warn('[jev] evaluateResumeAlignmentWithJev failed, using fallback:', err);
+      console.warn(`[Trace:${traceId || "untraced"}:jev:evaluateAlignment] failed, using fallback:`, err);
     }
   } else {
-    console.log('[jev] evaluateResumeAlignmentWithJev: No TYPESAFE_API_KEY provided or configured, using local fallback');
+    console.log(`[Trace:${traceId || "untraced"}:jev:evaluateAlignment] No TYPESAFE_API_KEY provided or configured, using local fallback`);
   }
 
   // Deterministic token overlap fallback
   const wordsJD = new Set(jobDescription.toLowerCase().match(/\b[a-z]{4,}\b/g) || []);
   const wordsResume = new Set(resumeText.toLowerCase().match(/\b[a-z]{4,}\b/g) || []);
-  if (wordsJD.size === 0) return { matchScore: 60, confidence: 0.5 };
+  let scoreVal = 60;
+  let confVal = 0.5;
 
-  let matchCount = 0;
-  wordsJD.forEach((w) => {
-    if (wordsResume.has(w)) matchCount++;
-  });
-  const ratio = matchCount / Math.min(wordsJD.size, 50);
-  const scoreVal = Math.min(95, Math.max(40, Math.round(ratio * 100)));
+  if (wordsJD.size > 0) {
+    let matchCount = 0;
+    wordsJD.forEach((w) => {
+      if (wordsResume.has(w)) matchCount++;
+    });
+    const ratio = matchCount / Math.min(wordsJD.size, 50);
+    scoreVal = Math.min(95, Math.max(40, Math.round(ratio * 100)));
+    confVal = 0.7;
+  }
 
-  return { matchScore: scoreVal, confidence: 0.7 };
+  const latencyMs = Math.round(performance.now() - startTime);
+
+  if (traceId) {
+    traceHub.recordSpan(traceId, {
+      id: generateSpanId("align"),
+      type: "jev",
+      name: "evaluateResumeAlignmentWithJev",
+      timestamp: new Date().toISOString(),
+      durationMs: latencyMs,
+      data: {
+        operation: "evaluateAlignment",
+        target: "resume-alignment",
+        mode: "local_fallback",
+        latencyMs,
+        scores: {
+          overallImpactScore: scoreVal,
+        },
+        verdict: "accepted",
+      },
+    });
+  }
+
+  return { matchScore: scoreVal, confidence: confVal };
 }
