@@ -221,6 +221,46 @@ TypeScript, React, Node.js, Go, Kubernetes, PostgreSQL, GraphQL
     expect(handleActiveChange).toHaveBeenCalledWith("section-skills");
   });
 
+  it("focuses corresponding suggestion in reviewer when clicking an experience section block", () => {
+    const mockSuggestions: ResumeSuggestion[] = [
+      {
+        id: "sug-chapman",
+        section: "Chapman University – Software Engineer",
+        originalText: "Developed and maintained campus portal",
+        suggestedText: "Engineered scalable campus portal serving 12,000 students",
+        status: "pending",
+        jobIndex: 1,
+      },
+      {
+        id: "sug-google",
+        section: "Google – Senior Software Engineer",
+        originalText: "Architected high-throughput microservices",
+        suggestedText: "Architected distributed microservices handling 50k RPS",
+        status: "pending",
+        jobIndex: 0,
+      },
+    ];
+
+    const { container } = render(
+      <TailoredResumeOutput
+        newResume={sampleResume}
+        originalResume={sampleResume}
+        suggestions={mockSuggestions}
+        sectionGroups={mockSectionGroups}
+        loading={false}
+      />
+    );
+
+    // Click Chapman section in document
+    const exp1Section = container.querySelector('[data-section-id="section-exp-1"]');
+    expect(exp1Section).toBeInTheDocument();
+    fireEvent.click(exp1Section!);
+
+    // Should focus Chapman in reviewer
+    expect(screen.getByText(/Engineered scalable campus portal serving 12,000 students/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Chapman University – Software Engineer/i).length).toBeGreaterThanOrEqual(2);
+  });
+
   it("passes sectionGroups and activeSectionId props to ResumeSuggestionReviewer in cockpit mode", () => {
     const mockSuggestions: ResumeSuggestion[] = [
       {

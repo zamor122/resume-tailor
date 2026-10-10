@@ -139,4 +139,28 @@ describe('POST /api/resume/retrieve', () => {
     expect(data.isUnlocked).toBe(true);
     expect(data.tailoredResume).toBe('Tailored');
   });
+
+  it('should return sectionGroups and resumeAST when present in format_spec or improvement_metrics', async () => {
+    const resumeWithSections = {
+      ...mockResume,
+      format_spec: {
+        sectionGroups: [{ id: 'section-exp-0', title: 'Tech Corp', sectionType: 'experience' }],
+        resumeAST: { experience: [{ company: 'Tech Corp' }] },
+      },
+    };
+    mockFrom.mockReturnValue(createSupabaseChain(resumeWithSections, null));
+    mockGetAccessInfoServer.mockResolvedValue({ hasAccess: true });
+
+    const req = new NextRequest('http://localhost:3000/api/resume/retrieve', {
+      method: 'POST',
+      body: JSON.stringify({ resumeId: 'resume-123', userId: 'user-1' }),
+    });
+
+    const response = await POST(req);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.sectionGroups).toEqual([{ id: 'section-exp-0', title: 'Tech Corp', sectionType: 'experience' }]);
+    expect(data.resumeAST).toEqual({ experience: [{ company: 'Tech Corp' }] });
+  });
 });

@@ -17,6 +17,8 @@ import AddVersionInfoPopover from "@/app/components/AddVersionInfoPopover";
 import Link from "next/link";
 import { analytics } from "@/app/services/analytics";
 import type { ResumeMetricsSnapshot, KeywordGapSnapshot, ResumeSuggestion } from "@/app/types/humanize";
+import type { ResumeSectionGroup } from "@/app/agent/state";
+import { groupSuggestionsBySection, type ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 
 function normalizeSwrError(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -35,6 +37,8 @@ interface ResumeData {
   matchScore?: number;
   metrics?: ResumeMetricsSnapshot;
   suggestions?: ResumeSuggestion[];
+  sectionGroups?: ResumeSectionGroup[];
+  resumeAST?: ParsedResumeForReassemble;
   improvementMetrics?: {
     quantifiedBulletsAdded?: number;
     atsKeywordsMatched?: number;
@@ -123,6 +127,8 @@ export default function ResumeDetailPage() {
       feedbackComment: json.feedbackComment ?? null,
       keywordGap: json.keywordGap as ResumeData["keywordGap"] ?? undefined,
       suggestions: (json.suggestions || (json as any).improvementMetrics?.suggestions || (json as any).formatSpec?.suggestions || []) as ResumeSuggestion[],
+      sectionGroups: ((json as any).sectionGroups || (json as any).formatSpec?.sectionGroups || (json as any).improvementMetrics?.sectionGroups || ((json.suggestions || (json as any).formatSpec?.suggestions) && json.originalResume ? groupSuggestionsBySection((json.suggestions || (json as any).formatSpec?.suggestions), (json as any).resumeAST || (json as any).formatSpec?.resumeAST, json.originalResume) : undefined)) as ResumeSectionGroup[] | undefined,
+      resumeAST: ((json as any).resumeAST || (json as any).formatSpec?.resumeAST || (json as any).improvementMetrics?.resumeAST || undefined) as ParsedResumeForReassemble | undefined,
     };
   }, [json, id]);
 
@@ -366,9 +372,16 @@ export default function ResumeDetailPage() {
                 newResume={displayResume}
                 originalResume={data.originalResume}
                 suggestions={data.suggestions || []}
+                sectionGroups={data.sectionGroups}
+                resumeAST={data.resumeAST}
                 onSuggestionsChange={(updated) => {
                   if (json) {
                     mutate({ ...json, success: json.success ?? true, suggestions: updated }, false);
+                  }
+                }}
+                onSectionGroupsChange={(updatedGroups) => {
+                  if (json) {
+                    mutate({ ...json, sectionGroups: updatedGroups }, false);
                   }
                 }}
                 loading={false}

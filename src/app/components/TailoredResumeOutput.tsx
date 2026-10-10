@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useContext } from "react";
+import React, { useMemo, useState, useEffect, useContext, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import CopyButton from "./CopyButton";
 import ResumeDownloadButton from "./ResumeDownloadButton";
@@ -330,12 +330,68 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   const effectiveActiveSectionId =
     activeSectionId !== undefined ? activeSectionId : internalActiveSectionId;
 
-  const handleActiveSectionChange = (id: string | null) => {
-    if (activeSectionId === undefined) {
-      setInternalActiveSectionId(id);
-    }
-    onActiveSectionChange?.(id);
-  };
+  const effectiveSuggestions = internalSuggestions;
+  const hasSuggestions = effectiveSuggestions && effectiveSuggestions.length > 0;
+  const acceptedCount = useMemo(() => {
+    return (effectiveSuggestions || []).filter((s) => s.status === "accepted").length;
+  }, [effectiveSuggestions]);
+  const [viewLayout, setViewLayout] = useState<"cockpit" | "document">("cockpit");
+  const [userToggledLayout, setUserToggledLayout] = useState(false);
+  const [activeSuggestionId, setActiveSuggestionId] = useState<string | null>(
+    effectiveSuggestions?.[0]?.id ?? null
+  );
+
+  const handleActiveSectionChange = useCallback(
+    (id: string | null) => {
+      if (activeSectionId === undefined) {
+        setInternalActiveSectionId((prev) => (prev === id ? prev : id));
+      }
+      onActiveSectionChange?.(id);
+
+      // If a section is clicked in the document, also focus its corresponding suggestion in the reviewer
+      if (id && effectiveSuggestions && effectiveSuggestions.length > 0) {
+        const cleanId = id.replace(/^#/, "");
+        // Match via sectionGroups if provided
+        if (sectionGroups && sectionGroups.length > 0) {
+          const group = sectionGroups.find((g) => g.id === cleanId);
+          if (group && group.suggestions && group.suggestions.length > 0) {
+            const targetId = group.suggestions[0].id;
+            setActiveSuggestionId((prev) => (prev === targetId ? prev : targetId));
+            return;
+          }
+        }
+        // Match by jobIndex from "section-exp-X"
+        const expMatch = cleanId.match(/section-exp-(\d+)/);
+        if (expMatch) {
+          const jobIdx = parseInt(expMatch[1], 10);
+          const match = effectiveSuggestions.find((s) => s.jobIndex === jobIdx);
+          if (match) {
+            setActiveSuggestionId((prev) => (prev === match.id ? prev : match.id));
+            return;
+          }
+        }
+        if (cleanId === "section-summary") {
+          const match = effectiveSuggestions.find(
+            (s) => s.category === "summary" || (s.section && s.section.toLowerCase().includes("summary"))
+          );
+          if (match) {
+            setActiveSuggestionId((prev) => (prev === match.id ? prev : match.id));
+            return;
+          }
+        }
+        if (cleanId === "section-skills") {
+          const match = effectiveSuggestions.find(
+            (s) => s.category === "keyword" || (s.section && s.section.toLowerCase().includes("skill"))
+          );
+          if (match) {
+            setActiveSuggestionId((prev) => (prev === match.id ? prev : match.id));
+            return;
+          }
+        }
+      }
+    },
+    [activeSectionId, onActiveSectionChange, effectiveSuggestions, sectionGroups]
+  );
 
   useEffect(() => {
     if (!effectiveActiveSectionId) return;
@@ -349,17 +405,6 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [effectiveActiveSectionId]);
-
-  const effectiveSuggestions = internalSuggestions;
-  const hasSuggestions = effectiveSuggestions && effectiveSuggestions.length > 0;
-  const acceptedCount = useMemo(() => {
-    return (effectiveSuggestions || []).filter((s) => s.status === "accepted").length;
-  }, [effectiveSuggestions]);
-  const [viewLayout, setViewLayout] = useState<"cockpit" | "document">("cockpit");
-  const [userToggledLayout, setUserToggledLayout] = useState(false);
-  const [activeSuggestionId, setActiveSuggestionId] = useState<string | null>(
-    effectiveSuggestions?.[0]?.id ?? null
-  );
 
   React.useEffect(() => {
     if (hasSuggestions && !activeSuggestionId) {
@@ -428,6 +473,30 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
         return { suggestion: s, index: i };
       }
     }
+
+    // Resilient fallback: Word token overlap (Jaccard similarity >= 0.4 for longer bullet statements)
+    if (clean.length >= 25) {
+      const cleanWords = new Set(clean.split(/\s+/).filter((w) => w.length > 3));
+      if (cleanWords.size >= 4) {
+        for (let i = 0; i < effectiveSuggestions.length; i++) {
+          const s = effectiveSuggestions[i];
+          const cand = (s.status === "accepted" ? s.suggestedText : s.originalText) || "";
+          const candWords = cand.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+          if (candWords.length >= 4) {
+            let intersection = 0;
+            for (const cw of candWords) {
+              if (cleanWords.has(cw)) intersection++;
+            }
+            const union = cleanWords.size + candWords.length - intersection;
+            const jaccard = union > 0 ? intersection / union : 0;
+            if (jaccard >= 0.4) {
+              return { suggestion: s, index: i };
+            }
+          }
+        }
+      }
+    }
+
     return null;
   };
 

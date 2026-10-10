@@ -484,4 +484,85 @@ B.S. Computer Science`;
     expect(screen.getByText(/Change 2 of 3/i)).toBeInTheDocument();
     expect(screen.getByText("Led service architecture")).toBeInTheDocument();
   });
+
+  it("calls onActiveSectionChange with parent section ID when suggestion changes", () => {
+    const onActiveSectionChange = vi.fn();
+    const mockSectionGroups = [
+      {
+        id: "section-exp-1",
+        sectionType: "experience" as const,
+        title: "Chapman University – Software Engineer",
+        jobIndex: 1,
+        orderIndex: 0,
+        status: "ready" as const,
+        auditRationale: "Early career foundation",
+        suggestions: [mockSuggestions[0]],
+        originalContent: "Built campus web apps",
+        hasChanges: true,
+      },
+      {
+        id: "section-exp-0",
+        sectionType: "experience" as const,
+        title: "Google – Senior Software Engineer",
+        jobIndex: 0,
+        orderIndex: 1,
+        status: "ready" as const,
+        auditRationale: "Elevated distributed systems",
+        suggestions: [mockSuggestions[1]],
+        originalContent: "Led service architecture",
+        hasChanges: true,
+      },
+    ];
+
+    render(
+      <ResumeSuggestionReviewer
+        originalResume="Original Resume"
+        suggestions={mockSuggestions}
+        sectionGroups={mockSectionGroups}
+        onActiveSectionChange={onActiveSectionChange}
+        beforeScore={50}
+        matchScore={80}
+      />
+    );
+
+    // Initial mount on Change 1 (jobIndex 1) should notify parent section-exp-1
+    expect(onActiveSectionChange).toHaveBeenCalledWith("section-exp-1");
+
+    // Advance to Change 2 (jobIndex 0)
+    const nextChangeBtn = screen.getByRole("button", { name: /Next Change/i });
+    fireEvent.click(nextChangeBtn);
+
+    expect(onActiveSectionChange).toHaveBeenCalledWith("section-exp-0");
+  });
+
+  it("renders the Agent Audit Rationale banner when sectionGroups provides audit rationale", () => {
+    const mockSectionGroups = [
+      {
+        id: "section-exp-1",
+        sectionType: "experience" as const,
+        title: "Chapman University – Software Engineer",
+        jobIndex: 1,
+        orderIndex: 0,
+        status: "ready" as const,
+        auditRationale: "Targeted scaling metrics (+40% throughput) and authentic student tenure",
+        suggestions: [mockSuggestions[0]],
+        originalContent: "Built campus web apps",
+        hasChanges: true,
+      },
+    ];
+
+    render(
+      <ResumeSuggestionReviewer
+        originalResume="Original Resume"
+        suggestions={mockSuggestions}
+        sectionGroups={mockSectionGroups}
+        beforeScore={50}
+        matchScore={80}
+      />
+    );
+
+    expect(
+      screen.getByText(/Targeted scaling metrics \(\+40% throughput\) and authentic student tenure/i)
+    ).toBeInTheDocument();
+  });
 });

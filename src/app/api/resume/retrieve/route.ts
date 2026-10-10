@@ -95,6 +95,8 @@ export async function POST(req: NextRequest) {
     if (!hasAccess) {
       const ms = resume.match_score as { before?: number; after?: number; afterMetrics?: unknown; keywordGap?: { missingKeywords: string[]; foundInResume: string[] } } | null;
       const suggestions = resume.format_spec?.suggestions || resume.improvement_metrics?.suggestions || [];
+      const sectionGroups = resume.format_spec?.sectionGroups || resume.improvement_metrics?.sectionGroups || undefined;
+      const resumeAST = resume.format_spec?.resumeAST || resume.improvement_metrics?.resumeAST || undefined;
       return NextResponse.json({
         success: true,
         originalResume: resume.original_content,
@@ -107,6 +109,8 @@ export async function POST(req: NextRequest) {
         metrics: ms?.afterMetrics ?? undefined,
         keywordGap: ms?.keywordGap ?? undefined,
         suggestions,
+        sectionGroups,
+        resumeAST,
         improvementMetrics: resume.improvement_metrics,
         freeReveal: resume.free_reveal,
         formatSpec: resume.format_spec ?? null,
@@ -121,6 +125,8 @@ export async function POST(req: NextRequest) {
     // Return resume data with access info (unobfuscated since user has access)
     const ms = resume.match_score as { before?: number; after?: number; afterMetrics?: unknown; keywordGap?: { missingKeywords: string[]; foundInResume: string[] } } | null;
     const suggestions = resume.format_spec?.suggestions || resume.improvement_metrics?.suggestions || [];
+    const sectionGroups = resume.format_spec?.sectionGroups || resume.improvement_metrics?.sectionGroups || undefined;
+    const resumeAST = resume.format_spec?.resumeAST || resume.improvement_metrics?.resumeAST || undefined;
     return NextResponse.json({
       success: true,
       originalResume: resume.original_content,
@@ -133,6 +139,8 @@ export async function POST(req: NextRequest) {
       metrics: ms?.afterMetrics ?? undefined,
       keywordGap: ms?.keywordGap ?? undefined,
       suggestions,
+      sectionGroups,
+      resumeAST,
       improvementMetrics: resume.improvement_metrics,
       freeReveal: resume.free_reveal,
       formatSpec: resume.format_spec ?? null,

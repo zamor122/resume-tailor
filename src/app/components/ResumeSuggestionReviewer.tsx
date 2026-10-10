@@ -239,6 +239,64 @@ export default function ResumeSuggestionReviewer({
 
   const currentSuggestion = substantiveSuggestions[activeIndex] || substantiveSuggestions[0];
 
+  // Resolve enclosing section group for the active suggestion
+  const currentSectionGroup = useMemo(() => {
+    if (!currentSuggestion) return null;
+    if (sectionGroups && sectionGroups.length > 0) {
+      if (currentSuggestion.jobIndex !== undefined) {
+        const found = sectionGroups.find(
+          (g) => g.sectionType === "experience" && g.jobIndex === currentSuggestion.jobIndex
+        );
+        if (found) return found;
+      }
+      if (currentSuggestion.category === "summary" || currentSuggestion.section?.toLowerCase().includes("summary")) {
+        const found = sectionGroups.find((g) => g.sectionType === "summary");
+        if (found) return found;
+      }
+      if (currentSuggestion.category === "keyword" || currentSuggestion.section?.toLowerCase().includes("skill")) {
+        const found = sectionGroups.find((g) => g.sectionType === "skills");
+        if (found) return found;
+      }
+      if (currentSuggestion.section) {
+        const cleanSec = currentSuggestion.section.toLowerCase();
+        const found = sectionGroups.find((g) => {
+          const cleanTitle = g.title.toLowerCase();
+          return cleanTitle.includes(cleanSec) || cleanSec.includes(cleanTitle);
+        });
+        if (found) return found;
+      }
+    }
+    return null;
+  }, [currentSuggestion, sectionGroups]);
+
+  const activeSectionComputedId = useMemo(() => {
+    if (currentSectionGroup) return currentSectionGroup.id;
+    if (currentSuggestion?.jobIndex !== undefined) {
+      return `section-exp-${currentSuggestion.jobIndex}`;
+    }
+    if (currentSuggestion?.category === "summary" || currentSuggestion?.section?.toLowerCase().includes("summary")) {
+      return "section-summary";
+    }
+    if (currentSuggestion?.category === "keyword" || currentSuggestion?.section?.toLowerCase().includes("skill")) {
+      return "section-skills";
+    }
+    return null;
+  }, [currentSectionGroup, currentSuggestion]);
+
+  const lastReportedSectionRef = React.useRef<string | null>(null);
+
+  // Synchronize active section ID to parent/live document preview
+  useEffect(() => {
+    if (
+      activeSectionComputedId &&
+      activeSectionComputedId !== lastReportedSectionRef.current &&
+      activeSectionComputedId !== activeSectionId
+    ) {
+      lastReportedSectionRef.current = activeSectionComputedId;
+      onActiveSectionChange?.(activeSectionComputedId);
+    }
+  }, [activeSectionComputedId, activeSectionId, onActiveSectionChange]);
+
   const currentOriginalText = useMemo(() => {
     if (!currentSuggestion) return "";
     return isolatePreciseOriginalChange(
@@ -256,6 +314,27 @@ export default function ResumeSuggestionReviewer({
 
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* Agent Audit Rationale Banner */}
+      {currentSectionGroup?.auditRationale && (
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-purple-950/20 border border-cyan-500/30 text-xs shadow-sm flex items-start gap-3 backdrop-blur-xs">
+          <span className="text-xl shrink-0 select-none">🤖</span>
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                Agent Audit Rationale
+              </span>
+              <span className="text-gray-500">•</span>
+              <span className="text-[11px] font-medium text-gray-300 truncate">
+                {currentSectionGroup.title}
+              </span>
+            </div>
+            <p className="leading-relaxed text-gray-200">
+              {currentSectionGroup.auditRationale}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Sticky Top Header: Tri-Color Progress Bar & ATS Score Boost */}
       <div className="sticky top-2 z-20 p-4 rounded-2xl bg-gradient-to-r from-gray-900 via-gray-900/95 to-gray-800 text-white border border-gray-700/80 shadow-lg space-y-3 backdrop-blur-md">
         {/* Score & Counters Header */}
