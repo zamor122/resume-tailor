@@ -163,4 +163,108 @@ describe('POST /api/resume/retrieve', () => {
     expect(data.sectionGroups).toEqual([{ id: 'section-exp-0', title: 'Tech Corp', sectionType: 'experience' }]);
     expect(data.resumeAST).toEqual({ experience: [{ company: 'Tech Corp' }] });
   });
+
+  it('should return 403 when user tries to retrieve someone elses resume (anti-IDOR)', async () => {
+    const foreignResume = {
+      ...mockResume,
+      user_id: 'victim-user-id',
+    };
+    mockFrom.mockReturnValue(createSupabaseChain(foreignResume, null));
+
+    const req = new NextRequest('http://localhost:3000/api/resume/retrieve', {
+      method: 'POST',
+      body: JSON.stringify({ resumeId: 'resume-123', userId: 'user-1' }),
+    });
+
+    const response = await POST(req);
+    expect(response.status).toBe(403);
+    const data = await response.json();
+    expect(data.error).toContain('Access denied');
+  });
+
+  it('should sanitize suggestions and strip realText from contentMap when isUnlocked is false', async () => {
+    const lockedResume = {
+      ...mockResume,
+      user_id: 'user-1',
+      content_map: [
+        {
+          obfuscatedText: '████████',
+          realText: 'SECRET_UNREDACTED_BULLET',
+          isFreeReveal: false,
+        },
+        {
+          obfuscatedText: 'REVEALED_BULLET',
+          realText: 'FREE_SAMPLE_BULLET',
+          isFreeReveal: true,
+        },
+      ],
+      format_spec: {
+        suggestions: [
+          {
+            id: 'sug-1',
+            section: 'Experience',
+            originalText: 'Old bullet',
+            suggestedText: 'SECRET_TAILORED_BULLET',
+          },
+          {
+            id: 'sug-2',
+            section: 'Experience',
+            originalText: 'Old bullet 2',
+            suggestedText: 'FREE_SAMPLE_BULLET',
+          },
+        ],
+        sectionGroups: [
+          {
+            id: 'group-1',
+            title: 'Experience',
+            tailoredContent: 'SECRET_FULL_TAILORED_SECTION',
+            suggestions: [
+              {
+                id: 'sug-1',
+                section: 'Experience',
+                originalText: 'Old bullet',
+                suggestedText: 'SECRET_TAILORED_BULLET',
+              },
+            ],
+          },
+        ],
+        resumeAST: { experience: [{ role: 'SECRET_AST' }] },
+      },
+      free_reveal: {
+        improvedText: 'FREE_SAMPLE_BULLET',
+      },
+    };
+
+    mockFrom.mockReturnValue(createSupabaseChain(lockedResume, null));
+    mockGetAccessInfoServer.mockResolvedValue({ hasAccess: false });
+    mockIsWithinFreeResumeLimitServer.mockResolvedValue(false);
+
+    const req = new NextRequest('http://localhost:3000/api/resume/retrieve', {
+      method: 'POST',
+      body: JSON.stringify({ resumeId: 'resume-123', userId: 'user-1' }),
+    });
+
+    const response = await POST(req);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+
+    expect(data.isUnlocked).toBe(false);
+
+    // Verify contentMap has no secret realText
+    expect(data.contentMap[0].realText).toBeUndefined();
+    expect(data.contentMap[1].realText).toBe('FREE_SAMPLE_BULLET');
+
+    // Verify suggestions are masked
+    expect(data.suggestions[0].suggestedText).toContain('🔒 AI-tailored accomplishment locked');
+    expect(data.suggestions[0].isLocked).toBe(true);
+    expect(data.suggestions[1].suggestedText).toBe('FREE_SAMPLE_BULLET');
+    expect(data.suggestions[1].isFreeReveal).toBe(true);
+
+    // Verify sectionGroups stripped tailoredContent and masked suggestions
+    expect(data.sectionGroups[0].tailoredContent).toBeUndefined();
+    expect(data.sectionGroups[0].suggestions[0].suggestedText).toContain('🔒 AI-tailored accomplishment locked');
+
+    // Verify resumeAST is undefined to prevent structural inspection
+    expect(data.resumeAST).toBeUndefined();
+  });
 });

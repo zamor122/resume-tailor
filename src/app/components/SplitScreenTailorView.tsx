@@ -199,6 +199,7 @@ async function runHumanizeStream(params: {
       validationResult: completeData.validationResult,
       resumeId: completeData.resumeId,
       hasAccess: true,
+      isUnlocked: completeData.isUnlocked !== undefined ? completeData.isUnlocked : true,
     };
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
@@ -794,7 +795,7 @@ export default function SplitScreenTailorView() {
               onSectionGroupsChange={(updatedGroups) =>
                 setResults((prev) => (prev ? { ...prev, sectionGroups: updatedGroups } : null))
               }
-              isUnlocked={false}
+              isUnlocked={results.isUnlocked !== undefined ? results.isUnlocked : true}
               onUnlockRequest={() => setShowAuthModalMode("signup")}
               beforeScore={results.beforeScore ?? 50}
               matchScore={results.matchScore ?? 85}

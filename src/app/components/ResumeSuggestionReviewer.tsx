@@ -126,8 +126,14 @@ export default function ResumeSuggestionReviewer({
     const targetId = id || substantiveSuggestions[activeIndex]?.id;
     if (!targetId) return;
 
-    onAcceptSuggestion?.(targetId);
     const currentSug = suggestions.find((s) => s.id === targetId);
+    // Anti-fraud: If locked and not a free reveal bullet, trigger unlock request
+    if (!isUnlocked && !(currentSug as any)?.isFreeReveal) {
+      onUnlockRequest?.();
+      return;
+    }
+
+    onAcceptSuggestion?.(targetId);
     const nextStatus: "pending" | "accepted" = currentSug?.status === "accepted" ? "pending" : "accepted";
 
     const updated = suggestions.map((s) =>
@@ -151,6 +157,10 @@ export default function ResumeSuggestionReviewer({
   };
 
   const handleAcceptAllRemaining = () => {
+    if (!isUnlocked) {
+      onUnlockRequest?.();
+      return;
+    }
     const updated = suggestions.map((s) =>
       !s.status || s.status === "pending" ? { ...s, status: "accepted" as const } : s
     );
@@ -166,6 +176,10 @@ export default function ResumeSuggestionReviewer({
 
   // Inline editing
   const handleStartEdit = (sug: ResumeSuggestion) => {
+    if (!isUnlocked && !(sug as any)?.isFreeReveal) {
+      onUnlockRequest?.();
+      return;
+    }
     setEditingId(sug.id);
     setEditText(sug.suggestedText);
   };
@@ -424,7 +438,7 @@ export default function ResumeSuggestionReviewer({
                 className="px-2 py-0.5 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                 title="Accept all remaining unreviewed changes"
               >
-                Accept All Remaining
+                {!isUnlocked ? "🔒 Unlock to Accept All" : "Accept All Remaining"}
               </button>
               <span className="text-gray-600">•</span>
               <button
@@ -595,29 +609,55 @@ export default function ResumeSuggestionReviewer({
                 )}
 
                 {/* Green Line: Tailored Replacement or Addition */}
-                <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/25 border-l-4 border-emerald-500 text-emerald-950 dark:text-emerald-200">
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 select-none shrink-0 text-base leading-snug">
-                    +
-                  </span>
-                  <div className="text-sm leading-relaxed flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                        {isAddition ? "Tailored (Addition):" : "Tailored (Enhanced):"}
-                      </span>
-                      {isAddition && (
-                        <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                          + New bullet added
-                        </span>
-                      )}
-                    </div>
-                    <span>
-                      {renderHighlightedKeywords(
-                        currentSuggestion.suggestedText.replace(/^[-*•–—]\s*/, ""),
-                        currentSuggestion.keywords
-                      )}
+                {!isUnlocked && !(currentSuggestion as any)?.isFreeReveal ? (
+                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/25 border-l-4 border-amber-500 text-amber-950 dark:text-amber-200">
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400 select-none shrink-0 text-base leading-snug">
+                      🔒
                     </span>
+                    <div className="text-sm leading-relaxed flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                          Tailored Accomplishment (Locked):
+                        </span>
+                        <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                          Access pass required
+                        </span>
+                      </div>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">
+                        {currentSuggestion.suggestedText}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/25 border-l-4 border-emerald-500 text-emerald-950 dark:text-emerald-200">
+                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 select-none shrink-0 text-base leading-snug">
+                      +
+                    </span>
+                    <div className="text-sm leading-relaxed flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                          {isAddition ? "Tailored (Addition):" : "Tailored (Enhanced):"}
+                        </span>
+                        {isAddition && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                            + New bullet added
+                          </span>
+                        )}
+                        {Boolean((currentSuggestion as any)?.isFreeReveal) && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                            ✓ Free sample preview
+                          </span>
+                        )}
+                      </div>
+                      <span>
+                        {renderHighlightedKeywords(
+                          currentSuggestion.suggestedText.replace(/^[-*•–—]\s*/, ""),
+                          currentSuggestion.keywords
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -633,23 +673,34 @@ export default function ResumeSuggestionReviewer({
             {/* Action Controls for Active Change */}
             <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex-wrap">
               <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => handleAcceptChange(currentSuggestion.id)}
-                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 shadow-sm active:scale-95 ${
-                    isAcc
-                      ? "bg-emerald-600 text-white border-emerald-600 shadow ring-2 ring-emerald-400/30"
-                      : "bg-blue-600 hover:bg-blue-500 text-white border-blue-600 shadow-sm"
-                  }`}
-                >
-                  {isAcc ? (
-                    <>
-                      <span>✓</span> {isAddition ? "Addition Accepted" : "Accepted"}
-                    </>
-                  ) : (
-                    <span>{isAddition ? "Accept Addition" : "Accept Change"}</span>
-                  )}
-                </button>
+                {!isUnlocked && !(currentSuggestion as any)?.isFreeReveal ? (
+                  <button
+                    type="button"
+                    onClick={() => onUnlockRequest?.()}
+                    className="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-sm flex items-center gap-1.5 active:scale-95 transition-all"
+                  >
+                    <span>🔒</span>
+                    <span>Unlock Plan to Apply</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleAcceptChange(currentSuggestion.id)}
+                    className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 shadow-sm active:scale-95 ${
+                      isAcc
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow ring-2 ring-emerald-400/30"
+                        : "bg-blue-600 hover:bg-blue-500 text-white border-blue-600 shadow-sm"
+                    }`}
+                  >
+                    {isAcc ? (
+                      <>
+                        <span>✓</span> {isAddition ? "Addition Accepted" : "Accepted"}
+                      </>
+                    ) : (
+                      <span>{isAddition ? "Accept Addition" : "Accept Change"}</span>
+                    )}
+                  </button>
+                )}
 
                 <button
                   type="button"

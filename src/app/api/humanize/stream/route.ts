@@ -10,6 +10,13 @@ import { buildResumeAgentGraph } from "@/app/agent/graph";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
 import type { AgentState } from "@/app/agent/state";
+import { getAccessInfoServer } from "@/app/utils/accessManager";
+import { FREE_RESUME_LIMIT } from "@/app/config/pricing";
+import {
+  sanitizeSuggestionsForLocked,
+  sanitizeSectionGroupsForLocked,
+  sanitizeContentMapForLocked,
+} from "@/app/utils/gatingSanitizer";
 
 export const runtime = "nodejs";
 export const preferredRegion = "auto";
@@ -399,20 +406,55 @@ export async function POST(req: NextRequest) {
           })),
         });
 
+        // Determine whether user is entitled to full unredacted access
+        let isUnlocked = false;
+        if (authenticatedUserId) {
+          try {
+            const accessInfo = await getAccessInfoServer(authenticatedUserId);
+            const paidAccess = accessInfo?.hasAccess || false;
+
+            // Check if user is within their FREE_RESUME_LIMIT (3) resumes
+            const { count } = await supabaseAdmin
+              .from("resumes")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", authenticatedUserId);
+
+            // If user currently has <= FREE_RESUME_LIMIT resumes (including the newly inserted one), it is free!
+            const withinFreeQuota = (count ?? 0) <= FREE_RESUME_LIMIT;
+            isUnlocked = paidAccess || withinFreeQuota;
+          } catch (e) {
+            console.warn("[Stream API] Access check error, defaulting to locked for safety:", e);
+            isUnlocked = false;
+          }
+        }
+
+        const safeTailoredResume = isUnlocked ? tailoredResume : obfuscationResult.obfuscatedResume;
+        const safeSuggestions = isUnlocked
+          ? (agentResult.suggestions || [])
+          : sanitizeSuggestionsForLocked(agentResult.suggestions || [], obfuscationResult.freeReveal);
+        const safeSectionGroups = isUnlocked
+          ? agentResult.sectionGroups
+          : sanitizeSectionGroupsForLocked(agentResult.sectionGroups, safeSuggestions);
+        const safeResumeAST = isUnlocked ? agentResult.resumeAST : undefined;
+        const safeContentMap = isUnlocked
+          ? obfuscationResult.contentMap
+          : sanitizeContentMapForLocked(obfuscationResult.contentMap);
+
         // Final completion event
         streamClosed = !sendSSE(controller, "complete", {
-          tailoredResume,
-          suggestions: agentResult.suggestions || [],
-          sectionGroups: agentResult.sectionGroups,
-          resumeAST: agentResult.resumeAST,
+          tailoredResume: safeTailoredResume,
+          suggestions: safeSuggestions,
+          sectionGroups: safeSectionGroups,
+          resumeAST: safeResumeAST,
           improvementMetrics: agentResult.improvementMetrics,
           matchScore: agentResult.afterScore ?? 85,
           beforeScore: agentResult.beforeScore ?? 50,
           keywordGap: agentResult.keywordGap,
           validationResult: null,
-          contentMap: obfuscationResult.contentMap,
+          contentMap: safeContentMap,
           freeReveal: obfuscationResult.freeReveal,
           resumeId: storedResumeId,
+          isUnlocked,
           tailoringPreferences: preferences,
           discoveredJobs: agentResult.discoveredJobs,
           agentSteps: agentResult.logs,
