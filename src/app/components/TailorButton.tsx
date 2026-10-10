@@ -17,6 +17,7 @@ const TailorButton: React.FC<TailorButtonProps> = ({
 
   return (
     <button
+      data-testid="tailor-button"
       onClick={onClick}
       disabled={isDisabled}
       className={`

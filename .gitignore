@@ -53,3 +53,6 @@ index.scip
 .superpowers/
 .worktrees/
 
+# playwright
+/test-results/
+/playwright-report/
