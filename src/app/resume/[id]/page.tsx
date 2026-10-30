@@ -7,6 +7,7 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import { fetchResumeById, fetchResumeVersions } from "@/app/lib/swr-fetchers";
 import TailoredResumeOutput from "@/app/components/TailoredResumeOutput";
 import ImprovementHighlights from "@/app/components/ImprovementHighlights";
+import AtsMatchGauge from "@/app/components/AtsMatchGauge";
 import PaymentGate from "@/app/components/PaymentGate";
 import FreeReveal from "@/app/components/FreeReveal";
 import TierSelectionModal from "@/app/components/TierSelectionModal";
@@ -400,6 +401,7 @@ export default function ResumeDetailPage() {
                 className="min-h-[320px]"
                 addedLabel="Added in your tailored resume"
                 removedLabel="Removed from your original"
+                layout="side-by-side"
               />
             )}
             {viewMode === "compare" && (
@@ -447,6 +449,7 @@ export default function ResumeDetailPage() {
                     originalText={displayResume}
                     tailoredText={compareData.tailoredResume}
                     className="min-h-[320px]"
+                    layout="side-by-side"
                     addedLabel={
                       (() => {
                         const sel = versions.find((v) => v.id === compareWithVersionId);
@@ -474,12 +477,17 @@ export default function ResumeDetailPage() {
         <div className={`${viewMode === "resume" ? "hidden" : "md:col-span-4"} space-y-6 ${mobileTab === "stats" ? "block" : "hidden md:block"}`}>
           {/* Match Strength Card */}
           <div className="output-container p-5 sm:p-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center justify-between">
-              <span>Job Match Strength</span>
-              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {matchScore}%
-              </span>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Job Match Strength
             </h3>
+            <AtsMatchGauge
+              score={matchScore}
+              sublabel={
+                data.metrics?.criticalKeywords && data.metrics.criticalKeywords.total > 0
+                  ? `${data.metrics.criticalKeywords.matched}/${data.metrics.criticalKeywords.total} critical keywords`
+                  : undefined
+              }
+            />
             {data.metrics && (
               <div className="space-y-2 text-xs sm:text-sm pt-2 border-t border-gray-100 dark:border-gray-800">
                 {data.metrics.jdCoverage && data.metrics.jdCoverage.total > 0 && (
