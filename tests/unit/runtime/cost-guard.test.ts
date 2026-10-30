@@ -58,6 +58,9 @@ describe('Cost guard', () => {
     it('classifies deepseek as paid-opt-in', () => {
       expect(classifyProvider('deepseek')).toBe('paid-opt-in');
     });
+    it('classifies openrouter as paid-opt-in (aggregator can route to paid models)', () => {
+      expect(classifyProvider('openrouter')).toBe('paid-opt-in');
+    });
     it('defaults unknown providers to paid-opt-in (fail safe)', () => {
       expect(classifyProvider('some-fake-provider')).toBe('paid-opt-in');
     });

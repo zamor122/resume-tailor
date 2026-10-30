@@ -15,6 +15,11 @@ CREATE TABLE IF NOT EXISTS access_grants (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Migration: revocation tracking (refunds / chargebacks).
+-- See supabase/migrations/20261030000000_access_grant_revocation.sql
+ALTER TABLE access_grants ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ;
+ALTER TABLE access_grants ADD COLUMN IF NOT EXISTS revoked_reason TEXT;
+
 -- Resumes table
 CREATE TABLE IF NOT EXISTS resumes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

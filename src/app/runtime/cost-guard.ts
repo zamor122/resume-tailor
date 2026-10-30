@@ -5,8 +5,8 @@ import type { CostClass, CostPolicy, StepId } from './types';
 // Provider classification (free vs paid-opt-in)
 // ---------------------------------------------------------------
 
-const FREE_PROVIDERS = new Set(['cerebras', 'gemini', 'groq', 'huggingface', 'openrouter']);
-const PAID_OPT_IN_PROVIDERS = new Set(['openai', 'anthropic', 'mistral', 'deepseek']);
+const FREE_PROVIDERS = new Set(['cerebras', 'gemini', 'groq', 'huggingface']);
+const PAID_OPT_IN_PROVIDERS = new Set(['openai', 'anthropic', 'mistral', 'deepseek', 'openrouter']);
 
 // Penny providers are operator-funded gateways whose per-run cost is negligible
 // (target <$0.005). Unlike paid-opt-in providers they do NOT require a
@@ -15,8 +15,9 @@ const PAID_OPT_IN_PROVIDERS = new Set(['openai', 'anthropic', 'mistral', 'deepse
 const PENNY_PROVIDERS = new Set(['cline']);
 
 // DeepSeek is marked "No free tier" in models.ts, so it goes in paid-opt-in.
-// OpenRouter may have free-rate models, but we gate it as paid-opt-in unless
-// the specific model is verified free.
+// OpenRouter is an aggregator: it CAN serve free-rate models, but the model key
+// alone doesn't prove a specific model is free, so it is gated as paid-opt-in
+// (fail safe — an OpenRouter key must never silently buy a paid model).
 
 export function classifyProvider(provider: string): CostClass {
   if (FREE_PROVIDERS.has(provider)) return 'free';

@@ -3,7 +3,9 @@ import { NextRequest } from 'next/server';
 import { GET, POST } from '@/app/api/stripe/webhook/route';
 
 const mockInsertAccessGrants = vi.fn();
+const mockUpdateAccessGrants = vi.fn();
 const mockInsertPayments = vi.fn();
+const mockSelectPayment = vi.fn();
 const mockListLineItems = vi.fn();
 const mockConstructEvent = vi.fn();
 
@@ -26,11 +28,19 @@ vi.mock('@/app/lib/supabase/server', () => ({
       if (table === 'access_grants') {
         return {
           insert: (...args: unknown[]) => mockInsertAccessGrants(...args),
+          update: (payload: unknown) => ({
+            eq: (col: string, val: unknown) => mockUpdateAccessGrants(payload, col, val),
+          }),
         };
       }
       if (table === 'payments') {
         return {
           insert: (...args: unknown[]) => mockInsertPayments(...args),
+          select: (cols: string) => ({
+            eq: (col: string, val: unknown) => ({
+              maybeSingle: () => mockSelectPayment(cols, col, val),
+            }),
+          }),
         };
       }
       return {
@@ -56,6 +66,11 @@ describe('Stripe Webhook Fulfillment & Lifecycle', () => {
     vi.clearAllMocks();
     process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_valid_secret';
     mockInsertAccessGrants.mockResolvedValue({ error: null });
+    mockUpdateAccessGrants.mockResolvedValue({ error: null });
+    mockSelectPayment.mockResolvedValue({
+      data: { stripe_session_id: 'cs_default_session' },
+      error: null,
+    });
     mockInsertPayments.mockResolvedValue({ error: null });
     mockListLineItems.mockResolvedValue({
       data: [{ price: { id: 'price_7d' } }],
@@ -293,6 +308,138 @@ describe('Stripe Webhook Fulfillment & Lifecycle', () => {
         'cs_duplicate_session'
       );
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('POST /api/stripe/webhook - Revocation (refunds & chargebacks)', () => {
+    it('revokes the access grant when a charge is refunded', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockConstructEvent.mockReturnValueOnce({
+        type: 'charge.refunded',
+        data: { object: { id: 'ch_refund_1', payment_intent: 'pi_refund_1' } },
+      });
+      mockSelectPayment.mockResolvedValueOnce({
+        data: { stripe_session_id: 'cs_refunded_1' },
+        error: null,
+      });
+      mockUpdateAccessGrants.mockResolvedValueOnce({ error: null });
+
+      const req = new NextRequest('http://localhost:3000/api/stripe/webhook', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { 'stripe-signature': 'valid_sig' },
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+
+      expect(mockUpdateAccessGrants).toHaveBeenCalledTimes(1);
+      const [payload, col, val] = mockUpdateAccessGrants.mock.calls[0];
+      expect(payload).toMatchObject({ is_active: false, revoked_reason: 'refunded' });
+      expect(payload.revoked_at).toBeDefined();
+      expect(col).toBe('stripe_session_id');
+      expect(val).toBe('cs_refunded_1');
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('revokes the access grant on charge.dispute.created', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockConstructEvent.mockReturnValueOnce({
+        type: 'charge.dispute.created',
+        data: { object: { id: 'dp_1', payment_intent: 'pi_disputed_1' } },
+      });
+      mockSelectPayment.mockResolvedValueOnce({
+        data: { stripe_session_id: 'cs_disputed_1' },
+        error: null,
+      });
+      mockUpdateAccessGrants.mockResolvedValueOnce({ error: null });
+
+      const req = new NextRequest('http://localhost:3000/api/stripe/webhook', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { 'stripe-signature': 'valid_sig' },
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+
+      const [payload] = mockUpdateAccessGrants.mock.calls[0];
+      expect(payload).toMatchObject({ is_active: false, revoked_reason: 'disputed' });
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('does not revoke when no matching payment record exists', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockConstructEvent.mockReturnValueOnce({
+        type: 'charge.refunded',
+        data: { object: { id: 'ch_unknown', payment_intent: 'pi_unknown' } },
+      });
+      mockSelectPayment.mockResolvedValueOnce({ data: null, error: null });
+
+      const req = new NextRequest('http://localhost:3000/api/stripe/webhook', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { 'stripe-signature': 'valid_sig' },
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      expect(mockUpdateAccessGrants).not.toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('POST /api/stripe/webhook - Failure signalling (Stripe retries)', () => {
+    it('returns 500 when the access_grants insert fails, so Stripe retries', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockConstructEvent.mockReturnValueOnce({
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            id: 'cs_db_fail',
+            payment_status: 'paid',
+            metadata: { tier: '7D', userId: 'user-db-fail' },
+          },
+        },
+      });
+      mockInsertAccessGrants.mockResolvedValueOnce({
+        error: { code: '08006', message: 'connection failure' },
+      });
+
+      const req = new NextRequest('http://localhost:3000/api/stripe/webhook', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { 'stripe-signature': 'valid_sig' },
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('returns 500 for a paid session with no userId (cannot be fulfilled)', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockConstructEvent.mockReturnValueOnce({
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            id: 'cs_no_user',
+            payment_status: 'paid',
+            metadata: { tier: '7D' },
+          },
+        },
+      });
+
+      const req = new NextRequest('http://localhost:3000/api/stripe/webhook', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { 'stripe-signature': 'valid_sig' },
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      expect(mockInsertAccessGrants).not.toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
     });
   });
 });
