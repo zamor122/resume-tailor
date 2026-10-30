@@ -1,6 +1,7 @@
 import type { AgentState } from "../state";
 import { parseResume } from "@/app/utils/resumeParser";
 import { parseResumeWithLLM } from "@/app/utils/resumeParserLLM";
+import { resolveStepModel } from "@/app/runtime/cost-guard";
 
 /**
  * Intake parser node.
@@ -47,7 +48,9 @@ export async function intakeParserNode(
     console.log(`[intakeParser] ⚡ Deterministic parser found 0 jobs; gating to LLM resume parser...`);
     const resumeAST = await parseResumeWithLLM(
       state.rawResume,
-      state.modelKey,
+      // Route through the runtime cost guard so the per-step model policy applies
+      // to the agent path too (token-light read node -> cheapest model).
+      resolveStepModel("readResume", state.modelKey),
       state.sessionApiKeys,
       1 // 1 bounded attempt to preserve pipeline timeout budget
     );

@@ -1,5 +1,6 @@
 import type { AgentState } from "../state";
 import { generateWithFallback } from "@/app/services/model-fallback";
+import { resolveStepModel } from "@/app/runtime/cost-guard";
 import { getJDInterpreterPrompt } from "@/app/prompts";
 import { parseJSONFromText } from "@/app/utils/json-extractor";
 import {
@@ -33,7 +34,8 @@ export async function keywordAnalyzerNode(
       );
       const res = await generateWithFallback(
         prompt,
-        state.modelKey,
+        // Structured-extraction node -> penny engine when keyed, free chain otherwise.
+        resolveStepModel("extractKeywords", state.modelKey),
         { maxTokens: 800, temperature: 0.1 },
         state.sessionApiKeys
       );

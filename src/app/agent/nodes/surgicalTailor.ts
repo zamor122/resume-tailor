@@ -1,5 +1,6 @@
 import type { AgentState, ResumeSuggestion } from "../state";
 import { generateWithFallback } from "@/app/services/model-fallback";
+import { resolveStepModel } from "@/app/runtime/cost-guard";
 import {
   getHolisticSummaryPrompt,
   getExperienceBulletsPrompt,
@@ -186,7 +187,8 @@ export async function surgicalTailorNode(
             domainTaxonomy,
             jobKnowledge: state.jobKnowledge,
           }),
-          state.modelKey,
+          // Heavy-generation node -> penny engine when keyed, free chain otherwise.
+          resolveStepModel("tailor", state.modelKey),
           { maxTokens: 2000, temperature: 0.2 },
           state.sessionApiKeys
         );
@@ -369,7 +371,7 @@ export async function surgicalTailorNode(
           careerArc: state.careerArc,
           targetCompany,
         }),
-        state.modelKey,
+        resolveStepModel("tailor", state.modelKey),
         { maxTokens: 800, temperature: 0.2 },
         state.sessionApiKeys
       );

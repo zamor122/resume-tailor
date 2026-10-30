@@ -1,5 +1,6 @@
 import type { AgentState, CandidateProfile } from "../state";
 import { generateWithFallback } from "@/app/services/model-fallback";
+import { resolveStepModel } from "@/app/runtime/cost-guard";
 import { parseJSONFromText } from "@/app/utils/json-extractor";
 import {
   classifySeniorityTier,
@@ -34,7 +35,7 @@ export async function candidateProfilerNode(
     const snippet = state.rawResume.slice(0, 1500);
     const result = await generateWithFallback(
       PROFILE_PROMPT(snippet),
-      state.modelKey,
+      resolveStepModel("readResume", state.modelKey),
       { maxTokens: 250, temperature: 0.1 },
       state.sessionApiKeys
     );

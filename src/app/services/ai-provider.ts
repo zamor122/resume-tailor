@@ -1,5 +1,7 @@
 import type { AIProvider, ModelOptions, GenerateContentResult } from '@/app/types/model';
 import { parseModelKey, getModelConfig, DEFAULT_MODEL, FALLBACK_MODELS } from '@/app/config/models';
+import { checkPayGate } from '@/app/runtime/cost-guard';
+import type { CostPolicy } from '@/app/runtime/types';
 import { isRateLimitError as checkRateLimit } from './error-utils';
 import { OpenAIProvider } from './providers/openai';
 import { AnthropicProvider } from './providers/anthropic';
@@ -96,11 +98,24 @@ export async function generateContentWithFallback(
     'gemini:gemini-1.5-flash',
     'groq:llama-3.3-70b-versatile',
     'groq:openai/gpt-oss-120b',
-    'openai:gpt-4o-mini',
+    // NOTE: deliberately no paid provider in this default tail — the cost guard
+    // below is what decides whether a paid model may ever be attempted.
   ].filter(Boolean) as string[];
 
-  // Deduplicate while preserving priority order
-  const uniqueModels = Array.from(new Set(modelsToTry));
+  // Deduplicate while preserving priority order, then enforce the cost policy.
+  //
+  // Cost guard (AUDIT.md F10): applied at this single choke point, so it covers
+  // the agent path and every API route — not just the runtime executor. A caller
+  // that supplies its own API keys has opted in to paid models; otherwise the
+  // policy is zero-cost, so a stray OPENAI_API_KEY (or similar) in the
+  // environment can never silently buy inference. Free and penny models always
+  // pass; penny models additionally require their server-side key.
+  const costPolicy: CostPolicy =
+    sessionApiKeys && Object.keys(sessionApiKeys).length > 0 ? 'paid' : 'free';
+
+  const uniqueModels = Array.from(new Set(modelsToTry)).filter(
+    (model) => checkPayGate(model, costPolicy, sessionApiKeys).allowed
+  );
 
   let lastError: unknown = null;
 
