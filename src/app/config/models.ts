@@ -269,6 +269,19 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     apiKeyEnvVar: 'OPENROUTER_API_KEY',
     description: 'Access via OpenRouter',
   },
+
+  // ClinePass Models (OpenAI-compatible gateway) — penny-inference engine
+  // Operator-funded (server-side CLINE_API_KEY); classified as `penny` by the
+  // runtime cost-guard. See 100-dollar-startup/SPRINT-SPEC.md §Penny-inference.
+  'cline:cline-pass/deepseek-v4.1-flash': {
+    provider: 'cline',
+    modelId: 'cline-pass/deepseek-v4.1-flash',
+    name: 'DeepSeek v4.1 Flash (ClinePass)',
+    requiresApiKey: true,
+    apiKeyEnvVar: 'CLINE_API_KEY',
+    baseUrl: 'https://api.cline.bot/api/v1',
+    description: 'Penny-inference engine — target <$0.005 per tailored resume',
+  },
 };
 
 /**

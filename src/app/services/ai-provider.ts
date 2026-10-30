@@ -10,6 +10,7 @@ import { GroqProvider } from './providers/groq';
 import { MistralProvider } from './providers/mistral';
 import { HuggingFaceProvider } from './providers/huggingface';
 import { OpenRouterProvider } from './providers/openrouter';
+import { ClineProvider } from './providers/cline';
 import { stripModelThinking } from '@/app/utils/stripModelThinking';
 
 export { isRateLimitError, isModelUnavailableError } from './error-utils';
@@ -57,6 +58,8 @@ export function createProvider(
       return new HuggingFaceProvider(modelId, apiKey);
     case 'openrouter':
       return new OpenRouterProvider(modelId, apiKey);
+    case 'cline':
+      return new ClineProvider(modelId, apiKey);
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }

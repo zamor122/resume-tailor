@@ -8,12 +8,19 @@ import type { CostClass, CostPolicy, StepId } from './types';
 const FREE_PROVIDERS = new Set(['cerebras', 'gemini', 'groq', 'huggingface', 'openrouter']);
 const PAID_OPT_IN_PROVIDERS = new Set(['openai', 'anthropic', 'mistral', 'deepseek']);
 
+// Penny providers are operator-funded gateways whose per-run cost is negligible
+// (target <$0.005). Unlike paid-opt-in providers they do NOT require a
+// user-supplied key — the server-side key pays — but they are still refused
+// when that server-side key is absent. See mission-control.md §2.3.
+const PENNY_PROVIDERS = new Set(['cline']);
+
 // DeepSeek is marked "No free tier" in models.ts, so it goes in paid-opt-in.
 // OpenRouter may have free-rate models, but we gate it as paid-opt-in unless
 // the specific model is verified free.
 
 export function classifyProvider(provider: string): CostClass {
   if (FREE_PROVIDERS.has(provider)) return 'free';
+  if (PENNY_PROVIDERS.has(provider)) return 'penny';
   if (PAID_OPT_IN_PROVIDERS.has(provider)) return 'paid-opt-in';
   // Unknown providers default to paid-opt-in (fail safe — don't auto-spend).
   return 'paid-opt-in';
@@ -36,12 +43,33 @@ export const FREE_FALLBACK_CHAIN = [
 
 /** Heavy generation node → most capable free model. */
 const HEAVY_GEN_STEPS = new Set<StepId>(['tailor']);
+/** Structured-extraction nodes → penny engine (cheap JSON extraction). */
+const STRUCTURED_STEPS = new Set<StepId>(['extractKeywords']);
 /** Token-light read nodes → fastest free model to preserve heavy quota. */
 const READ_STEPS = new Set<StepId>(['readResume', 'extractKeywords', 'researchCompany']);
+
+/**
+ * Penny engine — DeepSeek v4.1 Flash via ClinePass (operator-funded).
+ * Preferred for heavy generation + structured extraction when its server-side
+ * key is present. Any failure falls back to the free chain (see
+ * getFallbackChainFor + generateContentWithFallback), so cost cannot escalate.
+ */
+export const PENNY_MODEL = 'cline:cline-pass/deepseek-v4.1-flash';
+
+function pennyAvailable(): boolean {
+  const config = getModelConfig(PENNY_MODEL);
+  return !!(config?.apiKeyEnvVar && process.env[config.apiKeyEnvVar]);
+}
 
 export function resolveStepModel(stepId: StepId, userModelKey?: string): string {
   // User override always wins (e.g., from session preferences).
   if (userModelKey) return userModelKey;
+
+  // Penny engine for heavy generation + structured extraction when the
+  // server-side key is present (cheap, operator-funded, <$0.005/run).
+  if (pennyAvailable() && (HEAVY_GEN_STEPS.has(stepId) || STRUCTURED_STEPS.has(stepId))) {
+    return PENNY_MODEL;
+  }
 
   // Heavy nodes get the most capable free model.
   if (HEAVY_GEN_STEPS.has(stepId)) return FREE_FALLBACK_CHAIN[0]; // gemini:gemini-2.5-flash
@@ -75,6 +103,17 @@ export function checkPayGate(
 
   // Free models always allowed regardless of policy.
   if (costClass === 'free') return { allowed: true };
+
+  // Penny models (operator-funded, <$0.005/run) are allowed whenever the
+  // server-side key is configured — no user key or costPolicy:'paid' required.
+  if (costClass === 'penny') {
+    const envVar = config.apiKeyEnvVar;
+    if (envVar && process.env[envVar]) return { allowed: true };
+    return {
+      allowed: false,
+      reason: `Penny model ${modelKey} requires server-side key in ${envVar}.`,
+    };
+  }
 
   // Paid model requires explicit opt-in + a valid user key.
   if (costPolicy !== 'paid') {

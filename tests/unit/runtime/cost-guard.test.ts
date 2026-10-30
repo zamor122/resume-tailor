@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   classifyProvider,
   checkPayGate,
@@ -19,6 +19,7 @@ vi.mock('@/app/config/models', () => ({
       'anthropic:claude-3-5-haiku-20241022': { apiKeyEnvVar: 'ANTHROPIC_API_KEY' },
       'deepseek:deepseek-chat': { apiKeyEnvVar: 'DEEPSEEK_API_KEY' },
       'mistral:mistral-small-latest': { apiKeyEnvVar: 'MISTRAL_API_KEY' },
+      'cline:cline-pass/deepseek-v4.1-flash': { apiKeyEnvVar: 'CLINE_API_KEY' },
     };
     return catalog[key] ?? null;
   },
@@ -29,6 +30,15 @@ vi.mock('@/app/config/models', () => ({
 }));
 
 describe('Cost guard', () => {
+  // Keep env deterministic — the ambient shell may or may not export CLINE_API_KEY,
+  // which would otherwise flip penny routing on/off between machines.
+  beforeEach(() => {
+    vi.stubEnv('CLINE_API_KEY', '');
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   describe('classifyProvider', () => {
     it('classifies cerebras as free', () => {
       expect(classifyProvider('cerebras')).toBe('free');
@@ -138,6 +148,36 @@ describe('Cost guard', () => {
         const provider = key.split(':')[0];
         expect(classifyProvider(provider)).toBe('free');
       }
+    });
+  });
+
+  describe('penny class (operator-funded ClinePass engine)', () => {
+    it('classifies cline as penny', () => {
+      expect(classifyProvider('cline')).toBe('penny');
+    });
+
+    it('refuses penny models when the server-side key is absent', () => {
+      vi.stubEnv('CLINE_API_KEY', '');
+      const result = checkPayGate('cline:cline-pass/deepseek-v4.1-flash', 'free');
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('CLINE_API_KEY');
+    });
+
+    it('allows penny models when the server-side key is present (no user key needed)', () => {
+      vi.stubEnv('CLINE_API_KEY', 'cline-server-key');
+      const result = checkPayGate('cline:cline-pass/deepseek-v4.1-flash', 'free');
+      expect(result.allowed).toBe(true);
+    });
+
+    it('routes heavy generation + structured extraction to the penny engine when keyed', () => {
+      vi.stubEnv('CLINE_API_KEY', 'cline-server-key');
+      expect(resolveStepModel('tailor')).toBe('cline:cline-pass/deepseek-v4.1-flash');
+      expect(resolveStepModel('extractKeywords')).toBe('cline:cline-pass/deepseek-v4.1-flash');
+    });
+
+    it('falls back to the free chain when the penny key is absent', () => {
+      vi.stubEnv('CLINE_API_KEY', '');
+      expect(resolveStepModel('tailor')).toBe('gemini:gemini-2.5-flash');
     });
   });
 });
