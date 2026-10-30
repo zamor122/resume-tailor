@@ -149,7 +149,7 @@ export function parseChunkBulletsResponse(params: {
         match = parsedItems![idx];
       }
 
-      let rawNew = (match?.suggestedText || (match as any)?.tailored || cleanOrig);
+      const rawNew = (match?.suggestedText || (match as any)?.tailored || cleanOrig);
       let cleanNew = stripModelThinking(rawNew)
         .replace(BULLET_PREFIX_REGEX, "")
         .trim();

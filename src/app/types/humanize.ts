@@ -53,6 +53,8 @@ export interface HumanizeResponse {
   companyResearch?: unknown;
   resumeId?: string | null;
   hasAccess?: boolean;
+  /** Whether the tailored resume is unlocked (paid access or within free quota) */
+  isUnlocked?: boolean;
   accessInfo?: unknown;
   /** Agent specific data */
   tailoringPreferences?: TailoringPreferences;

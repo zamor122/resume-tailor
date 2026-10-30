@@ -228,29 +228,6 @@ export default function ResumeSuggestionReviewer({
     }
   };
 
-  if (totalCount === 0) {
-    return (
-      <div className={`p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-center space-y-3 ${className}`}>
-        <span className="text-3xl">🎉</span>
-        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
-          All Sections Aligned
-        </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-          Your resume content already matches the key qualifications and requirements for this role.
-        </p>
-        {onFinalize && (
-          <button
-            type="button"
-            onClick={onFinalize}
-            className="px-5 py-2 text-xs font-bold rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 shadow transition-all"
-          >
-            Finish & View Resume →
-          </button>
-        )}
-      </div>
-    );
-  }
-
   const currentSuggestion = substantiveSuggestions[activeIndex] || substantiveSuggestions[0];
 
   // Resolve enclosing section group for the active suggestion
@@ -319,6 +296,33 @@ export default function ResumeSuggestionReviewer({
       originalResume
     );
   }, [currentSuggestion, originalResume]);
+
+  // NOTE (rules-of-hooks): this early return must stay BELOW every hook call.
+  // It previously sat above the useMemo/useRef/useEffect block, so whenever
+  // `totalCount` crossed 0 the hook count changed between renders and React
+  // threw "Rendered more hooks than during the previous render".
+  if (totalCount === 0) {
+    return (
+      <div className={`p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-center space-y-3 ${className}`}>
+        <span className="text-3xl">🎉</span>
+        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
+          All Sections Aligned
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          Your resume content already matches the key qualifications and requirements for this role.
+        </p>
+        {onFinalize && (
+          <button
+            type="button"
+            onClick={onFinalize}
+            className="px-5 py-2 text-xs font-bold rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 shadow transition-all"
+          >
+            Finish & View Resume →
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const isAddition = !currentOriginalText || !currentOriginalText.trim();
   const isAcc = currentSuggestion?.status === "accepted";

@@ -5,7 +5,7 @@
 
 /** Normalize section title for comparison (lowercase, collapse spaces, common aliases). */
 function normalizeSectionKey(title: string): string {
-  let key = title.trim().toLowerCase().replace(/\s+/g, " ");
+  const key = title.trim().toLowerCase().replace(/\s+/g, " ");
   const aliases: [RegExp, string][] = [
     [/^work\s+experience$/, "experience"],
     [/^professional\s+experience$/, "experience"],

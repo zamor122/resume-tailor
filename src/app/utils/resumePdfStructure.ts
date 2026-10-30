@@ -7,7 +7,7 @@ import { deduplicateResumeSections } from "./resumeSectionDedupe";
 
 /** Strip inline markdown to plain text for PDF. */
 function stripInline(text: string): string {
-  let t = text
+  const t = text
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/__([^_]+)__/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")
@@ -185,7 +185,7 @@ export function parseResumeSections(markdown: string): ResumeSections | null {
     const experience = experienceSection ? parseExperienceBody(experienceSection.body) : [];
 
     const skillsSection = findSection(deduped, SKILLS_VARIANTS);
-    let skills: string[] = [];
+    const skills: string[] = [];
     if (skillsSection?.body) {
       const skillLines = skillsSection.body.split(/\n/).map((l) => l.trim()).filter(Boolean);
       for (const sl of skillLines) {

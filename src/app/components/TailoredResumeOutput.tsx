@@ -543,6 +543,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
       </h3>
     ),
     p: ({ children }: { children?: React.ReactNode }) => {
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- react-markdown renders this lowercase `p` override as a component, so the hook is legal
       const isInsideList = useContext(InsideListContext);
       if (isInsideList) {
         return <span className="inline leading-relaxed">{children}</span>;

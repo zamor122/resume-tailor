@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "webhook:listen": "stripe listen --forward-to http://127.0.0.1:3000/api/stripe/webhook --events checkout.session.completed",
     "webhook:trigger": "stripe trigger checkout.session.completed",
     "push:preview": "git push origin feature/section-narrative-review-flow",
