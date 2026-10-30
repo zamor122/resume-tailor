@@ -299,7 +299,10 @@ export default function SplitScreenTailorView() {
   useEffect(() => {
     let sid = typeof window !== "undefined" ? localStorage.getItem("resume-tailor-session-id") : null;
     if (!sid) {
-      sid = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // This id acts as a bearer token for anonymous resume access, so it must be
+      // unguessable. The previous value embedded Date.now() (fully predictable)
+      // and Math.random() (not a CSPRNG); randomUUID() gives 122 bits.
+      sid = `session-${crypto.randomUUID()}`;
       if (typeof window !== "undefined") {
         localStorage.setItem("resume-tailor-session-id", sid);
       }

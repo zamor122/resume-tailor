@@ -441,5 +441,37 @@ describe('Stripe Webhook Fulfillment & Lifecycle', () => {
       expect(mockInsertAccessGrants).not.toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
     });
+
+    it('returns 500 when the payment ledger row cannot be written, so the sale is not silently lost', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockConstructEvent.mockReturnValueOnce({
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            id: 'cs_ledger_fail',
+            payment_status: 'paid',
+            metadata: { tier: '7D', userId: 'user-ledger' },
+          },
+        },
+      });
+      mockInsertAccessGrants.mockResolvedValueOnce({ error: null });
+      mockInsertPayments.mockResolvedValueOnce({
+        error: { code: '08006', message: 'connection failure' },
+      });
+
+      const req = new NextRequest('http://localhost:3000/api/stripe/webhook', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { 'stripe-signature': 'valid_sig' },
+      });
+
+      const res = await POST(req);
+
+      expect(res.status).toBe(500);
+      // The grant was written, so the retry only re-attempts the ledger row —
+      // the grant insert hits 23505 and is skipped as a duplicate.
+      expect(mockInsertAccessGrants).toHaveBeenCalledTimes(1);
+      consoleErrorSpy.mockRestore();
+    });
   });
 });

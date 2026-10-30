@@ -57,9 +57,20 @@ function createLLMInvoker(
     }
 
     const fallback = getFallbackChainFor(modelKey);
-    return generateWithFallback(prompt, modelKey, options, apiKeys ?? config.userApiKeys, {
+    const result = await generateWithFallback(prompt, modelKey, options, apiKeys ?? config.userApiKeys, {
       fallbackModels: fallback,
     });
+
+    // Reconcile the pre-flight estimate with the provider's actual usage so the
+    // enforced budget tracks real spend instead of drifting from it. The
+    // estimate above stays as a gate (we must not start a call that would blow
+    // the budget), but it must not remain the recorded figure.
+    const actualTokens = result.usage?.totalTokens;
+    if (typeof actualTokens === 'number') {
+      state.tokensUsed += actualTokens - stepTokens;
+    }
+
+    return result;
   };
 }
 

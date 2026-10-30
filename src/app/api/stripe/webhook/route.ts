@@ -146,7 +146,7 @@ async function handleCheckoutCompleted(
     const amountTotal = session.amount_total ?? 0;
     const amountDiscount = session.total_details?.amount_discount ?? 0;
 
-    await supabaseAdmin.from("payments").insert({
+    const { error: paymentError } = await supabaseAdmin.from("payments").insert({
       user_id: userId,
       resume_id: resumeId && resumeId.trim() ? resumeId.trim() : null,
       stripe_session_id: session.id,
@@ -158,10 +158,23 @@ async function handleCheckoutCompleted(
       status: "completed",
       metadata: { tier, source: "access_grant", amount_discount: amountDiscount },
     });
+
+    if (paymentError) {
+      // Both tables are keyed UNIQUE on stripe_session_id, so a Stripe retry is
+      // idempotent: the grant insert hits 23505 and is skipped, and the ledger
+      // row is retried. Fail loudly so a sale can never silently go unrecorded.
+      console.error("[Webhook] Failed to insert payment record:", paymentError);
+      return NextResponse.json(
+        { error: "Failed to record payment" },
+        { status: 500 }
+      );
+    }
   } catch (err) {
-    // The grant is what matters commercially; a missing ledger row is logged
-    // loudly but does not fail the delivery.
-    console.warn("[Webhook] Optional payments insert failed:", err);
+    console.error("[Webhook] Error inserting payment record:", err);
+    return NextResponse.json(
+      { error: "Failed to record payment" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ received: true }, { status: 200 });
