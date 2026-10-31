@@ -18,21 +18,57 @@ export interface TimeBasedTier {
   popular?: boolean;
 }
 
+/**
+ * Stripe price ids are declared HERE, beside the display price, instead of being
+ * read from STRIPE_PRICE_ID_* env vars.
+ *
+ * Why: when the advertised amount and the charged amount live in two different
+ * places they drift. A stale env var silently makes the site advertise one price
+ * while Stripe charges another — and nothing in the app can detect it. Keeping the
+ * price id and the amount in the same object makes that impossible: changing a
+ * price is a one-line edit to one file, and `price` must match the Stripe price.
+ *
+ * Changing a price therefore means: create the new Stripe price, then update both
+ * `priceId` and `price` here together.
+ *
+ * Test-mode ids are used when the app runs against a test Stripe key, so local
+ * development keeps working against the same amounts.
+ */
+const IS_TEST_MODE = (process.env.STRIPE_SECRET_KEY ?? '').startsWith('sk_test_');
+
+const STRIPE_PRICE_IDS: Record<TimeBasedTier['tier'], { live: string; test: string }> = {
+  '2D': {
+    live: 'price_1UWWMNC13jTu0IyNbytoqqBo',
+    test: 'price_1UWWOoC13jTu0IyNgu19qjyC',
+  },
+  '7D': {
+    live: 'price_1UWWMNC13jTu0IyNBbYsFakA',
+    test: 'price_1UWWOpC13jTu0IyNTTflqNCC',
+  },
+  '30D': {
+    live: 'price_1UWWMOC13jTu0IyNs5aTJlxJ',
+    test: 'price_1UWWOpC13jTu0IyN3BNRH1hb',
+  },
+};
+
+const priceIdFor = (tier: TimeBasedTier['tier']): string =>
+  IS_TEST_MODE ? STRIPE_PRICE_IDS[tier].test : STRIPE_PRICE_IDS[tier].live;
+
 export const TIME_BASED_TIERS: TimeBasedTier[] = [
   {
     tier: '2D',
-    priceId: process.env.STRIPE_PRICE_ID_2D || '',
-    price: 4.95,
-    label: '2-Day Access',
+    priceId: priceIdFor('2D'),
+    price: 9.0,
+    label: 'Sprint Pass',
     description: 'Perfect for urgent applications',
     durationDays: 2,
     durationLabel: '2 days',
   },
   {
     tier: '7D',
-    priceId: process.env.STRIPE_PRICE_ID_7D || '',
-    price: 10.00,
-    label: '1-Week Access',
+    priceId: priceIdFor('7D'),
+    price: 19.0,
+    label: 'Pro Week',
     description: 'Tailor unlimited resumes for a full week',
     durationDays: 7,
     durationLabel: '1 week',
@@ -40,9 +76,9 @@ export const TIME_BASED_TIERS: TimeBasedTier[] = [
   },
   {
     tier: '30D',
-    priceId: process.env.STRIPE_PRICE_ID_30D || '',
-    price: 20.00,
-    label: '1-Month Access',
+    priceId: priceIdFor('30D'),
+    price: 29.0,
+    label: 'Job Search Month',
     description: 'Comprehensive access for your full job search',
     durationDays: 30,
     durationLabel: '1 month',
@@ -84,4 +120,3 @@ export const TIME_BASED_VALUE_BULLETS = [
   '✓ Full access to all improvements',
   '✓ No subscription - one-time payment',
 ];
-
