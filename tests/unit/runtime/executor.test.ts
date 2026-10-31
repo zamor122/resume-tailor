@@ -59,7 +59,7 @@ describe('StepRuntime — executor', () => {
   });
 
   it('runs independent nodes in parallel', async () => {
-    let r = 0, mx = 0, d: string[] = [];
+    let r = 0, mx = 0; const d: string[] = [];
     const mk = (n: string) => vi.fn(async () => {
       r++; if (r > mx) mx = r;
       await new Promise((y) => setTimeout(y, 5));

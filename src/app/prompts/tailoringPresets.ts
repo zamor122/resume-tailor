@@ -55,9 +55,10 @@ export function buildIntensityInstruction(intensity: IntensityLevel): string {
 - Preserve the candidate's exact voice, terminology, and sentence patterns.`;
     case "targeted":
       return `TRANSFORMATION SCOPE — TARGETED (BALANCED):
-- Rewrite 3–5 of the highest-impact bullets across experience sections plus the professional summary.
-- Use the Google XYZ format (Accomplished [X] as measured by [Y] by doing [Z]) for the most impactful bullets.
-- Weave missing critical ATS keywords naturally into these selected bullets. Keep remaining bullets close to original.`;
+- Rewrite EVERY bullet supplied in this request. The JSON contract below requires exactly one output item per input bullet, so a partial pass is invalid.
+- Strengthen impact, clarity, and ATS alignment in each bullet. Use the Google XYZ format (Accomplished [X] as measured by [Y] by doing [Z]) where it genuinely fits the source content.
+- Weave missing critical ATS keywords naturally, distributing them across bullets rather than repeating the same keyword.
+- Return a bullet unchanged (status "unchanged") only when it already fully covers the role and admits no substantive improvement.`;
     case "overhaul":
       return `TRANSFORMATION SCOPE — COMPLETE OVERHAUL (DEEP RE-FRAME):
 - Completely rewrite EVERY experience bullet and summary into executive-grade language with strong action verbs and Google XYZ structure.
@@ -76,11 +77,11 @@ export function buildMetricsInstruction(mode: MetricsMode): string {
 - Do not invent, estimate, or infer new metrics. If a bullet lacks a metric in the original, keep it metric-free.`;
     case "placeholders":
       return `METRICS MODE — SMART PLACEHOLDERS [X%]:
-- Where a bullet clearly implies measurable impact but no exact number is given, insert an editable bracketed placeholder inline: e.g. "increasing throughput by [X%]", "reducing latency by [Y ms]", "supporting [N] concurrent users".
+- Where a bullet clearly implies measurable impact but no exact number is given, insert an editable bracketed placeholder inline: e.g. "increasing output by [X%]", "reducing turnaround time by [Y hours]", "supporting [N] concurrent cases".
 - Use at most one bracketed placeholder per bullet. Do not invent exact numbers.`;
     case "benchmarks":
       return `METRICS MODE — INDUSTRY KPI BENCHMARKS:
-- Re-frame accomplishments using standard industry KPI frameworks relevant to the target role (e.g. latency, MTTR, uptime, conversion rate, team velocity, budget efficiency).
+- Re-frame accomplishments using standard industry KPI frameworks relevant to the target role (e.g. volume handled, cycle time, accuracy, utilization, conversion rate, budget efficiency).
 - Quantify context realistically based on the candidate's actual responsibilities and domain scale.`;
   }
 }

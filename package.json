@@ -6,12 +6,14 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "webhook:listen": "stripe listen --forward-to http://127.0.0.1:3000/api/stripe/webhook --events checkout.session.completed",
     "webhook:trigger": "stripe trigger checkout.session.completed",
+    "push:preview": "git push origin feature/section-narrative-review-flow",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
@@ -24,6 +26,7 @@
     "@react-pdf/renderer": "^4.3.2",
     "@supabase/supabase-js": "^2.95.3",
     "@types/mailgun-js": "^0.22.19",
+    "@typesafe-ai/sdk": "^0.6.0",
     "@umami/api-client": "^0.77.0",
     "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.3.1",
@@ -45,6 +48,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
+    "@playwright/test": "^1.64.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

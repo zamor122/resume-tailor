@@ -1,123 +1,185 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import type { ResumeSuggestion } from "@/app/types/humanize";
+import React, { useState, useMemo, useEffect } from "react";
+import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
+import { isSubstantiveChange, isolatePreciseOriginalChange } from "@/app/utils/resumeReassemble";
 
-interface ResumeSuggestionReviewerProps {
-  originalResume: string;
+export interface ResumeSuggestionReviewerProps {
+  originalResume?: string;
   suggestions: ResumeSuggestion[];
-  onSuggestionsChange: (updatedSuggestions: ResumeSuggestion[]) => void;
-  isUnlocked?: boolean;
-  onUnlockRequest?: () => void;
+  sectionGroups?: ResumeSectionGroup[];
+  onSectionGroupsChange?: (groups: ResumeSectionGroup[]) => void;
+  onSuggestionsChange?: (suggestions: ResumeSuggestion[]) => void;
+  activeSectionId?: string | null;
+  onActiveSectionChange?: (sectionId: string | null) => void;
   beforeScore?: number;
   matchScore?: number;
+  jobDescription?: string;
+  jobTitle?: string;
+  resumeAST?: any;
+  isUnlocked?: boolean;
+  onUnlockRequest?: () => void;
   activeSuggestionId?: string | null;
-  onActiveSuggestionChange?: (id: string | null) => void;
+  onActiveSuggestionChange?: (suggestionId: string | null) => void;
   className?: string;
+  onFinalize?: () => void;
+  onAcceptSuggestion?: (id: string) => void;
+  onRejectSuggestion?: (id: string) => void;
+  onResetAll?: () => void;
 }
 
 export default function ResumeSuggestionReviewer({
-  originalResume,
-  suggestions,
+  originalResume = "",
+  suggestions = [],
+  sectionGroups,
+  onSectionGroupsChange,
   onSuggestionsChange,
-  isUnlocked = true,
-  onUnlockRequest,
+  activeSectionId,
+  onActiveSectionChange,
   beforeScore = 50,
   matchScore = 85,
+  jobDescription,
+  jobTitle,
+  resumeAST,
+  isUnlocked = true,
+  onUnlockRequest,
   activeSuggestionId,
   onActiveSuggestionChange,
   className = "",
+  onFinalize,
+  onAcceptSuggestion,
+  onRejectSuggestion,
+  onResetAll,
 }: ResumeSuggestionReviewerProps) {
-  const [mode, setMode] = useState<"step" | "list">("step");
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [activeIndex, setActiveIndex] = useState<number>(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>("");
 
-  // Keep currentIndex in sync if parent changes activeSuggestionId
+  // Topmost Layer Filtering: discard trivial newline, whitespace, bullet, and empty changes
+  const substantiveSuggestions = useMemo(
+    () => suggestions.filter((s) => isSubstantiveChange(s.originalText, s.suggestedText)),
+    [suggestions]
+  );
+
+  const totalCount = substantiveSuggestions.length;
+
+  // Keep active index within bounds
   useEffect(() => {
-    if (activeSuggestionId) {
-      const idx = suggestions.findIndex((s) => s.id === activeSuggestionId);
-      if (idx !== -1 && idx !== currentIndex) {
-        setCurrentIndex(idx);
+    if (activeIndex >= totalCount && totalCount > 0) {
+      setActiveIndex(totalCount - 1);
+    }
+  }, [totalCount, activeIndex]);
+
+  // Synchronize when external activeSuggestionId changes
+  useEffect(() => {
+    if (activeSuggestionId && totalCount > 0) {
+      const idx = substantiveSuggestions.findIndex((s) => s.id === activeSuggestionId);
+      if (idx !== -1 && idx !== activeIndex) {
+        setActiveIndex(idx);
       }
     }
-  }, [activeSuggestionId, suggestions]);
+  }, [activeSuggestionId, substantiveSuggestions, totalCount, activeIndex]);
 
-  // Sync active suggestion with parent on step change
-  const currentSug = suggestions[currentIndex] || suggestions[0];
-  const activeId = mode === "step" ? currentSug?.id : activeSuggestionId;
+  // Upfront score calculation divided proportionally per substantive change
+  const acceptedCount = useMemo(
+    () => substantiveSuggestions.filter((s) => s.status === "accepted").length,
+    [substantiveSuggestions]
+  );
+  const dismissedCount = useMemo(
+    () => substantiveSuggestions.filter((s) => s.status === "rejected").length,
+    [substantiveSuggestions]
+  );
+  const remainingCount = useMemo(
+    () => substantiveSuggestions.filter((s) => !s.status || s.status === "pending").length,
+    [substantiveSuggestions]
+  );
 
-  useEffect(() => {
-    if (currentSug?.id && mode === "step") {
-      onActiveSuggestionChange?.(currentSug.id);
+  const totalBoost = Math.max(0, matchScore - beforeScore);
+  const boostPerChange = totalCount > 0 ? totalBoost / totalCount : 0;
+  const currentBoost = Math.round(acceptedCount * boostPerChange);
+  const liveScore = Math.min(100, Math.round(beforeScore + currentBoost));
+
+  // Navigation handler
+  const handleSelectIndex = (idx: number) => {
+    if (idx < 0 || idx >= totalCount) return;
+    setActiveIndex(idx);
+    const sug = substantiveSuggestions[idx];
+    if (sug) {
+      onActiveSuggestionChange?.(sug.id);
     }
-  }, [currentIndex, currentSug?.id, mode]);
+  };
 
-  const filteredSuggestions = useMemo(() => {
-    return suggestions.filter((s) => {
-      if (selectedFilter === "all") return true;
-      if (selectedFilter === "accepted") return s.status !== "rejected";
-      if (selectedFilter === "rejected") return s.status === "rejected";
-      if (selectedFilter === "keyword") return s.category === "keyword";
-      if (selectedFilter === "metric") return s.category === "metric";
-      if (selectedFilter === "summary") return s.category === "summary" || s.section.toLowerCase().includes("summary");
-      if (selectedFilter === "action_verb") return s.category === "action_verb";
-      return true;
-    });
-  }, [suggestions, selectedFilter]);
+  const handleNext = () => {
+    if (activeIndex < totalCount - 1) {
+      handleSelectIndex(activeIndex + 1);
+    }
+  };
 
-  const acceptedCount = useMemo(() => {
-    return suggestions.filter((s) => s.status !== "rejected").length;
-  }, [suggestions]);
+  const handlePrevious = () => {
+    if (activeIndex > 0) {
+      handleSelectIndex(activeIndex - 1);
+    }
+  };
 
-  // Compute category counts
-  const categoryCounts = useMemo(() => {
-    return {
-      keyword: suggestions.filter((s) => s.category === "keyword").length,
-      metric: suggestions.filter((s) => s.category === "metric").length,
-      summary: suggestions.filter((s) => s.category === "summary" || s.section.toLowerCase().includes("summary")).length,
-    };
-  }, [suggestions]);
+  // Change action handlers: toggle status on active change without premature auto-advance
+  const handleAcceptChange = (id?: string) => {
+    const targetId = id || substantiveSuggestions[activeIndex]?.id;
+    if (!targetId) return;
 
-  // Compute live match score based on accepted ratio
-  const liveScore = useMemo(() => {
-    if (suggestions.length === 0) return matchScore;
-    const ratio = acceptedCount / suggestions.length;
-    const boost = matchScore - beforeScore;
-    return Math.round(beforeScore + boost * ratio);
-  }, [suggestions, acceptedCount, beforeScore, matchScore]);
+    const currentSug = suggestions.find((s) => s.id === targetId);
+    // Anti-fraud: If locked and not a free reveal bullet, trigger unlock request
+    if (!isUnlocked && !(currentSug as any)?.isFreeReveal) {
+      onUnlockRequest?.();
+      return;
+    }
 
-  const isCurrentAccepted = currentSug ? currentSug.status !== "rejected" : true;
+    onAcceptSuggestion?.(targetId);
+    const nextStatus: "pending" | "accepted" = currentSug?.status === "accepted" ? "pending" : "accepted";
 
-  const handleToggle = (id: string, newStatus: "accepted" | "rejected", autoAdvance = false) => {
     const updated = suggestions.map((s) =>
-      s.id === id ? { ...s, status: newStatus } : s
+      s.id === targetId ? { ...s, status: nextStatus } : s
     );
-    onSuggestionsChange(updated);
-    if (autoAdvance && currentIndex < suggestions.length - 1) {
-      const nextIdx = currentIndex + 1;
-      setCurrentIndex(nextIdx);
-      onActiveSuggestionChange?.(suggestions[nextIdx]?.id || null);
+    onSuggestionsChange?.(updated);
+  };
+
+  const handleKeepOriginal = (id?: string) => {
+    const targetId = id || substantiveSuggestions[activeIndex]?.id;
+    if (!targetId) return;
+
+    onRejectSuggestion?.(targetId);
+    const currentSug = suggestions.find((s) => s.id === targetId);
+    const nextStatus: "pending" | "rejected" = currentSug?.status === "rejected" ? "pending" : "rejected";
+
+    const updated = suggestions.map((s) =>
+      s.id === targetId ? { ...s, status: nextStatus } : s
+    );
+    onSuggestionsChange?.(updated);
+  };
+
+  const handleAcceptAllRemaining = () => {
+    if (!isUnlocked) {
+      onUnlockRequest?.();
+      return;
     }
+    const updated = suggestions.map((s) =>
+      !s.status || s.status === "pending" ? { ...s, status: "accepted" as const } : s
+    );
+    onSuggestionsChange?.(updated);
   };
 
-  const handleSelectStep = (idx: number) => {
-    setCurrentIndex(idx);
-    onActiveSuggestionChange?.(suggestions[idx]?.id || null);
+  const handleKeepAllRemaining = () => {
+    const updated = suggestions.map((s) =>
+      !s.status || s.status === "pending" ? { ...s, status: "rejected" as const } : s
+    );
+    onSuggestionsChange?.(updated);
   };
 
-  const handleAcceptAll = () => {
-    const updated = suggestions.map((s) => ({ ...s, status: "accepted" as const }));
-    onSuggestionsChange(updated);
-  };
-
-  const handleRejectAll = () => {
-    const updated = suggestions.map((s) => ({ ...s, status: "rejected" as const }));
-    onSuggestionsChange(updated);
-  };
-
+  // Inline editing
   const handleStartEdit = (sug: ResumeSuggestion) => {
+    if (!isUnlocked && !(sug as any)?.isFreeReveal) {
+      onUnlockRequest?.();
+      return;
+    }
     setEditingId(sug.id);
     setEditText(sug.suggestedText);
   };
@@ -126,7 +188,7 @@ export default function ResumeSuggestionReviewer({
     const updated = suggestions.map((s) =>
       s.id === id ? { ...s, suggestedText: editText.trim(), status: "accepted" as const } : s
     );
-    onSuggestionsChange(updated);
+    onSuggestionsChange?.(updated);
     setEditingId(null);
   };
 
@@ -135,266 +197,397 @@ export default function ResumeSuggestionReviewer({
     setEditText("");
   };
 
-  const getCategoryBadge = (cat?: string) => {
-    switch (cat) {
-      case "metric":
-        return { label: "📈 Metric & Impact Boost", color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" };
-      case "summary":
-        return { label: "✨ Summary Alignment", color: "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30" };
-      case "action_verb":
-        return { label: "⚡ Action Verb Polish", color: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" };
-      case "keyword":
-      default:
-        return { label: "🎯 Target Keyword Match", color: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30" };
+  // Highlight keywords cleanly without visual noise
+  const renderHighlightedKeywords = (text: string, keywords?: string[]) => {
+    if (!keywords || keywords.length === 0 || !text) return text;
+    const valid = keywords
+      .map((k) => k.trim())
+      .filter((k) => k.length > 1);
+    if (valid.length === 0) return text;
+
+    try {
+      const escaped = valid.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+      const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+      const parts = text.split(regex);
+      return parts.map((part, i) => {
+        const isKw = valid.some((k) => k.toLowerCase() === part.toLowerCase());
+        if (isKw) {
+          return (
+            <mark
+              key={i}
+              className="bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 px-1 py-0.5 rounded font-semibold border-b border-emerald-500/40"
+            >
+              {part}
+            </mark>
+          );
+        }
+        return part;
+      });
+    } catch {
+      return text;
     }
   };
 
-  if (!suggestions || suggestions.length === 0) {
+  const currentSuggestion = substantiveSuggestions[activeIndex] || substantiveSuggestions[0];
+
+  // Resolve enclosing section group for the active suggestion
+  const currentSectionGroup = useMemo(() => {
+    if (!currentSuggestion) return null;
+    if (sectionGroups && sectionGroups.length > 0) {
+      if (currentSuggestion.jobIndex !== undefined) {
+        const found = sectionGroups.find(
+          (g) => g.sectionType === "experience" && g.jobIndex === currentSuggestion.jobIndex
+        );
+        if (found) return found;
+      }
+      if (currentSuggestion.category === "summary" || currentSuggestion.section?.toLowerCase().includes("summary")) {
+        const found = sectionGroups.find((g) => g.sectionType === "summary");
+        if (found) return found;
+      }
+      if (currentSuggestion.category === "keyword" || currentSuggestion.section?.toLowerCase().includes("skill")) {
+        const found = sectionGroups.find((g) => g.sectionType === "skills");
+        if (found) return found;
+      }
+      if (currentSuggestion.section) {
+        const cleanSec = currentSuggestion.section.toLowerCase();
+        const found = sectionGroups.find((g) => {
+          const cleanTitle = g.title.toLowerCase();
+          return cleanTitle.includes(cleanSec) || cleanSec.includes(cleanTitle);
+        });
+        if (found) return found;
+      }
+    }
+    return null;
+  }, [currentSuggestion, sectionGroups]);
+
+  const activeSectionComputedId = useMemo(() => {
+    if (currentSectionGroup) return currentSectionGroup.id;
+    if (currentSuggestion?.jobIndex !== undefined) {
+      return `section-exp-${currentSuggestion.jobIndex}`;
+    }
+    if (currentSuggestion?.category === "summary" || currentSuggestion?.section?.toLowerCase().includes("summary")) {
+      return "section-summary";
+    }
+    if (currentSuggestion?.category === "keyword" || currentSuggestion?.section?.toLowerCase().includes("skill")) {
+      return "section-skills";
+    }
+    return null;
+  }, [currentSectionGroup, currentSuggestion]);
+
+  const lastReportedSectionRef = React.useRef<string | null>(null);
+
+  // Synchronize active section ID to parent/live document preview
+  useEffect(() => {
+    if (
+      activeSectionComputedId &&
+      activeSectionComputedId !== lastReportedSectionRef.current &&
+      activeSectionComputedId !== activeSectionId
+    ) {
+      lastReportedSectionRef.current = activeSectionComputedId;
+      onActiveSectionChange?.(activeSectionComputedId);
+    }
+  }, [activeSectionComputedId, activeSectionId, onActiveSectionChange]);
+
+  const currentOriginalText = useMemo(() => {
+    if (!currentSuggestion) return "";
+    return isolatePreciseOriginalChange(
+      currentSuggestion.originalText,
+      currentSuggestion.suggestedText,
+      originalResume
+    );
+  }, [currentSuggestion, originalResume]);
+
+  // NOTE (rules-of-hooks): this early return must stay BELOW every hook call.
+  // It previously sat above the useMemo/useRef/useEffect block, so whenever
+  // `totalCount` crossed 0 the hook count changed between renders and React
+  // threw "Rendered more hooks than during the previous render".
+  if (totalCount === 0) {
     return (
-      <div className="p-8 text-center bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
-        <span className="text-3xl">✨</span>
-        <h4 className="font-bold text-gray-800 dark:text-gray-200">No Changes Needed</h4>
-        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-          Your resume already has high keyword alignment with the target job posting.
+      <div className={`p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-center space-y-3 ${className}`}>
+        <span className="text-3xl">🎉</span>
+        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
+          All Sections Aligned
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          Your resume content already matches the key qualifications and requirements for this role.
         </p>
+        {onFinalize && (
+          <button
+            type="button"
+            onClick={onFinalize}
+            className="px-5 py-2 text-xs font-bold rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 shadow transition-all"
+          >
+            Finish & View Resume →
+          </button>
+        )}
       </div>
     );
   }
 
+  const isAddition = !currentOriginalText || !currentOriginalText.trim();
+  const isAcc = currentSuggestion?.status === "accepted";
+  const isRej = currentSuggestion?.status === "rejected";
+  const isPending = !currentSuggestion?.status || currentSuggestion?.status === "pending";
+  const isEditing = Boolean(currentSuggestion && editingId === currentSuggestion.id);
+
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Studio Header: You are in the driver's seat */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-gray-900 via-gray-900/95 to-gray-800 text-white border border-gray-700/80 shadow-xl space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-                Resume Change Studio
+      {/* Agent Audit Rationale Banner */}
+      {currentSectionGroup?.auditRationale && (
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-purple-950/20 border border-cyan-500/30 text-xs shadow-sm flex items-start gap-3 backdrop-blur-xs">
+          <span className="text-xl shrink-0 select-none">🤖</span>
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                Agent Audit Rationale
+              </span>
+              <span className="text-gray-500">•</span>
+              <span className="text-[11px] font-medium text-gray-300 truncate">
+                {currentSectionGroup.title}
               </span>
             </div>
-            <div className="text-sm font-semibold text-gray-200">
-              {acceptedCount} of {suggestions.length} changes accepted
+            <p className="leading-relaxed text-gray-200">
+              {currentSectionGroup.auditRationale}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky Top Header: Tri-Color Progress Bar & ATS Score Boost */}
+      <div className="sticky top-2 z-20 p-4 rounded-2xl bg-gradient-to-r from-gray-900 via-gray-900/95 to-gray-800 text-white border border-gray-700/80 shadow-lg space-y-3 backdrop-blur-md">
+        {/* Score & Counters Header */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
+                Change {activeIndex + 1} of {totalCount}
+              </span>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs font-medium text-gray-300">
+                {substantiveSuggestions[activeIndex]?.section || "Resume Review"}
+              </span>
             </div>
           </div>
 
-          {/* Dynamic Match Score Badge */}
-          <div className="flex items-center gap-3 bg-black/40 px-3.5 py-1.5 rounded-xl border border-gray-700/60 shrink-0">
-            <div className="text-right">
-              <div className="text-[9px] uppercase tracking-wider text-gray-400 font-bold">Estimated ATS</div>
-              <div className="flex items-center gap-1 font-bold">
-                <span className="text-gray-400 text-xs">{beforeScore}%</span>
-                <span className="text-cyan-400 text-[10px]">→</span>
-                <span className="text-emerald-400 text-base font-extrabold">{liveScore}%</span>
-              </div>
-            </div>
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              +{liveScore - beforeScore}%
+          {/* Dynamic Score Badge */}
+          <div className="flex items-center gap-2.5 bg-black/40 px-3 py-1.5 rounded-xl border border-gray-700/60 shrink-0">
+            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">
+              ATS Match:
             </span>
+            <div className="flex items-center gap-1 font-bold">
+              <span className="text-gray-400 text-xs">{beforeScore}%</span>
+              <span className="text-cyan-400 text-[10px]">→</span>
+              <span className="text-emerald-400 text-sm font-extrabold">{liveScore}%</span>
+            </div>
+            {currentBoost > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                +{currentBoost}%
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Interactive Progress Bar with Clickable Step Dots */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between text-[11px] text-gray-400">
-            <span>Change {currentIndex + 1} of {suggestions.length}</span>
-            <span>{Math.round((acceptedCount / suggestions.length) * 100)}% Applied</span>
-          </div>
-          <div className="grid grid-flow-col auto-cols-fr gap-1.5">
-            {suggestions.map((s, idx) => {
-              const isAcc = s.status !== "rejected";
-              const isCur = idx === currentIndex;
+        {/* Tri-Color Segmented Progress Bar */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1 w-full h-3 rounded-full bg-gray-800/80 p-0.5 overflow-hidden">
+            {substantiveSuggestions.map((s, idx) => {
+              const isAcc = s.status === "accepted";
+              const isRej = s.status === "rejected";
+              const isCur = idx === activeIndex;
+
+              const bg = isAcc
+                ? "bg-emerald-500"
+                : isRej
+                ? "bg-rose-500"
+                : "bg-gray-600/80";
+
               return (
                 <button
-                  key={s.id}
+                  key={s.id || idx}
                   type="button"
-                  onClick={() => handleSelectStep(idx)}
-                  className={`h-2 rounded-full transition-all ${
+                  onClick={() => handleSelectIndex(idx)}
+                  title={`Change ${idx + 1}: ${s.section} (${isAcc ? "Accepted" : isRej ? "Kept Original" : "Unreviewed"})`}
+                  className={`h-full flex-1 rounded-[2px] transition-all cursor-pointer ${bg} ${
                     isCur
-                      ? "ring-2 ring-cyan-400 ring-offset-1 ring-offset-gray-900 bg-cyan-400"
-                      : isAcc
-                      ? "bg-emerald-500 hover:bg-emerald-400"
-                      : "bg-gray-700 hover:bg-gray-600"
+                      ? "ring-2 ring-cyan-300 scale-y-125 z-10"
+                      : "opacity-80 hover:opacity-100"
                   }`}
-                  title={`Jump to Change ${idx + 1}: ${s.section}`}
                 />
               );
             })}
           </div>
-        </div>
-      </div>
 
-      {/* Mode Toggle & Batch Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-        <div className="flex items-center bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl border border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full">
-          <button
-            type="button"
-            onClick={() => setMode("step")}
-            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all shrink-0 ${
-              mode === "step"
-                ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-          >
-            🎯 Step-by-Step
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("list")}
-            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all shrink-0 ${
-              mode === "list"
-                ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-          >
-            📋 All Changes ({suggestions.length})
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={handleAcceptAll}
-            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-all active:scale-95"
-            title="Accept all suggested improvements"
-          >
-            ✓ Accept All
-          </button>
-          <button
-            type="button"
-            onClick={handleRejectAll}
-            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 transition-all active:scale-95"
-            title="Keep all original resume lines"
-          >
-            ↺ Keep All Original
-          </button>
-        </div>
-      </div>
-
-      {/* Category & Status Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] px-1 scrollbar-none">
-        <button
-          type="button"
-          onClick={() => setSelectedFilter("all")}
-          className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
-            selectedFilter === "all"
-              ? "bg-cyan-500 text-white shadow-xs"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-          }`}
-        >
-          All ({suggestions.length})
-        </button>
-        {categoryCounts.keyword > 0 && (
-          <button
-            type="button"
-            onClick={() => setSelectedFilter("keyword")}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
-              selectedFilter === "keyword"
-                ? "bg-cyan-600 text-white shadow-xs"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            🎯 Keywords ({categoryCounts.keyword})
-          </button>
-        )}
-        {categoryCounts.metric > 0 && (
-          <button
-            type="button"
-            onClick={() => setSelectedFilter("metric")}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
-              selectedFilter === "metric"
-                ? "bg-emerald-600 text-white shadow-xs"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            📈 Metrics ({categoryCounts.metric})
-          </button>
-        )}
-        {categoryCounts.summary > 0 && (
-          <button
-            type="button"
-            onClick={() => setSelectedFilter("summary")}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
-              selectedFilter === "summary"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            ✨ Summary ({categoryCounts.summary})
-          </button>
-        )}
-      </div>
-
-      {/* MODE 1: STEP-BY-STEP CHANGE CARD */}
-      {mode === "step" && currentSug && (
-        <div className="relative rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg overflow-hidden transition-all">
-          {/* Card Header */}
-          <div className="flex items-center justify-between gap-2 p-3.5 px-4 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-2 min-w-0 flex-wrap">
-              <span className="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-gray-200/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 shrink-0">
-                {currentSug.section}
+          {/* Metric Labels & Bulk Shortcuts */}
+          <div className="flex items-center justify-between text-xs text-gray-400 flex-wrap gap-2 pt-0.5">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                <strong className="text-emerald-400 font-bold">{acceptedCount}</strong> Accepted
               </span>
-              <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${getCategoryBadge(currentSug.category).color}`}>
-                {getCategoryBadge(currentSug.category).label}
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
+                <strong className="text-rose-400 font-bold">{dismissedCount}</strong> Kept
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-gray-500 shrink-0" />
+                <strong className="text-gray-300 font-bold">{remainingCount}</strong> Remaining
               </span>
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
-                disabled={currentIndex === 0}
-                onClick={() => handleSelectStep(Math.max(0, currentIndex - 1))}
-                className="p-1.5 px-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition-colors"
-                title="Previous change"
+                onClick={handleAcceptAllRemaining}
+                disabled={remainingCount === 0}
+                className="px-2 py-0.5 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                title="Accept all remaining unreviewed changes"
               >
-                ← Prev
+                {!isUnlocked ? "🔒 Unlock to Accept All" : "Accept All Remaining"}
               </button>
+              <span className="text-gray-600">•</span>
               <button
                 type="button"
-                disabled={currentIndex === suggestions.length - 1}
-                onClick={() => handleSelectStep(Math.min(suggestions.length - 1, currentIndex + 1))}
-                className="p-1.5 px-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition-colors"
-                title="Next change"
+                onClick={handleKeepAllRemaining}
+                disabled={remainingCount === 0}
+                className="px-2 py-0.5 text-[10px] font-semibold text-gray-400 hover:text-gray-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                title="Keep all remaining unreviewed changes as original"
               >
-                Next →
+                Keep All Remaining
               </button>
             </div>
           </div>
+        </div>
 
-          {/* Card Body: ATS Strategy + Diff */}
-          <div className="p-4 space-y-4">
-            {currentSug.reason && (
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-cyan-500/5 dark:bg-cyan-950/20 border border-cyan-500/20 text-xs text-cyan-900 dark:text-cyan-200 leading-relaxed">
-                <span className="text-base shrink-0">💡</span>
-                <div>
-                  <span className="font-bold">Why the AI suggests this: </span>
-                  {currentSug.reason}
-                </div>
+        {/* Global Navigation Controls */}
+        <div className="flex items-center justify-between pt-1 border-t border-gray-700/60 text-xs">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={activeIndex === 0}
+              onClick={handlePrevious}
+              className="px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            >
+              ← Previous
+            </button>
+            <button
+              type="button"
+              disabled={activeIndex === totalCount - 1}
+              onClick={handleNext}
+              className="px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            >
+              Next →
+            </button>
+          </div>
+
+          {onFinalize && (
+            <button
+              type="button"
+              onClick={onFinalize}
+              className="px-3.5 py-1 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-500 shadow transition-all active:scale-95"
+            >
+              ✓ Finish & View Resume →
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Focused Single-Change Card (Showing ONE change at a time) */}
+      {currentSuggestion && (
+        <div
+          className={`rounded-2xl border bg-white dark:bg-gray-900 shadow-sm overflow-hidden transition-all ${
+            isAcc
+              ? "border-emerald-500/40 dark:border-emerald-500/30"
+              : isRej
+              ? "border-rose-500/40 dark:border-rose-500/30"
+              : "border-gray-200 dark:border-gray-800"
+          }`}
+        >
+          {/* Card Header: Section, Change #, Status & Adjust/Edit */}
+          <div className="px-5 py-3.5 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700/80 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <span className="font-bold text-gray-800 dark:text-gray-200 text-xs flex items-center gap-1.5">
+                  <span>📁</span>
+                  <span>{currentSuggestion.section || "Resume Section"}</span>
+                </span>
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400">
+                  Active Suggestion
+                </span>
               </div>
-            )}
+              {currentSuggestion.jevJudge && (
+                <div className="flex flex-wrap items-center gap-2 mt-1 mb-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Jev Verified
+                  </span>
+                  <span className="text-xs text-emerald-400 font-semibold">
+                    +{currentSuggestion.jevJudge.scoreDeltaPercent}% Match
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    • {currentSuggestion.jevJudge.toneOfVoiceRating === 'strong_authentic' ? 'Authentic Tone' : 'Professional Tone'}
+                  </span>
+                  <span className="text-xs text-amber-400 font-medium">
+                    • {currentSuggestion.jevJudge.overallImpactScore}/5 Impact
+                  </span>
+                </div>
+              )}
+            </div>
 
-            {editingId === currentSug.id ? (
+            <div className="flex items-center gap-2">
+              {isPending ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                  ● Pending Choice
+                </span>
+              ) : isAcc ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                  ✓ Tailored Active
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
+                  ✕ Original Kept
+                </span>
+              )}
+
+              {!isEditing && (
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(currentSuggestion)}
+                  className="px-2.5 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-200/60 dark:hover:bg-gray-700 transition-colors"
+                >
+                  ✎ Adjust / Edit
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Card Body */}
+          <div className="p-5 space-y-4">
+            {/* Inline Edit Mode */}
+            {isEditing ? (
               <div className="space-y-3">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                  Customize wording for this line:
+                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block">
+                  Edit tailored bullet text:
                 </label>
                 <textarea
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
                   rows={3}
-                  className="w-full p-3 text-sm rounded-xl border border-cyan-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  className="w-full p-3 text-sm rounded-xl border border-cyan-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 leading-relaxed"
                 />
-                <div className="flex items-center gap-2 justify-end">
+                <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={handleCancelEdit}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="px-3.5 py-1.5 text-xs font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleSaveEdit(currentSug.id)}
+                    onClick={() => handleSaveEdit(currentSuggestion.id)}
                     className="px-4 py-1.5 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white shadow"
                   >
                     Save & Accept
@@ -402,143 +595,158 @@ export default function ResumeSuggestionReviewer({
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                {/* Original Resume Snippet */}
-                <div className="p-3.5 rounded-xl bg-rose-500/5 dark:bg-rose-950/20 border border-rose-500/20">
-                  <div className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-1">
-                    Your Original Resume Text:
-                  </div>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {currentSug.originalText}
-                  </p>
-                </div>
-
-                {/* AI Proposed Suggestion */}
-                <div
-                  className={`p-3.5 rounded-xl border transition-all ${
-                    isCurrentAccepted
-                      ? "bg-emerald-500/10 dark:bg-emerald-950/30 border-emerald-500/40 text-gray-900 dark:text-white ring-1 ring-emerald-500/30"
-                      : "bg-gray-100 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 text-gray-500"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                      ✨ Proposed Enhancement ({isCurrentAccepted ? "Applied" : "Declined"}):
+              /* Simplified Line Diff: Soft Red (-) & Soft Green (+) */
+              <div className="space-y-3 font-sans">
+                {/* Red Line: Original (Only shown if modifying an existing line) */}
+                {!isAddition && (
+                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-500/10 dark:bg-rose-950/25 border-l-4 border-rose-500 text-rose-950 dark:text-rose-200">
+                    <span className="font-mono font-bold text-rose-600 dark:text-rose-400 select-none shrink-0 text-base leading-snug">
+                      -
                     </span>
-                    {currentSug.keywords && currentSug.keywords.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {currentSug.keywords.map((kw) => (
-                          <span
-                            key={kw}
-                            className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
-                          >
-                            +{kw}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="text-sm leading-relaxed flex-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 block mb-1">
+                        Original (Before):
+                      </span>
+                      <span>{currentOriginalText.replace(/^[-*•–—]\s*/, "")}</span>
+                    </div>
                   </div>
-                  <p className="text-xs sm:text-sm font-medium leading-relaxed">
-                    {currentSug.suggestedText}
-                  </p>
-                </div>
+                )}
+
+                {/* Green Line: Tailored Replacement or Addition */}
+                {!isUnlocked && !(currentSuggestion as any)?.isFreeReveal ? (
+                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/25 border-l-4 border-amber-500 text-amber-950 dark:text-amber-200">
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400 select-none shrink-0 text-base leading-snug">
+                      🔒
+                    </span>
+                    <div className="text-sm leading-relaxed flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                          Tailored Accomplishment (Locked):
+                        </span>
+                        <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                          Access pass required
+                        </span>
+                      </div>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">
+                        {currentSuggestion.suggestedText}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/25 border-l-4 border-emerald-500 text-emerald-950 dark:text-emerald-200">
+                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 select-none shrink-0 text-base leading-snug">
+                      +
+                    </span>
+                    <div className="text-sm leading-relaxed flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                          {isAddition ? "Tailored (Addition):" : "Tailored (Enhanced):"}
+                        </span>
+                        {isAddition && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                            + New bullet added
+                          </span>
+                        )}
+                        {Boolean((currentSuggestion as any)?.isFreeReveal) && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                            ✓ Free sample preview
+                          </span>
+                        )}
+                      </div>
+                      <span>
+                        {renderHighlightedKeywords(
+                          currentSuggestion.suggestedText.replace(/^[-*•–—]\s*/, ""),
+                          currentSuggestion.keywords
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* 3 Driver Actions: Accept / Keep Original / Adjust */}
-            <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-800">
-              <button
-                type="button"
-                onClick={() => handleStartEdit(currentSug)}
-                className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                ✎ Adjust / Edit
-              </button>
+            {/* Plain-English Rationale */}
+            {currentSuggestion.reason && (
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  💡 <span className="font-semibold text-gray-800 dark:text-gray-200">Why this change:</span> {currentSuggestion.reason}
+                </p>
+              </div>
+            )}
 
-              <div className="flex items-center gap-2">
+            {/* Action Controls for Active Change */}
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                {!isUnlocked && !(currentSuggestion as any)?.isFreeReveal ? (
+                  <button
+                    type="button"
+                    onClick={() => onUnlockRequest?.()}
+                    className="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-sm flex items-center gap-1.5 active:scale-95 transition-all"
+                  >
+                    <span>🔒</span>
+                    <span>Unlock Plan to Apply</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleAcceptChange(currentSuggestion.id)}
+                    className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 shadow-sm active:scale-95 ${
+                      isAcc
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow ring-2 ring-emerald-400/30"
+                        : "bg-blue-600 hover:bg-blue-500 text-white border-blue-600 shadow-sm"
+                    }`}
+                  >
+                    {isAcc ? (
+                      <>
+                        <span>✓</span> {isAddition ? "Addition Accepted" : "Accepted"}
+                      </>
+                    ) : (
+                      <span>{isAddition ? "Accept Addition" : "Accept Change"}</span>
+                    )}
+                  </button>
+                )}
+
                 <button
                   type="button"
-                  onClick={() => handleToggle(currentSug.id, "rejected", true)}
-                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 ${
-                    !isCurrentAccepted
-                      ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white border-gray-400"
-                      : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100"
+                  onClick={() => handleKeepOriginal(currentSuggestion.id)}
+                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 active:scale-95 ${
+                    isRej
+                      ? "bg-rose-600 text-white border-rose-600 shadow ring-2 ring-rose-400/30"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                   }`}
                 >
-                  ✕ Keep My Original
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleToggle(currentSug.id, "accepted", true)}
-                  className={`px-5 py-2 text-xs font-bold rounded-xl text-white shadow-md transition-all active:scale-95 ${
-                    isCurrentAccepted
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-emerald-500/20"
-                      : "bg-cyan-600 hover:bg-cyan-500 shadow-cyan-600/20"
-                  }`}
-                >
-                  ✓ Accept Change →
+                  {isRej ? (
+                    <>
+                      <span>✕</span> {isAddition ? "Addition Dismissed" : "Kept Original"}
+                    </>
+                  ) : (
+                    <span>{isAddition ? "Dismiss Addition" : "Keep Original"}</span>
+                  )}
                 </button>
               </div>
+
+              {activeIndex < totalCount - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => handleSelectIndex(activeIndex + 1)}
+                  className="px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors flex items-center gap-1.5 ml-auto border border-gray-200 dark:border-gray-700"
+                >
+                  <span>Next Change</span>
+                  <span>→</span>
+                </button>
+              ) : (
+                onFinalize && (
+                  <button
+                    type="button"
+                    onClick={onFinalize}
+                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow transition-all ml-auto"
+                  >
+                    Finish Review →
+                  </button>
+                )
+              )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* MODE 2: ALL CHANGES LIST VIEW */}
-      {mode === "list" && (
-        <div className="space-y-3">
-          {filteredSuggestions.map((sug) => {
-            const isAccepted = sug.status !== "rejected";
-            const isActive = activeId === sug.id;
-            const badge = getCategoryBadge(sug.category);
-
-            return (
-              <div
-                key={sug.id}
-                onClick={() => onActiveSuggestionChange?.(sug.id)}
-                className={`relative rounded-xl border transition-all p-3.5 space-y-2 cursor-pointer ${
-                  isActive
-                    ? "ring-2 ring-cyan-500 border-cyan-500 bg-cyan-500/5 dark:bg-cyan-950/20 shadow-md"
-                    : isAccepted
-                    ? "bg-white dark:bg-gray-900 border-emerald-500/30 hover:border-emerald-500/60 shadow-sm"
-                    : "bg-gray-50/80 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-70"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-200/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200">
-                      {sug.section}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badge.color}`}>
-                      {badge.label}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      onClick={() => handleToggle(sug.id, isAccepted ? "rejected" : "accepted")}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                        isAccepted
-                          ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                          : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      {isAccepted ? "✓ Accepted" : "+ Accept"}
-                    </button>
-                  </div>
-                </div>
-
-                <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
-                  {sug.suggestedText}
-                </p>
-                {sug.reason && (
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    💡 {sug.reason}
-                  </p>
-                )}
-              </div>
-            );
-          })}
         </div>
       )}
     </div>

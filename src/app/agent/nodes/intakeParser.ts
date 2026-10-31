@@ -1,17 +1,60 @@
 import type { AgentState } from "../state";
 import { parseResume } from "@/app/utils/resumeParser";
+import { parseResumeWithLLM } from "@/app/utils/resumeParserLLM";
+import { resolveStepModel } from "@/app/runtime/cost-guard";
 
 /**
- * Deterministic intake parser node.
- * Breaks the raw resume string into an AST containing contact info,
+ * Intake parser node.
+ * Deconstructs the raw resume string into an AST containing contact info,
  * sections, experience entries, education, skills, and summary.
- * Zero LLM calls, < 15ms execution.
+ *
+ * Fast Path: Runs the deterministic parser first (<10ms).
+ * Gated Fallback: If deterministic parsing yields 0 experience entries,
+ * routes to the bounded LLM parser for ambiguous or unstructured resumes.
  */
 export async function intakeParserNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
   try {
-    const resumeAST = parseResume(state.rawResume);
+    console.log(`[intakeParser] ▶ Intake parser started (rawResume chars: ${state.rawResume?.length || 0})`);
+
+    // 1. Fast deterministic parse first (<10ms)
+    // Runs unless useLLMParser is explicitly requested
+    const deterministicAST = !(state as any).useLLMParser
+      ? parseResume(state.rawResume)
+      : { experience: [], sections: [], contactInfo: {}, education: [], skills: { technical: [], soft: [] }, summary: null };
+
+    if (deterministicAST.experience.length > 0) {
+      console.log(`[intakeParser] ✔ Fast deterministic parser succeeded: ${deterministicAST.experience.length} jobs, summary: ${deterministicAST.summary ? "present" : "none"}, sections: ${deterministicAST.sections.join(", ")}`);
+      return {
+        resumeAST: {
+          contactInfo: deterministicAST.contactInfo,
+          education: deterministicAST.education,
+          experience: deterministicAST.experience,
+          sections: deterministicAST.sections,
+          skills: {
+            technical: deterministicAST.skills?.technical || [],
+            soft: deterministicAST.skills?.soft || [],
+          },
+          summary: deterministicAST.summary,
+        },
+        logs: [
+          `[intakeParser] Resume parsed into AST (${deterministicAST.experience.length} jobs, summary: ${deterministicAST.summary ? "yes" : "no"})`,
+        ],
+      };
+    }
+
+    // 2. Gated Fallback: If deterministic parsing could not extract experience, use bounded LLM parser
+    console.log(`[intakeParser] ⚡ Deterministic parser found 0 jobs; gating to LLM resume parser...`);
+    const resumeAST = await parseResumeWithLLM(
+      state.rawResume,
+      // Route through the runtime cost guard so the per-step model policy applies
+      // to the agent path too (token-light read node -> cheapest model).
+      resolveStepModel("readResume", state.modelKey),
+      state.sessionApiKeys,
+      1 // 1 bounded attempt to preserve pipeline timeout budget
+    );
+    console.log(`[intakeParser] ✔ LLM parser generated: ${resumeAST.experience.length} jobs, summary: ${resumeAST.summary ? "present" : "none"}, sections: ${resumeAST.sections.join(", ")}`);
     return {
       resumeAST: {
         contactInfo: resumeAST.contactInfo,
@@ -24,10 +67,13 @@ export async function intakeParserNode(
         },
         summary: resumeAST.summary,
       },
-      logs: ["[intakeParser] Resume parsed into AST"],
+      logs: [
+        `[intakeParser] Resume parsed into AST (${resumeAST.experience.length} jobs, summary: ${resumeAST.summary ? "yes" : "no"})`,
+      ],
     };
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[intakeParser] ❌ Failed: ${errMsg}`);
     return {
       errors: [`[intakeParser] Failed: ${errMsg}`],
     };

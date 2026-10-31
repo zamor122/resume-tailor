@@ -17,6 +17,8 @@ export interface ResumeRetrieveResponse {
   metrics?: unknown;
   keywordGap?: KeywordGapSnapshot;
   suggestions?: ResumeSuggestion[];
+  sectionGroups?: any[];
+  resumeAST?: any;
   improvementMetrics?: Record<string, unknown>;
   freeReveal?: { section: string; originalText: string; improvedText: string } | null;
   resumeId?: string;

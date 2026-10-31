@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { getAccessInfoServer, isWithinFreeResumeLimitServer } from "@/app/utils/accessManager";
 import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
+import {
+  sanitizeSuggestionsForLocked,
+  sanitizeSectionGroupsForLocked,
+  sanitizeContentMapForLocked,
+} from "@/app/utils/gatingSanitizer";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -80,6 +85,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Anti-fraud: Verify ownership if resume is associated with a registered user
+    if (resume.user_id) {
+      if (!userId || userId !== resume.user_id) {
+        return NextResponse.json(
+          { error: "Access denied. You do not have permission to view this resume." },
+          { status: 403 }
+        );
+      }
+    }
+
     // Verify access: paid access OR within first 3 free resumes (by created_at)
     let hasAccess = false;
     let accessInfo = null;
@@ -91,25 +106,43 @@ export async function POST(req: NextRequest) {
       hasAccess = paidAccess || freeAccess;
     }
 
-    // If no access, return obfuscated content
+    // If no access, return sanitized obfuscated content
     if (!hasAccess) {
       const ms = resume.match_score as { before?: number; after?: number; afterMetrics?: unknown; keywordGap?: { missingKeywords: string[]; foundInResume: string[] } } | null;
-      const suggestions = resume.format_spec?.suggestions || resume.improvement_metrics?.suggestions || [];
+      const rawSuggestions = resume.format_spec?.suggestions || resume.improvement_metrics?.suggestions || [];
+      const rawSectionGroups = resume.format_spec?.sectionGroups || resume.improvement_metrics?.sectionGroups || undefined;
+
+      const safeSuggestions = sanitizeSuggestionsForLocked(rawSuggestions, resume.free_reveal);
+      const safeSectionGroups = sanitizeSectionGroupsForLocked(rawSectionGroups, safeSuggestions);
+      const safeContentMap = sanitizeContentMapForLocked(resume.content_map);
+
       return NextResponse.json({
         success: true,
         originalResume: resume.original_content,
         tailoredResume: resume.obfuscated_content, // Return obfuscated version
         obfuscatedResume: resume.obfuscated_content,
-        contentMap: resume.content_map,
+        contentMap: safeContentMap, // Strip realText from non-free reveal
         jobDescription: resume.job_description,
         jobTitle: resume.job_title ?? null,
         matchScore: ms?.after ?? ms?.before ?? 0,
         metrics: ms?.afterMetrics ?? undefined,
         keywordGap: ms?.keywordGap ?? undefined,
-        suggestions,
-        improvementMetrics: resume.improvement_metrics,
+        suggestions: safeSuggestions, // Masked suggestedText
+        sectionGroups: safeSectionGroups, // Masked tailoredContent & suggestions
+        resumeAST: undefined, // Strip AST to prevent tree extraction
+        improvementMetrics: {
+          ...(resume.improvement_metrics || {}),
+          suggestions: safeSuggestions,
+        },
         freeReveal: resume.free_reveal,
-        formatSpec: resume.format_spec ?? null,
+        formatSpec: resume.format_spec
+          ? {
+              ...resume.format_spec,
+              suggestions: safeSuggestions,
+              sectionGroups: safeSectionGroups,
+              resumeAST: undefined,
+            }
+          : null,
         resumeId: resume.id,
         isUnlocked: false,
         accessInfo: null,
@@ -121,6 +154,8 @@ export async function POST(req: NextRequest) {
     // Return resume data with access info (unobfuscated since user has access)
     const ms = resume.match_score as { before?: number; after?: number; afterMetrics?: unknown; keywordGap?: { missingKeywords: string[]; foundInResume: string[] } } | null;
     const suggestions = resume.format_spec?.suggestions || resume.improvement_metrics?.suggestions || [];
+    const sectionGroups = resume.format_spec?.sectionGroups || resume.improvement_metrics?.sectionGroups || undefined;
+    const resumeAST = resume.format_spec?.resumeAST || resume.improvement_metrics?.resumeAST || undefined;
     return NextResponse.json({
       success: true,
       originalResume: resume.original_content,
@@ -133,6 +168,8 @@ export async function POST(req: NextRequest) {
       metrics: ms?.afterMetrics ?? undefined,
       keywordGap: ms?.keywordGap ?? undefined,
       suggestions,
+      sectionGroups,
+      resumeAST,
       improvementMetrics: resume.improvement_metrics,
       freeReveal: resume.free_reveal,
       formatSpec: resume.format_spec ?? null,

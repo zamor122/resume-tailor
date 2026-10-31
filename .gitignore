@@ -33,6 +33,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -47,3 +48,11 @@ index.scip
 /scip-graph.llm.txt
 /scip-coverage.txt
 /scripts/.tools/
+
+# superpowers / worktrees
+.superpowers/
+.worktrees/
+
+# playwright
+/test-results/
+/playwright-report/

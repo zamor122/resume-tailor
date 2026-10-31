@@ -89,10 +89,6 @@ export function normalizeJDInterpreterResponse(
     cleanedJobDescription = cleanedJobDescription.substring(0, CLEANED_JD_MAX_LENGTH) + "...";
   }
   const jobTitle = typeof o.jobTitle === "string" ? o.jobTitle.trim() || undefined : undefined;
-  // #region agent log
-  const ROLE_NOT_FOUND = "Role description not found in the provided text.";
-  fetch('http://127.0.0.1:7244/ingest/99fdcdcf-6af5-4738-8645-d0c7076b1a2a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'keyword-extraction.ts:normalizeJDInterpreterResponse',message:'cleanedJobDescription from interpreter',data:{len:cleanedJobDescription.length,isSentinel:cleanedJobDescription===ROLE_NOT_FOUND},hypothesisId:'H5',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   return {
     ...base,
     cleanedJobDescription,

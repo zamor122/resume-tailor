@@ -1,6 +1,9 @@
 -- Supabase Database Schema
 -- Run this in Supabase SQL Editor: Dashboard > SQL Editor > New Query
 
+-- Required for the uuid_generate_v4() column defaults used below.
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Access grants table (time-based access - NOT subscriptions)
 -- Users purchase access for a period (2D, 7D, 30D); grants access to ALL resumes when valid
 CREATE TABLE IF NOT EXISTS access_grants (
@@ -14,6 +17,11 @@ CREATE TABLE IF NOT EXISTS access_grants (
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration: revocation tracking (refunds / chargebacks).
+-- See supabase/migrations/20261030000000_access_grant_revocation.sql
+ALTER TABLE access_grants ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ;
+ALTER TABLE access_grants ADD COLUMN IF NOT EXISTS revoked_reason TEXT;
 
 -- Resumes table
 CREATE TABLE IF NOT EXISTS resumes (
@@ -83,6 +91,9 @@ CREATE INDEX IF NOT EXISTS idx_resumes_session_id ON resumes(session_id);
 CREATE INDEX IF NOT EXISTS idx_resumes_customer_email ON resumes(customer_email);
 CREATE INDEX IF NOT EXISTS idx_resumes_user_id_created_at ON resumes(user_id, created_at DESC) WHERE user_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_resumes_session_id_created_at ON resumes(session_id, created_at DESC) WHERE session_id IS NOT NULL;
+-- Version-chain lookups (compare UI). See migration 20261030020000.
+CREATE INDEX IF NOT EXISTS idx_resumes_parent_resume_id ON resumes(parent_resume_id);
+CREATE INDEX IF NOT EXISTS idx_resumes_root_resume_id ON resumes(root_resume_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_resume_id ON payments(resume_id);
@@ -105,20 +116,21 @@ DROP POLICY IF EXISTS "Users can view own payments" ON payments;
 CREATE POLICY "Users can view own access grants" ON access_grants
   FOR SELECT USING ((select auth.uid()) = user_id);
 
--- RLS Policy: Allow anonymous reads by session_id, authenticated reads by user_id
--- This enables the teaser strategy where anonymous users can see their generated resume
+-- RLS Policy: authenticated users may read their own resumes only.
+-- The previous version also allowed `session_id IS NOT NULL`, which — because the
+-- anon/publishable key ships to browsers — let any visitor read every anonymous
+-- resume. Nothing depended on it: the app reads resumes through the service role
+-- (which bypasses RLS) and the anonymous teaser goes via POST /api/resume/retrieve.
+-- See supabase/migrations/20261030010000_harden_resume_rls.sql
 CREATE POLICY "Users can view own resumes" ON resumes
-  FOR SELECT USING (
-    (select auth.uid()) = user_id 
-    OR session_id IS NOT NULL  -- Allow anonymous access by session_id
-  );
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
--- Allow updates to link session_id resumes to user_id (for when user authenticates)
+-- Linking an anonymous resume to an account happens server-side (service role).
+-- Restrict the client-facing UPDATE to the caller's own rows.
 CREATE POLICY "Users can link own resumes" ON resumes
-  FOR UPDATE USING (
-    (select auth.uid()) = user_id 
-    OR (user_id IS NULL AND session_id IS NOT NULL)  -- Allow linking anonymous resumes
-  );
+  FOR UPDATE
+  USING ((select auth.uid()) = user_id)
+  WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can view own sessions" ON sessions
   FOR SELECT USING ((select auth.uid()) = user_id OR user_id IS NULL);

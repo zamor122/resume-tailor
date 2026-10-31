@@ -1,13 +1,22 @@
 import type { AgentState, CandidateProfile } from "../state";
 import { generateWithFallback } from "@/app/services/model-fallback";
+import { resolveStepModel } from "@/app/runtime/cost-guard";
 import { parseJSONFromText } from "@/app/utils/json-extractor";
+import {
+  classifySeniorityTier,
+  extractSuccessPillars,
+  buildCareerArcContext,
+  type SeniorityTier,
+} from "@/app/utils/seniorityClassifier";
+import { detectIndustryCategory } from "@/app/config/domainTaxonomy";
+import { getOrSynthesizeJobKnowledge, resolveCanonicalTitle } from "@/app/services/jobKnowledge";
 
 const PROFILE_PROMPT = (resumeSnippet: string) => `
 You are analyzing a resume to extract candidate profile information.
 Output ONLY valid JSON with these fields:
 {
   "primaryTitle": "most recent job title or target role",
-  "seniorityLevel": "entry|mid|senior|staff|principal|executive",
+  "seniorityLevel": "entry|mid|senior|lead_manager|executive",
   "topSkills": ["skill1", "skill2", ...up to 8 primary skills],
   "domain": "e.g. Full Stack Web, Cloud Infrastructure, Healthcare, Finance",
   "searchQuery": "concise search query to find matching job postings, e.g. Senior Full Stack Engineer remote"
@@ -21,40 +30,104 @@ JSON only, no markdown:`;
 export async function candidateProfilerNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
+  const jd = state.rawJobDescription || state.selectedJobDescription || "";
   try {
     const snippet = state.rawResume.slice(0, 1500);
     const result = await generateWithFallback(
       PROFILE_PROMPT(snippet),
-      state.modelKey,
+      resolveStepModel("readResume", state.modelKey),
       { maxTokens: 250, temperature: 0.1 },
       state.sessionApiKeys
     );
 
-    const profile = parseJSONFromText<CandidateProfile>(result.text);
+    const parsedProfile = parseJSONFromText<CandidateProfile>(result.text);
+
+    // Prioritize target jobTitle over candidate's historical resume title for role classification
+    const targetTitle = state.jobTitle || parsedProfile?.primaryTitle || "Professional";
+    const seniorityTier: SeniorityTier = classifySeniorityTier(targetTitle, jd);
+    const successPillars = extractSuccessPillars(jd, targetTitle);
+    const careerArc = buildCareerArcContext(state.resumeAST?.experience, parsedProfile?.domain);
+
+    const industryCategory = detectIndustryCategory(targetTitle, jd);
+    const canonicalRole = resolveCanonicalTitle(targetTitle, industryCategory);
+    let jobKnowledge = undefined;
+    try {
+      jobKnowledge = await getOrSynthesizeJobKnowledge(
+        targetTitle,
+        jd,
+        state.sessionApiKeys?.["GOOGLE_GENERATIVE_AI_API_KEY"] || state.sessionApiKeys?.["GEMINI_API_KEY"]
+      );
+    } catch {
+      // Fallback silently if knowledge resolution fails
+    }
+
+    const profile: CandidateProfile = {
+      primaryTitle: targetTitle,
+      canonicalRole,
+      industryCategory,
+      seniorityLevel: seniorityTier,
+      seniorityTier,
+      topSkills: parsedProfile?.topSkills || [],
+      domain: parsedProfile?.domain || "General",
+      searchQuery: parsedProfile?.searchQuery || `${targetTitle} job opening`,
+      successPillars,
+      careerArc,
+      jobKnowledge,
+    };
 
     return {
-      candidateProfile: profile ?? {
-        primaryTitle: "Professional",
-        seniorityLevel: "mid",
-        topSkills: [],
-        domain: "General",
-        searchQuery: "professional job opening",
-      },
-      jobTitle: profile?.primaryTitle || state.jobTitle,
+      candidateProfile: profile,
+      jobTitle: state.jobTitle || parsedProfile?.primaryTitle,
+      canonicalRole,
+      industryCategory,
+      jobKnowledge,
+      seniorityTier,
+      successPillars,
+      careerArc,
       logs: [
-        `[candidateProfiler] Profile extracted: ${profile?.primaryTitle || "Professional"} (${profile?.seniorityLevel || "mid"})`,
+        `[candidateProfiler] Profile extracted: ${targetTitle} (${profile.seniorityLevel}, ${industryCategory})`,
       ],
     };
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
+    const fallbackTitle = state.jobTitle || "Professional";
+    const seniorityTier: SeniorityTier = classifySeniorityTier(fallbackTitle, jd);
+    const successPillars = extractSuccessPillars(jd, fallbackTitle);
+    const careerArc = buildCareerArcContext(state.resumeAST?.experience);
+    const industryCategory = detectIndustryCategory(fallbackTitle, jd);
+    const canonicalRole = resolveCanonicalTitle(fallbackTitle, industryCategory);
+    let jobKnowledge = undefined;
+    try {
+      jobKnowledge = await getOrSynthesizeJobKnowledge(
+        fallbackTitle,
+        jd,
+        state.sessionApiKeys?.["GOOGLE_GENERATIVE_AI_API_KEY"] || state.sessionApiKeys?.["GEMINI_API_KEY"]
+      );
+    } catch {
+      // Fallback silently if knowledge resolution fails
+    }
+
     return {
       candidateProfile: {
-        primaryTitle: "Professional",
-        seniorityLevel: "mid",
+        primaryTitle: fallbackTitle,
+        canonicalRole,
+        industryCategory,
+        seniorityLevel: seniorityTier,
+        seniorityTier,
         topSkills: [],
         domain: "General",
-        searchQuery: "professional job opening",
+        searchQuery: `${fallbackTitle} job opening`,
+        successPillars,
+        careerArc,
+        jobKnowledge,
       },
+      jobTitle: state.jobTitle,
+      canonicalRole,
+      industryCategory,
+      jobKnowledge,
+      seniorityTier,
+      successPillars,
+      careerArc,
       errors: [`[candidateProfiler] Fallback used: ${errMsg}`],
     };
   }

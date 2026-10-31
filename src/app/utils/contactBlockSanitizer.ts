@@ -39,8 +39,12 @@ function looksLikeLocation(line: string): boolean {
 function looksLikeDegreeOrUniversity(line: string): boolean {
   const t = line.trim().toLowerCase();
   if (t.length < 6) return false;
-  const degreeWords = /\b(bachelor|master|phd|bs|ms|ba|ma|degree|diploma|certificate|associate)\b/;
-  const universityWords = /\b(university|college|institute|school of)\b/;
+  // Never treat lines with email, URLs, or location state codes as degree duplicates
+  if (/@|https?:\/\/|www\./i.test(t)) return false;
+  if (/,\s*[a-z]{2}\b/i.test(t)) return false;
+
+  const degreeWords = /\b(bachelor(?:'s)?\s+(?:of|in)|master(?:'s)?\s+(?:of|in)|ph\.?d\.?|doctorate|diploma in)\b/i;
+  const universityWords = /\b(university|institute of technology|school of)\b/i;
   return degreeWords.test(t) || universityWords.test(t);
 }
 
@@ -66,7 +70,7 @@ const SECTION_HEADER_SET = new Set([
 ]);
 
 export function findContactEndIndex(lines: string[]): number {
-  for (let i = 0; i < Math.min(lines.length, 12); i++) {
+  for (let i = 0; i < Math.min(lines.length, 30); i++) {
     const line = lines[i].trim();
     if (/^#+\s+/.test(line)) {
       return i;
@@ -75,20 +79,18 @@ export function findContactEndIndex(lines: string[]): number {
     if (clean && SECTION_HEADER_SET.has(clean)) {
       return i;
     }
-  }
-  for (let i = 0; i < Math.min(lines.length, 6); i++) {
-    if (!lines[i].trim() && i > 0) {
+    // Check if line looks like a job header with date range (e.g. "Acme Corp | 2020 - Present")
+    if (/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}\s*[-–—]\s*(?:Present|Current|\d{4})/i.test(line)) {
       return i;
     }
   }
-  return Math.min(lines.length, 2);
+  return lines.length;
 }
 
 /**
  * Sanitize the contact block in the tailored resume using parsed original data.
- * - Removes location line if original had no location.
- * - Removes degree/university lines from contact when Education section exists.
- * - Keeps name, email, phone, links when present in original (no stripping of those here; we only remove invented/duplicate content).
+ * Guarantees that no authentic original personal information (names, emails, phones,
+ * locations, state codes like MA, links, titles, or credentials) is ever removed.
  */
 export function sanitizeContactBlock(
   tailoredResume: string,
@@ -101,18 +103,9 @@ export function sanitizeContactBlock(
 
   const contactLines = lines.slice(0, contactEndIndex);
   const restLines = lines.slice(contactEndIndex);
-  const hasEducationSection = (parsedOriginal?.education?.length ?? 0) > 0;
-  const hasLocationInOriginal = !!(parsedOriginal?.contactInfo?.location?.trim());
 
-  const sanitizedContactLines = contactLines.filter((line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return true;
-    if (looksLikeLocation(trimmed) && !hasLocationInOriginal) return false;
-    if (hasEducationSection && looksLikeDegreeOrUniversity(trimmed)) return false;
-    return true;
-  });
-
-  const sanitizedContact = sanitizedContactLines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  // Preserve all contact lines; do not strip valid user contact info
+  const sanitizedContact = contactLines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
   const result = [sanitizedContact, ...restLines].join("\n");
   return result;
 }

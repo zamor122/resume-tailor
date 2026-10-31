@@ -153,7 +153,35 @@ async function runHumanizeStream(params: {
       }
     }
 
-    if (!completeData) throw new Error("No result received from tailoring stream");
+    // Process any remaining data in the buffer after stream closed
+    if (!completeData && buffer.trim()) {
+      const remainingLines = buffer.split("\n");
+      for (const line of remainingLines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const parsed = JSON.parse(line.slice(6).trim());
+            if (parsed.tailoredResume) {
+              completeData = parsed;
+            }
+            if (parsed.error) {
+              throw new Error(parsed.error);
+            }
+          } catch (e) {
+            if (e instanceof Error && e.message !== "Failed to tailor resume") {
+              if (completeData) break;
+              throw e;
+            }
+          }
+        }
+      }
+    }
+
+    if (!completeData) {
+      if (controller.signal.aborted) {
+        throw new Error("Request timed out. Please try again with a shorter resume or job description.");
+      }
+      throw new Error("The tailoring connection was interrupted before completion. Please try tailoring again.");
+    }
 
     return {
       originalResume: resume,
@@ -162,6 +190,8 @@ async function runHumanizeStream(params: {
       contentMap: completeData.contentMap,
       freeReveal: completeData.freeReveal,
       suggestions: completeData.suggestions || [],
+      sectionGroups: completeData.sectionGroups,
+      resumeAST: completeData.resumeAST,
       improvementMetrics: completeData.improvementMetrics,
       matchScore: completeData.matchScore,
       beforeScore: completeData.beforeScore,
@@ -169,6 +199,7 @@ async function runHumanizeStream(params: {
       validationResult: completeData.validationResult,
       resumeId: completeData.resumeId,
       hasAccess: true,
+      isUnlocked: completeData.isUnlocked !== undefined ? completeData.isUnlocked : true,
     };
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
@@ -268,7 +299,10 @@ export default function SplitScreenTailorView() {
   useEffect(() => {
     let sid = typeof window !== "undefined" ? localStorage.getItem("resume-tailor-session-id") : null;
     if (!sid) {
-      sid = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // This id acts as a bearer token for anonymous resume access, so it must be
+      // unguessable. The previous value embedded Date.now() (fully predictable)
+      // and Math.random() (not a CSPRNG); randomUUID() gives 122 bits.
+      sid = `session-${crypto.randomUUID()}`;
       if (typeof window !== "undefined") {
         localStorage.setItem("resume-tailor-session-id", sid);
       }
@@ -339,7 +373,7 @@ export default function SplitScreenTailorView() {
     setError(null);
     setResults(null);
     setHasStartedTailoring(true);
-    setAgentMessage("Initializing LangGraph agent...");
+    setAgentMessage("Analyzing your resume and target job requirements...");
     setAgentProgress(10);
 
     const source = prefillResumeId ? "prefill" : (resume.trim().length > 0 ? "return_visit" : "blank");
@@ -756,15 +790,21 @@ export default function SplitScreenTailorView() {
               newResume={results.tailoredResume ?? ""}
               originalResume={resume}
               suggestions={results.suggestions || []}
+              sectionGroups={results.sectionGroups}
+              resumeAST={results.resumeAST}
               onSuggestionsChange={(updated) =>
                 setResults((prev) => (prev ? { ...prev, suggestions: updated } : null))
               }
-              isUnlocked={false}
+              onSectionGroupsChange={(updatedGroups) =>
+                setResults((prev) => (prev ? { ...prev, sectionGroups: updatedGroups } : null))
+              }
+              isUnlocked={results.isUnlocked !== undefined ? results.isUnlocked : true}
               onUnlockRequest={() => setShowAuthModalMode("signup")}
               beforeScore={results.beforeScore ?? 50}
               matchScore={results.matchScore ?? 85}
               loading={false}
-              showDownload={false}
+              showDownload={true}
+              downloadJobTitle={detectedJobTitle ?? undefined}
             />
             {results.matchScore != null && (
               <p className="text-sm text-gray-600 dark:text-gray-400">

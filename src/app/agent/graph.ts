@@ -6,10 +6,14 @@ import type {
   BulletPlan,
   ImprovementMetrics,
   ResumeSuggestion,
+  ResumeSectionGroup,
 } from "./state";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { JDInterpreterResult } from "@/app/utils/keyword-extraction";
+import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
+import type { IndustryCategory } from "@/app/config/domainTaxonomy";
+import type { JobRoleKnowledge } from "@/app/services/jobKnowledge";
 
 import { intakeParserNode } from "./nodes/intakeParser";
 import { candidateProfilerNode } from "./nodes/candidateProfiler";
@@ -32,16 +36,25 @@ export const AgentStateAnnotation = Annotation.Root({
 
   resumeAST: Annotation<ParsedResumeForReassemble | undefined>(),
   candidateProfile: Annotation<CandidateProfile | undefined>(),
+  careerArc: Annotation<string | undefined>(),
+  seniorityTier: Annotation<SeniorityTier | undefined>(),
+  successPillars: Annotation<string[] | undefined>(),
   selectedJobDescription: Annotation<string | undefined>(),
   discoveredJobs: Annotation<DiscoveredJob[] | undefined>(),
   companyResearch: Annotation<any>(),
   jobTitle: Annotation<string | undefined>(),
+  canonicalRole: Annotation<string | undefined>(),
+  industryCategory: Annotation<IndustryCategory | undefined>(),
+  jobKnowledge: Annotation<JobRoleKnowledge | undefined>(),
 
   keywordResult: Annotation<JDInterpreterResult | undefined>(),
   sortedMissingKeywords: Annotation<string[] | undefined>(),
   baselineScore: Annotation<number | undefined>(),
 
   bulletPlan: Annotation<BulletPlan | undefined>(),
+  sectionGroups: Annotation<ResumeSectionGroup[] | undefined>(),
+  activeSectionId: Annotation<string | undefined>(),
+  sectionCache: Annotation<Record<string, ResumeSectionGroup> | undefined>(),
   tailoredSummary: Annotation<string | undefined>(),
   tailoredBulletsByJob: Annotation<string[] | undefined>(),
   tailoredSkills: Annotation<string | undefined>(),

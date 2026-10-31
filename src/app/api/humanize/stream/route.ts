@@ -9,10 +9,66 @@ import { checkAndRecordAnonymousTailor } from "@/app/utils/anonymousTailorAllowa
 import { buildResumeAgentGraph } from "@/app/agent/graph";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
+import type { AgentState } from "@/app/agent/state";
+import { getAccessInfoServer } from "@/app/utils/accessManager";
+import { FREE_RESUME_LIMIT } from "@/app/config/pricing";
+import {
+  sanitizeSuggestionsForLocked,
+  sanitizeSectionGroupsForLocked,
+  sanitizeContentMapForLocked,
+} from "@/app/utils/gatingSanitizer";
 
 export const runtime = "nodejs";
 export const preferredRegion = "auto";
-export const maxDuration = 60;
+export const maxDuration = 300;
+
+const NODE_PROGRESS_MAP: Record<string, { progress: number; message: string; step: string }> = {
+  intakeParser: {
+    progress: 25,
+    message: "Analyzing career experience, roles, and skills...",
+    step: "analyzing",
+  },
+  candidateProfiler: {
+    progress: 40,
+    message: "Determining career narrative and seniority level...",
+    step: "profiling",
+  },
+  jobDiscovery: {
+    progress: 48,
+    message: "Discovering target role requirements and qualifications...",
+    step: "discovery",
+  },
+  keywordAnalyzer: {
+    progress: 55,
+    message: "Aligning competencies and qualifications to target role...",
+    step: "matching",
+  },
+  bulletPlanner: {
+    progress: 68,
+    message: "Formulating accomplishment enhancement strategy...",
+    step: "planning",
+  },
+  surgicalTailor: {
+    progress: 90,
+    message: "Elevating accomplishment bullets & verifying authenticity with Jev AI...",
+    step: "tailoring",
+  },
+  reassembleAndScore: {
+    progress: 96,
+    message: "Finalizing tailored resume and measuring score boost...",
+    step: "finalizing",
+  },
+};
+
+function getHeartbeatStatus(progress: number): string {
+  if (progress < 30) return "Reviewing career milestones, work experience, and accomplishments...";
+  if (progress < 45) return "Analyzing career narrative, leadership trajectory, and core strengths...";
+  if (progress < 60) return "Identifying high-priority competencies employers look for...";
+  if (progress < 70) return "Planning strategic accomplishment framing for each role...";
+  if (progress < 80) return "Elevating accomplishment bullets with quantified business outcomes...";
+  if (progress < 90) return "Verifying bullet truthfulness and authentic tone with Jev AI...";
+  return "Synthesizing executive summary and measuring match score boost...";
+}
 
 /**
  * Send SSE event to client
@@ -108,9 +164,15 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       let streamClosed = false;
+      let heartbeatTimer: NodeJS.Timeout | null = null;
+      let currentProgress = 15;
 
       req.signal?.addEventListener?.("abort", () => {
         streamClosed = true;
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
         try {
           controller.close();
         } catch {}
@@ -129,34 +191,79 @@ export async function POST(req: NextRequest) {
         // Step 1: Initial event
         streamClosed = !sendSSE(controller, "status", {
           stage: "preprocessing",
-          message: "Agent initializing resume intake...",
-          progress: 10,
+          message: "Analyzing your career experience and target role...",
+          progress: currentProgress,
         });
         if (streamClosed) return;
 
-        // Build and execute LangGraph Agent
+        // Build and execute LangGraph Agent with real-time update streaming
         const startTime = Date.now();
         const graph = buildResumeAgentGraph();
 
         streamClosed = !sendSSE(controller, "agent_step", {
-          step: "parsing",
-          message: "Parsing resume AST and extracting structure...",
+          step: "analyzing",
+          message: "Reviewing career milestones, skills, and key accomplishments...",
           progress: 20,
         });
         if (streamClosed) return;
 
-        // Execute graph with initial state
-        const agentResult = await graph.invoke({
-          rawResume: resume,
-          rawJobDescription: jobDescription,
-          sessionId,
-          userId: authenticatedUserId ?? undefined,
-          parentResumeId,
-          preferences,
-          modelKey: selectedModel,
-          sessionApiKeys,
-          jobTitle: clientJobTitle,
-        });
+        // Start heartbeat keepalive & progressive tick timer (every 2.5s)
+        heartbeatTimer = setInterval(() => {
+          if (streamClosed) return;
+          if (currentProgress < 94) {
+            currentProgress += 1;
+            sendSSE(controller, "agent_step", {
+              step: "processing",
+              message: getHeartbeatStatus(currentProgress),
+              progress: currentProgress,
+            });
+          } else {
+            try {
+              controller.enqueue(new TextEncoder().encode(": keepalive\n\n"));
+            } catch {}
+          }
+        }, 2500);
+
+        // Execute graph with initial state and node-by-node update streaming
+        let agentResult: AgentState = {} as AgentState;
+        const streamIterable = await graph.stream(
+          {
+            rawResume: resume,
+            rawJobDescription: jobDescription,
+            sessionId,
+            userId: authenticatedUserId ?? undefined,
+            parentResumeId,
+            preferences,
+            modelKey: selectedModel,
+            sessionApiKeys,
+            jobTitle: clientJobTitle,
+          },
+          { streamMode: ["updates", "values"] }
+        );
+
+        for await (const [mode, payload] of streamIterable) {
+          if (streamClosed) break;
+
+          if (mode === "values") {
+            agentResult = payload as AgentState;
+          } else if (mode === "updates" && payload && typeof payload === "object") {
+            const finishedNode = Object.keys(payload)[0];
+            const meta = NODE_PROGRESS_MAP[finishedNode];
+            if (meta) {
+              currentProgress = Math.max(currentProgress, meta.progress);
+              sendSSE(controller, "agent_step", {
+                step: meta.step,
+                message: meta.message,
+                progress: currentProgress,
+              });
+            }
+          }
+        }
+
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
 
         const elapsedMs = Date.now() - startTime;
         console.log(`[Stream API] ✔ Agent graph completed in ${elapsedMs}ms`, {
@@ -172,29 +279,32 @@ export async function POST(req: NextRequest) {
           sendSSE(controller, "jobs_found", { jobs: agentResult.discoveredJobs });
         }
 
+        currentProgress = 98;
         streamClosed = !sendSSE(controller, "agent_step", {
-          step: "tailoring",
-          message: `Applying ${preferences.intensity.toUpperCase()} transformation...`,
-          progress: 70,
+          step: "finalizing",
+          message: "Formatting your tailored resume and computing your match improvement...",
+          progress: currentProgress,
         });
         if (streamClosed) return;
 
         const tailoredResume = agentResult.finalResumeText || resume;
 
-        // Stream sections
-        const sections = tailoredResume.split(/\n(?=#|\n)/);
-        sections.forEach((section: string, index: number) => {
-          if (section.trim()) {
-            if (streamClosed) return;
-            streamClosed = !sendSSE(controller, "section", {
-              index: index + 1,
-              total: sections.length,
-              content: section.trim(),
-              sectionName: section.split("\n")[0].replace(/^#+\s*/, ""),
-            });
-          }
-        });
-        if (streamClosed) return;
+        // Stream sections (best-effort progressive rendering)
+        try {
+          const sections = tailoredResume.split(/\n(?=#|\n)/);
+          sections.forEach((section: string, index: number) => {
+            if (section.trim() && !streamClosed) {
+              sendSSE(controller, "section", {
+                index: index + 1,
+                total: sections.length,
+                content: section.trim(),
+                sectionName: section.split("\n")[0].replace(/^#+\s*/, ""),
+              });
+            }
+          });
+        } catch (e) {
+          console.warn("[Stream API] Section progressive streaming error (continuing to complete payload):", e);
+        }
 
         // Obfuscate for unauthorized / teaser view
         const obfuscationResult = obfuscateResume(resume, tailoredResume);
@@ -238,9 +348,13 @@ export async function POST(req: NextRequest) {
               improvement_metrics: {
                 ...agentResult.improvementMetrics,
                 suggestions: agentResult.suggestions,
+                sectionGroups: agentResult.sectionGroups,
+                resumeAST: agentResult.resumeAST,
               },
               format_spec: {
                 suggestions: agentResult.suggestions,
+                sectionGroups: agentResult.sectionGroups,
+                resumeAST: agentResult.resumeAST,
               },
               free_reveal: obfuscationResult.freeReveal,
               job_title: agentResult.jobTitle || clientJobTitle || null,
@@ -281,20 +395,66 @@ export async function POST(req: NextRequest) {
           contentMapEntries: obfuscationResult.contentMap?.length || 0,
           hasFreeReveal: !!obfuscationResult.freeReveal,
           suggestionCount: agentResult.suggestions?.length || 0,
+          suggestionIds: agentResult.suggestions?.map((s: any) => s.id) || [],
+          sectionGroupsCount: agentResult.sectionGroups?.length || 0,
+          sectionGroupDetails: agentResult.sectionGroups?.map((g: any) => ({
+            id: g.id,
+            title: g.title,
+            suggestionsCount: g.suggestions?.length || 0,
+            hasChanges: g.hasChanges,
+            status: g.status,
+          })),
         });
+
+        // Determine whether user is entitled to full unredacted access
+        let isUnlocked = false;
+        if (authenticatedUserId) {
+          try {
+            const accessInfo = await getAccessInfoServer(authenticatedUserId);
+            const paidAccess = accessInfo?.hasAccess || false;
+
+            // Check if user is within their FREE_RESUME_LIMIT (3) resumes
+            const { count } = await supabaseAdmin
+              .from("resumes")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", authenticatedUserId);
+
+            // If user currently has <= FREE_RESUME_LIMIT resumes (including the newly inserted one), it is free!
+            const withinFreeQuota = (count ?? 0) <= FREE_RESUME_LIMIT;
+            isUnlocked = paidAccess || withinFreeQuota;
+          } catch (e) {
+            console.warn("[Stream API] Access check error, defaulting to locked for safety:", e);
+            isUnlocked = false;
+          }
+        }
+
+        const safeTailoredResume = isUnlocked ? tailoredResume : obfuscationResult.obfuscatedResume;
+        const safeSuggestions = isUnlocked
+          ? (agentResult.suggestions || [])
+          : sanitizeSuggestionsForLocked(agentResult.suggestions || [], obfuscationResult.freeReveal);
+        const safeSectionGroups = isUnlocked
+          ? agentResult.sectionGroups
+          : sanitizeSectionGroupsForLocked(agentResult.sectionGroups, safeSuggestions);
+        const safeResumeAST = isUnlocked ? agentResult.resumeAST : undefined;
+        const safeContentMap = isUnlocked
+          ? obfuscationResult.contentMap
+          : sanitizeContentMapForLocked(obfuscationResult.contentMap);
 
         // Final completion event
         streamClosed = !sendSSE(controller, "complete", {
-          tailoredResume,
-          suggestions: agentResult.suggestions || [],
+          tailoredResume: safeTailoredResume,
+          suggestions: safeSuggestions,
+          sectionGroups: safeSectionGroups,
+          resumeAST: safeResumeAST,
           improvementMetrics: agentResult.improvementMetrics,
           matchScore: agentResult.afterScore ?? 85,
           beforeScore: agentResult.beforeScore ?? 50,
           keywordGap: agentResult.keywordGap,
           validationResult: null,
-          contentMap: obfuscationResult.contentMap,
+          contentMap: safeContentMap,
           freeReveal: obfuscationResult.freeReveal,
           resumeId: storedResumeId,
+          isUnlocked,
           tailoringPreferences: preferences,
           discoveredJobs: agentResult.discoveredJobs,
           agentSteps: agentResult.logs,
@@ -304,6 +464,10 @@ export async function POST(req: NextRequest) {
         if (streamClosed) return;
         controller.close();
       } catch (error: any) {
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
         console.error("[Stream API] ❌ Agent Graph Execution Error:", {
           message: error?.message,
           status: error?.status,
@@ -322,6 +486,11 @@ export async function POST(req: NextRequest) {
           canRetry: error?.status === 429,
           userId: authenticatedUserId ?? "anonymous",
         });
+      } finally {
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
       }
     },
   });

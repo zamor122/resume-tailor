@@ -14,7 +14,10 @@ describe("Tailoring Preferences & Controlling Levers", () => {
 
     const targeted = buildIntensityInstruction("targeted");
     expect(targeted).toContain("TRANSFORMATION SCOPE — TARGETED");
-    expect(targeted).toContain("3–5");
+    // REQ-EVT-02/REQ-STA-01: the planner now dispatches every job chunk with 1:1 bullet mapping, so the
+    // targeted lever must NOT restate the old 3–5-bullet cap (it capped production coverage).
+    expect(targeted).toContain("EVERY bullet supplied");
+    expect(targeted).not.toContain("3–5");
 
     const overhaul = buildIntensityInstruction("overhaul");
     expect(overhaul).toContain("TRANSFORMATION SCOPE — COMPLETE OVERHAUL");

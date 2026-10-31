@@ -104,8 +104,8 @@ describe('POST /api/validate-resume', () => {
     const req = new NextRequest('http://localhost:3000/api/validate-resume', {
       method: 'POST',
       body: JSON.stringify({
-        originalResume: 'Original resume',
-        tailoredResume: 'Tailored resume with extra skills',
+        originalResume: 'Original resume for john@example.com with 10 years of software engineering experience.',
+        tailoredResume: 'Tailored resume',
       }),
     });
 

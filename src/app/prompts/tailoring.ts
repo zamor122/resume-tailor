@@ -88,6 +88,7 @@ The output must read as if written by an experienced professional, not by an AI.
 - NEVER use bold/highlighted keywords for stuffing
 - Keywords must appear inside full sentences describing real work, never as a bullet list of terms
 - Never put keywords or skill lists in parentheses. Do not write (keyword1, keyword2). Use each term inside a full sentence (e.g. "Built services in Python and Django" not "(Python, Django)").
+- NO TRIVIAL OR NEWLINE EDITS: Every modification must be substantive and intentional (adding target skills, tools, action verbs, or quantifiable metrics). NEVER split bullets across lines, insert arbitrary line breaks/newlines, alter whitespace, re-wrap text, or make punctuation-only changes. If an original bullet is already strong, keep it exactly as-is.
 
 PROFESSIONAL ONLY (STRICTLY ENFORCED):
 - The resume must be strictly professional and role-focused: skills, experience, outcomes, technologies. No exceptions.

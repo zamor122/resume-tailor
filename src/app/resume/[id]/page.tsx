@@ -7,6 +7,7 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import { fetchResumeById, fetchResumeVersions } from "@/app/lib/swr-fetchers";
 import TailoredResumeOutput from "@/app/components/TailoredResumeOutput";
 import ImprovementHighlights from "@/app/components/ImprovementHighlights";
+import AtsMatchGauge from "@/app/components/AtsMatchGauge";
 import PaymentGate from "@/app/components/PaymentGate";
 import FreeReveal from "@/app/components/FreeReveal";
 import TierSelectionModal from "@/app/components/TierSelectionModal";
@@ -17,6 +18,8 @@ import AddVersionInfoPopover from "@/app/components/AddVersionInfoPopover";
 import Link from "next/link";
 import { analytics } from "@/app/services/analytics";
 import type { ResumeMetricsSnapshot, KeywordGapSnapshot, ResumeSuggestion } from "@/app/types/humanize";
+import type { ResumeSectionGroup } from "@/app/agent/state";
+import { groupSuggestionsBySection, type ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 
 function normalizeSwrError(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -35,6 +38,8 @@ interface ResumeData {
   matchScore?: number;
   metrics?: ResumeMetricsSnapshot;
   suggestions?: ResumeSuggestion[];
+  sectionGroups?: ResumeSectionGroup[];
+  resumeAST?: ParsedResumeForReassemble;
   improvementMetrics?: {
     quantifiedBulletsAdded?: number;
     atsKeywordsMatched?: number;
@@ -123,6 +128,8 @@ export default function ResumeDetailPage() {
       feedbackComment: json.feedbackComment ?? null,
       keywordGap: json.keywordGap as ResumeData["keywordGap"] ?? undefined,
       suggestions: (json.suggestions || (json as any).improvementMetrics?.suggestions || (json as any).formatSpec?.suggestions || []) as ResumeSuggestion[],
+      sectionGroups: ((json as any).sectionGroups || (json as any).formatSpec?.sectionGroups || (json as any).improvementMetrics?.sectionGroups || ((json.suggestions || (json as any).formatSpec?.suggestions) && json.originalResume ? groupSuggestionsBySection((json.suggestions || (json as any).formatSpec?.suggestions), (json as any).resumeAST || (json as any).formatSpec?.resumeAST, json.originalResume) : undefined)) as ResumeSectionGroup[] | undefined,
+      resumeAST: ((json as any).resumeAST || (json as any).formatSpec?.resumeAST || (json as any).improvementMetrics?.resumeAST || undefined) as ParsedResumeForReassemble | undefined,
     };
   }, [json, id]);
 
@@ -366,9 +373,16 @@ export default function ResumeDetailPage() {
                 newResume={displayResume}
                 originalResume={data.originalResume}
                 suggestions={data.suggestions || []}
+                sectionGroups={data.sectionGroups}
+                resumeAST={data.resumeAST}
                 onSuggestionsChange={(updated) => {
                   if (json) {
                     mutate({ ...json, success: json.success ?? true, suggestions: updated }, false);
+                  }
+                }}
+                onSectionGroupsChange={(updatedGroups) => {
+                  if (json) {
+                    mutate({ ...json, sectionGroups: updatedGroups }, false);
                   }
                 }}
                 loading={false}
@@ -387,6 +401,7 @@ export default function ResumeDetailPage() {
                 className="min-h-[320px]"
                 addedLabel="Added in your tailored resume"
                 removedLabel="Removed from your original"
+                layout="side-by-side"
               />
             )}
             {viewMode === "compare" && (
@@ -434,6 +449,7 @@ export default function ResumeDetailPage() {
                     originalText={displayResume}
                     tailoredText={compareData.tailoredResume}
                     className="min-h-[320px]"
+                    layout="side-by-side"
                     addedLabel={
                       (() => {
                         const sel = versions.find((v) => v.id === compareWithVersionId);
@@ -461,12 +477,17 @@ export default function ResumeDetailPage() {
         <div className={`${viewMode === "resume" ? "hidden" : "md:col-span-4"} space-y-6 ${mobileTab === "stats" ? "block" : "hidden md:block"}`}>
           {/* Match Strength Card */}
           <div className="output-container p-5 sm:p-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center justify-between">
-              <span>Job Match Strength</span>
-              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {matchScore}%
-              </span>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Job Match Strength
             </h3>
+            <AtsMatchGauge
+              score={matchScore}
+              sublabel={
+                data.metrics?.criticalKeywords && data.metrics.criticalKeywords.total > 0
+                  ? `${data.metrics.criticalKeywords.matched}/${data.metrics.criticalKeywords.total} critical keywords`
+                  : undefined
+              }
+            />
             {data.metrics && (
               <div className="space-y-2 text-xs sm:text-sm pt-2 border-t border-gray-100 dark:border-gray-800">
                 {data.metrics.jdCoverage && data.metrics.jdCoverage.total > 0 && (

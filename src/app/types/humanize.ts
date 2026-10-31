@@ -1,5 +1,6 @@
 import type { TailoringPreferences } from "./tailoringPreferences";
-import type { DiscoveredJob, ResumeSuggestion } from "@/app/agent/state";
+import type { DiscoveredJob, ResumeSuggestion, ResumeSectionGroup } from "@/app/agent/state";
+import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 
 export type { ResumeSuggestion };
 
@@ -28,6 +29,8 @@ export interface HumanizeResponse {
   contentMap?: Record<string, string> | null;
   freeReveal?: { section: string; originalText: string; improvedText: string } | null;
   suggestions?: ResumeSuggestion[];
+  sectionGroups?: ResumeSectionGroup[];
+  resumeAST?: ParsedResumeForReassemble;
   improvementMetrics?: {
     quantifiedBulletsAdded?: number;
     atsKeywordsMatched?: number;
@@ -50,6 +53,8 @@ export interface HumanizeResponse {
   companyResearch?: unknown;
   resumeId?: string | null;
   hasAccess?: boolean;
+  /** Whether the tailored resume is unlocked (paid access or within free quota) */
+  isUnlocked?: boolean;
   accessInfo?: unknown;
   /** Agent specific data */
   tailoringPreferences?: TailoringPreferences;

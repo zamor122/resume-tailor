@@ -1,10 +1,6 @@
-import { NextResponse } from "next/server";
-import Stripe from "stripe";
+import { NextRequest, NextResponse } from "next/server";
 import { getTierConfig } from "@/app/config/pricing";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2026-01-28.clover",
-});
+import { stripe } from "@/app/lib/stripe";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -13,9 +9,18 @@ export const maxDuration = 30;
  * GET /api/stripe/debug-coupons
  * Returns Stripe coupon/promotion code setup and eligibility for our prices.
  * Use this to debug why promotion codes don't work.
+ * Protected in production to avoid exposing coupon configurations.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    if (process.env.NODE_ENV === "production") {
+      const authHeader = req.headers.get("authorization");
+      const secret = process.env.BLOG_ADMIN_SECRET || process.env.CRON_SECRET;
+      if (!secret || authHeader !== `Bearer ${secret}`) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+    }
+
     if (!process.env.STRIPE_SECRET_KEY) {
       return NextResponse.json(
         { error: "STRIPE_SECRET_KEY not configured" },
@@ -149,7 +154,9 @@ export async function GET() {
     return NextResponse.json(
       {
         error: "Failed to fetch coupon info",
-        message: error instanceof Error ? error.message : String(error),
+        ...(process.env.NODE_ENV !== "production" && {
+          message: error instanceof Error ? error.message : String(error),
+        }),
       },
       { status: 500 }
     );

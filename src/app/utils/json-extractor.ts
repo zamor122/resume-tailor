@@ -73,7 +73,7 @@ function fixCommonJsonErrors(jsonString: string): string {
  * Safely parses JSON from text that may contain reasoning or other content
  */
 export function parseJSONFromText<T = any>(text: string): T | null {
-  let jsonString = extractJSONFromText(text);
+  const jsonString = extractJSONFromText(text);
   
   if (!jsonString) {
     return null;

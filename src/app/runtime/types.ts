@@ -5,7 +5,7 @@ import type { GenerateContentResult, ModelOptions } from '@/app/types/model';
 export type StepId = string;
 
 /** Cost classification for any step that might call an LLM. */
-export type CostClass = 'free' | 'paid-opt-in';
+export type CostClass = 'free' | 'penny' | 'paid-opt-in';
 
 /** A key into context.ts selectors that names a slice of input data for a step. */
 export type InputSelector = string;

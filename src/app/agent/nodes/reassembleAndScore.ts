@@ -3,8 +3,11 @@ import {
   applySuggestionsToOriginal,
   reassembleResumeFromSections,
   buildContactFromOriginal,
+  getBulletsList,
+  isSubstantiveChange,
+  isolatePreciseOriginalChange,
 } from "@/app/utils/resumeReassemble";
-import { sanitizeResumeForATS } from "@/app/utils/atsSanitizer";
+import { lightSanitizeForATS } from "@/app/utils/atsSanitizer";
 import { deduplicateResumeSections } from "@/app/utils/resumeSectionDedupe";
 import { rewriteParentheticalKeywords } from "@/app/utils/keywordParenthesesCleaner";
 import { validateOrFixEducationBlock } from "@/app/utils/educationValidator";
@@ -13,6 +16,7 @@ import {
   replaceContactBlock,
 } from "@/app/utils/contactBlockSanitizer";
 import { computeKeywordGap } from "../utils/keywordGap";
+import { evaluateResumeAlignmentWithJev } from "@/app/services/jev";
 
 export async function reassembleAndScoreNode(
   state: AgentState
@@ -55,17 +59,29 @@ export async function reassembleAndScoreNode(
       const expList = resumeAST.experience;
       tailoredBulletsByJob.forEach((newBullets, jobIdx) => {
         const origExp = expList[jobIdx];
-        if (origExp && newBullets && newBullets.trim() !== origExp.description.trim()) {
-          activeSuggestions.push({
-            id: `sug-job-${jobIdx}-auto`,
-            section: origExp.company || "Experience",
-            originalText: origExp.description.trim(),
-            suggestedText: newBullets.trim(),
-            reason: "Targeted keyword and achievement enhancement",
-            keywords: [],
-            status: "accepted",
-          });
-        }
+        if (!origExp || !newBullets) return;
+
+        const origList = getBulletsList(origExp.description);
+        const newList = getBulletsList(newBullets);
+
+        newList.forEach((nb, bulletIdx) => {
+          const cleanN = nb.replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
+          const cleanO = (origList[bulletIdx] || "").replace(/^([-*•–—]|\d+\.)\s*/, "").trim();
+
+          if (cleanN && isSubstantiveChange(cleanO, cleanN)) {
+            activeSuggestions.push({
+              id: `sug-job-${jobIdx}-b-${bulletIdx}-auto`,
+              section: origExp.company ? `${origExp.company} – ${origExp.title || "Role"}` : "Experience",
+              originalText: cleanO,
+              suggestedText: cleanN,
+              reason: "Targeted keyword and achievement enhancement",
+              keywords: [],
+              status: "accepted",
+              jobIndex: jobIdx,
+              bulletIndex: bulletIdx,
+            });
+          }
+        });
       });
     }
   }
@@ -78,7 +94,7 @@ export async function reassembleAndScoreNode(
   }
 
   // 2. Deterministic ATS formatting hygiene (normalize bullet glyphs and date separators)
-  finalResume = sanitizeResumeForATS(finalResume);
+  finalResume = lightSanitizeForATS(finalResume);
   finalResume = rewriteParentheticalKeywords(finalResume);
 
   // 3. Compute final keyword gap
@@ -90,7 +106,30 @@ export async function reassembleAndScoreNode(
   const matchRatio = Math.min(1, foundCount / Math.max(1, totalKeywords));
 
   const targetBoost = preferences.intensity === "minimal" ? 15 : preferences.intensity === "targeted" ? 25 : 35;
-  const afterScore = Math.min(98, Math.max(baselineScore + 10, Math.round(baselineScore + targetBoost * matchRatio)));
+  let beforeScore = baselineScore;
+  let afterScore = Math.min(98, Math.max(baselineScore + 10, Math.round(baselineScore + targetBoost * matchRatio)));
+
+  const jd = state.selectedJobDescription?.trim();
+  if (jd && rawResume) {
+    try {
+      const apiKey = state.sessionApiKeys?.['TYPESAFE_API_KEY'];
+      const [beforeEval, afterEval] = await Promise.all([
+        evaluateResumeAlignmentWithJev(rawResume, jd, apiKey),
+        evaluateResumeAlignmentWithJev(finalResume, jd, apiKey),
+      ]);
+      if (
+        beforeEval &&
+        Number.isFinite(beforeEval.matchScore) &&
+        afterEval &&
+        Number.isFinite(afterEval.matchScore)
+      ) {
+        beforeScore = beforeEval.matchScore;
+        afterScore = Math.min(98, Math.max(beforeScore + 5, afterEval.matchScore));
+      }
+    } catch (err) {
+      console.warn("[reassembleAndScore] Jev alignment evaluation failed, falling back to token scoring:", err);
+    }
+  }
 
   // 5. Count metrics and modifications
   const placeholderCount = (finalResume.match(/\[[^\]]+\]/g) || []).length;
@@ -102,20 +141,20 @@ export async function reassembleAndScoreNode(
   const improvementMetrics: ImprovementMetrics = {
     bulletsRewritten: totalBulletsModified,
     keywordsAdded: keywordGap.foundInResume.length,
-    scoreImprovement: afterScore - baselineScore,
+    scoreImprovement: afterScore - beforeScore,
     intensityApplied: preferences.intensity,
     metricsInjected: placeholderCount,
   };
 
   return {
     finalResumeText: finalResume,
-    beforeScore: baselineScore,
+    beforeScore,
     afterScore,
     keywordGap,
     suggestions: activeSuggestions,
     improvementMetrics,
     logs: [
-      `[reassembleAndScore] Reassembled resume | Match score: ${baselineScore}% -> ${afterScore}% (+${afterScore - baselineScore}%) | Suggestions: ${activeSuggestions.length}`,
+      `[reassembleAndScore] Reassembled resume | Match score: ${beforeScore}% -> ${afterScore}% (+${afterScore - beforeScore}%) | Suggestions: ${activeSuggestions.length}`,
     ],
   };
 }

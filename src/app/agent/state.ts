@@ -1,13 +1,23 @@
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { JDInterpreterResult } from "@/app/utils/keyword-extraction";
+import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
+import type { JevJudgeResult } from "@/app/services/jev";
+import type { IndustryCategory } from "@/app/config/domainTaxonomy";
+import type { JobRoleKnowledge } from "@/app/services/jobKnowledge";
 
 export interface CandidateProfile {
   primaryTitle: string;
+  canonicalRole?: string;
+  industryCategory?: IndustryCategory;
   seniorityLevel: string;
   topSkills: string[];
   domain: string;
   searchQuery: string;
+  seniorityTier?: SeniorityTier;
+  successPillars?: string[];
+  careerArc?: string;
+  jobKnowledge?: JobRoleKnowledge;
 }
 
 export interface DiscoveredJob {
@@ -18,15 +28,30 @@ export interface DiscoveredJob {
   snippet: string;
 }
 
+export type RecencyTier = "recent_deep" | "mid_career" | "foundational";
+
+export interface JobAudit {
+  jobIndex: number;
+  hasChanges: boolean;
+  bulletIndices: number[] | 'all';
+  auditRationale: string;
+  recencyTier?: RecencyTier;
+}
+
+export interface JobBulletChange {
+  jobIndex: number;
+  bulletIndices: number[] | 'all';
+  reason: string;
+  recencyTier?: RecencyTier;
+}
+
 export interface BulletPlan {
   summaryChange: boolean;
-  jobBulletChanges: Array<{
-    jobIndex: number;
-    bulletIndices: number[] | 'all';
-    reason: string;
-  }>;
+  jobBulletChanges: JobBulletChange[];
+  jobAudits?: JobAudit[];
   skillsChange: boolean;
 }
+
 
 export interface ImprovementMetrics {
   bulletsRewritten: number;
@@ -44,9 +69,28 @@ export interface ResumeSuggestion {
   reason: string;
   keywords: string[];
   category?: "keyword" | "metric" | "summary" | "action_verb" | "streamline";
-  status?: "accepted" | "rejected";
+  status?: "pending" | "accepted" | "rejected";
   jobIndex?: number;
   bulletIndex?: number;
+  jevJudge?: JevJudgeResult;
+}
+
+export type SectionGroupType = "experience" | "skills" | "summary" | "other";
+export type SectionTailorStatus = "pending" | "tailoring" | "ready" | "reviewed" | "unchanged";
+
+export interface ResumeSectionGroup {
+  id: string;
+  sectionType: SectionGroupType;
+  title: string;
+  subtitle?: string;
+  jobIndex?: number;
+  orderIndex: number;
+  status: SectionTailorStatus;
+  auditRationale: string;
+  suggestions: ResumeSuggestion[];
+  originalContent: string;
+  tailoredContent?: string;
+  hasChanges: boolean;
 }
 
 export interface AgentLog {
@@ -69,12 +113,18 @@ export interface AgentState {
   // Parsed Structures
   resumeAST?: ParsedResumeForReassemble;
   candidateProfile?: CandidateProfile;
+  careerArc?: string;
+  seniorityTier?: SeniorityTier;
+  successPillars?: string[];
 
   // Job Target
   selectedJobDescription?: string;
   discoveredJobs?: DiscoveredJob[];
   companyResearch?: any;
   jobTitle?: string;
+  canonicalRole?: string;
+  industryCategory?: IndustryCategory;
+  jobKnowledge?: JobRoleKnowledge;
 
   // Keyword Analysis
   keywordResult?: JDInterpreterResult;
@@ -83,6 +133,11 @@ export interface AgentState {
 
   // Bullet Planning
   bulletPlan?: BulletPlan;
+
+  // Section Orchestration
+  sectionGroups?: ResumeSectionGroup[];
+  activeSectionId?: string;
+  sectionCache?: Record<string, ResumeSectionGroup>;
 
   // Generation Results
   tailoredSummary?: string;
