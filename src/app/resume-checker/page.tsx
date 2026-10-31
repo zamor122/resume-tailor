@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 const FAQ_ITEMS = [
   {
     q: "What is an ATS Resume Checker?",
-    a: "An ATS (Applicant Tracking System) Resume Checker scans your resume using the exact parsing algorithms that corporate ATS software (Workday, Greenhouse, Lever, Taleo) uses to filter applicants. It checks section formatting, header hierarchy, keyword density, and contact information readability.",
+    a: "An ATS (Applicant Tracking System) Resume Checker checks your resume the way keyword-parsing screening software reads it: section formatting, header hierarchy, keyword coverage, and contact information readability. Many large employers use systems like Workday, Greenhouse, Lever or Taleo to filter on keyword match before a human sees an application.",
   },
   {
     q: "Is this ATS resume scan completely free?",
@@ -32,7 +32,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What is a good ATS resume score?",
-    a: "A score of 80% or higher is considered strong for most automated filters. Scores below 65% often fail initial keyword and formatting thresholds, preventing recruiters from ever seeing your application.",
+    a: "There is no single universal threshold — every employer configures its filters differently, so treat the score as a relative signal rather than a pass mark. A higher score means more of the job description's key language is present in your resume; the useful next step is the missing-keyword list, which tells you what to add.",
   },
   {
     q: "How do I fix ATS errors on my resume?",
@@ -54,7 +54,7 @@ export default function ResumeCheckerPage() {
           Free ATS Resume Checker & Score Scanner
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-          Over 75% of resumes are discarded by Applicant Tracking Systems before a human recruiter reads them. Check your ATS score and fix formatting gaps in seconds.
+          Most large employers screen resumes with Applicant Tracking Systems before a human ever reads them. Check your ATS score and fix formatting gaps in seconds.
         </p>
       </div>
 
