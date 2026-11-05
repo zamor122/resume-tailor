@@ -26,12 +26,16 @@ import { extractTextFromPDF } from "@/app/utils/pdfExtractor";
 import { analytics } from "@/app/services/analytics";
 import { saveResumeData, loadResumeData, clearResumeData } from "@/app/utils/dataPersistence";
 import { TAILORING_PRESET_LABELS } from "@/app/prompts/tailoringPresets";
-import { FREE_RESUME_LIMIT } from "@/app/config/pricing";
+import { FREE_RESUME_LIMIT, TIME_BASED_TIERS } from "@/app/config/pricing";
 import type { HumanizeResponse } from "@/app/types/humanize";
 
 export { type HumanizeResponse } from "@/app/types/humanize";
 
 const TAILOR_TIMEOUT_MS = 62_000; // Slightly over 60s maxDuration to detect timeout
+
+// Entry price for the hero price-anchor. Derived from the single source of truth
+// (TIME_BASED_TIERS) so the advertised price can never drift from what Stripe charges.
+const ENTRY_PRICE = Math.min(...TIME_BASED_TIERS.map((t) => t.price)).toFixed(2);
 
 async function runHumanizeStream(params: {
   resume: string;
@@ -538,11 +542,14 @@ export default function SplitScreenTailorView() {
       <ParallaxContainer className="container mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10 max-w-6xl space-y-8 md:space-y-12">
         {/* Hero */}
         <section className="py-8 md:py-12 text-center" data-parallax="0.05">
+          <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-cyan-600 dark:text-cyan-400 mb-3">
+            Free · No login to check · Nothing auto-renews
+          </p>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-3 md:mb-4">
-            Free AI Resume Tailor: Optimize Your Resume for Any Job Posting
+            Tailor your resume to any job — in seconds.
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6">
-            Tailor your resume to each job in seconds. Still you—just refined.
+            Paste your resume and a job description. Get your ATS keyword-match score and the keywords you&apos;re missing. Still you — just refined.
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
             First {FREE_RESUME_LIMIT} free — no credit card required.
@@ -559,6 +566,9 @@ export default function SplitScreenTailorView() {
           >
             Get Started
           </button>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-4">
+            Free AI resume tailor to optimize your resume for any job posting — one-time payment from ${ENTRY_PRICE}, nothing auto-renews.
+          </p>
         </section>
 
         {parentResumeId && prefillData && (
