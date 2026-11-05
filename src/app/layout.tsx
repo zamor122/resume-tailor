@@ -96,9 +96,14 @@ export const metadata: Metadata = {
     site: "@airesumetailor",
     images: ["/og-image.jpg"],
   },
-  alternates: {
-    canonical: "https://airesumetailor.com",
-  },
+  // NOTE: deliberately NO root-level `alternates.canonical` here.
+  //
+  // Next.js metadata is INHERITED by every route, so setting a canonical at the root
+  // made every page that did not override it declare the HOMEPAGE as its own canonical —
+  // i.e. it told search engines "this page is a duplicate of /, do not index me".
+  // That silently de-indexed the six /alternatives/* competitor pages, /blog, /faq,
+  // /pricing and /resume-optimizer, which is why months of published content produced no
+  // organic traffic. Pages now self-canonicalize, or set their own `alternates.canonical`.
   authors: [{ name: "AI Resume Tailor" }],
   category: "Career Tools",
   classification: "Resume Builder",
