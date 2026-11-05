@@ -86,23 +86,33 @@ export function buildMetricsInstruction(mode: MetricsMode): string {
   }
 }
 
+/**
+ * Truthfulness ceiling appended to every seniority framing lever.
+ *
+ * The seniority lever sets the TONE the candidate wants, but it must never become permission to
+ * fabricate scope. The tailoring pipeline's authenticity judge rejects rewrites that claim more
+ * ownership or scale than the source supports, so this bound keeps the lever honest.
+ */
+const SENIORITY_TRUTHFULNESS_BOUND =
+  "\n- TRUTHFULNESS CEILING: Apply this register ONLY where the original text supports it. Never upgrade the candidate's real scope, ownership, leadership, or metrics to match the requested register — the framing sets tone, not permission to invent scope.";
+
 /** Convert seniorityLevel lever -> prompt instruction block */
 export function buildSeniorityInstruction(level: SeniorityLevel): string {
   switch (level) {
     case "mid":
       return `SENIORITY FRAMING — MID-LEVEL:
 - Use contributor-focused language highlighting execution and technical craft.
-- Verbs: Built, Developed, Implemented, Contributed to, Maintained, Analyzed, Integrated.`;
+- Verbs: Built, Developed, Implemented, Contributed to, Maintained, Analyzed, Integrated.${SENIORITY_TRUTHFULNESS_BOUND}`;
     case "senior":
       return `SENIORITY FRAMING — SENIOR / STAFF:
-- Use ownership, architectural, and scope language.
-- Verbs: Led, Architected, Designed, Spearheaded, Owned, Drove, Established, Mentored.
-- Highlight system scale, technical trade-offs, and cross-functional collaboration.`;
+- Use ownership, architectural, and scope language ONLY where the original text supports it.
+- Verbs (use only when the source action genuinely matches): Led, Architected, Designed, Owned, Established, Mentored. Do NOT use these to inflate a plain build/write/fix action.
+- Highlight system scale, technical trade-offs, and cross-functional collaboration only where the original states them.${SENIORITY_TRUTHFULNESS_BOUND}`;
     case "executive":
       return `SENIORITY FRAMING — LEAD / EXECUTIVE:
-- Use strategic, organizational, and business-impact language.
-- Verbs: Directed, Scaled, Transformed, Championed, Defined, Orchestrated.
-- Frame accomplishments in terms of org-level ROI, efficiency, team growth, and strategic outcomes.`;
+- Use strategic, organizational, and business-impact language ONLY where the original text supports it.
+- Verbs (use only when the source action genuinely matches): Directed, Scaled, Transformed, Championed, Defined, Orchestrated. Do NOT use these to inflate a plain build/write/fix action.
+- Frame accomplishments in terms of org-level ROI, efficiency, team growth, and strategic outcomes only where the original states them.${SENIORITY_TRUTHFULNESS_BOUND}`;
   }
 }
 

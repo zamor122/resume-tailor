@@ -42,7 +42,7 @@ function buildSeniorityCalibration(seniorityTier?: SeniorityTier | string): stri
     lead_manager:
       "Emphasize workflow orchestration, stakeholder alignment, resource governance, and team leadership scope (headcount, scheduling, performance, cross-department coordination).",
     senior:
-      "Emphasize strategic trade-offs, mentoring and developing others, risk mitigation, and personal ownership of end-to-end outcomes.",
+      "Where the original text genuinely supports it, surface strategic trade-offs, mentoring and developing others, risk mitigation, and personal ownership. Do NOT add any of these dimensions if the source bullet does not state them — never manufacture scope.",
     mid: "Emphasize execution rigor, procedural delivery, and dependable hands-on contribution within established workflows.",
     entry:
       "Emphasize execution rigor, procedural delivery, and hands-on contribution that demonstrates readiness to grow.",
@@ -64,7 +64,7 @@ function buildRecencyDepthGuidance(recencyTier?: string): string {
   if (!tier) return "";
   const tierGuidance: Record<string, string> = {
     recent_deep:
-      "Give these achievements maximum depth: highlight strategic scope, leadership ownership, and detailed, substantiated outcomes.",
+      "Give these achievements more depth by expanding on the strategic scope, ownership, and outcomes the original text ALREADY states. Never invent scope, leadership, or outcomes the source does not support.",
     mid_career:
       "Keep these achievements concise, emphasizing transferable competencies and proven milestones.",
     foundational:
@@ -125,14 +125,37 @@ function buildAuthenticMetricsBlock(
     ? domainTaxonomy.authenticMetricExamples.slice(0, 5).join(", ")
     : "";
 
-  const exampleSuffix = metricExamples ? ` (e.g. ${metricExamples})` : "";
+  const exampleSuffix = metricExamples
+    ? ` Relevant metric types for this role (reference only — never invent a value): ${metricExamples}.`
+    : "";
 
   return `AUTHENTIC METRICS ONLY:
 - Do NOT invent artificial percentage metrics (e.g. "by 35%", "increased revenue 40%") unless the original text states them.
-- Instead quantify with authentic scope, volume, headcount, compliance standards, or concrete operational outcomes${exampleSuffix}.`;
+- Do NOT add scope, volume, headcount, compliance figures, or business impact the original bullet does not state. If the original is metric-free, keep the rewritten bullet metric-free — clarity and relevance come from wording, not from invented numbers.${exampleSuffix}`;
 }
 
 const AUTHENTIC_METRICS_BLOCK = buildAuthenticMetricsBlock();
+
+/**
+ * Highest-priority truthfulness mandate, injected ahead of every calibration block.
+ *
+ * The pipeline's own authenticity judge (Jev) discards any rewrite that fabricates scope,
+ * seniority, ownership or numbers the original bullet does not support. Earlier prompt revisions
+ * framed the writer as an "elite executive" and told it to "elevate seniority / scope", which
+ * reliably produced inflated rewrites the judge then threw away — leaving the customer with an
+ * unchanged resume. This block explicitly bounds every calibration directive that follows it.
+ */
+const ANTI_INFLATION_MANDATE = `ANTI-INFLATION MANDATE — HIGHEST PRIORITY (OVERRIDES EVERY CALIBRATION BLOCK BELOW):
+- Your job is to make the candidate's REAL work RELEVANT and CLEAR for this role. It is NOT to make the candidate sound more senior, more strategic, or higher-scope than they actually are.
+- PRESERVE THE TRUE SCOPE AND SENIORITY OF EVERY BULLET. The wording must never claim more ownership, leadership, or scale than the original states.
+- NEVER upgrade a plain, hands-on action into an inflated one:
+    * "built" / "wrote" / "created" / "developed" / "worked on" MUST NOT become "architected", "orchestrated", "owned", "directed", or "drove".
+    * "helped" / "assisted" / "contributed to" / "supported" MUST NOT become "led", "spearheaded", "championed", or "headed".
+    * "fixed" / "resolved" / "handled" MUST NOT become "led incident response", "commanded", or "owned reliability".
+- NEVER introduce scale, headcount, budget, revenue, uptime, latency, throughput, or team-leadership scope that the original bullet does not state. If the original does not say the candidate led a team, owned a system end-to-end, or handled a specific volume, you MUST NOT imply it.
+- KEEP THE CLAIM AT THE SAME ORDER OF MAGNITUDE. A mid-level contributor stays mid-level in wording. A stronger verb is permitted ONLY when the original action genuinely matches it.
+- A second, independent authenticity judge reviews every rewrite and DISCARDS anything that fabricates scope, seniority, ownership, or numbers. A truthful, clearly-reworded bullet always survives; an inflated one is thrown away and the customer gets nothing.
+- Legitimate improvements you SHOULD still make (none of these change the underlying claim): align terminology to the job description, replace vague phrasing with precise phrasing, choose an accurate action verb at the SAME seniority level, surface real technologies and responsibilities the original bullet or the candidate's own resume already states, and remove empty filler.`;
 
 /**
  * Role and domain taxonomy calibration guidance ensuring native vocabulary and zero tech jargon bias.
@@ -328,6 +351,7 @@ ${leverBlock}${userBlock}${keywordsBlock}`
   const jobKnowledge = options.jobKnowledge;
 
   const governingBlock = [
+    ANTI_INFLATION_MANDATE,
     buildSeniorityCalibration(seniorityTier),
     buildRecencyDepthGuidance(recencyTier),
     buildCareerArcBlock(careerArc),
@@ -346,7 +370,7 @@ ${leverBlock}${userBlock}${keywordsBlock}`
 
   const verbsExample = hasDomainVerbs
     ? (jobKnowledge?.powerVerbs?.length ? jobKnowledge.powerVerbs : domainTaxonomy!.primaryVerbs).slice(0, 14).join(", ")
-    : "Orchestrated, Architected, Engineered, Overhauled, Scaled, Standardized, Automated, Deployed, Revamped, Authored, Refactored, Delivered, Designed, Instituted, Accelerated";
+    : "Built, Developed, Implemented, Delivered, Improved, Migrated, Automated, Integrated, Maintained, Resolved, Launched, Redesigned, Supported, Authored, Optimized";
 
   const domainBanned = domainTaxonomy?.bannedClichés?.length
     ? `, and domain clichés: ${domainTaxonomy.bannedClichés.map((c) => `"${c}"`).join(", ")}`
@@ -360,7 +384,7 @@ ${leverBlock}${userBlock}${keywordsBlock}`
     : [];
   const bulletCount = bulletLines.length;
 
-  return `You are an elite executive resume writer. Tailor the bullet points for this specific role against the target job description.
+  return `You are an expert resume writer. Tailor the bullet points for this specific role against the target job description by improving RELEVANCE and CLARITY — never by inflating the candidate's scope or seniority.
 
 ${governingBlock}
 ${
@@ -394,11 +418,11 @@ CRITICAL INSTRUCTIONS:
    - Do NOT merge bullets, split bullets, delete bullets, or create new bullets.
 2. ENHANCEMENT RULES & MAXIMUM IMPACT MANDATE:
    - ZERO THINKING / PREAMBLE LEAK: DO NOT output any internal thoughts, <think> tags, chain-of-thought analysis, or commentary (such as "*Analyze User Input:**"). Output ONLY the valid JSON array starting directly with [ and ending with ].
-   - HIGH-IMPACT GOOGLE X-Y-Z STRUCTURE: Reframe candidate achievements into the high-impact pattern: Accomplished [X], as measured by [Y], by doing [Z]. State what was achieved, the measurable scale/metric/operational impact, and the exact strategic action taken.
-   - BAN WEAK & PASSIVE PHRASING: NEVER use weak, subordinate, or passive phrasing such as "Assisted with", "Helped", "Worked on", "Responsible for", "Participated in", "Contributed to", "Handled", or "Supported". Every enhanced bullet MUST position the candidate as the primary driver and decisive owner of the result.
-   - EXECUTIVE OWNERSHIP ACTION VERBS: Open each enhanced bullet with a powerful, authoritative past-tense action verb (e.g. ${verbsExample}).
-   - BAN SUPERFICIAL WORD SWAPS: DO NOT make cosmetic, low-value synonym swaps (e.g. replacing "used" with "utilized"). Enhancements must substantively elevate the candidate's seniority, technical/business scope, operational scale, or target competency alignment.
-   - AUTHENTIC QUANTIFICATION: Quantify using concrete scope, volume, throughput, latency, headcount, compliance standards, or business impact derived from the context. Do NOT fabricate artificial percentages or fictitious employers.
+   - HIGH-IMPACT GOOGLE X-Y-Z STRUCTURE (ONLY WHERE THE SOURCE SUPPORTS IT): Where the original bullet already states an outcome, a real measure, and an action, frame it as Accomplished [X], as measured by [Y], by doing [Z]. If the original provides no genuine measure (Y), do NOT invent one — simply state the true action and its real, stated outcome.
+   - BAN WEAK & PASSIVE PHRASING: Replace empty, vague phrasing such as "Assisted with", "Helped", "Worked on", "Responsible for", "Participated in", "Contributed to", "Handled", or "Supported" with a precise, accurate verb — BUT only where doing so does not overstate the candidate's role. Never turn a supporting contribution into sole ownership: if the original says the candidate helped or contributed, keep that scope in clearer words.
+   - ACTION VERB SELECTION (TRUTHFUL, SAME LEVEL): Open each enhanced bullet with a precise past-tense action verb that accurately matches what the original bullet says the candidate did. The vocabulary below is reference only — do NOT pick a stronger verb than the source action supports (if the original says "built", "wrote", or "fixed", keep that level; do not upgrade to "architected", "engineered", or "drove"): ${verbsExample}.
+   - BAN SUPERFICIAL WORD SWAPS: DO NOT make cosmetic, low-value synonym swaps (e.g. replacing "used" with "utilized"). Improvements must be substantive in CLARITY, PRECISION, and RELEVANCE to the role — aligning wording to the job description and making the true contribution unambiguous — NOT by inflating the candidate's seniority, scope, or scale.
+   - AUTHENTIC QUANTIFICATION: Use ONLY numbers, scale, or metrics that are explicitly present in the original bullet or the candidate's own resume. Do NOT invent, estimate, or infer percentages, volumes, throughput, latency, headcount, budgets, or business impact. If the original has no metric, keep the bullet metric-free.
    - If a bullet already adequately covers the role and does not require substantive tailoring, return the exact original text unchanged with status: "unchanged".
    - NO REPETITIVE OPENING VERBS: Each enhanced bullet within this role MUST begin with a DISTINCT, varied past-tense action verb. NEVER repeat the same opening verb across bullets. Use varied, precise verbs suited to the work.
    - NO COOKIE-CUTTER CLAUSE FORMULAS: DO NOT repeat the exact same sentence pattern across bullets. Avoid repeatedly ending bullets with ", resulting in X% [metric]" or ", driving X% [metric]". Vary the sentence cadence:
@@ -545,7 +569,7 @@ export function getHolisticSummaryPrompt(
     resumeContent = parts.join("\n\n");
   }
 
-  return `You are an elite executive resume writer. Write a cohesive, holistic Professional Summary (2–3 sentences) representing the candidate's ENTIRE career arc, tailored for the target role below.
+  return `You are an expert resume writer. Write a cohesive, holistic Professional Summary (2–3 sentences) representing the candidate's ENTIRE career arc, tailored for the target role below. Preserve the candidate's TRUE seniority and scope — never inflate them.
 ${leverBlock}
 ${targetTitleLine}${keywordsLine}${seniorityBlock}${careerArcSection}${companyPrivacySection}
 CRITICAL INSTRUCTIONS:
@@ -553,6 +577,7 @@ CRITICAL INSTRUCTIONS:
 - This is a HOLISTIC EXECUTIVE SUMMARY of the candidate's career as an organic whole, NOT a changelog of recent edits.
 - Synthesize their complete trajectory: years of experience, core leadership scope, and signature domain proficiencies derived directly from the assembled resume.
 - GUARANTEE ZERO CONTRADICTIONS: Every capability, tool, and achievement claimed must be 100% grounded in the vetted resume below.
+- PRESERVE TRUE SENIORITY: Do NOT upgrade the candidate's level, ownership, or scope. Never invent scale, headcount, budgets, or leadership the resume does not state. An authenticity judge will discard an inflated summary.
 - BANNED BUZZWORDS: Do NOT use fluff or repetitive filler ("passionate", "results-driven", "team player", "leveraging", "spearheaded", "pivotal role"). Use authoritative, factual declarative sentences.
 - Vary sentence syntax and cadence; avoid repetitive sentence structures.
 - Output ONLY the 2–3 sentence summary paragraph. No headers, no intro, no conversational remarks.
@@ -560,7 +585,7 @@ CRITICAL INSTRUCTIONS:
 STRICT RULES & CONSTRAINTS:
 1. STRICT LENGTH CONSTRAINT: Write exactly 2 to 3 concise, punchy sentences (maximum 60 words total).
 2. COMMANDING EXECUTIVE IDENTITY HOOK: Open sentence 1 directly with the candidate's target professional/executive identity and core domain authority (e.g. "[Target Title / Specialty] with [X]+ years directing [core domain scope]...").
-3. PROVEN PEAK IMPACT: Sentence 2 highlights the candidate's highest-impact, quantified achievement or primary operational transformation directly relevant to the target job description.
+3. PROVEN PEAK IMPACT: Sentence 2 highlights the candidate's highest-impact achievement or operational contribution directly relevant to the target job description, using ONLY outcomes the resume already states (no invented metrics).
 4. FORWARD-LOOKING CAPABILITY ALIGNMENT: Sentence 3 reinforces their signature strategic capabilities and technical proficiencies positioned to deliver immediate impact in the target role.
 5. Content Focus: Explicitly highlight the candidate's most relevant qualifications, primary domain authority, and proven accomplishments matching the target role.
 6. Prohibit generic fluff, filler adjectives, or cliché openings ("Passionate, results-driven professional..."). Open directly with domain impact.
