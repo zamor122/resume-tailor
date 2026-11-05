@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import AlternativeComparisonTable from "@/app/components/AlternativeComparisonTable";
 
 export const metadata = {
   title: "Free Alternative to Teal - AI Resume Tailor",
@@ -26,6 +27,13 @@ export default function TealAlternativePage() {
       </p>
 
       <div className="space-y-8 text-gray-700 dark:text-gray-300">
+        <AlternativeComparisonTable
+          competitorName="Teal"
+          competitorPrice="$29 / 30 days"
+          competitorAutoRenews
+          competitorFreeTier="Has a free tier"
+        />
+
         <section>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Why Choose AI Resume Tailor Over Teal?

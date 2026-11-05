@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import AlternativeComparisonTable from "@/app/components/AlternativeComparisonTable";
 
 export const metadata = {
   title: "Free Alternative to Kickresume - AI Resume Tailor",
@@ -26,6 +27,13 @@ export default function KickresumeAlternativePage() {
       </p>
 
       <div className="space-y-8 text-gray-700 dark:text-gray-300">
+        <AlternativeComparisonTable
+          competitorName="Kickresume"
+          competitorPrice="$24/mo (annual $8/mo)"
+          competitorAutoRenews
+          competitorFreeTier="4 resume templates"
+        />
+
         <section>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             What Makes AI Resume Tailor a Great Kickresume Alternative?

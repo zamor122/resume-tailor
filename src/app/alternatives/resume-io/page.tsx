@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import AlternativeComparisonTable from "@/app/components/AlternativeComparisonTable";
 
 export const metadata = {
   title: "Free Alternative to Resume.io - AI Resume Tailor",
@@ -26,6 +27,14 @@ export default function ResumeIoAlternativePage() {
       </p>
 
       <div className="space-y-8 text-gray-700 dark:text-gray-300">
+        <AlternativeComparisonTable
+          competitorName="Resume.io"
+          competitorPrice="Auto-renewing trial"
+          competitorAutoRenews
+          competitorFreeTier="Not verified"
+          note="Resume.io's exact price is only supported by an anecdotal user report, so we don't state a figure. Like Zety, it uses a trial that auto-renews."
+        />
+
         <section>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             What Makes AI Resume Tailor a Great Resume.io Alternative?
