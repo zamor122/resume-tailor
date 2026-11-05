@@ -20,7 +20,13 @@ import {
 
 export const runtime = "nodejs";
 export const preferredRegion = "auto";
-export const maxDuration = 300;
+// 60 is the hard ceiling on Vercel's Hobby plan. A larger value does not just cap
+// this route — it makes the ENTIRE deployment fail at the "Deploying outputs"
+// step with "Serverless Functions must have a maxDuration between 1 and 60 for
+// plan hobby". That silently froze production on the account serving
+// airesumetailor.com for weeks. 60 also matches the client's TAILOR_TIMEOUT_MS
+// (62s), which was already written to detect a 60s server-side timeout.
+export const maxDuration = 60;
 
 const NODE_PROGRESS_MAP: Record<string, { progress: number; message: string; step: string }> = {
   intakeParser: {
