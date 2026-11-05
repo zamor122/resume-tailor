@@ -70,6 +70,27 @@ export function enforceBriefSummary(summary: string): string {
   return sentences.slice(0, 3).map((s) => s.trim()).join(" ").trim();
 }
 
+/**
+ * Quality gate for a single tailored suggestion.
+ *
+ * AUTHENTICITY is a HARD bar and is intentionally unchanged: any judge verdict of
+ * `isAuthentic === false` discards the suggestion outright, so fabricated numbers,
+ * inflated scope, or unverified claims never ship.
+ *
+ * The IMPROVEMENT bar is deliberately lenient. Rewriting an already-decent bullet has
+ * little honest headroom, so the previous rule — discard whenever the judge did not rate
+ * the rewrite "substantively more impactful" (`isBetterThanOriginal === false`) — threw
+ * away perfectly good, honest, clearer phrasing and left the customer with a near-unchanged
+ * resume. We now discard on the improvement axis ONLY when the judge rates the rewrite
+ * genuinely WORSE than the original (`overallImpactScore === 1`, the "Worse or destructive
+ * edit" bucket). Authentic rewrites that are neutral-to-better SHIP — a clearer, JD-aligned
+ * bullet is the product's value.
+ */
+export function isRejectedByQualityGate(judge: JevJudgeResult): boolean {
+  if (judge.isAuthentic === false) return true;
+  return judge.overallImpactScore <= 1;
+}
+
 export async function surgicalTailorNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
@@ -262,11 +283,12 @@ export async function surgicalTailorNode(
 
       judgedChunkSuggestions.forEach(({ sug, judge }) => {
         const bulletIdx = sug.bulletIndex ?? 0;
-        if (judge && (judge.isAuthentic === false || judge.isBetterThanOriginal === false)) {
+        if (judge && isRejectedByQualityGate(judge)) {
           console.log(`[surgicalTailor] Suggestion rejected by Jev gatekeeper:`, {
             id: sug.id,
             isAuthentic: judge.isAuthentic,
             isBetterThanOriginal: judge.isBetterThanOriginal,
+            overallImpactScore: judge.overallImpactScore,
           });
           if (origBullets[bulletIdx] !== undefined) {
             sanitizedBullets[bulletIdx] = origBullets[bulletIdx];
@@ -275,6 +297,9 @@ export async function surgicalTailorNode(
           suggestions.push({
             ...sug,
             id: `sug-job-${r.index}-bullet-${bulletIdx}`,
+            // Passed the (strict) authenticity + (lenient) improvement gate -> ship it into
+            // the final resume. The reviewer can still reject any suggestion.
+            status: "accepted",
             reason: planItem.reason || sug.reason,
             ...(judge ? { jevJudge: judge } : {}),
           });
@@ -325,11 +350,12 @@ export async function surgicalTailorNode(
         const localIdx = sug.bulletIndex ?? 0;
         const originalIdx = targetIndices[localIdx] ?? localIdx;
 
-        if (judge && (judge.isAuthentic === false || judge.isBetterThanOriginal === false)) {
+        if (judge && isRejectedByQualityGate(judge)) {
           console.log(`[surgicalTailor] Suggestion rejected by Jev gatekeeper:`, {
             id: sug.id,
             isAuthentic: judge.isAuthentic,
             isBetterThanOriginal: judge.isBetterThanOriginal,
+            overallImpactScore: judge.overallImpactScore,
           });
           if (origBullets[localIdx] !== undefined) {
             sanitizedBullets[localIdx] = origBullets[localIdx];
@@ -339,6 +365,9 @@ export async function surgicalTailorNode(
             ...sug,
             id: `sug-job-${r.index}-bullet-${originalIdx}`,
             bulletIndex: originalIdx,
+            // Passed the (strict) authenticity + (lenient) improvement gate -> ship it into
+            // the final resume. The reviewer can still reject any suggestion.
+            status: "accepted",
             reason: planItem.reason || sug.reason,
             ...(judge ? { jevJudge: judge } : {}),
           });
@@ -397,7 +426,7 @@ export async function surgicalTailorNode(
           console.warn("[surgicalTailor] Jev judge failed for summary:", judgeErr);
         }
 
-        if (judge && (judge.isAuthentic === false || judge.isBetterThanOriginal === false)) {
+        if (judge && isRejectedByQualityGate(judge)) {
           console.log("[surgicalTailor] Summary suggestion rejected by Jev gatekeeper:", judge);
           tailoredSummary = originalSummary;
         } else {
@@ -410,7 +439,8 @@ export async function surgicalTailorNode(
             reason: `Reframed summary to highlight target role competencies, core tech stack, and leadership scope`,
             keywords: sortedMissingKeywords.slice(0, 4),
             category: "summary",
-            status: "pending",
+            // Passed the (strict) authenticity + (lenient) improvement gate -> ship it.
+            status: "accepted",
             ...(judge ? { jevJudge: judge } : {}),
           });
           console.log(`[surgicalTailor] Added summary suggestion`);

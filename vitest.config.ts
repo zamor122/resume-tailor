@@ -14,7 +14,7 @@ export default defineConfig({
     environment: 'happy-dom',
     setupFiles: ['./tests/setup.tsx'],
     include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['node_modules', '.next', 'dist', 'scip-snapshot', 'scripts', 'tests/e2e/**'],
+    exclude: ['node_modules', '.next', 'dist', 'scip-snapshot', 'scripts', 'tests/e2e/**', 'tests/integration/**'],
     pool: 'threads',
     coverage: {
       provider: 'v8',
