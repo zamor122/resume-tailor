@@ -2,6 +2,12 @@
  * JSON-LD structured data for SEO (schema.org).
  * Injected into layout/pages for rich results in search.
  */
+import {
+  TIME_BASED_TIERS,
+  FREE_RESUME_LIMIT,
+  NON_SUBSCRIPTION_MESSAGE,
+} from "@/app/config/pricing";
+
 const BASE_URL = "https://airesumetailor.com";
 
 const organizationSchema = {
@@ -129,6 +135,77 @@ export function FAQStructuredData({ items }: { items: FAQItem[] }) {
       dangerouslySetInnerHTML={{
         __html: JSON.stringify(faqSchema),
       }}
+    />
+  );
+}
+
+/**
+ * Product + Offer structured data for the pricing page.
+ *
+ * Prices are DERIVED from TIME_BASED_TIERS (the same object that carries the
+ * Stripe price id) so the machine-readable offer can never drift from what we
+ * actually charge. No AggregateRating / Review is emitted — we have no reviews,
+ * and inventing them is both dishonest and a search manual-action risk.
+ */
+export function ProductOfferStructuredData() {
+  const productSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "AI Resume Tailor",
+    description: `Web app that tailors an existing resume to a specific job description with ATS-friendly, human-sounding output. Your first ${FREE_RESUME_LIMIT} tailored resumes are free. ${NON_SUBSCRIPTION_MESSAGE}`,
+    url: `${BASE_URL}/pricing`,
+    brand: {
+      "@type": "Brand",
+      name: "AI Resume Tailor",
+    },
+    offers: TIME_BASED_TIERS.map((tier) => ({
+      "@type": "Offer",
+      name: tier.label,
+      description: `${tier.description}. ${tier.durationLabel} of unlimited resume tailoring access. One-time payment, no subscription.`,
+      url: `${BASE_URL}/pricing`,
+      price: tier.price.toFixed(2),
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+    />
+  );
+}
+
+export interface BreadcrumbItem {
+  name: string;
+  item?: string;
+}
+
+/**
+ * BreadcrumbList structured data. Pass the same crumbs rendered visibly on the
+ * page — the markup must mirror the visible hierarchy, not a hidden variant.
+ */
+export function BreadcrumbListStructuredData({
+  items,
+}: {
+  items: BreadcrumbItem[];
+}) {
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((crumb, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      name: crumb.name,
+      ...(crumb.item ? { item: crumb.item } : {}),
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
     />
   );
 }

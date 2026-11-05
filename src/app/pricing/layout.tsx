@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { ProductOfferStructuredData } from "@/app/components/StructuredData";
 
 export const metadata: Metadata = {
   title: "Pricing - Simple, Transparent Plans",
@@ -11,5 +12,10 @@ export default function PricingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      <ProductOfferStructuredData />
+      {children}
+    </>
+  );
 }
