@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getTierConfig } from "@/app/config/pricing";
 import { getAccessInfo } from "@/app/utils/accessManager";
 
-export default function SuccessPage() {
+function SuccessPageInner() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
 
@@ -204,5 +204,23 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// `useSearchParams()` opts a route out of static prerendering unless it is wrapped
+// in a Suspense boundary. Without this, `next build` fails with
+// "useSearchParams() should be wrapped in a suspense boundary at page /success".
+export default function SuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto px-4 py-16 text-center max-w-lg">
+          <div className="inline-block w-10 h-10 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Verifying your payment...</p>
+        </div>
+      }
+    >
+      <SuccessPageInner />
+    </Suspense>
   );
 }

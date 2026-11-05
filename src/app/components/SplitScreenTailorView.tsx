@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { fetchResumeById } from "@/app/lib/swr-fetchers";
 import { useJobTitle } from "@/app/hooks/useJobTitle";
@@ -210,11 +210,27 @@ async function runHumanizeStream(params: {
   }
 }
 
+/**
+ * Reads the query string on the client WITHOUT using next/navigation's
+ * useSearchParams(). A bare useSearchParams() call forces the whole route into a
+ * client-side render ("CSR bailout") unless wrapped in <Suspense>, and wrapping the
+ * homepage's main content in <Suspense> would strip ALL server-rendered HTML from the
+ * homepage — fatal for SEO. These prefill params are optional and only consumed inside
+ * effects below, so deferring the read until after mount is not user-visible.
+ */
+function useClientSearchParams(): URLSearchParams | null {
+  const [params, setParams] = useState<URLSearchParams | null>(null);
+  useEffect(() => {
+    setParams(new URLSearchParams(window.location.search));
+  }, []);
+  return params;
+}
+
 export default function SplitScreenTailorView() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const prefillResumeId = searchParams.get("prefillResumeId");
-  const prefillVersion = searchParams.get("prefillVersion");
+  const searchParams = useClientSearchParams();
+  const prefillResumeId = searchParams?.get("prefillResumeId") ?? null;
+  const prefillVersion = searchParams?.get("prefillVersion") ?? null;
   const { user, session } = useAuth();
   const [resume, setResume] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -241,7 +257,7 @@ export default function SplitScreenTailorView() {
   const [activeMobileTab, setActiveMobileTab] = useState<"resume" | "job" | "options">("resume");
   const prefillSyncedForRef = useRef<string | null>(null);
 
-  const keywordsToWeaveParam = searchParams.get("keywordsToWeave");
+  const keywordsToWeaveParam = searchParams?.get("keywordsToWeave") ?? null;
   const prefillId = prefillVersion ?? prefillResumeId;
   const prefillSwrKey =
     prefillId && user?.id && session?.access_token
