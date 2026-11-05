@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import AlternativeComparisonTable from "@/app/components/AlternativeComparisonTable";
 
 export const metadata = {
   title: "Free Alternative to Zety - AI Resume Tailor",
@@ -26,6 +27,14 @@ export default function ZetyAlternativePage() {
       </p>
 
       <div className="space-y-8 text-gray-700 dark:text-gray-300">
+        <AlternativeComparisonTable
+          competitorName="Zety"
+          competitorPrice="Auto-renewing trial"
+          competitorAutoRenews
+          competitorFreeTier="Not verified"
+          note="Zety's exact price is only supported by an anecdotal user report, so we don't state a figure. Like Resume.io, it uses a trial that auto-renews."
+        />
+
         <section>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Why Choose AI Resume Tailor Over Zety?

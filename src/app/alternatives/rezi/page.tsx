@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import AlternativeComparisonTable from "@/app/components/AlternativeComparisonTable";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -30,6 +31,13 @@ export default function ReziAlternativePage() {
       </p>
 
       <div className="space-y-8 text-gray-700 dark:text-gray-300">
+        <AlternativeComparisonTable
+          competitorName="Rezi"
+          competitorPrice="$29/mo (Lifetime $149 one-time)"
+          competitorAutoRenews
+          competitorFreeTier="1 resume, 3 PDF downloads"
+        />
+
         <section>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Why Choose AI Resume Tailor Over Rezi?
