@@ -4,6 +4,7 @@ import "./globals.css";
 import {Analytics} from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Footer from './components/Footer';
+import SiteLinks from './components/SiteLinks';
 import Navigation from "./components/Navigation";
 import { ThemeProvider } from './components/ThemeProvider'
 import { AuthProvider } from './contexts/AuthContext';
@@ -169,6 +170,9 @@ export default function RootLayout({
                   {children}
                 </main>
                 <Footer />
+                {/* Server-rendered internal link map — guarantees crawlers see a link
+                    graph on every page. See SiteLinks.tsx for why this exists. */}
+                <SiteLinks />
                 <Analytics />
                 <SpeedInsights />
               </ExitSurveyProvider>
