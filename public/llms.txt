@@ -1,0 +1,26 @@
+# AI Resume Tailor
+
+> AI Resume Tailor is a web app that tailors your existing resume to a specific job description and includes a free ATS resume checker. Your first 3 tailored resumes are free; further access is a one-time purchase with no subscription.
+
+## Core pages
+- [Free ATS Resume Checker](https://airesumetailor.com/resume-checker): ATS compatibility score, formatting, and missing-keyword analysis.
+- [Resume Optimizer](https://airesumetailor.com/resume-optimizer): Tailors your resume to a job description.
+- [Pricing](https://airesumetailor.com/pricing): One-time access tiers; the first 3 tailored resumes are free.
+- [FAQ](https://airesumetailor.com/faq): Common questions about resume tailoring and ATS.
+- [Blog](https://airesumetailor.com/blog): Guides on resume tailoring, ATS, and keywords.
+
+## Competitor alternatives
+- [Free Jobscan alternative](https://airesumetailor.com/alternatives/jobscan)
+- [Free Teal alternative](https://airesumetailor.com/alternatives/teal)
+- [Free Rezi alternative](https://airesumetailor.com/alternatives/rezi)
+- [Free Kickresume alternative](https://airesumetailor.com/alternatives/kickresume)
+- [Free Resume.io alternative](https://airesumetailor.com/alternatives/resume-io)
+- [Free Zety alternative](https://airesumetailor.com/alternatives/zety)
+- [All alternatives](https://airesumetailor.com/alternatives)
+
+## Resume keyword guides
+- [Resume keywords hub](https://airesumetailor.com/keywords): ATS keyword and action-verb guides by role.
+
+## Optional
+- [Privacy policy](https://airesumetailor.com/privacy)
+- [Terms of service](https://airesumetailor.com/terms)

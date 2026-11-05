@@ -1,0 +1,28 @@
+# AI Resume Tailor
+
+> AI Resume Tailor is a web app that tailors your existing resume to a specific job description and includes a free ATS resume checker. Your first 3 tailored resumes are free; further access is a one-time purchase with no subscription.
+
+AI Resume Tailor focuses on one task: rewriting your existing resume so it matches the wording of a specific job posting, with ATS-friendly formatting and human-sounding output. You paste your resume and the job description and get a tailored version. The site also provides a free ATS resume checker that reports compatibility, formatting, and missing-keyword signals. There is no auto-renewing subscription — paid access is a one-time purchase for a fixed period.
+
+## Core pages
+- [Free ATS Resume Checker](https://airesumetailor.com/resume-checker): ATS compatibility score, layout and header checks, missing-keyword detection, and action-verb strength.
+- [Resume Optimizer](https://airesumetailor.com/resume-optimizer): Tailors your resume to a job description with keyword matching and human-sounding output.
+- [Pricing](https://airesumetailor.com/pricing): One-time access tiers (2-day, 1-week, 1-month). The first 3 tailored resumes are free; no subscription.
+- [FAQ](https://airesumetailor.com/faq): Common questions about resume tailoring, ATS scoring, and pricing.
+- [Blog](https://airesumetailor.com/blog): Guides on resume tailoring, ATS compatibility, and role-specific keywords.
+
+## Competitor alternatives
+- [Free Jobscan alternative](https://airesumetailor.com/alternatives/jobscan): How AI Resume Tailor compares with Jobscan on price, free offering, and approach.
+- [Free Teal alternative](https://airesumetailor.com/alternatives/teal): How AI Resume Tailor compares with Teal.
+- [Free Rezi alternative](https://airesumetailor.com/alternatives/rezi): How AI Resume Tailor compares with Rezi.
+- [Free Kickresume alternative](https://airesumetailor.com/alternatives/kickresume): How AI Resume Tailor compares with Kickresume.
+- [Free Resume.io alternative](https://airesumetailor.com/alternatives/resume-io): How AI Resume Tailor compares with Resume.io.
+- [Free Zety alternative](https://airesumetailor.com/alternatives/zety): How AI Resume Tailor compares with Zety.
+- [All alternatives](https://airesumetailor.com/alternatives): Index of every comparison page.
+
+## Resume keyword guides
+- [Resume keywords hub](https://airesumetailor.com/keywords): Per-role ATS keyword lists, high-impact action verbs, and example bullets.
+
+## Optional
+- [Privacy policy](https://airesumetailor.com/privacy)
+- [Terms of service](https://airesumetailor.com/terms)

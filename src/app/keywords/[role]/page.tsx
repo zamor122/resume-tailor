@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ROLE_PAGES, getRoleBySlug } from "@/app/keywords/data/roles";
 import { FAQStructuredData } from "@/app/components/StructuredData";
+import { BreadcrumbListStructuredData } from "@/app/components/StructuredData";
 
 interface Props {
   params: Promise<{ role: string }>;
@@ -61,6 +62,13 @@ export default async function RoleKeywordPage({ params }: Props) {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 md:py-16 space-y-12">
       <FAQStructuredData items={faqItems} />
+      <BreadcrumbListStructuredData
+        items={[
+          { name: "Home", item: "https://airesumetailor.com/" },
+          { name: "Keywords", item: "https://airesumetailor.com/keywords" },
+          { name: role.title },
+        ]}
+      />
 
       {/* Breadcrumb */}
       <nav className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
