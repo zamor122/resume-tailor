@@ -2,6 +2,7 @@ import React from "react";
 import { TIME_BASED_TIERS, FREE_RESUME_LIMIT } from "@/app/config/pricing";
 import Breadcrumbs from "./Breadcrumbs";
 import AlternativeFaq from "./AlternativeFaq";
+import AlternativeDeepDive from "./AlternativeDeepDive";
 
 interface AlternativeComparisonTableProps {
   /** Display name of the competitor, e.g. "Jobscan". */
@@ -103,6 +104,8 @@ export default function AlternativeComparisonTable({
           <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">{note}</p>
         )}
       </section>
+
+      <AlternativeDeepDive competitorName={competitorName} />
 
       <AlternativeFaq
         competitorName={competitorName}
