@@ -52,7 +52,7 @@ export default function AlternativeComparisonTable({
     {
       feature: "Free score",
       competitor: competitorFreeTier,
-      ours: "Yes, no login",
+      ours: "Yes — free, no card",
     },
     {
       feature: `First ${FREE_RESUME_LIMIT} free`,
