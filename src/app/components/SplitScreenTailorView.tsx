@@ -20,8 +20,10 @@ import FileDropZone from "./FileDropZone";
 import HomepageSEOSection from "./HomepageSEOSection";
 import TailoredResumeOutput from "./TailoredResumeOutput";
 import TailoringControlsPanel from "./TailoringControlsPanel";
+import ElicitationPanel from "./ElicitationPanel";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
+import type { ElicitationFact, ElicitationQuestion } from "@/app/types/elicitation";
 import { extractTextFromPDF } from "@/app/utils/pdfExtractor";
 import { analytics } from "@/app/services/analytics";
 import { saveResumeData, loadResumeData, clearResumeData } from "@/app/utils/dataPersistence";
@@ -50,6 +52,7 @@ async function runHumanizeStream(params: {
   keywordsToWeave?: string[];
   promptPresetIds?: string[];
   preferences?: TailoringPreferences;
+  elicitationFacts?: ElicitationFact[];
 }): Promise<HumanizeResponse> {
   const {
     resume,
@@ -64,6 +67,7 @@ async function runHumanizeStream(params: {
     keywordsToWeave,
     promptPresetIds,
     preferences,
+    elicitationFacts,
   } = params;
 
   const controller = new AbortController();
@@ -88,6 +92,7 @@ async function runHumanizeStream(params: {
         keywordsToWeave: keywordsToWeave?.length ? keywordsToWeave : undefined,
         promptPresetIds: promptPresetIds?.length ? promptPresetIds : undefined,
         preferences,
+        elicitationFacts: elicitationFacts?.length ? elicitationFacts : undefined,
       }),
       signal: controller.signal,
     });
@@ -257,6 +262,12 @@ export default function SplitScreenTailorView() {
   const [activeMobileTab, setActiveMobileTab] = useState<"resume" | "job" | "options">("resume");
   const prefillSyncedForRef = useRef<string | null>(null);
 
+  // Guided elicitation ("A few things your resume didn't say").
+  const [showElicitation, setShowElicitation] = useState(false);
+  const [elicitationQuestions, setElicitationQuestions] = useState<ElicitationQuestion[]>([]);
+  const elicitationResolvedRef = useRef(false);
+  const elicitationFactsRef = useRef<ElicitationFact[]>([]);
+
   const keywordsToWeaveParam = searchParams?.get("keywordsToWeave") ?? null;
   const prefillId = prefillVersion ?? prefillResumeId;
   const prefillSwrKey =
@@ -389,6 +400,35 @@ export default function SplitScreenTailorView() {
       return;
     }
 
+    // Guided elicitation: ask 3-5 plain questions ONCE, after the job is known and
+    // before tailoring, so we can surface true specifics the resume omitted. Every
+    // question is optional; the user's answers are the only source of new numbers.
+    if (!elicitationResolvedRef.current) {
+      elicitationResolvedRef.current = true;
+      try {
+        const res = await fetch("/api/elicitation/questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resume: resume.trim(),
+            jobDescription: jobDescription.trim(),
+            jobTitle: detectedJobTitle ?? jobTitleFromHook ?? undefined,
+          }),
+        });
+        const data = await res.json().catch(() => null);
+        const questions: ElicitationQuestion[] = Array.isArray(data?.questions)
+          ? data.questions
+          : [];
+        if (questions.length > 0) {
+          setElicitationQuestions(questions);
+          setShowElicitation(true);
+          return; // wait for the user to answer or skip, then resume tailoring
+        }
+      } catch {
+        // Couldn't get questions — never block the user; tailor as usual.
+      }
+    }
+
     setLoading(true);
     setError(null);
     setResults(null);
@@ -428,6 +468,7 @@ export default function SplitScreenTailorView() {
         keywordsToWeave: keywordsToWeave.length ? keywordsToWeave : undefined,
         promptPresetIds: promptPresetIds.length ? promptPresetIds : undefined,
         preferences,
+        elicitationFacts: elicitationFactsRef.current.length ? elicitationFactsRef.current : undefined,
       });
 
       let timeToValueSeconds: number | undefined;
@@ -514,12 +555,33 @@ export default function SplitScreenTailorView() {
     }
   }, [resume, jobDescription, sessionId, user, session, router, prefillResumeId, detectedJobTitle, jobTitleFromHook, parentResumeId, customInstructions, keywordsToWeave, promptPresetIds]);
 
+  // Resume tailoring after the elicitation screen: carry the user's own words into
+  // the pipeline as user-supplied facts (empty when skipped -> behaves as today).
+  const handleElicitationComplete = useCallback(
+    (facts: ElicitationFact[]) => {
+      elicitationFactsRef.current = facts;
+      setShowElicitation(false);
+      void handleTailor();
+    },
+    [handleTailor]
+  );
+
+  const handleElicitationSkipAll = useCallback(() => {
+    elicitationFactsRef.current = [];
+    setShowElicitation(false);
+    void handleTailor();
+  }, [handleTailor]);
+
   const handleReset = useCallback(() => {
     setResume("");
     setJobDescription("");
     setResults(null);
     setError(null);
     setHasStartedTailoring(false);
+    // Allow the elicitation questions to be asked again for the next resume.
+    elicitationResolvedRef.current = false;
+    elicitationFactsRef.current = [];
+    setShowElicitation(false);
     setFileDropKey((k) => k + 1);
     setParentResumeId(undefined);
     setCustomInstructions("");
@@ -901,6 +963,14 @@ export default function SplitScreenTailorView() {
         isOpen={showResetModal}
         onClose={() => setShowResetModal(false)}
         onConfirm={handleReset}
+      />
+
+      <ElicitationPanel
+        isOpen={showElicitation}
+        questions={elicitationQuestions}
+        jobTitle={detectedJobTitle ?? jobTitleFromHook ?? null}
+        onComplete={handleElicitationComplete}
+        onSkipAll={handleElicitationSkipAll}
       />
     </>
   );

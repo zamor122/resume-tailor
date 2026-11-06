@@ -207,6 +207,7 @@ export async function surgicalTailorNode(
             diagnosis,
             domainTaxonomy,
             jobKnowledge: state.jobKnowledge,
+            userSuppliedFacts: state.userSuppliedFacts,
           }),
           // Heavy-generation node -> penny engine when keyed, free chain otherwise.
           resolveStepModel("tailor", state.modelKey),
@@ -399,6 +400,7 @@ export async function surgicalTailorNode(
           seniorityTier: state.seniorityTier,
           careerArc: state.careerArc,
           targetCompany,
+          userSuppliedFacts: state.userSuppliedFacts,
         }),
         resolveStepModel("tailor", state.modelKey),
         { maxTokens: 800, temperature: 0.2 },

@@ -1,4 +1,5 @@
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
+import type { ElicitationFact } from "@/app/types/elicitation";
 import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { JDInterpreterResult } from "@/app/utils/keyword-extraction";
 import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
@@ -109,6 +110,12 @@ export interface AgentState {
   preferences: TailoringPreferences;
   modelKey?: string;
   sessionApiKeys?: Record<string, string>;
+  /**
+   * TRUE specifics the candidate supplied during guided elicitation. The user is
+   * the source of every number here; the tailoring node may USE these facts but
+   * must never inflate them (see src/app/utils/elicitation.ts).
+   */
+  userSuppliedFacts?: ElicitationFact[];
 
   // Parsed Structures
   resumeAST?: ParsedResumeForReassemble;
