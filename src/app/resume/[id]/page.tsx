@@ -14,6 +14,7 @@ import TierSelectionModal from "@/app/components/TierSelectionModal";
 import ShareResumeCard from "@/app/components/ShareResumeCard";
 import ResumeFeedbackCard from "@/app/components/ResumeFeedbackCard";
 import ResumeDiffView from "@/app/components/ResumeDiffView";
+import ChangedAndWhy from "@/app/components/ChangedAndWhy";
 import AddVersionInfoPopover from "@/app/components/AddVersionInfoPopover";
 import Link from "next/link";
 import { analytics } from "@/app/services/analytics";
@@ -68,7 +69,7 @@ export default function ResumeDetailPage() {
 
   const [showTierModal, setShowTierModal] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"resume" | "diff" | "compare">("resume");
+  const [viewMode, setViewMode] = useState<"changes" | "resume" | "diff" | "compare">("changes");
   const [compareWithVersionId, setCompareWithVersionId] = useState<string | null>(null);
   const [compareData, setCompareData] = useState<{ tailoredResume: string } | null>(null);
   const [mobileTab, setMobileTab] = useState<"resume" | "stats">("resume");
@@ -300,16 +301,33 @@ export default function ResumeDetailPage() {
               : "text-gray-600 dark:text-gray-400"
           }`}
         >
-          <span>📊 Match ({matchScore}%) & Keywords</span>
+          <span>📊 Match &amp; Keywords</span>
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
         {/* Main Resume Column */}
-        <div className={`${viewMode === "resume" ? "col-span-12" : "md:col-span-8"} space-y-6 min-w-0 ${mobileTab === "resume" ? "block" : "hidden md:block"}`}>
+        <div className={`${viewMode === "resume" || viewMode === "changes" ? "col-span-12" : "md:col-span-8"} space-y-6 min-w-0 ${viewMode === "changes" || mobileTab === "resume" ? "block" : "hidden md:block"}`}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
               <div className="flex rounded-xl border border-gray-200 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-800/50 p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode("changes");
+                    analytics.trackEvent(analytics.events.VIEW_MODE_CHANGED, {
+                      ...analytics.getTrackingContext({ section: "output", element: "view_toggle", resumeId: data.resumeId }),
+                      mode: "changes",
+                    });
+                  }}
+                  className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                    viewMode === "changes"
+                      ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
+                  }`}
+                >
+                  What we changed &amp; why
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -368,6 +386,9 @@ export default function ResumeDetailPage() {
               </div>
             </div>
 
+            {viewMode === "changes" && (
+              <ChangedAndWhy suggestions={data.suggestions || []} />
+            )}
             {viewMode === "resume" && (
               <TailoredResumeOutput
                 newResume={displayResume}
@@ -474,7 +495,7 @@ export default function ResumeDetailPage() {
         </div>
 
         {/* Stats & Insights Column (Shown in Diff/Compare modes or Mobile stats tab) */}
-        <div className={`${viewMode === "resume" ? "hidden" : "md:col-span-4"} space-y-6 ${mobileTab === "stats" ? "block" : "hidden md:block"}`}>
+        <div className={`${viewMode === "resume" || viewMode === "changes" ? "hidden" : "md:col-span-4"} space-y-6 ${mobileTab === "stats" ? "block" : "hidden md:block"}`}>
           {/* Match Strength Card */}
           <div className="output-container p-5 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
