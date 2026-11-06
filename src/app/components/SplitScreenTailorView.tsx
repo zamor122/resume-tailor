@@ -559,7 +559,7 @@ export default function SplitScreenTailorView() {
         {/* Hero */}
         <section className="py-8 md:py-12 text-center" data-parallax="0.05">
           <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-cyan-600 dark:text-cyan-400 mb-3">
-            Free · No login to check · Nothing auto-renews
+            Free · No credit card required · Nothing auto-renews
           </p>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-3 md:mb-4">
             Tailor your resume to any job — in seconds.
