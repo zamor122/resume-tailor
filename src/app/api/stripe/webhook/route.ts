@@ -141,8 +141,19 @@ async function handleCheckoutCompleted(
   }
 
   try {
-    const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
-    const priceId = lineItems.data[0]?.price?.id || "";
+    // Fetch the price id defensively. This is a LIVE Stripe API call, and its failure must
+    // not abort the ledger write, nor 500 a webhook that has already granted access —
+    // Stripe would then retry for days over a bookkeeping detail. Observed in testing: a
+    // session Stripe could not resolve ("No such checkout session", 404) killed the whole
+    // payment record. Fall back to the tier's configured price id, which we always know.
+    let priceId = "";
+    try {
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+      priceId = lineItems.data[0]?.price?.id || "";
+    } catch (lineItemErr) {
+      console.error("[Webhook] listLineItems failed; using the configured price id:", lineItemErr);
+      priceId = getTierConfig(tier)?.priceId || "";
+    }
     const amountTotal = session.amount_total ?? 0;
     const amountDiscount = session.total_details?.amount_discount ?? 0;
 
@@ -156,6 +167,12 @@ async function handleCheckoutCompleted(
       amount_cents: amountTotal,
       currency: "usd",
       status: "completed",
+      // `tier_purchased` is NOT NULL in the live payments table but was missing from this
+      // insert, so EVERY payments row failed — which the old warn-and-continue code hid
+      // (the F4 fail-loud change is what surfaced it). The column exists in the database
+      // but was never declared in scripts/supabase-schema.sql, so it was added directly
+      // and the code was never updated. It is declared there now.
+      tier_purchased: tier,
       metadata: { tier, source: "access_grant", amount_discount: amountDiscount },
     });
 
