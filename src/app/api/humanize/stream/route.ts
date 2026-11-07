@@ -463,7 +463,14 @@ export async function POST(req: NextRequest) {
           isUnlocked,
           tailoringPreferences: preferences,
           discoveredJobs: agentResult.discoveredJobs,
-          agentSteps: agentResult.logs,
+          // Raw agent logs are deliberately NOT sent to the client. They carry internal
+          // node names, "parsed into AST", and — worse — a SYNTHETIC baseline score
+          // (keywordAnalyzer's formula at line 80, floored at 30 and capped at 95) that
+          // directly contradicts the evaluated matchScore in this same payload (Jev's
+          // alignment score, ~40). Two different numbers for the same resume in one
+          // response is indefensible, and the rest is jargon in a product whose whole
+          // mandate is plain language. Plain-language progress is already streamed via
+          // the `agent_step` events, which is the user-facing channel.
           progress: 100,
         });
 
