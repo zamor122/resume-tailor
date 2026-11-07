@@ -78,6 +78,9 @@ CREATE TABLE IF NOT EXISTS payments (
   amount_cents INT NOT NULL,
   currency TEXT DEFAULT 'usd',
   status TEXT NOT NULL,
+  -- Present in the live database (NOT NULL) but previously undeclared here, which is why
+  -- the webhook's payments insert silently failed. Declared so fresh environments match.
+  tier_purchased TEXT NOT NULL,
   metadata JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
