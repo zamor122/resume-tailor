@@ -1,6 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { FAQStructuredData } from '@/app/components/StructuredData';
+import { TIME_BASED_TIERS } from '@/app/config/pricing';
+
+// Derived from the single source of truth so the FAQ can never drift from what Stripe charges.
+// It previously advertised the old "$4.95. / $10 / $20" figures long after the re-price.
+const PRICE_OPTIONS = TIME_BASED_TIERS.map(
+  (t) => `${t.durationLabel} ($${t.price.toFixed(2)})`
+).join(', ');
 
 export const metadata = {
   title: "Frequently Asked Questions - AI Resume Tailor",
@@ -52,7 +59,7 @@ const FAQ_ITEMS = [
     qa: [
       {
         q: "What do I get when I pay?",
-        a: "Time-based access—unlimited tailoring during your chosen period. You can view and download all your resumes, no matter how many you create. Options: 2 days ($4.95), 1 week ($10), or 1 month ($20).",
+        a: `Time-based access—unlimited tailoring during your chosen period. You can view and download all your resumes, no matter how many you create. Options: ${PRICE_OPTIONS}.`,
       },
       {
         q: "Is it a subscription?",
