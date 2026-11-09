@@ -4,10 +4,12 @@
  */
 import type { JevDiagnosticResult } from "@/app/services/jev";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
+import type { ElicitationFact } from "@/app/types/elicitation";
 import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
 import type { DomainTaxonomyConfig } from "@/app/config/domainTaxonomy";
 import type { JobRoleKnowledge } from "@/app/services/jobKnowledge";
 import { buildLeverInstructions } from "./tailoringPresets";
+import { buildUserSuppliedFactsBlock } from "@/app/utils/elicitation";
 
 /** Upper bound for an untrusted target company name injected into the privacy mandate. */
 const MAX_COMPANY_NAME_LENGTH = 80;
@@ -260,6 +262,8 @@ export interface ExperiencePromptOptions {
   preferences?: TailoringPreferences;
   domainTaxonomy?: DomainTaxonomyConfig;
   jobKnowledge?: JobRoleKnowledge;
+  /** TRUE specifics the candidate supplied via guided elicitation (their own words). */
+  userSuppliedFacts?: ElicitationFact[];
 }
 
 export interface ExperiencePromptTarget {
@@ -352,6 +356,7 @@ ${leverBlock}${userBlock}${keywordsBlock}`
 
   const governingBlock = [
     ANTI_INFLATION_MANDATE,
+    buildUserSuppliedFactsBlock(options.userSuppliedFacts),
     buildSeniorityCalibration(seniorityTier),
     buildRecencyDepthGuidance(recencyTier),
     buildCareerArcBlock(careerArc),
@@ -466,6 +471,8 @@ export interface HolisticSummaryPromptParams {
   recencyTier?: string;
   careerArc?: string;
   targetCompany?: string;
+  /** TRUE specifics the candidate supplied via guided elicitation (their own words). */
+  userSuppliedFacts?: ElicitationFact[];
 }
 
 /**
@@ -501,6 +508,7 @@ export function getHolisticSummaryPrompt(
     jobTitle?: string;
     userRequestedKeywords?: string[];
     recencyTier?: string;
+    userSuppliedFacts?: ElicitationFact[];
   }
 ): string {
   let assembledResume = "";
@@ -514,6 +522,7 @@ export function getHolisticSummaryPrompt(
   let recencyTier: string | undefined;
   let careerArc: string | undefined;
   let targetCompany: string | undefined;
+  let userSuppliedFacts: ElicitationFact[] | undefined;
 
   if (typeof arg1 === "string") {
     originalSummary = arg1;
@@ -527,6 +536,7 @@ export function getHolisticSummaryPrompt(
       jobTitle = arg4.jobTitle;
       userRequestedKeywords = arg4.userRequestedKeywords || [];
       recencyTier = arg4.recencyTier;
+      userSuppliedFacts = arg4.userSuppliedFacts;
     }
   } else {
     assembledResume = arg1.assembledResume || "";
@@ -540,6 +550,7 @@ export function getHolisticSummaryPrompt(
     recencyTier = arg1.recencyTier;
     careerArc = arg1.careerArc;
     targetCompany = arg1.targetCompany;
+    userSuppliedFacts = arg1.userSuppliedFacts;
   }
 
   const targetTitleLine = jobTitle ? `Target Role Title: "${jobTitle}"\n` : "";
@@ -552,6 +563,8 @@ export function getHolisticSummaryPrompt(
   const careerArcSection = careerArcBlock ? `\n${careerArcBlock}\n` : "";
   const companyPrivacyBlock = buildCompanyPrivacyBlock(targetCompany);
   const companyPrivacySection = companyPrivacyBlock ? `\n${companyPrivacyBlock}\n` : "";
+  const factsBlock = buildUserSuppliedFactsBlock(userSuppliedFacts);
+  const factsSection = factsBlock ? `\n${factsBlock}\n` : "";
 
   const bulletsText = Array.isArray(tailoredBullets)
     ? tailoredBullets.join("\n")
@@ -571,7 +584,7 @@ export function getHolisticSummaryPrompt(
 
   return `You are an expert resume writer. Write a cohesive, holistic Professional Summary (2–3 sentences) representing the candidate's ENTIRE career arc, tailored for the target role below. Preserve the candidate's TRUE seniority and scope — never inflate them.
 ${leverBlock}
-${targetTitleLine}${keywordsLine}${seniorityBlock}${careerArcSection}${companyPrivacySection}
+${targetTitleLine}${keywordsLine}${seniorityBlock}${careerArcSection}${companyPrivacySection}${factsSection}
 CRITICAL INSTRUCTIONS:
 - ZERO THINKING / PREAMBLE LEAK: DO NOT output any thinking trace, <think> tags, chain-of-thought analysis, or introductory remarks (such as "*Analyze User Input:**").
 - This is a HOLISTIC EXECUTIVE SUMMARY of the candidate's career as an organic whole, NOT a changelog of recent edits.

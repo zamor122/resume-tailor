@@ -9,6 +9,7 @@ import type {
   ResumeSectionGroup,
 } from "./state";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
+import type { ElicitationFact } from "@/app/types/elicitation";
 import type { ParsedResumeForReassemble } from "@/app/utils/resumeReassemble";
 import type { JDInterpreterResult } from "@/app/utils/keyword-extraction";
 import type { SeniorityTier } from "@/app/utils/seniorityClassifier";
@@ -33,6 +34,7 @@ export const AgentStateAnnotation = Annotation.Root({
   preferences: Annotation<TailoringPreferences>(),
   modelKey: Annotation<string | undefined>(),
   sessionApiKeys: Annotation<Record<string, string> | undefined>(),
+  userSuppliedFacts: Annotation<ElicitationFact[] | undefined>(),
 
   resumeAST: Annotation<ParsedResumeForReassemble | undefined>(),
   candidateProfile: Annotation<CandidateProfile | undefined>(),

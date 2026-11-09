@@ -9,6 +9,7 @@ import { checkAndRecordAnonymousTailor } from "@/app/utils/anonymousTailorAllowa
 import { buildResumeAgentGraph } from "@/app/agent/graph";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
+import type { ElicitationFact } from "@/app/types/elicitation";
 import type { AgentState } from "@/app/agent/state";
 import { getAccessInfoServer } from "@/app/utils/accessManager";
 import { FREE_RESUME_LIMIT } from "@/app/config/pricing";
@@ -104,9 +105,27 @@ export async function POST(req: NextRequest) {
     jobTitle: clientJobTitle,
     parentResumeId,
     preferences: incomingPreferences,
+    elicitationFacts: incomingElicitationFacts,
   } = body;
 
   const preferences: TailoringPreferences = incomingPreferences || DEFAULT_PREFERENCES;
+
+  // Guided-elicitation facts: TRUE specifics the candidate supplied in their own
+  // words. Only strings survive; everything else is dropped so a malformed or
+  // skipped answer can never inject anything. Empty -> pipeline behaves as today.
+  const userSuppliedFacts: ElicitationFact[] = Array.isArray(incomingElicitationFacts)
+    ? incomingElicitationFacts
+        .filter(
+          (f: unknown): f is { question?: unknown; answer?: unknown } =>
+            !!f && typeof f === "object"
+        )
+        .map((f) => ({
+          question: typeof f.question === "string" ? f.question : "",
+          answer: typeof f.answer === "string" ? f.answer.trim() : "",
+        }))
+        .filter((f) => f.answer.length > 0)
+        .slice(0, 8)
+    : [];
 
   if (!resume || resume.trim().length < 50) {
     return new Response(
@@ -243,6 +262,7 @@ export async function POST(req: NextRequest) {
             modelKey: selectedModel,
             sessionApiKeys,
             jobTitle: clientJobTitle,
+            userSuppliedFacts: userSuppliedFacts.length ? userSuppliedFacts : undefined,
           },
           { streamMode: ["updates", "values"] }
         );
