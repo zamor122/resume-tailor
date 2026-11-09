@@ -135,11 +135,11 @@ describe('parseElicitationQuestions', () => {
     expect(qs[0].question).toBe('How many users were affected?');
   });
 
-  it('always returns something usable for unparseable model output', () => {
+  it('returns [] (not padded fallbacks) when the model produced nothing usable', () => {
+    // The ROUTE then supplies the honest fallback and labels it source:"fallback".
+    // Padding here is what previously made a silent model miss look like a generation.
     for (const junk of ['', 'not json at all', '{}', 'I cannot help with that.']) {
-      const qs = parseElicitationQuestions(junk);
-      expect(qs.length).toBeGreaterThanOrEqual(ELICITATION_MIN_QUESTIONS);
-      expect(qs.every((q) => q.question.length > 0)).toBe(true);
+      expect(parseElicitationQuestions(junk)).toEqual([]);
     }
   });
 });

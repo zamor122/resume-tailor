@@ -69,6 +69,17 @@ describe('POST /api/elicitation/questions', () => {
     expect(Array.isArray(data.questions)).toBe(true);
   });
 
+  it('reports source "fallback" (not "generated") when the model returns nothing usable', async () => {
+    const { generateWithFallback } = await import('@/app/services/model-fallback');
+    (generateWithFallback as any).mockResolvedValue({ text: 'I cannot help with that.' });
+
+    const res = await POST(makeReq({ resume: LONG, jobDescription: LONG }));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.source).toBe('fallback');
+    expect(data.questions.length).toBeGreaterThanOrEqual(3);
+  });
+
   it('caps the returned question list at five', async () => {
     const { generateWithFallback } = await import('@/app/services/model-fallback');
     (generateWithFallback as any).mockResolvedValue({
