@@ -621,7 +621,7 @@ export default function SplitScreenTailorView() {
         {/* Hero */}
         <section className="py-8 md:py-12 text-center" data-parallax="0.05">
           <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-cyan-600 dark:text-cyan-400 mb-3">
-            Free · No credit card required · Nothing auto-renews
+            Free · No login to try · Nothing auto-renews
           </p>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-3 md:mb-4">
             Tailor your resume to any job — in seconds.
@@ -630,7 +630,7 @@ export default function SplitScreenTailorView() {
             Paste your resume and a job description. Get your ATS keyword-match score and the keywords you&apos;re missing. Still you — just refined.
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-            First {FREE_RESUME_LIMIT} free — no credit card required.
+            No login needed to try it — your first {FREE_RESUME_LIMIT} saved resumes are free.
           </p>
           <button
             onClick={() => {

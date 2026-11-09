@@ -28,7 +28,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Is this ATS resume scan completely free?",
-    a: "Yes — the scan is free and needs no credit card. Sign in with Google or email in seconds, then you'll see your baseline score, formatting gaps, and the keywords you're missing.",
+    a: "Yes — the scan is free and needs no credit card, and you do not need to sign in to try it. Paste your resume and the job posting and you will see your baseline score, formatting gaps, and the keywords you are missing. Create a free account only if you want to save the result.",
   },
   {
     q: "What is a good ATS resume score?",

@@ -56,7 +56,7 @@ export default function HomepageSEOSection() {
                 Is this free?
               </h3>
               <p className="leading-relaxed text-sm">
-                Yes. Your first 3 tailored resumes are completely free. Sign in with Google or email to get started—no credit card required. After that, you can purchase time-based access for unlimited tailoring.
+                Yes. You can try it right now with no login — paste your resume and the job posting to see your score and the keywords you are missing. Create a free account (Google or email, no credit card) to save it and get your first 3 tailored resumes free. After that, access is a one-time pass, and nothing auto-renews.
               </p>
             </div>
             <div>
