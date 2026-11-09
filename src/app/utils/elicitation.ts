@@ -52,6 +52,28 @@ function stripListMarker(question: string): string {
   return question.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim();
 }
 
+/**
+ * Line-based rescue for models that ignore the "Output ONLY a JSON array" instruction and
+ * reply with a numbered/bulleted list of questions in prose. Keeps only lines that read as
+ * a question to a person, so ordinary prose in the reply is not mistaken for one.
+ */
+function extractLineQuestions(rawText: string): string[] {
+  const out: string[] = [];
+  for (const rawLine of rawText.split(/\r?\n/)) {
+    const line = stripListMarker(rawLine).replace(/^["'`]|["'`]$/g, "").trim();
+    if (line.length < 15 || line.length > MAX_QUESTION_LENGTH) continue;
+    const looksLikeQuestion =
+      line.endsWith("?") ||
+      /^(what|how|which|who|when|where|why|can you|could you|did you|do you|describe|tell me|roughly|think of)\b/i.test(
+        line
+      );
+    if (!looksLikeQuestion) continue;
+    out.push(line);
+    if (out.length >= ELICITATION_MAX_QUESTIONS) break;
+  }
+  return out;
+}
+
 function isPlainEnglish(question: string): boolean {
   const lower = question.toLowerCase();
   return !FORBIDDEN_TERMS.some((term) => lower.includes(term));
@@ -119,6 +141,14 @@ export function parseElicitationQuestions(rawText: string): ElicitationQuestion[
     }
   } catch {
     // ignore — fall through to line-based parsing / fallback
+  }
+
+  // The model does not always honour "Output ONLY a JSON array" — it may reply with a
+  // numbered or bulleted list of questions in prose. This is the line-based fallback the
+  // comment above always advertised but which was never implemented, so genuinely
+  // tailored questions were being thrown away and replaced by the generic ones.
+  if (candidates.length === 0) {
+    candidates.push(...extractLineQuestions(rawText));
   }
 
   const unique: string[] = [];

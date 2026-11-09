@@ -9,6 +9,7 @@ import {
 import {
   ELICITATION_MIN_QUESTIONS,
   ELICITATION_MAX_QUESTIONS,
+  type ElicitationQuestion,
 } from '@/app/types/elicitation';
 
 describe('sanitizeElicitationValue', () => {
@@ -141,6 +142,36 @@ describe('parseElicitationQuestions', () => {
     for (const junk of ['', 'not json at all', '{}', 'I cannot help with that.']) {
       expect(parseElicitationQuestions(junk)).toEqual([]);
     }
+  });
+
+  it('rescues a numbered list of questions when the model ignores the JSON instruction', () => {
+    const raw =
+      'Sure! Here are some questions:\n1. How many customers did your onboarding change affect?\n2. What changed for the business after that work?\n3. How long did the project take?';
+    const qs = parseElicitationQuestions(raw);
+    expect(qs.length).toBe(3);
+    expect(qs[0].question).toBe('How many customers did your onboarding change affect?');
+  });
+
+  it('rescues a bulleted list of questions', () => {
+    const raw =
+      '- How many people were on the team you supported?\n- What was the measurable result?\n- Roughly how long did that take?';
+    const qs = parseElicitationQuestions(raw);
+    expect(qs.length).toBe(3);
+    expect(qs.map((q: ElicitationQuestion) => q.question)).toContain('What was the measurable result?');
+  });
+
+  it('does not mistake ordinary prose for questions', () => {
+    const raw =
+      'I reviewed the resume and it looks good overall. The candidate has relevant experience in support.';
+    expect(parseElicitationQuestions(raw)).toEqual([]);
+  });
+
+  it('still strips jargon out of rescued questions', () => {
+    const raw =
+      '1. What is the model temperature?\n2. How many users did you support?\n3. What changed for the business?';
+    const qs = parseElicitationQuestions(raw);
+    expect(qs.some((q: ElicitationQuestion) => /model|temperature/i.test(q.question))).toBe(false);
+    expect(qs.length).toBeGreaterThanOrEqual(ELICITATION_MIN_QUESTIONS);
   });
 });
 
