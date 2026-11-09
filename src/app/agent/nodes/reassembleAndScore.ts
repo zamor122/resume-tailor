@@ -30,7 +30,6 @@ export async function reassembleAndScoreNode(
     keywordResult,
     baselineScore = 50,
     preferences,
-    bulletPlan,
   } = state;
 
   if (!rawResume || rawResume.trim().length === 0) {
@@ -131,16 +130,26 @@ export async function reassembleAndScoreNode(
     }
   }
 
-  // 5. Count metrics and modifications
+  // 5. Count metrics from what was ACTUALLY applied.
   const placeholderCount = (finalResume.match(/\[[^\]]+\]/g) || []).length;
-  const totalBulletsModified = (bulletPlan?.jobBulletChanges || []).reduce(
-    (acc, cur) => acc + (cur.bulletIndices === "all" ? (resumeAST?.experience?.length || 1) * 3 : cur.bulletIndices.length),
-    0
-  );
+
+  // `activeSuggestions` is exactly the list applied to build finalResume above, so this
+  // reports DELIVERED rewrites. It previously reported the planner's intent
+  // (bulletPlan.jobBulletChanges), which can be far larger than what survived the
+  // authenticity gate — yielding payloads that claimed rewrites while every section came
+  // back `status:"unchanged"` with zero suggestions.
+  const bulletsRewritten = activeSuggestions.length;
+
+  // Keywords genuinely ADDED (present after, absent before). `foundInResume` alone is the
+  // count of keywords already present, which was being reported as "keywordsAdded".
+  const beforeKeywordGap = computeKeywordGap(keywordResult, rawResume);
+  const keywordsAdded = keywordGap.foundInResume.filter(
+    (kw) => !beforeKeywordGap.foundInResume.includes(kw)
+  ).length;
 
   const improvementMetrics: ImprovementMetrics = {
-    bulletsRewritten: totalBulletsModified,
-    keywordsAdded: keywordGap.foundInResume.length,
+    bulletsRewritten,
+    keywordsAdded,
     scoreImprovement: afterScore - beforeScore,
     intensityApplied: preferences.intensity,
     metricsInjected: placeholderCount,

@@ -93,8 +93,9 @@ Output ONLY a JSON array of 3 to 5 strings, e.g. ["Question one?", "Question two
 
 /**
  * Parse a model response into 3-5 clean, jargon-free questions.
- * Falls back to generic questions whenever the model output is unusable, so the
- * screen ALWAYS has something honest to show.
+ * Returns [] when the model produced nothing usable, so the caller can fall back to the
+ * generic questions AND label them as such — padding here used to make a silent model
+ * miss indistinguishable from a real generation (the route labelled both "generated").
  */
 export function parseElicitationQuestions(rawText: string): ElicitationQuestion[] {
   const candidates: string[] = [];
@@ -127,6 +128,11 @@ export function parseElicitationQuestions(rawText: string): ElicitationQuestion[
     unique.push(q);
     if (unique.length >= ELICITATION_MAX_QUESTIONS) break;
   }
+
+  // Nothing usable from the model -> hand the caller an empty list so it can supply the
+  // honest fallback and label it accordingly. Padding here is what made a silent model
+  // miss indistinguishable from a real generation.
+  if (unique.length === 0) return [];
 
   const padded = [...unique];
   if (padded.length < ELICITATION_MIN_QUESTIONS) {
