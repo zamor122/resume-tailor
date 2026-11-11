@@ -82,11 +82,11 @@ export const metadata: Metadata = {
     url: "https://airesumetailor.com",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
         alt: "AI Resume Tailor - Job Match Optimization Tool with Relevancy Scoring",
-        type: "image/jpeg",
+        type: "image/png",
       },
     ],
   },
@@ -95,7 +95,7 @@ export const metadata: Metadata = {
     title: "AI Resume Tailor - Free Job Match Optimization Tool",
     description: "Free AI resume tool that tailors your resume for each job and job description. Your first 3 tailored resumes are free. Get more interviews with perfectly tailored applications.",
     site: "@airesumetailor",
-    images: ["/og-image.jpg"],
+    images: ["/opengraph-image"],
   },
   // NOTE: deliberately NO root-level `alternates.canonical` here.
   //
