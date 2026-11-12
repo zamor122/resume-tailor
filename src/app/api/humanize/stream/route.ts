@@ -6,6 +6,12 @@ import { checkApiRateLimit, trackRateLimitHit, estimateTokens } from "@/app/util
 import { trackEventServer } from "@/app/utils/umamiServer";
 import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
 import { checkAnonymousTailorAllowed, recordAnonymousTailorUsage } from "@/app/utils/anonymousTailorAllowance";
+import {
+  startLangfuseTrace,
+  endLangfuseTrace,
+  setCurrentLangfuseTrace,
+  flushLangfuse,
+} from "@/app/services/observability/langfuse";
 import { buildResumeAgentGraph } from "@/app/agent/graph";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
@@ -193,6 +199,9 @@ export async function POST(req: NextRequest) {
       let streamClosed = false;
       let heartbeatTimer: NodeJS.Timeout | null = null;
       let currentProgress = 15;
+      let lsTraceId: string | null = null;
+      let lsTraceOutput: unknown = undefined;
+      let lsTraceError: string | null = null;
 
       req.signal?.addEventListener?.("abort", () => {
         streamClosed = true;
@@ -214,6 +223,21 @@ export async function POST(req: NextRequest) {
           userId: authenticatedUserId || "anonymous",
           jobTitle: clientJobTitle,
         });
+
+        // One trace per tailoring run, so the dashboard answers "how well is the agent doing?"
+        // with real per-run latency, model choices and outcomes.
+        lsTraceId = startLangfuseTrace({
+          name: "tailor-resume",
+          userId: authenticatedUserId ?? undefined,
+          sessionId,
+          metadata: {
+            resumeChars: resume.length,
+            jdChars: jobDescription?.length || 0,
+            intensity: preferences.intensity,
+            authenticated: !!authenticatedUserId,
+          },
+        });
+        setCurrentLangfuseTrace(lsTraceId);
 
         // Step 1: Initial event
         streamClosed = !sendSSE(controller, "status", {
@@ -303,6 +327,12 @@ export async function POST(req: NextRequest) {
         }
 
         const elapsedMs = Date.now() - startTime;
+        lsTraceOutput = {
+          suggestions: agentResult.suggestions?.length || 0,
+          beforeScore: agentResult.beforeScore,
+          afterScore: agentResult.afterScore,
+          elapsedMs,
+        };
         console.log(`[Stream API] ✔ Agent graph completed in ${elapsedMs}ms`, {
           scoreBefore: agentResult.beforeScore,
           scoreAfter: agentResult.afterScore,
@@ -518,6 +548,7 @@ export async function POST(req: NextRequest) {
           clearInterval(heartbeatTimer);
           heartbeatTimer = null;
         }
+        lsTraceError = error?.message || "unknown";
         console.error("[Stream API] ❌ Agent Graph Execution Error:", {
           message: error?.message,
           status: error?.status,
@@ -541,6 +572,17 @@ export async function POST(req: NextRequest) {
           clearInterval(heartbeatTimer);
           heartbeatTimer = null;
         }
+        // Telemetry MUST ship before this serverless invocation returns — a route handler that
+        // exits first silently drops the batch, which reads as "tracing is broken".
+        if (lsTraceId) {
+          endLangfuseTrace(lsTraceId, {
+            output: lsTraceOutput,
+            status: lsTraceError ? "error" : "completed",
+            error: lsTraceError || undefined,
+          });
+          setCurrentLangfuseTrace(null);
+        }
+        await flushLangfuse();
       }
     },
   });
