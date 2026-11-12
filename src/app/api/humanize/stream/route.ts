@@ -261,7 +261,16 @@ export async function POST(req: NextRequest) {
             userId: authenticatedUserId ?? undefined,
             parentResumeId,
             preferences,
-            modelKey: selectedModel,
+            // Only an EXPLICITLY chosen model may override per-step routing. Passing the
+            // resolved default (`selectedModel`) here used to override it for EVERY node:
+            // `resolveStepModel` returns the caller's key first, so the whole routing table
+            // (fast model for read/structured nodes, capable model for heavy generation) was
+            // dead code. Every node then hit `DEFAULT_MODEL_KEY` — the slowest free model,
+            // capped at 50 requests/day — and once that quota ran out the pipeline silently
+            // fell through to Groq's 120B reasoning model, turning each call into ~18s and
+            // pushing the run past Vercel's 60s function cap. `selectedModel` is still used
+            // for rate-limiting/telemetry above; it just must not masquerade as a user choice.
+            modelKey: modelKey || undefined,
             sessionApiKeys,
             jobTitle: clientJobTitle,
             userSuppliedFacts: userSuppliedFacts.length ? userSuppliedFacts : undefined,
