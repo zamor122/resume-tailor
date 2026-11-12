@@ -24,11 +24,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Deliberately does NOT return customer_email. This endpoint is reachable without a
+    // session (the post-payment /success page is intentionally sessionless and cannot send
+    // a bearer token), so it must not hand back buyer PII for any session id passed in.
+    // Session ids are cryptographically random and this route is rate-limited by middleware,
+    // which is what bounds the residual exposure here.
     return NextResponse.json({
       paid: true,
       status: session.payment_status,
       metadata: session.metadata,
-      customer_email: session.customer_email,
     });
   } catch (error) {
     console.error("Error verifying payment:", error);

@@ -94,12 +94,10 @@ export async function generateContentWithFallback(
     modelKey,
     DEFAULT_MODEL,
     ...(fallbackModels || FALLBACK_MODELS),
-    'gemini:gemini-2.5-flash',
-    'gemini:gemini-1.5-flash',
-    'groq:llama-3.3-70b-versatile',
-    'groq:openai/gpt-oss-120b',
     // NOTE: deliberately no paid provider in this default tail — the cost guard
     // below is what decides whether a paid model may ever be attempted.
+    // Dead model ids (gemini-1.5-flash, groq:llama-3.3-70b-versatile, cerebras:*)
+    // were removed per the live liveness probe (tests/integration/model-probe.test.ts).
   ].filter(Boolean) as string[];
 
   // Deduplicate while preserving priority order, then enforce the cost policy.

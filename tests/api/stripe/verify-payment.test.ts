@@ -69,7 +69,8 @@ describe('POST /api/stripe/verify-payment', () => {
     const data = await res.json();
     expect(data.paid).toBe(true);
     expect(data.status).toBe('paid');
-    expect(data.customer_email).toBe('applicant@example.com');
+    // Buyer PII must NOT be returned by an endpoint that cannot verify ownership.
+    expect(data.customer_email).toBeUndefined();
     expect(data.metadata).toEqual({
       tier: '7D',
       userId: 'user-xyz',

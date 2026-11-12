@@ -10,13 +10,15 @@ vi.mock("@/app/services/model-fallback", () => ({
 }));
 
 describe("Humanize Stream & Models Configuration", () => {
-  it("includes valid gemini-1.5-flash in MODEL_CONFIGS and FALLBACK_MODELS without deprecated models", () => {
-    expect(MODEL_CONFIGS["gemini:gemini-1.5-flash"]).toBeDefined();
-    expect(MODEL_CONFIGS["gemini:gemini-1.5-flash"].modelId).toBe("gemini-1.5-flash");
+  it("ships only live models in FALLBACK_MODELS (no dead ids)", () => {
+    // Dead ids removed after the live liveness probe: gemini-1.5-flash (404) and
+    // groq:llama-3.3-70b-versatile (404). See tests/integration/model-probe.test.ts.
+    expect(MODEL_CONFIGS["gemini:gemini-2.5-flash"]).toBeDefined();
 
-    // FALLBACK_MODELS should prioritize working models and not include deprecated gemini-2.5-flash-lite
-    expect(FALLBACK_MODELS).toContain("gemini:gemini-1.5-flash");
-    expect(FALLBACK_MODELS).not.toContain("gemini:gemini-2.5-flash-lite");
+    expect(FALLBACK_MODELS).toContain("gemini:gemini-2.5-flash");
+    expect(FALLBACK_MODELS).toContain("gemini:gemini-2.5-flash-lite");
+    expect(FALLBACK_MODELS).not.toContain("gemini:gemini-1.5-flash");
+    expect(FALLBACK_MODELS).not.toContain("groq:llama-3.3-70b-versatile");
   });
 
   it("bounds concurrency in surgicalTailorNode to at most 2 parallel calls", async () => {

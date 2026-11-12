@@ -44,6 +44,17 @@ export class GeminiProvider implements AIProvider {
         generationConfig.topP = options.topP;
       }
 
+      // Gemini 2.5 Flash is a *thinking* model: its internal reasoning is billed against
+      // maxOutputTokens and intermittently starved the visible answer, truncating JSON
+      // output mid-string (measured: thoughtsTokenCount ~992 of a 2000-token budget).
+      // These nodes do structured generation, not open-ended reasoning, so default
+      // thinking OFF; callers can opt back in via options.thinkingBudget.
+      const thinkingBudget =
+        options?.thinkingBudget ?? (this.modelId.includes('2.5') ? 0 : undefined);
+      if (thinkingBudget !== undefined) {
+        generationConfig.thinkingConfig = { thinkingBudget };
+      }
+
       const result = await this.model.generateContent({
         contents: [
           {

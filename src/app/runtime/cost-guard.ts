@@ -31,10 +31,11 @@ export function classifyProvider(provider: string): CostClass {
 // Free-only fallback chain (diverse providers; no single-key dep)
 // ---------------------------------------------------------------
 
-/** The ONLY models ever used in automatic (free) fallback. */
+/** The ONLY models ever used in automatic (free) fallback.
+ *  Live-verified only (see tests/integration/model-probe.test.ts). */
 export const FREE_FALLBACK_CHAIN = [
   'gemini:gemini-2.5-flash',
-  'groq:llama-3.3-70b-versatile',
+  'groq:openai/gpt-oss-120b',
   'gemini:gemini-2.5-flash-lite',
 ] as const;
 
@@ -54,10 +55,19 @@ const READ_STEPS = new Set<StepId>(['readResume', 'extractKeywords', 'researchCo
  * Preferred for heavy generation + structured extraction when its server-side
  * key is present. Any failure falls back to the free chain (see
  * getFallbackChainFor + generateContentWithFallback), so cost cannot escalate.
+ *
+ * DISABLED BY DEFAULT: the live probe shows the default ClinePass gateway/model
+ * id returns a non-OpenAI-shaped response (no `choices`), so routing here only
+ * burns a wasted round-trip before falling back. Re-enable with PENNY_ENABLED=1
+ * once the model id is verified against `GET $CLINE_API_URL/models`.
  */
 export const PENNY_MODEL = 'cline:cline-pass/deepseek-v4.1-flash';
 
+const PENNY_ENABLED_CTRL = 'PENNY_ENABLED';
+
 function pennyAvailable(): boolean {
+  // Read at call time so the flag is env-configurable (and testable) per call.
+  if (process.env[PENNY_ENABLED_CTRL] !== '1') return false;
   const config = getModelConfig(PENNY_MODEL);
   return !!(config?.apiKeyEnvVar && process.env[config.apiKeyEnvVar]);
 }

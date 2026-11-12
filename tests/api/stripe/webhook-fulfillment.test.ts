@@ -78,12 +78,13 @@ describe('Stripe Webhook Fulfillment & Lifecycle', () => {
   });
 
   describe('GET /api/stripe/webhook', () => {
-    it('returns health check status and indicates if webhook secret is configured', async () => {
+    it('returns a liveness status WITHOUT disclosing whether the webhook secret is configured', async () => {
       const res = await GET();
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.ok).toBe(true);
-      expect(data.hasSecret).toBe(true);
+      // Configuration state must not be readable by anyone who can reach this URL.
+      expect(data.hasSecret).toBeUndefined();
     });
   });
 

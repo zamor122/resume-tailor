@@ -18,14 +18,16 @@ describe('apiRateLimiter utilities', () => {
   });
 
   describe('extractIPAddress', () => {
-    it('should extract IP from x-forwarded-for header', () => {
+    it('uses the RIGHTMOST x-forwarded-for entry (the leftmost is client-supplied)', () => {
       const headers = new Headers();
       headers.set('x-forwarded-for', '192.168.1.1, 10.0.0.1');
-      
+
       const req = new NextRequest('http://localhost:3000', { headers });
       const ip = extractIPAddress(req);
-      
-      expect(ip).toBe('192.168.1.1');
+
+      // The trusted proxy APPENDS the real client, so the last entry is the trustworthy one.
+      // Trusting the leftmost let a caller forge their identity with one header.
+      expect(ip).toBe('10.0.0.1');
     });
 
     it('should extract IP from x-real-ip header', () => {

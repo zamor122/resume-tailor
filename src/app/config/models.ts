@@ -297,12 +297,19 @@ export const DEFAULT_MODEL =
     process.env.DEFAULT_MODEL_KEY ||
     'gemini:gemini-2.5-flash') as string;
 
+// Rebuilt from the live liveness probe (tests/integration/model-probe.test.ts).
+// Every entry MUST answer a real request — dead ids were removed after the probe
+// failed them: gemini-1.5-flash (404), groq:llama-3.3-70b-versatile (404),
+// cerebras:* (401 invalid key). The only live free models are Gemini 2.5 Flash,
+// Gemini 2.5 Flash-Lite, and Groq GPT-OSS 120B.
+//
+// Do NOT "fix" a dead key by aliasing MODEL_CONFIGS[key].modelId to a live model
+// id — the provider layer derives the wire id from the key string via
+// parseModelKey(), so a config-level alias is silently ignored.
 export const FALLBACK_MODELS = [
   'gemini:gemini-2.5-flash',
-  'gemini:gemini-1.5-flash',
-  'groq:llama-3.3-70b-versatile',
   'groq:openai/gpt-oss-120b',
-  'openai:gpt-4o-mini',
+  'gemini:gemini-2.5-flash-lite',
 ];
 
 export function getModelConfig(modelKey: string): ModelConfig | undefined {

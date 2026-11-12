@@ -7,6 +7,11 @@
 
 import { NextRequest } from 'next/server';
 import { checkRateLimit, RateLimitResult } from './rateLimiter';
+import { extractIPAddress } from './clientIp';
+
+// Re-exported for existing callers; the implementation lives in a dependency-free module
+// so Edge middleware can import it without pulling this file's analytics dependencies.
+export { extractIPAddress };
 import { checkCerebrasGlobalLimits, GlobalLimitStatus } from './cerebrasLimitTracker';
 import { trackRateLimitHitServer } from './umamiServer';
 
@@ -14,31 +19,7 @@ import { trackRateLimitHitServer } from './umamiServer';
  * Extract IP address from request headers
  * Handles various proxy configurations (x-forwarded-for, x-real-ip, etc.)
  */
-export function extractIPAddress(req: NextRequest): string {
-  // Try x-forwarded-for first (most common in production)
-  const forwardedFor = req.headers.get('x-forwarded-for');
-  if (forwardedFor) {
-    // x-forwarded-for can contain multiple IPs, take the first one
-    const ips = forwardedFor.split(',').map(ip => ip.trim());
-    return ips[0] || 'unknown';
-  }
-  
-  // Try x-real-ip
-  const realIP = req.headers.get('x-real-ip');
-  if (realIP) {
-    return realIP;
-  }
-  
-  // Try cf-connecting-ip (Cloudflare)
-  const cfIP = req.headers.get('cf-connecting-ip');
-  if (cfIP) {
-    return cfIP;
-  }
-  
-  // Fallback to req.ip if available (Next.js)
-  // Note: In Edge runtime, req.ip might not be available
-  return 'unknown';
-}
+// extractIPAddress now lives in ./clientIp (imported above and re-exported).
 
 /**
  * Hash IP address for privacy (one-way hash)
