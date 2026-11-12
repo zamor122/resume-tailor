@@ -14,6 +14,7 @@ import { HuggingFaceProvider } from './providers/huggingface';
 import { OpenRouterProvider } from './providers/openrouter';
 import { ClineProvider } from './providers/cline';
 import { stripModelThinking } from '@/app/utils/stripModelThinking';
+import { recordLangfuseGeneration, currentLangfuseTrace } from './observability/langfuse';
 
 export { isRateLimitError, isModelUnavailableError } from './error-utils';
 
@@ -134,13 +135,49 @@ export async function generateContentWithFallback(
       if (!provider.isAvailable()) {
         continue;
       }
-      const result = await provider.generateContent(prompt, options);
-      return {
-        ...result,
-        text: stripModelThinking(result.text),
-      };
+      // Trace EVERY attempt, not just the winner: the model actually used, the raw prompt and
+      // completion, latency and usage. A silent fallback (or a slow call) is the single most
+      // valuable thing to see here — it is exactly what was invisible when a node took 18s.
+      const callStartedAt = Date.now();
+      const promptText = Array.isArray(prompt) ? prompt.join("\n\n") : prompt;
+      try {
+        const result = await provider.generateContent(prompt, options);
+        recordLangfuseGeneration({
+          traceId: currentLangfuseTrace() || "unattributed",
+          name: "llm.generate",
+          model,
+          prompt: promptText,
+          completion: result.text,
+          startTime: callStartedAt,
+          endTime: Date.now(),
+          usage: result.usage
+            ? {
+                input: result.usage.promptTokens,
+                output: result.usage.completionTokens,
+                total: result.usage.totalTokens,
+              }
+            : undefined,
+        });
+        return {
+          ...result,
+          text: stripModelThinking(result.text),
+        };
+      } catch (callErr) {
+        recordLangfuseGeneration({
+          traceId: currentLangfuseTrace() || "unattributed",
+          name: "llm.generate",
+          model,
+          prompt: promptText,
+          startTime: callStartedAt,
+          endTime: Date.now(),
+          level: "ERROR",
+          metadata: { fallbackTriggered: true, error: callErr instanceof Error ? callErr.message : String(callErr) },
+        });
+        throw callErr;
+      }
     } catch (err) {
       console.warn(`[AIProvider] Model ${model} failed, falling back to next provider:`, err instanceof Error ? err.message : err);
+      // (the failure itself was already traced above, with fallbackTriggered: true)
       lastError = err;
       // Continue loop to attempt next provider
     }
