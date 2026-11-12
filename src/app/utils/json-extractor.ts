@@ -4,44 +4,39 @@
 export function extractJSONFromText(text: string): string | null {
   if (!text) return null;
 
-  // First, try to find JSON wrapped in code blocks
-  const codeBlockMatch = text.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-  if (codeBlockMatch) {
-    return codeBlockMatch[1].trim();
-  }
+  // Strip markdown code fences up front — including an UNCLOSED leading fence
+  // ("```json\n[...") that models emit when streamed/truncated output is cut
+  // before the closing fence. Without this the brace/bracket matchers never fire
+  // and we needlessly fall back to lossy line-based parsing.
+  const deFenced = text
+    .replace(/^\s*```[a-zA-Z]*\s*\r?\n?/, "")
+    .replace(/\r?\n?```\s*$/, "");
+  const trimmed = deFenced.trim();
 
-  // Try to find JSON object starting with {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    const potentialJson = jsonMatch[0];
-    
-    // Validate it's valid JSON by trying to parse it
-    try {
-      JSON.parse(potentialJson);
-      return potentialJson;
-    } catch {
-      // Not valid JSON, continue to other methods
+  // Prefer the container the payload actually opens with. Bullet output is an
+  // array, so a leading "[" must win over a stray inner object (or we'd return
+  // the first object and silently drop the rest of the list).
+  const patterns = trimmed.startsWith("[")
+    ? [/\[[\s\S]*\]/, /\{[\s\S]*\}/]
+    : [/\{[\s\S]*\}/, /\[[\s\S]*\]/];
+
+  for (const pattern of patterns) {
+    const match = deFenced.match(pattern);
+    if (match) {
+      try {
+        JSON.parse(match[0]);
+        return match[0];
+      } catch {
+        // Not valid JSON — try the next container shape.
+      }
     }
   }
 
-  // Try to find JSON array starting with [
-  const arrayMatch = text.match(/\[[\s\S]*\]/);
-  if (arrayMatch) {
-    const potentialJson = arrayMatch[0];
-    try {
-      JSON.parse(potentialJson);
-      return potentialJson;
-    } catch {
-      // Not valid JSON
-    }
-  }
-
-  // Last resort: try to extract text between first { and last }
-  const firstBrace = text.indexOf('{');
-  const lastBrace = text.lastIndexOf('}');
-  
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    const extracted = text.substring(firstBrace, lastBrace + 1);
+  // Last resort: slice from first { to last }.
+  const firstBrace = deFenced.indexOf("{");
+  const lastBrace = deFenced.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const extracted = deFenced.slice(firstBrace, lastBrace + 1);
     try {
       JSON.parse(extracted);
       return extracted;

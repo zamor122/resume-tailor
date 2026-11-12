@@ -7,12 +7,13 @@ import { stripe } from "@/app/lib/stripe";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-/** GET: Verify webhook endpoint is reachable (for local setup debugging) */
+/** GET: liveness probe only. Deliberately does NOT disclose whether the webhook secret
+ *  is configured — that is configuration state and must not be readable by anyone who can
+ *  reach this URL. */
 export async function GET() {
   return NextResponse.json({
     ok: true,
     message: "Webhook endpoint is reachable. Use POST for Stripe events.",
-    hasSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
   });
 }
 
@@ -87,6 +88,23 @@ async function handleCheckoutCompleted(
   if (!tierConfig) {
     console.error("[Webhook] Unknown tier:", tier);
     return NextResponse.json({ received: true }, { status: 200 });
+  }
+
+  // What was actually paid vs the tier's configured price. The amount is set server-side
+  // (the client cannot choose it) and promotion codes legitimately reduce it, so this must
+  // NOT block a discounted sale — its job is to make an unexpected free/deep-discount grant
+  // visible instead of silent, since the grant below is keyed on metadata.tier alone.
+  const expectedCents = Math.round(tierConfig.price * 100);
+  const paidCents = session.amount_total ?? 0;
+  const discountCents = session.total_details?.amount_discount ?? 0;
+  if (paidCents + discountCents < expectedCents) {
+    console.warn("[Webhook] Amount paid is BELOW the tier list price — granting, but flagged:", {
+      session: session.id,
+      tier,
+      expectedCents,
+      paidCents,
+      discountCents,
+    });
   }
 
   const now = new Date();

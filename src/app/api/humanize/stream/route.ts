@@ -5,7 +5,7 @@ import { obfuscateResume } from "@/app/utils/resumeObfuscator";
 import { checkApiRateLimit, trackRateLimitHit, estimateTokens } from "@/app/utils/apiRateLimiter";
 import { trackEventServer } from "@/app/utils/umamiServer";
 import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
-import { checkAndRecordAnonymousTailor } from "@/app/utils/anonymousTailorAllowance";
+import { checkAnonymousTailorAllowed, recordAnonymousTailorUsage } from "@/app/utils/anonymousTailorAllowance";
 import { buildResumeAgentGraph } from "@/app/agent/graph";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
@@ -138,6 +138,7 @@ export async function POST(req: NextRequest) {
   }
 
   let authenticatedUserId: string | null = null;
+  let anonymousHashedIP: string | null = null;
 
   if (userId) {
     const authResult = await requireAuth(req, { accessToken });
@@ -151,7 +152,8 @@ export async function POST(req: NextRequest) {
     if ("error" in verifyResult) return verifyResult.error;
     authenticatedUserId = authResult.userId;
   } else {
-    const { allowed } = await checkAndRecordAnonymousTailor(req);
+    const { allowed, hashedIP: anonHashedIP } = await checkAnonymousTailorAllowed(req);
+    anonymousHashedIP = anonHashedIP;
     if (!allowed) {
       return new Response(
         JSON.stringify({
@@ -465,6 +467,12 @@ export async function POST(req: NextRequest) {
         const safeContentMap = isUnlocked
           ? obfuscationResult.contentMap
           : sanitizeContentMapForLocked(obfuscationResult.contentMap);
+
+        // Charge the anonymous free preview ONLY now that a result is actually being
+        // delivered — a failed or timed-out run must not consume it (see the allowance module).
+        if (!authenticatedUserId && anonymousHashedIP) {
+          await recordAnonymousTailorUsage(anonymousHashedIP);
+        }
 
         // Final completion event
         streamClosed = !sendSSE(controller, "complete", {

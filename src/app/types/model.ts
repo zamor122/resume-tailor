@@ -21,6 +21,8 @@ export interface ModelOptions {
   frequencyPenalty?: number;
   presencePenalty?: number;
   stream?: boolean;
+  /** Gemini 2.5 reasoning budget. 0 disables thinking (see GeminiProvider). */
+  thinkingBudget?: number;
 }
 
 export interface GenerateContentResult {

@@ -49,6 +49,17 @@ describe('json-extractor utilities', () => {
     it('should return null for text without JSON', () => {
       expect(extractJSONFromText('Just plain text')).toBeNull();
     });
+
+    it('extracts a JSON array from an UNCLOSED leading ```json fence (truncated stream)', () => {
+      const text = '```json\n[{"index":0,"rewritten":"- Led the shipment dashboard."}]';
+      expect(extractJSONFromText(text)).toBe(
+        '[{"index":0,"rewritten":"- Led the shipment dashboard."}]',
+      );
+    });
+
+    it('prefers the array when the payload opens with [ (not the first inner object)', () => {
+      expect(extractJSONFromText('[{"a":1},{"b":2}]')).toBe('[{"a":1},{"b":2}]');
+    });
   });
 
   describe('parseJSONFromText', () => {

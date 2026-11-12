@@ -125,7 +125,7 @@ describe('Cost guard', () => {
     it('returns remaining chain after the current model', () => {
       const chain = getFallbackChainFor('gemini:gemini-2.5-flash');
       expect(chain).toEqual([
-        'groq:llama-3.3-70b-versatile',
+        'groq:openai/gpt-oss-120b',
         'gemini:gemini-2.5-flash-lite',
       ]);
     });
@@ -172,8 +172,16 @@ describe('Cost guard', () => {
       expect(result.allowed).toBe(true);
     });
 
-    it('routes heavy generation + structured extraction to the penny engine when keyed', () => {
+    it('does NOT route to the penny engine by default (penny disabled)', () => {
       vi.stubEnv('CLINE_API_KEY', 'cline-server-key');
+      vi.stubEnv('PENNY_ENABLED', '');
+      expect(resolveStepModel('tailor')).toBe('gemini:gemini-2.5-flash');
+      expect(resolveStepModel('extractKeywords')).toBe('gemini:gemini-2.5-flash-lite');
+    });
+
+    it('routes heavy generation + structured extraction to the penny engine when PENNY_ENABLED=1', () => {
+      vi.stubEnv('CLINE_API_KEY', 'cline-server-key');
+      vi.stubEnv('PENNY_ENABLED', '1');
       expect(resolveStepModel('tailor')).toBe('cline:cline-pass/deepseek-v4.1-flash');
       expect(resolveStepModel('extractKeywords')).toBe('cline:cline-pass/deepseek-v4.1-flash');
     });

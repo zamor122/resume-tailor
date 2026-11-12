@@ -173,6 +173,28 @@ If you cannot access or extract meaningful content from this URL, respond with e
   }
 }
 
+// ─── SSRF guard ──────────────────────────────────────────────────────────────
+// This endpoint fetches a URL the CALLER supplies, so it must never be pointable at the
+// host's own network (loopback, private ranges, link-local cloud metadata). Without this
+// it is an open proxy for probing internal services.
+const DISALLOWED_HOST_PATTERNS: RegExp[] = [
+  /^localhost$/i,
+  /^127\./,
+  /^0\.0\.0\.0$/,
+  /^10\./,
+  /^192\.168\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^169\.254\./,
+  /^\[?::1\]?$/,
+  /^metadata\./i,
+  /\.internal$/i,
+  /\.local$/i,
+];
+
+function isDisallowedHost(hostname: string): boolean {
+  return DISALLOWED_HOST_PATTERNS.some((p) => p.test(hostname));
+}
+
 // ─── Handler ─────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   let url: string;
@@ -187,12 +209,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "url is required" }, { status: 400 });
   }
 
+  let parsedUrl: URL;
   try {
-    const parsed = new URL(url);
-    if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Invalid protocol");
+    parsedUrl = new URL(url);
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error("Invalid protocol");
   } catch {
     return NextResponse.json(
       { error: "Invalid URL — please enter a valid http or https URL" },
+      { status: 400 }
+    );
+  }
+
+  // SSRF guard: refuse loopback / private / link-local targets.
+  if (isDisallowedHost(parsedUrl.hostname.toLowerCase())) {
+    return NextResponse.json(
+      { error: "That URL is not allowed." },
       { status: 400 }
     );
   }
