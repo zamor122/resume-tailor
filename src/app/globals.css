@@ -650,17 +650,18 @@
 
   /* Form textarea - retro typewriter feel with clean typography */
   .form-textarea {
-    @apply w-full min-h-[200px] md:min-h-[280px] rounded-lg p-4 text-sm md:text-base
-           text-[#1C2028] placeholder-gray-500 font-sans
+    @apply w-full min-h-[200px] md:min-h-[280px] rounded-xl p-4 text-xs sm:text-sm md:text-base
+           text-[#1C2028] placeholder-gray-500 font-mono leading-relaxed
            resize-y transition-all duration-200 outline-none;
     background: #FFFFFF;
-    border: 1.5px solid #1C2028;
-    box-shadow: 2px 2px 0px #1C2028;
+    border: 2px solid #1C2028;
+    box-shadow: 3px 3px 0px #1C2028;
   }
 
   .form-textarea:focus {
     outline: none;
-    border-color: transparent;
+    border-color: #1C2028;
+    box-shadow: 4px 4px 0px #FF5722;
   }
 
   .form-textarea::placeholder {
