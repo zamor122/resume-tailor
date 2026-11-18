@@ -80,42 +80,55 @@ export default function ResumeDiffView({
 
   const legend = (
     <div
-      className="flex flex-nowrap items-center gap-x-4 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 overflow-x-auto"
+      className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl px-4 py-3 flex flex-nowrap items-center gap-x-5 text-xs font-mono text-[#1C2028] overflow-x-auto"
       role="figure"
       aria-label="Legend for changes"
     >
-      <span className="inline-flex items-center gap-1.5 shrink-0">
-        <span className="resume-diff-legend-add inline-block h-4 min-w-3 rounded-sm" aria-hidden />
-        <span className="whitespace-nowrap">Green highlight = added</span>
+      <span className="neo-tag bg-[#1C2028] text-white text-[9px] px-2 py-0.5 font-bold uppercase tracking-wider shrink-0 border border-[#1C2028]">
+        DIFF LEGEND
       </span>
-      <span className="inline-flex items-center gap-1.5 shrink-0">
-        <span className="resume-diff-legend-del inline-block h-4 min-w-3 rounded-sm line-through decoration-gray-500" aria-hidden />
-        <span className="line-through whitespace-nowrap">Red highlight = removed</span>
+      <span className="inline-flex items-center gap-1.5 shrink-0 font-bold">
+        <span className="w-3 h-3 rounded-sm bg-[#10B981] border border-[#1C2028]" aria-hidden />
+        <span className="whitespace-nowrap">Green = Added in tailored resume</span>
+      </span>
+      <span className="inline-flex items-center gap-1.5 shrink-0 font-bold text-gray-600">
+        <span className="w-3 h-3 rounded-sm bg-[#EF4444] border border-[#1C2028]" aria-hidden />
+        <span className="line-through whitespace-nowrap">Red = Removed from original</span>
       </span>
     </div>
   );
 
   const paneClass =
-    "resume-diff overflow-auto rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 p-4 text-sm font-mono whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 [&_ins]:no-underline [&_del]:line-through";
+    "resume-diff overflow-auto rounded-xl border-2 border-[#1C2028] bg-white p-5 text-xs sm:text-sm font-mono whitespace-pre-wrap break-words text-[#1C2028] shadow-[3px_3px_0px_#1C2028] leading-relaxed [&_ins]:bg-[#D1FAE5] [&_ins]:text-[#065F46] [&_ins]:font-bold [&_ins]:no-underline [&_del]:bg-[#FEE2E2] [&_del]:text-[#991B1B] [&_del]:line-through";
 
   if (layout === "side-by-side") {
     return (
-      <div className={`space-y-3 ${className}`}>
+      <div className={`space-y-4 ${className}`}>
         {legend}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Original
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="neo-tag bg-[#1C2028] text-white text-[10px] font-mono font-bold px-2 py-0.5 border border-[#1C2028] shadow-[1px_1px_0px_#1C2028]">
+                01 ORIGINAL
+              </span>
+              <span className="text-xs font-mono font-bold text-gray-500 uppercase tracking-wide">
+                Previous Version
+              </span>
+            </div>
             <div
               className={paneClass}
               dangerouslySetInnerHTML={{ __html: leftHtml }}
             />
           </div>
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Tailored
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="neo-tag bg-[#10B981] text-white text-[10px] font-mono font-bold px-2 py-0.5 border border-[#1C2028] shadow-[1px_1px_0px_#1C2028]">
+                02 TAILORED
+              </span>
+              <span className="text-xs font-mono font-bold text-[#10B981] uppercase tracking-wide">
+                Current Version
+              </span>
+            </div>
             <div
               className={paneClass}
               dangerouslySetInnerHTML={{ __html: rightHtml }}
@@ -127,7 +140,7 @@ export default function ResumeDiffView({
   }
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={`space-y-4 ${className}`}>
       {legend}
       <div className={paneClass} dangerouslySetInnerHTML={{ __html: unifiedHtml }} />
     </div>

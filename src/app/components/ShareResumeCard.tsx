@@ -38,32 +38,37 @@ export default function ShareResumeCard() {
   };
 
   return (
-    <div className="output-container p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-        Share this tool
-      </h3>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        Get a friend to try it—free resume optimization with job matching.
+    <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] p-5 sm:p-6 rounded-xl space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="neo-tag bg-[#FF5722] text-white text-[9px] font-mono font-bold px-2 py-0.5 border border-[#1C2028]">
+          SHARE &amp; REFER
+        </span>
+        <h3 className="text-base sm:text-lg font-mono font-bold text-[#1C2028]">
+          Share With A Peer
+        </h3>
+      </div>
+      <p className="text-xs sm:text-sm font-mono text-gray-700 leading-relaxed">
+        Help another job seeker get their resume tuned for ATS and recruiter screens with 1-click tailoring.
       </p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2.5 pt-1">
         <button
           type="button"
           onClick={handleCopyLink}
-          className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="neo-btn px-4 py-2 text-xs font-mono font-bold uppercase rounded-lg border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] bg-white hover:bg-[#F4F1EA] text-[#1C2028] active:translate-x-[1px] active:translate-y-[1px]"
         >
-          {copied ? "Copied!" : "Copy link"}
+          {copied ? "✓ Copied to clipboard" : "📋 Copy link"}
         </button>
         <button
           type="button"
           onClick={handleShareLinkedIn}
-          className="px-4 py-2 text-sm font-medium rounded-lg bg-[#0A66C2] text-white hover:bg-[#004182] transition-colors"
+          className="neo-btn px-4 py-2 text-xs font-mono font-bold uppercase rounded-lg border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] bg-[#0A66C2] text-white hover:bg-[#004182] active:translate-x-[1px] active:translate-y-[1px]"
         >
           Share on LinkedIn
         </button>
         <button
           type="button"
           onClick={handleShareTwitter}
-          className="px-4 py-2 text-sm font-medium rounded-lg bg-black dark:bg-gray-200 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-300 transition-colors"
+          className="neo-btn px-4 py-2 text-xs font-mono font-bold uppercase rounded-lg border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] bg-[#1C2028] text-white hover:bg-black active:translate-x-[1px] active:translate-y-[1px]"
         >
           Share on X
         </button>

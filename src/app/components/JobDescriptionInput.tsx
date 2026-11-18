@@ -154,12 +154,21 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
   };
 
   return (
-    <div className={`input-container flex flex-col ${fillHeight ? "flex-1 min-h-0" : ""}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b-2 border-[#1C2028] flex-shrink-0">
-        <h2 className="text-base sm:text-lg md:text-xl font-mono font-bold text-[#1C2028] flex items-center gap-2 mb-0">
-          <span className="w-6 h-6 rounded bg-[#FF5722] text-white flex items-center justify-center text-xs border border-[#1C2028] shadow-[1px_1px_0px_#1C2028]">02</span>
-          <span>JOB DESCRIPTION</span>
-        </h2>
+    <div className={`input-container flex flex-col gap-4 ${fillHeight ? "flex-1 min-h-0" : ""}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b-2 border-[#1C2028] flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <span className="neo-tag bg-[#FF5722] text-white text-xs px-2.5 py-1 font-mono font-bold border border-[#1C2028] shadow-[1px_1px_0px_#1C2028]">
+            STEP 02
+          </span>
+          <div>
+            <h2 className="text-base sm:text-lg md:text-xl font-mono font-bold text-[#1C2028] leading-tight mb-0">
+              TARGET JOB DESCRIPTION
+            </h2>
+            <p className="text-[11px] sm:text-xs font-mono text-gray-600 mb-0">
+              Paste job post or enter a job URL
+            </p>
+          </div>
+        </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {/* URL fetch status badges */}
           {urlFetchState === "fetching" && (
@@ -183,7 +192,7 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
           )}
           {urlFetchState !== "fetching" && (
             <span
-              className={`neo-tag text-[11px] font-mono font-bold px-2 py-0.5 border border-[#1C2028] ${
+              className={`neo-tag text-[11px] font-mono font-bold px-2.5 py-1 border border-[#1C2028] ${
                 charCount === 0
                   ? "bg-white text-gray-500 shadow-[1px_1px_0px_#1C2028]"
                   : isSufficient
@@ -196,7 +205,7 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
                 <span className="ml-1 opacity-90">(MIN {MIN_CHARS})</span>
               )}
               {isSufficient && charCount > 0 && (
-                <span className="ml-1">READY</span>
+                <span className="ml-1">READY ✓</span>
               )}
             </span>
           )}

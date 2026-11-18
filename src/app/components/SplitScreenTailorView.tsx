@@ -28,6 +28,10 @@ import { useGamification } from "@/app/contexts/GamificationContext";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
 import type { ElicitationFact, ElicitationQuestion } from "@/app/types/elicitation";
+import {
+  getSavedElicitationAnswers,
+  normalizeElicitationKey,
+} from "@/app/utils/elicitation";
 import { extractTextFromPDF } from "@/app/utils/pdfExtractor";
 import { analytics } from "@/app/services/analytics";
 import { saveResumeData, loadResumeData, clearResumeData } from "@/app/utils/dataPersistence";
@@ -405,9 +409,19 @@ export default function SplitScreenTailorView() {
       return;
     }
 
+    // 1. Immediately indicate loading state on the button so 1 click suffices
+    setLoading(true);
+    setError(null);
+    setResults(null);
+    setHasStartedTailoring(true);
+    setAgentMessage("Checking requirements...");
+    setAgentProgress(5);
+    playSfx("click");
+
     // Guided elicitation: ask 3-5 plain questions ONCE, after the job is known and
-    // before tailoring, so we can surface true specifics the resume omitted. Every
-    // question is optional; the user's answers are the only source of new numbers.
+    // before tailoring, so we can surface true specifics the resume omitted.
+    // If the candidate already answered these questions in a previous session,
+    // we repopulate the answers and avoid re-asking them (instant 1-click tailoring!).
     if (!elicitationResolvedRef.current) {
       elicitationResolvedRef.current = true;
       try {
@@ -424,23 +438,40 @@ export default function SplitScreenTailorView() {
         const questions: ElicitationQuestion[] = Array.isArray(data?.questions)
           ? data.questions
           : [];
+
         if (questions.length > 0) {
-          setElicitationQuestions(questions);
-          setShowElicitation(true);
-          return; // wait for the user to answer or skip, then resume tailoring
+          const savedAnswers = getSavedElicitationAnswers();
+          const rememberedFacts: ElicitationFact[] = [];
+          let allAnswered = true;
+
+          for (const q of questions) {
+            const key = normalizeElicitationKey(q.question);
+            const answer = savedAnswers[key];
+            if (answer && answer.trim().length > 0) {
+              rememberedFacts.push({ question: q.question, answer: answer.trim() });
+            } else {
+              allAnswered = false;
+            }
+          }
+
+          if (allAnswered && rememberedFacts.length > 0) {
+            // All questions already answered previously — inject facts and continue with 0 delay!
+            elicitationFactsRef.current = rememberedFacts;
+          } else {
+            // Unanswered questions exist — open modal with known answers pre-populated
+            setLoading(false);
+            setElicitationQuestions(questions);
+            setShowElicitation(true);
+            return; // wait for the user to answer or skip, then resume tailoring
+          }
         }
       } catch {
         // Couldn't get questions — never block the user; tailor as usual.
       }
     }
 
-    setLoading(true);
-    setError(null);
-    setResults(null);
-    setHasStartedTailoring(true);
     setAgentMessage("Analyzing your resume and target job requirements...");
     setAgentProgress(10);
-    playSfx("click");
 
     const source = prefillResumeId ? "prefill" : (resume.trim().length > 0 ? "return_visit" : "blank");
     analytics.trackEvent(analytics.events.RESUME_TAILOR, {
@@ -713,7 +744,7 @@ export default function SplitScreenTailorView() {
         )}
 
         {/* Mobile Step Switcher (md:hidden) */}
-        <div className="md:hidden flex items-center justify-between p-1.5 rounded-xl bg-[#FAF7F0] dark:bg-[#1C2028] border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] gap-2">
+        <div className="md:hidden flex items-center justify-between p-1.5 mb-6 rounded-xl bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] gap-2">
           <button
             type="button"
             onClick={() => {
@@ -723,10 +754,10 @@ export default function SplitScreenTailorView() {
             className={`flex-1 py-2 px-2 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all neo-btn ${
               activeMobileTab === "resume"
                 ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
-                : "bg-white dark:bg-[#21262D] text-[#1C2028] dark:text-gray-300 border border-[#1C2028]/40"
+                : "bg-white text-[#1C2028] border border-[#1C2028]/40"
             }`}
           >
-            <span>📄 1. RESUME</span>
+            <span>📄 1. YOUR RESUME</span>
             {resume.trim().length >= 100 ? (
               <span className="w-2 h-2 rounded-full bg-[#10B981] border border-[#1C2028]" />
             ) : null}
@@ -740,7 +771,7 @@ export default function SplitScreenTailorView() {
             className={`flex-1 py-2 px-2 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all neo-btn ${
               activeMobileTab === "job"
                 ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
-                : "bg-white dark:bg-[#21262D] text-[#1C2028] dark:text-gray-300 border border-[#1C2028]/40"
+                : "bg-white text-[#1C2028] border border-[#1C2028]/40"
             }`}
           >
             <span>💼 2. TARGET JOB</span>
@@ -751,26 +782,28 @@ export default function SplitScreenTailorView() {
         </div>
 
         {/* Input Section - Side by side on desktop, active tab on mobile */}
-        <div id="tailorResume" className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 md:items-stretch">
+        <div id="tailorResume" className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10 md:items-stretch mb-8">
           {/* Resume Column */}
-          <div className={`space-y-4 flex flex-col ${activeMobileTab === "resume" || "hidden md:flex"}`}>
-            <FileDropZone
-              key={fileDropKey}
-              onFileAccepted={handleFileAccepted}
-              onError={handleFileError}
-              accept=".pdf,.txt"
-              extractText={extractTextForFile}
-            />
+          <div className={`flex flex-col min-h-[460px] md:min-h-[520px] md:h-full ${activeMobileTab === "resume" || "hidden md:flex"}`}>
             <ResumeInput
               label="Your Resume"
-              placeholder="Paste your resume here or upload a PDF above..."
+              placeholder="Paste your current resume bullet points, experience, and skills here..."
               value={resume}
               onChange={(e) => setResume(e.target.value)}
+              fileDropComponent={
+                <FileDropZone
+                  key={fileDropKey}
+                  onFileAccepted={handleFileAccepted}
+                  onError={handleFileError}
+                  accept=".pdf,.txt"
+                  extractText={extractTextForFile}
+                />
+              }
             />
           </div>
 
           {/* Job Description Column */}
-          <div className={`flex flex-col min-h-[320px] md:min-h-[400px] md:h-full ${activeMobileTab === "job" || "hidden md:flex"}`}>
+          <div className={`flex flex-col min-h-[460px] md:min-h-[520px] md:h-full ${activeMobileTab === "job" || "hidden md:flex"}`}>
             <JobDescriptionInput
               label="Job Description"
               placeholder="Paste the target job posting or a job listing URL..."
