@@ -141,7 +141,15 @@ export async function generateContentWithFallback(
       const callStartedAt = Date.now();
       const promptText = Array.isArray(prompt) ? prompt.join("\n\n") : prompt;
       try {
-        const result = await provider.generateContent(prompt, options);
+        const timeoutMs = 22_000;
+        let timer: NodeJS.Timeout | null = null;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`Model ${model} timed out after ${timeoutMs}ms`)), timeoutMs);
+        });
+        const resultPromise = provider.generateContent(prompt, options).finally(() => {
+          if (timer) clearTimeout(timer);
+        });
+        const result = await Promise.race([resultPromise, timeoutPromise]);
         recordLangfuseGeneration({
           traceId: currentLangfuseTrace() || "unattributed",
           name: "llm.generate",

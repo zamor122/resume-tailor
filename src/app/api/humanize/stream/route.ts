@@ -302,8 +302,15 @@ export async function POST(req: NextRequest) {
           { streamMode: ["updates", "values"] }
         );
 
+        const GRAPH_TIMEOUT_MS = 50_000;
+        let graphTimedOut = false;
+        const graphTimeoutTimer = setTimeout(() => {
+          graphTimedOut = true;
+          console.warn(`[Stream API] ⚠️ LangGraph execution reached ${GRAPH_TIMEOUT_MS}ms safety limit`);
+        }, GRAPH_TIMEOUT_MS);
+
         for await (const [mode, payload] of streamIterable) {
-          if (streamClosed) break;
+          if (streamClosed || graphTimedOut) break;
 
           if (mode === "values") {
             agentResult = payload as AgentState;
@@ -321,9 +328,15 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        clearTimeout(graphTimeoutTimer);
+
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer);
           heartbeatTimer = null;
+        }
+
+        if (graphTimedOut && !agentResult.finalResumeText) {
+          throw new Error("Tailoring took longer than expected. Please try again with targeted intensity.");
         }
 
         const elapsedMs = Date.now() - startTime;
@@ -376,84 +389,84 @@ export async function POST(req: NextRequest) {
         // Obfuscate for unauthorized / teaser view
         const obfuscationResult = obfuscateResume(resume, tailoredResume);
 
-        // Store in Supabase if authenticated
+        // Store in Supabase for both authenticated users and anonymous sessions
         let storedResumeId: string | null = null;
-        if (authenticatedUserId) {
-          try {
-            let versionNumber = 1;
-            let parentResumeIdVal: string | null = null;
-            let rootResumeIdVal: string | null = null;
-            let originalContent = resume;
-            let jobDescriptionForInsert = agentResult.selectedJobDescription || jobDescription || "";
+        try {
+          let versionNumber = 1;
+          let parentResumeIdVal: string | null = null;
+          let rootResumeIdVal: string | null = null;
+          let originalContent = resume;
+          let jobDescriptionForInsert = agentResult.selectedJobDescription || jobDescription || "";
 
-            if (parentResumeId) {
-              const { data: parentRow } = await supabaseAdmin
-                .from("resumes")
-                .select("id, user_id, version_number, root_resume_id, original_content, job_description")
-                .eq("id", parentResumeId)
-                .single();
-              if (parentRow && parentRow.user_id === authenticatedUserId) {
-                parentResumeIdVal = parentResumeId;
-                versionNumber = (parentRow.version_number ?? 1) + 1;
-                rootResumeIdVal = parentRow.root_resume_id ?? parentRow.id;
-                originalContent = parentRow.original_content ?? resume;
-                jobDescriptionForInsert = parentRow.job_description ?? jobDescriptionForInsert;
-              }
-            }
-
-            const insertData: any = {
-              original_content: originalContent,
-              tailored_content: tailoredResume,
-              obfuscated_content: obfuscationResult.obfuscatedResume,
-              content_map: obfuscationResult.contentMap,
-              job_description: jobDescriptionForInsert,
-              match_score: {
-                before: agentResult.beforeScore ?? 50,
-                after: agentResult.afterScore ?? 85,
-                keywordGap: agentResult.keywordGap,
-              },
-              improvement_metrics: {
-                ...agentResult.improvementMetrics,
-                suggestions: agentResult.suggestions,
-                sectionGroups: agentResult.sectionGroups,
-                resumeAST: agentResult.resumeAST,
-              },
-              format_spec: {
-                suggestions: agentResult.suggestions,
-                sectionGroups: agentResult.sectionGroups,
-                resumeAST: agentResult.resumeAST,
-              },
-              free_reveal: obfuscationResult.freeReveal,
-              job_title: agentResult.jobTitle || clientJobTitle || null,
-              company_name: null,
-              parent_resume_id: parentResumeIdVal,
-              version_number: versionNumber,
-              root_resume_id: rootResumeIdVal,
-              user_id: authenticatedUserId,
-            };
-
-            if (sessionId) {
-              insertData.session_id = sessionId;
-            }
-
-            const { data: resumeData } = await supabaseAdmin
+          if (parentResumeId) {
+            const { data: parentRow } = await supabaseAdmin
               .from("resumes")
-              .insert(insertData)
-              .select("id")
+              .select("id, user_id, version_number, root_resume_id, original_content, job_description")
+              .eq("id", parentResumeId)
               .single();
-
-            if (resumeData) {
-              storedResumeId = resumeData.id;
-              if (!parentResumeIdVal && !rootResumeIdVal) {
-                await supabaseAdmin
-                  .from("resumes")
-                  .update({ root_resume_id: storedResumeId })
-                  .eq("id", storedResumeId);
-              }
+            if (parentRow && (!authenticatedUserId || parentRow.user_id === authenticatedUserId)) {
+              parentResumeIdVal = parentResumeId;
+              versionNumber = (parentRow.version_number ?? 1) + 1;
+              rootResumeIdVal = parentRow.root_resume_id ?? parentRow.id;
+              originalContent = parentRow.original_content ?? resume;
+              jobDescriptionForInsert = parentRow.job_description ?? jobDescriptionForInsert;
             }
-          } catch (err) {
-            console.error("[Stream API] Error storing resume in Supabase:", err);
           }
+
+          const insertData: any = {
+            original_content: originalContent,
+            tailored_content: tailoredResume,
+            obfuscated_content: obfuscationResult.obfuscatedResume,
+            content_map: obfuscationResult.contentMap,
+            job_description: jobDescriptionForInsert,
+            match_score: {
+              before: agentResult.beforeScore ?? 50,
+              after: agentResult.afterScore ?? 85,
+              keywordGap: agentResult.keywordGap,
+            },
+            improvement_metrics: {
+              ...agentResult.improvementMetrics,
+              suggestions: agentResult.suggestions,
+              sectionGroups: agentResult.sectionGroups,
+              resumeAST: agentResult.resumeAST,
+            },
+            format_spec: {
+              suggestions: agentResult.suggestions,
+              sectionGroups: agentResult.sectionGroups,
+              resumeAST: agentResult.resumeAST,
+            },
+            free_reveal: obfuscationResult.freeReveal,
+            job_title: agentResult.jobTitle || clientJobTitle || null,
+            company_name: null,
+            parent_resume_id: parentResumeIdVal,
+            version_number: versionNumber,
+            root_resume_id: rootResumeIdVal,
+            user_id: authenticatedUserId || null,
+          };
+
+          if (sessionId) {
+            insertData.session_id = sessionId;
+          }
+
+          const { data: resumeData, error: insertError } = await supabaseAdmin
+            .from("resumes")
+            .insert(insertData)
+            .select("id")
+            .single();
+
+          if (insertError) {
+            console.error("[Stream API] Error storing resume in Supabase:", insertError);
+          } else if (resumeData) {
+            storedResumeId = resumeData.id;
+            if (!parentResumeIdVal && !rootResumeIdVal) {
+              await supabaseAdmin
+                .from("resumes")
+                .update({ root_resume_id: storedResumeId })
+                .eq("id", storedResumeId);
+            }
+          }
+        } catch (err) {
+          console.error("[Stream API] Error storing resume in Supabase:", err);
         }
 
         console.log(`[Stream API] 📦 Emitting final completion payload`, {

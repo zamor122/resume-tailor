@@ -41,7 +41,7 @@ import type { HumanizeResponse } from "@/app/types/humanize";
 
 export { type HumanizeResponse } from "@/app/types/humanize";
 
-const TAILOR_TIMEOUT_MS = 62_000; // Slightly over 60s maxDuration to detect timeout
+const TAILOR_TIMEOUT_MS = 56_000; // Trigger client abort slightly before 60s Vercel limit
 
 // Entry price for the hero price-anchor. Derived from the single source of truth
 // (TIME_BASED_TIERS) so the advertised price can never drift from what Stripe charges.
@@ -59,7 +59,7 @@ async function runHumanizeStream(params: {
   customInstructions?: string;
   keywordsToWeave?: string[];
   promptPresetIds?: string[];
-  preferences?: TailoringPreferences;
+  preferences: TailoringPreferences;
   elicitationFacts?: ElicitationFact[];
 }): Promise<HumanizeResponse> {
   const {
@@ -79,10 +79,20 @@ async function runHumanizeStream(params: {
   } = params;
 
   const controller = new AbortController();
-  let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(
-    () => controller.abort(),
-    TAILOR_TIMEOUT_MS
-  );
+  const totalTimeoutId = setTimeout(() => {
+    console.warn("[Tailor Stream] ⚠️ Stream reached total timeout of 56s");
+    controller.abort();
+  }, TAILOR_TIMEOUT_MS);
+
+  let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
+  const resetWatchdog = () => {
+    if (watchdogTimer) clearTimeout(watchdogTimer);
+    watchdogTimer = setTimeout(() => {
+      console.warn("[Tailor Stream] ⚠️ Stream watchdog expired: no chunks received for 26s");
+      controller.abort();
+    }, 26_000);
+  };
+  resetWatchdog();
 
   try {
     const response = await fetch("/api/humanize/stream", {
@@ -105,11 +115,6 @@ async function runHumanizeStream(params: {
       signal: controller.signal,
     });
 
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
-    }
-
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       const msg = body.message || body.error || "Failed to tailor resume";
@@ -129,6 +134,7 @@ async function runHumanizeStream(params: {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      resetWatchdog();
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
@@ -200,6 +206,18 @@ async function runHumanizeStream(params: {
       throw new Error("The tailoring connection was interrupted before completion. Please try tailoring again.");
     }
 
+    try {
+      if (typeof window !== "undefined" && completeData.tailoredResume) {
+        localStorage.setItem("airesumetailor_last_result", JSON.stringify({
+          resumeId: completeData.resumeId,
+          tailoredResume: completeData.tailoredResume,
+          matchScore: completeData.matchScore,
+          beforeScore: completeData.beforeScore,
+          timestamp: Date.now(),
+        }));
+      }
+    } catch {}
+
     return {
       originalResume: resume,
       tailoredResume: completeData.tailoredResume,
@@ -219,7 +237,8 @@ async function runHumanizeStream(params: {
       isUnlocked: completeData.isUnlocked !== undefined ? completeData.isUnlocked : true,
     };
   } finally {
-    if (timeoutId) clearTimeout(timeoutId);
+    clearTimeout(totalTimeoutId);
+    if (watchdogTimer) clearTimeout(watchdogTimer);
   }
 }
 
@@ -835,6 +854,20 @@ export default function SplitScreenTailorView() {
               }`}>
                 {jobDescription.trim().length >= 100 ? "✓ JOB READY" : "○ JOB (MIN 100 CHARS)"}
               </span>
+            </div>
+          )}
+
+          {error && (
+            <div
+              key={`action-error-${errorShakeKey}`}
+              className="animate-shake p-4 rounded-xl bg-[#FFE4E6] dark:bg-pink-900/20 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] text-[#9F1239] dark:text-pink-300 font-mono text-xs font-bold text-left flex items-start gap-2 max-w-xl mx-auto"
+              role="alert"
+            >
+              <span className="text-base leading-none">⚠️</span>
+              <div className="flex-1">
+                <span className="uppercase tracking-wide font-extrabold block mb-0.5">Notice</span>
+                <span>{error}</span>
+              </div>
             </div>
           )}
 
