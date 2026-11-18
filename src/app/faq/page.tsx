@@ -172,9 +172,9 @@ export default function FAQPage() {
         <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">Ready to try it?</p>
         <Link
           href="/"
-          className="inline-block bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-semibold py-3 px-6 rounded-xl transition-all hover:scale-[1.02]"
+          className="neo-btn inline-block bg-[#FF5722] hover:bg-[#E64A19] text-white font-mono font-bold uppercase tracking-wider py-3.5 px-8 rounded-lg border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] transition-all"
         >
-          Tailor Your Resume
+          ⚡ Tailor Your Resume Now
         </Link>
       </div>
     </div>

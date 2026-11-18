@@ -67,10 +67,10 @@ export default function ResetPasswordPage() {
   // Processing recovery link (hash present, waiting for session)
   if (hasHash && !user && !authLoading && !invalidLink) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-gray-400">Processing your reset link...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1C2028] mx-auto mb-4"></div>
+          <p className="text-gray-700 font-mono text-xs">PROCESSING SECURE RESET LINK...</p>
         </div>
       </div>
     );
@@ -78,18 +78,18 @@ export default function ResetPasswordPage() {
 
   if (invalidLink) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-gray-900 rounded-xl border border-gray-700 p-6 text-center">
-          <div className="text-amber-400 mb-4">⚠️</div>
-          <h1 className="text-xl font-bold text-white mb-2">Reset link expired</h1>
-          <p className="text-gray-400 mb-4">
+      <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center p-4">
+        <div className="max-w-md w-full neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[6px_6px_0px_#1C2028] rounded-xl p-6 sm:p-8 text-center text-[#1C2028]">
+          <div className="text-amber-500 mb-3 text-2xl">⚠️</div>
+          <h1 className="text-xl font-mono font-extrabold text-[#1C2028] mb-2">RESET LINK EXPIRED</h1>
+          <p className="text-gray-700 font-mono text-xs mb-6">
             This password reset link is invalid or has expired. Please request a new one.
           </p>
           <Link
             href="/"
-            className="inline-block px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700"
+            className="neo-btn inline-block px-5 py-2.5 rounded-lg bg-[#FF5722] text-white hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] font-mono font-bold text-xs uppercase"
           >
-            Back to home
+            ← BACK TO HOME
           </Link>
         </div>
       </div>
@@ -98,28 +98,34 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-gray-900 rounded-xl border border-gray-700 p-6 text-center">
-          <div className="text-green-400 mb-4">✓</div>
-          <h1 className="text-xl font-bold text-white mb-2">Password updated</h1>
-          <p className="text-gray-400">Redirecting you to the app...</p>
+      <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center p-4">
+        <div className="max-w-md w-full neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[6px_6px_0px_#1C2028] rounded-xl p-6 sm:p-8 text-center text-[#1C2028]">
+          <div className="text-emerald-500 mb-3 text-2xl">✓</div>
+          <h1 className="text-xl font-mono font-extrabold text-[#1C2028] mb-2">PASSWORD UPDATED</h1>
+          <p className="text-gray-700 font-mono text-xs">Redirecting to console...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-gray-900 rounded-xl border border-gray-700 p-6">
-        <h1 className="text-xl font-bold text-white mb-2">Set new password</h1>
-        <p className="text-gray-400 text-sm mb-6">
-          Enter your new password below.
-        </p>
+    <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center p-4">
+      <div className="max-w-md w-full neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[6px_6px_0px_#1C2028] rounded-xl p-6 sm:p-8 text-[#1C2028]">
+        <div className="text-center mb-4">
+          <div className="inline-flex items-center gap-1.5 neo-tag bg-[#FF5722] text-white text-[10px] px-2 py-0.5 font-mono font-bold uppercase mb-2">
+            <span>🔐</span>
+            <span>CREDENTIAL REKEY</span>
+          </div>
+          <h1 className="text-2xl font-mono font-extrabold text-[#1C2028]">SET NEW PASSWORD</h1>
+          <p className="text-gray-700 text-xs font-mono mt-1">
+            Enter your new password below to secure your operator profile.
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
-              New password
+            <label htmlFor="password" className="block text-xs font-mono font-bold text-[#1C2028] uppercase mb-1">
+              NEW PASSWORD
             </label>
             <input
               id="password"
@@ -129,14 +135,14 @@ export default function ResetPasswordPage() {
               required
               minLength={6}
               autoComplete="new-password"
-              className="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2.5 rounded-lg bg-white border-2 border-[#1C2028] text-xs font-mono text-[#1C2028] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF5722]"
               placeholder="••••••••"
             />
           </div>
 
           <div>
-            <label htmlFor="confirm" className="block text-sm font-medium text-gray-300 mb-1">
-              Confirm password
+            <label htmlFor="confirm" className="block text-xs font-mono font-bold text-[#1C2028] uppercase mb-1">
+              CONFIRM PASSWORD
             </label>
             <input
               id="confirm"
@@ -146,29 +152,29 @@ export default function ResetPasswordPage() {
               required
               minLength={6}
               autoComplete="new-password"
-              className="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2.5 rounded-lg bg-white border-2 border-[#1C2028] text-xs font-mono text-[#1C2028] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF5722]"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="p-3 rounded-lg bg-[#FEE2E2] border-2 border-[#EF4444] neo-box-sm shadow-none">
+              <p className="text-xs font-mono font-bold text-[#991B1B]">{error}</p>
             </div>
           )}
 
           <button
             type="submit"
             disabled={loading || authLoading || !user}
-            className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="neo-btn w-full py-3 px-4 rounded-lg bg-[#FF5722] text-white hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] font-mono font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Updating..." : "Update password"}
+            {loading ? "UPDATING..." : "UPDATE PASSWORD"}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-400">
-          <Link href="/" className="text-blue-400 hover:text-blue-300 underline">
-            Back to home
+        <p className="mt-4 text-center">
+          <Link href="/" className="text-xs font-mono font-bold text-[#FF5722] hover:underline">
+            ← Back to home
           </Link>
         </p>
       </div>

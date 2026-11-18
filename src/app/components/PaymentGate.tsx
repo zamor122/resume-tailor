@@ -75,23 +75,28 @@ export default function PaymentGate({
       <div className="relative">
         <div className="opacity-50 pointer-events-none">{children}</div>
         {/* Semi-transparent backdrop layer */}
-        <div className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm rounded-xl z-10"></div>
+        <div className="absolute inset-0 bg-[#1C2028]/60 backdrop-blur-xs rounded-xl z-10"></div>
         {/* Card with text and button */}
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none p-4">
-          <div className="pointer-events-auto w-full max-w-lg">
-            <div className="rounded-2xl bg-gray-900/95 backdrop-blur-md border border-blue-500/40 shadow-2xl p-8 text-center space-y-4 w-full">
-              <div className="text-4xl">🔒</div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-bold text-white whitespace-normal break-words">Unlock Access</h3>
-                <p className="text-gray-300 text-sm md:text-base whitespace-normal break-words">
-                  Purchase time-based access to view and download all your resumes.
+          <div className="pointer-events-auto w-full max-w-md">
+            <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[8px_8px_0px_#1C2028] rounded-xl p-6 sm:p-8 text-center space-y-4 w-full text-[#1C2028]">
+              <div className="inline-flex items-center gap-1.5 neo-tag bg-[#FF5722] text-white text-[10px] px-2 py-0.5 font-mono font-bold uppercase">
+                <span>🔒</span>
+                <span>ACCESS PASS REQUIRED</span>
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-xl sm:text-2xl font-mono font-extrabold text-[#1C2028]">
+                  UNLOCK ACCESS
+                </h3>
+                <p className="text-gray-700 text-xs sm:text-sm font-mono leading-relaxed">
+                  Purchase flexible time-based access to export unlimited resumes to PDF and Word.
                 </p>
               </div>
               <button
                 onClick={handleUnlock}
-                className="w-full px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold hover:from-blue-700 hover:to-purple-700 transition-all whitespace-normal break-words shadow-lg"
+                className="neo-btn w-full py-3 px-6 rounded-lg bg-[#FF5722] text-white hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] font-mono font-bold text-xs sm:text-sm uppercase tracking-wider transition-all"
               >
-                Choose Access Plan
+                CHOOSE ACCESS PLAN
               </button>
             </div>
           </div>

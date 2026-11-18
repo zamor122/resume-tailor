@@ -173,13 +173,22 @@ export default function Navigation() {
               })}
 
               {!user && (
-                <Link
-                  href="/#tailorResume"
-                  onClick={() => playSfx("click")}
-                  className="neo-btn bg-[#FF5722] text-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider ml-1"
-                >
-                  ⚡ START FREE
-                </Link>
+                <div className="flex items-center gap-2 ml-1">
+                  <Link
+                    href="/profile"
+                    onClick={() => playSfx("click")}
+                    className="neo-btn bg-white hover:bg-[#F4F1EA] text-[#1C2028] px-3.5 py-1.5 text-xs font-bold font-mono uppercase tracking-wider"
+                  >
+                    SIGN IN
+                  </Link>
+                  <Link
+                    href="/#tailorResume"
+                    onClick={() => playSfx("click")}
+                    className="neo-btn bg-[#FF5722] text-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider"
+                  >
+                    ⚡ START FREE
+                  </Link>
+                </div>
               )}
             </div>
 
@@ -253,16 +262,28 @@ export default function Navigation() {
             })}
 
             {!user && (
-              <Link
-                href="/#tailorResume"
-                onClick={() => {
-                  playSfx("click");
-                  setMenuOpen(false);
-                }}
-                className="neo-btn bg-[#FF5722] text-white py-3 text-center text-sm font-bold uppercase tracking-wider mt-1"
-              >
-                ⚡ START FREE
-              </Link>
+              <div className="flex flex-col gap-2 mt-1">
+                <Link
+                  href="/profile"
+                  onClick={() => {
+                    playSfx("click");
+                    setMenuOpen(false);
+                  }}
+                  className="neo-btn bg-white text-[#1C2028] py-2.5 text-center text-sm font-bold font-mono uppercase tracking-wider"
+                >
+                  SIGN IN
+                </Link>
+                <Link
+                  href="/#tailorResume"
+                  onClick={() => {
+                    playSfx("click");
+                    setMenuOpen(false);
+                  }}
+                  className="neo-btn bg-[#FF5722] text-white py-3 text-center text-sm font-bold uppercase tracking-wider"
+                >
+                  ⚡ START FREE
+                </Link>
+              </div>
             )}
           </div>
         )}

@@ -32,34 +32,37 @@ function DidThisHelpPrompt({
     <div
       role="dialog"
       aria-label="Feedback"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)] px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg flex flex-col sm:flex-row items-center gap-3"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)] px-4 py-3 rounded-xl bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[5px_5px_0px_#1C2028] flex flex-col sm:flex-row items-center justify-between gap-3 text-[#1C2028]"
     >
-      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-shrink-0">
-        Did this save you time?
-      </p>
+      <div className="flex items-center gap-2">
+        <span className="text-base">⚡</span>
+        <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#1C2028]">
+          Did this save you time?
+        </p>
+      </div>
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => onResponse("yes")}
-          className="px-3 py-1.5 text-sm font-medium rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/60"
+          className="neo-btn px-3.5 py-1.5 text-xs font-mono font-bold uppercase rounded bg-[#10B981] text-white hover:bg-[#059669] border border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
         >
           Yes
         </button>
         <button
           type="button"
           onClick={() => onResponse("no")}
-          className="px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+          className="neo-btn px-3.5 py-1.5 text-xs font-mono font-bold uppercase rounded bg-white text-[#1C2028] hover:bg-[#F4F1EA] border border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
         >
           No
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+          className="p-1 text-[#1C2028] hover:bg-[#F4F1EA] border border-[#1C2028] rounded"
           aria-label="Dismiss"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
