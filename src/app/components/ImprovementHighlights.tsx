@@ -87,13 +87,18 @@ export default function ImprovementHighlights({
   }
 
   return (
-    <div className="my-6 p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
-      <h3 className="text-lg font-semibold text-white mb-3">Your Resume Improvements</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="my-6 p-4 rounded-xl neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] text-[#1C2028]">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="neo-tag bg-[#10B981] text-white text-[10px] px-2 py-0.5 font-mono font-bold uppercase">
+          METRIC GAINS
+        </span>
+        <h3 className="text-sm font-mono font-bold text-[#1C2028]">RESUME ENHANCEMENTS</h3>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         {highlights.map((highlight, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <span className="text-xl">{highlight.icon}</span>
-            <span className={`text-sm ${highlight.color}`}>{highlight.text}</span>
+          <div key={index} className="neo-box-sm bg-white border border-[#1C2028] p-2.5 rounded-lg flex items-center gap-2 shadow-[2px_2px_0px_#1C2028]">
+            <span className="text-lg">{highlight.icon}</span>
+            <span className="text-xs font-mono font-bold text-[#1C2028]">{highlight.text}</span>
           </div>
         ))}
       </div>

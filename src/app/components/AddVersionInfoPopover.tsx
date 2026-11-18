@@ -61,7 +61,7 @@ export default function AddVersionInfoPopover({
       {tooltipRect && typeof document !== "undefined" &&
         createPortal(
           <div
-            className="fixed z-[200] px-6 py-6 text-sm font-normal text-white bg-gray-800 rounded-lg shadow-xl text-left leading-relaxed box-border"
+            className="fixed z-[200] p-4 text-xs font-mono font-medium text-[#1C2028] bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-lg text-left leading-relaxed box-border"
             style={{
               width: TOOLTIP_WIDTH,
               left: (() => {

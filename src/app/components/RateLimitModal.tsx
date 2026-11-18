@@ -73,55 +73,43 @@ export default function RateLimitModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="relative w-full max-w-md bg-gray-900 rounded-xl border border-gray-700 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+      <div className="relative w-full max-w-md neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[8px_8px_0px_#1C2028] rounded-xl text-[#1C2028]">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 p-1 rounded border border-[#1C2028] bg-white hover:bg-[#F4F1EA] text-[#1C2028] transition-colors"
+          aria-label="Close modal"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
         {/* Content */}
         <div className="p-6">
-          {/* Icon */}
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-yellow-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            </div>
-          </div>
-
-          {/* Header */}
+          {/* Badge & Header */}
           <div className="mb-4 text-center">
-            <h2 className="text-2xl font-bold text-white mb-2">
-              It's very crowded right now
+            <div className="inline-flex items-center gap-1.5 neo-tag bg-[#F59E0B] text-[#1C2028] text-[10px] px-2 py-0.5 font-mono font-bold uppercase mb-2">
+              <span>⚠️</span>
+              <span>RADAR: HIGH TRAFFIC</span>
+            </div>
+            <h2 className="text-xl font-mono font-extrabold text-[#1C2028] mb-1">
+              SYSTEM AT CAPACITY
             </h2>
-            <p className="text-gray-400 text-sm">
-              {message || "Please try again in a little bit"}
+            <p className="text-gray-700 text-xs font-mono leading-relaxed">
+              {message || "High demand on neural processors. Please allow a moment before next request."}
             </p>
           </div>
 
           {/* Countdown Timer */}
           {timeRemaining > 0 && (
-            <div className="mb-6 p-4 rounded-lg bg-gray-800/50 border border-gray-700">
+            <div className="mb-5 p-4 rounded-lg bg-white border-2 border-[#1C2028] neo-box-sm shadow-[3px_3px_0px_#1C2028]">
               <div className="text-center">
-                <p className="text-sm text-gray-400 mb-2">Try again in:</p>
-                <p className="text-2xl font-bold text-yellow-500">
+                <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-gray-600 mb-1">
+                  COOLDOWN TIMER:
+                </p>
+                <p className="text-2xl font-mono font-extrabold text-[#FF5722]">
                   {formatTime(timeRemaining)}
                 </p>
               </div>
@@ -132,14 +120,14 @@ export default function RateLimitModal({
           <button
             onClick={handleTryAgain}
             disabled={timeRemaining > 0}
-            className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-purple-600"
+            className="neo-btn w-full py-3 px-4 rounded-lg bg-[#FF5722] text-white hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] font-mono font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {timeRemaining > 0 ? `Try Again (${formatTime(timeRemaining)})` : "Try Again"}
+            {timeRemaining > 0 ? `TRY AGAIN (${formatTime(timeRemaining)})` : "TRY AGAIN"}
           </button>
 
           {/* Info Text */}
-          <p className="mt-4 text-xs text-center text-gray-500">
-            This helps ensure everyone gets fair access to our services
+          <p className="mt-3 text-[11px] font-mono text-center text-gray-500">
+            Fair queue rate limiting active for system stability.
           </p>
         </div>
       </div>

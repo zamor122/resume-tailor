@@ -52,24 +52,49 @@ export default function ExitSurveyModal({
 
   const content = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
       aria-labelledby="exit-survey-title"
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6 border border-gray-200 dark:border-gray-700"
+        className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[8px_8px_0px_#1C2028] rounded-xl max-w-md w-full p-6 text-[#1C2028]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="exit-survey-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Quick question: What stopped you from tailoring your resume today?
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2 py-0.5 font-mono font-bold uppercase tracking-wider">
+              FEEDBACK CONSOLE
+            </span>
+            <span className="text-xs font-mono font-bold text-gray-500 uppercase">
+              QUICK QUESTION
+            </span>
+          </div>
+          <button
+            onClick={handleSkip}
+            className="p-1 rounded border border-[#1C2028] bg-white hover:bg-[#F4F1EA] text-[#1C2028] transition-colors"
+            aria-label="Close survey"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <h2 id="exit-survey-title" className="text-base font-mono font-bold text-[#1C2028] mb-4 leading-snug">
+          What stopped you from tailoring your resume today?
         </h2>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             {EXIT_REASONS.map((r) => (
               <label
                 key={r.value}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                className={`neo-box-sm border border-[#1C2028] p-3 rounded-lg flex items-center gap-3 cursor-pointer transition-all ${
+                  reason === r.value
+                    ? "bg-[#FFE7D6] shadow-[2px_2px_0px_#1C2028]"
+                    : "bg-white hover:bg-[#F4F1EA]"
+                }`}
               >
                 <input
                   type="radio"
@@ -77,9 +102,9 @@ export default function ExitSurveyModal({
                   value={r.value}
                   checked={reason === r.value}
                   onChange={() => setReason(r.value)}
-                  className="rounded-full border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                  className="rounded-full border-2 border-[#1C2028] text-[#FF5722] focus:ring-[#FF5722] accent-[#FF5722]"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">{r.label}</span>
+                <span className="text-xs font-mono font-bold text-[#1C2028]">{r.label}</span>
               </label>
             ))}
           </div>
@@ -89,7 +114,7 @@ export default function ExitSurveyModal({
               placeholder="Tell us more (optional)"
               value={otherComment}
               onChange={(e) => setOtherComment(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+              className="w-full px-3 py-2 text-xs font-mono rounded-lg border-2 border-[#1C2028] bg-white text-[#1C2028] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF5722]"
               maxLength={500}
               aria-label="Other reason"
             />
@@ -98,16 +123,16 @@ export default function ExitSurveyModal({
             <button
               type="button"
               onClick={handleSkip}
-              className="flex-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="neo-btn flex-1 py-2.5 px-4 font-mono font-bold text-xs uppercase bg-white text-[#1C2028] border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#F4F1EA]"
             >
               Skip
             </button>
             <button
               type="submit"
               disabled={!reason}
-              className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="neo-btn flex-1 py-2.5 px-4 font-mono font-bold text-xs uppercase bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#E64A19] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Submit
+              Submit Feedback
             </button>
           </div>
         </form>

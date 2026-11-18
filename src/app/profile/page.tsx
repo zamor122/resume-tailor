@@ -205,7 +205,7 @@ export default function ProfilePage() {
     return (
       <div className="container mx-auto px-4 py-16">
         <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1C2028]"></div>
         </div>
       </div>
     );
@@ -213,22 +213,29 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-2xl">
-        <div className="text-center space-y-6">
-          <h1 className="text-4xl font-bold text-white mb-4">Profile</h1>
-          <p className="text-gray-300 text-lg">
-            Sign in to view your resume history and download your tailored resumes.
+      <div className="container mx-auto px-4 py-12 max-w-xl">
+        <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[6px_6px_0px_#1C2028] rounded-xl p-8 text-center space-y-6">
+          <div className="inline-flex items-center gap-2 neo-tag bg-[#FF5722] text-white text-xs px-3 py-1 font-mono font-bold uppercase tracking-wider">
+            SYSTEM PROFILE
+          </div>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-[#1C2028] font-mono tracking-tight">
+            OPERATOR PROFILE
+          </h1>
+          <p className="text-gray-700 text-sm md:text-base font-sans max-w-md mx-auto leading-relaxed">
+            Sign in to view your tailored resume history, add new job versions, and export formatted resumes.
           </p>
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="px-8 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg"
-          >
-            Sign In / Create Account
-          </button>
-          <p className="mt-3 text-sm text-gray-400">
+          <div className="pt-2">
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="neo-btn w-full sm:w-auto px-8 py-3.5 font-mono font-bold text-sm uppercase bg-[#FF5722] text-white hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] transition-all transform hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0px_#1C2028]"
+            >
+              ⚡ Sign In / Create Account
+            </button>
+          </div>
+          <p className="mt-4 text-xs font-mono text-gray-600">
             <Link
               href="/auth/forgot-password"
-              className="text-blue-400 hover:text-blue-300 underline"
+              className="text-[#FF5722] hover:underline font-bold"
             >
               Forgot password?
             </Link>
@@ -262,37 +269,47 @@ export default function ProfilePage() {
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
         <div className="text-center md:text-left">
-          <h1 className="text-2xl md:text-4xl font-bold text-white mb-2">Profile</h1>
-          <p className="text-gray-300 text-sm md:text-base break-all">
-            Signed in as <span className="font-medium text-white">{user.email}</span>
+          <div className="inline-flex items-center gap-2 neo-tag bg-[#10B981] text-white text-[10px] px-2 py-0.5 font-mono font-bold uppercase tracking-wider mb-1.5">
+            ● OPERATOR ONLINE
+          </div>
+          <h1 className="text-2xl md:text-4xl font-extrabold text-[#1C2028] font-mono tracking-tight mb-2">
+            OPERATOR PROFILE
+          </h1>
+          <p className="text-gray-600 text-xs md:text-sm font-mono break-all">
+            Signed in as <span className="font-bold text-[#1C2028] bg-white px-2 py-0.5 border border-[#1C2028] rounded neo-box-sm shadow-none">{user.email}</span>
           </p>
         </div>
-          <div className="flex flex-col sm:flex-row items-stretch md:items-center gap-2 md:gap-3">
-            <button
-              onClick={handleViewReceipts}
-              disabled={openingPortal}
-              className="px-4 py-2 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition-colors"
-            >
-              {openingPortal ? "Opening..." : "View Receipts"}
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="px-4 py-2 rounded-lg font-medium text-white bg-gray-700 hover:bg-gray-600 transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
+        <div className="flex flex-col sm:flex-row items-stretch md:items-center gap-2 md:gap-3">
+          <button
+            onClick={handleViewReceipts}
+            disabled={openingPortal}
+            className="neo-btn px-4 py-2 text-xs font-mono font-bold uppercase text-[#1C2028] bg-white hover:bg-[#F4F1EA] border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] disabled:opacity-60 transition-colors"
+          >
+            {openingPortal ? "Opening..." : "View Receipts"}
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="neo-btn px-4 py-2 text-xs font-mono font-bold uppercase text-white bg-[#1C2028] hover:bg-black border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] transition-colors"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
 
-      <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-6 max-w-lg md:max-w-none mx-auto">
+      <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[6px_6px_0px_#1C2028] rounded-xl p-6 max-w-lg md:max-w-none mx-auto text-[#1C2028]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-          <h2 className="text-xl md:text-2xl font-bold text-white text-center sm:text-left">Resume History</h2>
+          <div className="flex items-center gap-2">
+            <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2 py-0.5 font-mono font-bold uppercase">
+              ARCHIVE
+            </span>
+            <h2 className="text-xl md:text-2xl font-bold font-mono text-[#1C2028] text-center sm:text-left">Resume History</h2>
+          </div>
           <div className="flex justify-center sm:justify-end">
             <button
               type="button"
               onClick={() => mutateList()}
               disabled={loading}
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors disabled:opacity-50"
+              className="p-2 rounded-lg text-[#1C2028] bg-white border border-[#1C2028] hover:bg-[#F4F1EA] shadow-[2px_2px_0px_#1C2028] transition-colors disabled:opacity-50"
               title="Refresh list"
             >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -304,8 +321,8 @@ export default function ProfilePage() {
         
         {resumes.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-400 text-lg">No resumes found.</p>
-            <p className="text-gray-500 mt-2">Start tailoring your resume to see it here.</p>
+            <p className="text-gray-700 font-mono text-lg">No resumes found.</p>
+            <p className="text-gray-500 font-mono text-sm mt-2">Start tailoring your resume to see it here.</p>
           </div>
         ) : (
           <>
@@ -314,23 +331,23 @@ export default function ProfilePage() {
               {currentResumes.map((resume) => (
                 <div
                   key={resume.id}
-                  className="rounded-xl border border-gray-600 bg-gray-800/30 p-4 space-y-3"
+                  className="rounded-lg border-2 border-[#1C2028] bg-white shadow-[3px_3px_0px_#1C2028] p-4 space-y-3"
                 >
                   <div>
-                    <p className="font-medium text-white truncate" title={resume.jobTitle}>
+                    <p className="font-mono font-bold text-[#1C2028] truncate" title={resume.jobTitle}>
                       {resume.jobTitle}
                     </p>
-                    <p className="text-sm text-gray-400 mt-0.5">
+                    <p className="text-xs font-mono text-gray-600 mt-0.5">
                       {new Date(resume.createdAt).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
                       })}
                     </p>
-                    <p className="text-sm mt-1">
-                      <span className="text-green-400 font-semibold">{resume.matchScore}%</span>
+                    <p className="text-sm font-mono mt-1">
+                      <span className="text-[#059669] font-bold">{resume.matchScore}%</span>
                       {(resume.versionCount != null && resume.versionCount > 1) || resume.bestMatchScore != null ? (
-                        <span className="text-gray-400 ml-2">
+                        <span className="text-gray-600 ml-2">
                           {resume.versionCount != null && resume.versionCount > 1 && `${resume.versionCount} versions`}
                           {resume.versionCount != null && resume.versionCount > 1 && resume.bestMatchScore != null && " · "}
                           {resume.bestMatchScore != null && `Best ${resume.bestMatchScore}%`}
@@ -346,14 +363,14 @@ export default function ProfilePage() {
                         });
                         router.push(`/resume/${resume.id}`);
                       }}
-                      className="flex-1 min-w-[80px] px-3 py-2 text-sm font-medium rounded-lg text-white bg-cyan-600 hover:bg-cyan-500 transition-colors"
+                      className="neo-btn flex-1 min-w-[80px] px-3 py-2 text-xs font-mono font-bold uppercase rounded text-white bg-[#1C2028] hover:bg-black border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] transition-colors"
                     >
                       View
                     </button>
                     <span className="flex-1 min-w-[80px] flex items-center justify-center gap-1">
                       <Link
                         href={`/?prefillVersion=${resume.id}`}
-                        className="text-sm font-medium text-cyan-400 border border-cyan-500/50 hover:bg-cyan-500/10 rounded-lg px-3 py-2 inline-flex items-center gap-1.5 transition-colors"
+                        className="neo-btn w-full text-center text-xs font-mono font-bold uppercase text-[#1C2028] bg-[#FAF7F0] border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-white rounded px-3 py-2 inline-flex items-center justify-center gap-1.5 transition-colors"
                         onClick={() => {
                           analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
                             ...analytics.getTrackingContext({ section: "resume_table", element: "link", label: "Add version", resumeId: resume.id, source: "profile" }),
@@ -362,14 +379,6 @@ export default function ProfilePage() {
                       >
                         Add version
                       </Link>
-                      <span className="relative flex-shrink-0 group/info" aria-label="Get another tailored resume for this job. Job description stays filled in; you can change it or run again. Every result is saved in your history.">
-                        <svg className="w-4 h-4 text-gray-400 hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-6 py-6 text-xs font-normal text-white bg-gray-800 rounded shadow-lg opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity z-10 min-w-[320px] max-w-[440px] min-h-[100px] text-left leading-relaxed text-sm">
-                          Get another tailored resume for this job. The job description stays filled in so you can run again—tweak it or leave it as is. Every result is saved in your history.
-                        </span>
-                      </span>
                     </span>
                     {(hasAccess || resume.isUnlocked) ? (
                       <div className="relative w-full sm:w-auto">
@@ -386,7 +395,7 @@ export default function ProfilePage() {
                             }
                           }}
                           disabled={pdfLoadingId === resume.id}
-                          className="w-full sm:w-auto px-3 py-2 text-sm font-medium rounded-lg text-green-400 border border-green-500/50 hover:bg-green-500/10 transition-colors disabled:opacity-50"
+                          className="neo-btn w-full sm:w-auto px-3 py-2 text-xs font-mono font-bold uppercase rounded text-white bg-[#10B981] hover:bg-[#059669] border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] transition-colors disabled:opacity-50"
                         >
                           {pdfLoadingId === resume.id ? "Generating…" : "Download"}
                         </button>
@@ -400,12 +409,12 @@ export default function ProfilePage() {
                                 aria-hidden="true"
                               />
                               <div
-                                className="fixed z-[101] py-1 w-44 rounded-lg bg-gray-800 border border-gray-600 shadow-xl"
+                                className="fixed z-[101] py-1 w-48 rounded-lg bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] font-mono text-xs font-bold"
                                 style={
                                   downloadTriggerRef.current
                                     ? (() => {
                                         const rect = downloadTriggerRef.current!.getBoundingClientRect();
-                                        const w = 176;
+                                        const w = 192;
                                         return {
                                           top: rect.bottom + 4,
                                           left: Math.max(8, Math.min(rect.right - w, window.innerWidth - w - 8)),
@@ -417,16 +426,16 @@ export default function ProfilePage() {
                                 <button
                                   type="button"
                                   onClick={() => handleDownload(resume.id, "pdf")}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-t-lg"
+                                  className="w-full text-left px-4 py-2.5 text-[#1C2028] hover:bg-white rounded-t-lg transition-colors border-b border-gray-200"
                                 >
-                                  Download as PDF
+                                  📄 Download as PDF
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDownload(resume.id, "markdown")}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-b-lg"
+                                  className="w-full text-left px-4 py-2.5 text-[#1C2028] hover:bg-white rounded-b-lg transition-colors"
                                 >
-                                  Download as Markdown
+                                  📝 Download as Markdown
                                 </button>
                               </div>
                             </>,
@@ -439,7 +448,7 @@ export default function ProfilePage() {
                           setTierModalResumeId(resume.id);
                           setShowTierModal(true);
                         }}
-                        className="w-full sm:w-auto px-3 py-2 text-sm font-medium rounded-lg text-orange-400 border border-orange-500/50 hover:bg-orange-500/10 transition-colors"
+                        className="neo-btn w-full sm:w-auto px-3 py-2 text-xs font-mono font-bold uppercase rounded text-white bg-[#FF5722] hover:bg-[#E64A19] border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] transition-colors"
                       >
                         Get Access
                       </button>
@@ -453,17 +462,17 @@ export default function ProfilePage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left table-fixed">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="pb-4 text-sm font-semibold text-gray-300 w-[320px]">Job Title</th>
-                    <th className="pb-4 text-sm font-semibold text-gray-300">
+                  <tr className="border-b-2 border-[#1C2028]">
+                    <th className="pb-3 text-xs font-mono font-bold text-gray-700 uppercase tracking-wider w-[320px]">Job Title</th>
+                    <th className="pb-3 text-xs font-mono font-bold text-gray-700 uppercase tracking-wider">
                       <span className="inline-flex items-center gap-1.5">
                         Date Created
                         <span
-                          className="inline-flex flex-col text-gray-400"
+                          className="inline-flex flex-col text-[#FF5722]"
                           title="Sorted by date (newest first)"
                         >
                           <svg
-                            className="w-3.5 h-3.5 text-cyan-400"
+                            className="w-3.5 h-3.5 text-[#FF5722]"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                             aria-hidden
@@ -473,17 +482,17 @@ export default function ProfilePage() {
                         </span>
                       </span>
                     </th>
-                    <th className="pb-4 text-sm font-semibold text-gray-300">Match Score</th>
-                    <th className="pb-4 text-sm font-semibold text-gray-300 text-right">Actions</th>
+                    <th className="pb-3 text-xs font-mono font-bold text-gray-700 uppercase tracking-wider">Match Score</th>
+                    <th className="pb-3 text-xs font-mono font-bold text-gray-700 uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentResumes.map((resume) => (
-                    <tr key={resume.id} className="border-b border-gray-700/50 hover:bg-gray-800/30 transition-colors">
-                      <td className="py-4 text-white font-medium w-[320px]" title={resume.jobTitle}>
+                    <tr key={resume.id} className="border-b border-gray-300 hover:bg-white/60 transition-colors">
+                      <td className="py-4 text-[#1C2028] font-bold font-mono text-sm w-[320px]" title={resume.jobTitle}>
                         <span className="block truncate">{resume.jobTitle}</span>
                       </td>
-                      <td className="py-4 text-gray-300">
+                      <td className="py-4 text-gray-700 font-mono text-xs">
                         {new Date(resume.createdAt).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "short",
@@ -493,11 +502,11 @@ export default function ProfilePage() {
                         })}
                       </td>
                       <td className="py-4">
-                        <span className="text-green-400 font-semibold">
+                        <span className="neo-tag bg-[#ECFDF5] text-[#065F46] border border-[#10B981] text-xs font-mono font-bold px-2 py-0.5">
                           {resume.matchScore}%
                         </span>
                         {(resume.versionCount != null && resume.versionCount > 1) || resume.bestMatchScore != null ? (
-                          <span className="block text-xs text-gray-400 mt-0.5">
+                          <span className="block text-xs font-mono text-gray-500 mt-1">
                             {resume.versionCount != null && resume.versionCount > 1 && `${resume.versionCount} versions`}
                             {resume.versionCount != null && resume.versionCount > 1 && resume.bestMatchScore != null && " · "}
                             {resume.bestMatchScore != null && `Best match ${resume.bestMatchScore}%`}
@@ -509,7 +518,7 @@ export default function ProfilePage() {
                           <span className="inline-flex items-center gap-1">
                             <Link
                               href={`/?prefillVersion=${resume.id}`}
-                              className="px-3 py-1.5 text-sm rounded-lg text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors"
+                              className="neo-btn px-3 py-1.5 text-xs font-mono font-bold uppercase rounded text-[#1C2028] bg-white border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#F4F1EA] transition-colors"
                               onClick={() => {
                                 analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
                                   ...analytics.getTrackingContext({ section: "resume_table", element: "link", label: "Add version", resumeId: resume.id, source: "profile" }),
@@ -530,7 +539,7 @@ export default function ProfilePage() {
                               });
                               router.push(`/resume/${resume.id}`);
                             }}
-                            className="px-3 py-1.5 text-sm rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
+                            className="neo-btn px-3 py-1.5 text-xs font-mono font-bold uppercase rounded text-[#1C2028] bg-[#F4F1EA] border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-white transition-colors"
                           >
                             View
                           </button>
@@ -549,7 +558,7 @@ export default function ProfilePage() {
                                   }
                                 }}
                                 disabled={pdfLoadingId === resume.id}
-                                className="px-3 py-1.5 text-sm rounded-lg text-green-400 hover:text-green-300 hover:bg-green-500/10 transition-colors disabled:opacity-50"
+                                className="neo-btn px-3 py-1.5 text-xs font-mono font-bold uppercase rounded text-white bg-[#10B981] border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#059669] transition-colors disabled:opacity-50"
                               >
                                 {pdfLoadingId === resume.id ? "Generating…" : "Download"}
                               </button>
@@ -563,12 +572,12 @@ export default function ProfilePage() {
                                       aria-hidden="true"
                                     />
                                     <div
-                                      className="fixed z-[101] py-1 w-44 rounded-lg bg-gray-800 border border-gray-600 shadow-xl"
+                                      className="fixed z-[101] py-1 w-48 rounded-lg bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] font-mono text-xs font-bold"
                                       style={
                                         downloadTriggerRef.current
                                           ? (() => {
                                               const rect = downloadTriggerRef.current!.getBoundingClientRect();
-                                              const w = 176;
+                                              const w = 192;
                                               return {
                                                 top: rect.bottom + 4,
                                                 left: Math.max(8, Math.min(rect.right - w, window.innerWidth - w - 8)),
@@ -580,16 +589,16 @@ export default function ProfilePage() {
                                       <button
                                         type="button"
                                         onClick={() => handleDownload(resume.id, "pdf")}
-                                        className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-t-lg"
+                                        className="w-full text-left px-4 py-2.5 text-[#1C2028] hover:bg-white rounded-t-lg transition-colors border-b border-gray-200"
                                       >
-                                        Download as PDF
+                                        📄 Download as PDF
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => handleDownload(resume.id, "markdown")}
-                                        className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-b-lg"
+                                        className="w-full text-left px-4 py-2.5 text-[#1C2028] hover:bg-white rounded-b-lg transition-colors"
                                       >
-                                        Download as Markdown
+                                        📝 Download as Markdown
                                       </button>
                                     </div>
                                   </>,
@@ -602,7 +611,7 @@ export default function ProfilePage() {
                                 setTierModalResumeId(resume.id);
                                 setShowTierModal(true);
                               }}
-                              className="px-3 py-1.5 text-sm rounded-lg text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 transition-colors"
+                              className="neo-btn px-3 py-1.5 text-xs font-mono font-bold uppercase rounded text-white bg-[#FF5722] border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#E64A19] transition-colors"
                             >
                               Get Access
                             </button>
@@ -616,25 +625,25 @@ export default function ProfilePage() {
             </div>
 
             {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-6 pt-6 border-t border-gray-700">
-                <div className="text-sm text-gray-400 order-2 sm:order-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-6 pt-6 border-t-2 border-[#1C2028]">
+                <div className="text-xs font-mono text-gray-600 order-2 sm:order-1">
                   Showing {startIndex + 1} to {endIndex} of {totalCount} resumes
                 </div>
                 <div className="flex items-center gap-2 order-1 sm:order-2">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1 || loading}
-                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="neo-btn px-4 py-2 text-xs font-mono font-bold uppercase rounded text-[#1C2028] bg-white border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#F4F1EA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Previous
                   </button>
-                  <div className="text-sm text-gray-300">
+                  <div className="text-xs font-mono font-bold text-[#1C2028] px-2">
                     Page {currentPage} of {totalPages}
                   </div>
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages || loading}
-                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="neo-btn px-4 py-2 text-xs font-mono font-bold uppercase rounded text-[#1C2028] bg-white border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#F4F1EA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
                   </button>

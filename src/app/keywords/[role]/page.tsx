@@ -93,20 +93,23 @@ export default async function RoleKeywordPage({ params }: Props) {
       </div>
 
       {/* Interactive Tailor CTA Banner */}
-      <div className="rounded-2xl border border-cyan-200/80 dark:border-cyan-900/60 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-transparent p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[5px_5px_0px_#1C2028] rounded-xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 text-[#1C2028]">
         <div className="space-y-2 text-center sm:text-left">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          <div className="inline-flex items-center gap-1.5 neo-tag bg-[#FF5722] text-white text-[10px] px-2 py-0.5 font-mono font-bold uppercase">
+            <span>TARGET OPTIMIZER</span>
+          </div>
+          <h2 className="text-xl font-mono font-extrabold text-[#1C2028]">
             Tailor Your Resume for a {role.title} Role
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-xs font-mono text-gray-700">
             Our AI Agent will automatically weave in top {role.title} keywords while preserving your authentic work history.
           </p>
         </div>
         <Link
           href={`/?jobTitle=${encodeURIComponent(role.title)}`}
-          className="whitespace-nowrap px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-semibold rounded-xl shadow-md transition-all transform hover:scale-[1.02]"
+          className="neo-btn whitespace-nowrap px-6 py-3 bg-[#FF5722] hover:bg-[#E64A19] text-white font-mono font-bold text-xs uppercase tracking-wider rounded-lg border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] transition-all"
         >
-          Tailor Resume for Free →
+          ⚡ Tailor Resume for Free →
         </Link>
       </div>
 

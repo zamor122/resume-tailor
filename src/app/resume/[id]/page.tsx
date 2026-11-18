@@ -572,9 +572,9 @@ export default function ResumeDetailPage() {
                   {data.resumeId && (
                     <Link
                       href={`/?prefillVersion=${encodeURIComponent(data.resumeId)}&keywordsToWeave=${encodeURIComponent(data.keywordGap.missingKeywords.join(","))}`}
-                      className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white shadow-sm transition-all"
+                      className="neo-btn inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-xs sm:text-sm font-mono font-bold uppercase bg-[#FF5722] text-white hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] transition-all"
                     >
-                      Re-tailor with missing keywords
+                      ⚡ Re-tailor with missing keywords
                     </Link>
                   )}
                 </div>
@@ -592,7 +592,7 @@ export default function ResumeDetailPage() {
               </p>
               <button
                 onClick={() => setShowTierModal(true)}
-                className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs sm:text-sm text-white bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 shadow-md transition-all"
+                className="neo-btn w-full py-2.5 px-4 rounded-lg font-mono font-bold text-xs sm:text-sm uppercase text-white bg-[#FF5722] hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] transition-all"
               >
                 Choose Access Plan
               </button>

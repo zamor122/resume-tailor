@@ -98,9 +98,9 @@ export default function ReziAlternativePage() {
           </p>
           <Link
             href="/"
-            className="inline-block px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-semibold rounded-xl shadow-lg transition-all"
+            className="neo-btn inline-block px-8 py-3.5 bg-[#FF5722] hover:bg-[#E64A19] text-white font-mono font-bold uppercase tracking-wider rounded-lg border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] transition-all"
           >
-            Start Tailoring Free →
+            ⚡ Start Tailoring Free →
           </Link>
         </section>
       </div>
