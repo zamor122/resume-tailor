@@ -123,13 +123,21 @@ export default function AtsMatchGauge({
           {value}%
         </text>
       </svg>
-      <p className="mt-1 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200">
+      <p className="mt-2 text-xs sm:text-sm font-mono font-bold text-[#1C2028]">
         {label}
       </p>
-      <p className={`text-xs font-semibold ${meta.text}`}>
-        {meta.caption}
-        {sublabel ? ` · ${sublabel}` : ""}
-      </p>
+      <div className="mt-1 flex items-center gap-1.5 flex-wrap justify-center font-mono">
+        <span className={`neo-tag text-[10px] font-bold px-2 py-0.5 border border-[#1C2028] shadow-[1px_1px_0px_#1C2028] ${
+          value >= 85 ? "bg-[#10B981] text-white" : value >= 70 ? "bg-[#0D9488] text-white" : value >= 50 ? "bg-[#F59E0B] text-white" : "bg-[#EF4444] text-white"
+        }`}>
+          {meta.caption.toUpperCase()}
+        </span>
+        {sublabel ? (
+          <span className="text-[11px] text-gray-600 font-bold">
+            • {sublabel}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

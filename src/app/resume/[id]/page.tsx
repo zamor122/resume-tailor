@@ -167,10 +167,12 @@ export default function ResumeDetailPage() {
   if (!id) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <p className="text-red-500">Invalid resume ID</p>
-        <Link href="/" className="mt-4 inline-block text-cyan-500 hover:underline">
-          Back to home
-        </Link>
+        <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] p-6 rounded-xl max-w-md">
+          <p className="font-mono font-bold text-sm text-red-600">Invalid resume ID</p>
+          <Link href="/" className="neo-btn mt-4 inline-block px-4 py-2 font-mono font-bold text-xs uppercase bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]">
+            ← Back to Home
+          </Link>
+        </div>
       </div>
     );
   }
@@ -178,10 +180,10 @@ export default function ResumeDetailPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
-          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded" />
-          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] p-8 rounded-xl animate-pulse space-y-6">
+          <div className="h-8 bg-[#E5E0D8] border border-[#1C2028] rounded w-1/3" />
+          <div className="h-64 bg-[#E5E0D8] border border-[#1C2028] rounded" />
+          <div className="h-32 bg-[#E5E0D8] border border-[#1C2028] rounded" />
         </div>
       </div>
     );
@@ -190,14 +192,19 @@ export default function ResumeDetailPage() {
   if (error || !data) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="p-6 rounded-xl bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800/30">
-          <p className="text-pink-700 dark:text-pink-400">{error || "Resume not found"}</p>
-          <Link href="/" className="mt-4 inline-block text-cyan-500 hover:underline">
-            Back to home
-          </Link>
-          <Link href="/profile" className="mt-4 ml-4 inline-block text-cyan-500 hover:underline">
-            View all resumes
-          </Link>
+        <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] p-8 rounded-xl max-w-lg space-y-4">
+          <span className="neo-tag bg-[#EF4444] text-white text-[10px] font-mono font-bold px-2 py-0.5 border border-[#1C2028]">
+            ERROR
+          </span>
+          <p className="font-mono font-bold text-sm text-[#1C2028]">{error || "Resume not found"}</p>
+          <div className="flex gap-3 pt-2">
+            <Link href="/" className="neo-btn px-4 py-2 font-mono font-bold text-xs uppercase bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]">
+              ← Back to Home
+            </Link>
+            <Link href="/profile" className="neo-btn px-4 py-2 font-mono font-bold text-xs uppercase bg-white text-[#1C2028] border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#F4F1EA]">
+              View All Resumes
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -212,11 +219,11 @@ export default function ResumeDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center justify-between gap-3 min-w-0">
           <Link
             href="/profile"
-            className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400 shrink-0"
+            className="neo-btn text-xs font-mono font-bold px-3.5 py-1.5 rounded-lg border-2 border-[#1C2028] bg-white text-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#F4F1EA] shrink-0 transition-all active:translate-x-[1px] active:translate-y-[1px]"
             onClick={() => {
               analytics.trackEvent(analytics.events.LINK_CLICK, {
                 ...analytics.getTrackingContext({ section: "header", element: "link", label: "Back to resumes" }),
@@ -228,66 +235,66 @@ export default function ResumeDetailPage() {
           </Link>
           {/* Access pill forefront on mobile */}
           <div
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border ${
+            className={`shrink-0 px-3 py-1 font-mono font-bold text-xs border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] rounded-md ${
               data.isUnlocked
-                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
-                : "bg-amber-500/20 border-amber-500/40 text-amber-700 dark:text-amber-300"
+                ? "bg-[#10B981] text-white"
+                : "bg-[#F59E0B] text-white"
             }`}
           >
-            {data.isUnlocked ? "Unlocked" : "Locked"}
+            {data.isUnlocked ? "✓ UNLOCKED" : "🔒 LOCKED"}
           </div>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="inline-flex items-center gap-1">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="inline-flex items-center gap-1.5">
             <Link
               href={`/?prefillVersion=${data.resumeId}`}
-              className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400"
+              className="neo-btn text-xs font-mono font-bold px-3 py-1.5 rounded-lg border-2 border-[#1C2028] bg-white text-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#F4F1EA] transition-all"
               onClick={() => {
                 analytics.trackEvent(analytics.events.TAILOR_ANOTHER_JOB_CLICK, {
                   ...analytics.getTrackingContext({ section: "header", element: "link", label: "Add version", resumeId: data.resumeId }),
                 });
               }}
             >
-              Add version
+              + Add Version
             </Link>
             <span className="relative flex-shrink-0 group/info" aria-label="Get another tailored resume for this job. Job description stays filled in; you can change it or run again. Every result is saved in your history.">
-              <svg className="w-4 h-4 text-gray-400 hover:text-gray-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <svg className="w-4 h-4 text-gray-500 hover:text-[#1C2028] cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-6 py-6 text-xs font-normal text-white dark:bg-gray-800 bg-gray-900 rounded shadow-lg opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity z-10 min-w-[320px] max-w-[440px] min-h-[100px] text-left leading-relaxed text-sm text-gray-100">
-                Get another tailored resume for this job. The job description stays filled in so you can run again—tweak it or leave it as is. Every result is saved in your history.
+              <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-4 py-3 text-xs font-mono text-[#1C2028] bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-lg opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity z-20 min-w-[280px] max-w-[360px] text-left leading-relaxed">
+                Get another tailored resume for this job. The job description stays filled in so you can run again with new tweaks. Every result is saved in your history.
               </span>
             </span>
           </span>
           <Link
             href={`/?prefillVersion=${data.resumeId}`}
-            className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
+            className="neo-btn text-xs font-mono font-bold uppercase px-3.5 py-1.5 rounded-lg bg-[#10B981] hover:bg-[#059669] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] active:translate-x-[1px] active:translate-y-[1px] transition-all"
             onClick={() => {
               analytics.trackEvent(analytics.events.LINK_CLICK, {
                 ...analytics.getTrackingContext({ section: "header", element: "link", label: "Re-tailor", resumeId: data.resumeId }),
               });
             }}
           >
-            Re-tailor this resume
+            ⚡ Re-tailor this resume
           </Link>
         </div>
       </div>
 
       {versions.length > 1 && matchScore < 90 && (
-        <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-          Re-tailor to try for a higher score. Most users who re-tailor 2–3 times get a better match.
+        <p className="mb-4 text-xs sm:text-sm font-mono text-gray-700">
+          Tip: Re-tailor to aim for a 90%+ match score. Candidates who iterate 2–3 times achieve higher recruiter callbacks.
         </p>
       )}
 
       {/* Mobile Tab Switcher (md:hidden) */}
-      <div className="md:hidden flex items-center justify-between p-1 mb-6 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700/80 shadow-inner">
+      <div className="md:hidden flex items-center justify-between p-1.5 mb-6 rounded-xl bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] gap-2">
         <button
           type="button"
           onClick={() => setMobileTab("resume")}
-          className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 py-2 px-3 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all neo-btn ${
             mobileTab === "resume"
-              ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-              : "text-gray-600 dark:text-gray-400"
+              ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+              : "bg-white text-[#1C2028] border border-[#1C2028]/40"
           }`}
         >
           <span>📄 Tailored Resume</span>
@@ -295,10 +302,10 @@ export default function ResumeDetailPage() {
         <button
           type="button"
           onClick={() => setMobileTab("stats")}
-          className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 py-2 px-3 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all neo-btn ${
             mobileTab === "stats"
-              ? "bg-white dark:bg-gray-900 text-purple-600 dark:text-purple-400 shadow-sm"
-              : "text-gray-600 dark:text-gray-400"
+              ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+              : "bg-white text-[#1C2028] border border-[#1C2028]/40"
           }`}
         >
           <span>📊 Match &amp; Keywords</span>
@@ -310,7 +317,7 @@ export default function ResumeDetailPage() {
         <div className={`${viewMode === "resume" || viewMode === "changes" ? "col-span-12" : "md:col-span-8"} space-y-6 min-w-0 ${viewMode === "changes" || mobileTab === "resume" ? "block" : "hidden md:block"}`}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
-              <div className="flex rounded-xl border border-gray-200 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-800/50 p-1">
+              <div className="flex flex-wrap rounded-xl bg-[#FAF7F0] p-1.5 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] gap-1.5">
                 <button
                   type="button"
                   onClick={() => {
@@ -320,10 +327,10 @@ export default function ResumeDetailPage() {
                       mode: "changes",
                     });
                   }}
-                  className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                  className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all neo-btn ${
                     viewMode === "changes"
-                      ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
+                      ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[1px_1px_0px_#1C2028]"
+                      : "bg-white text-[#1C2028] hover:bg-[#F4F1EA] border border-[#1C2028]/30"
                   }`}
                 >
                   What we changed &amp; why
@@ -337,10 +344,10 @@ export default function ResumeDetailPage() {
                       mode: "resume",
                     });
                   }}
-                  className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                  className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all neo-btn ${
                     viewMode === "resume"
-                      ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
+                      ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[1px_1px_0px_#1C2028]"
+                      : "bg-white text-[#1C2028] hover:bg-[#F4F1EA] border border-[#1C2028]/30"
                   }`}
                 >
                   ⚡ Change Studio & Resume
@@ -354,10 +361,10 @@ export default function ResumeDetailPage() {
                       mode: "diff",
                     });
                   }}
-                  className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                  className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all neo-btn ${
                     viewMode === "diff"
-                      ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
+                      ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[1px_1px_0px_#1C2028]"
+                      : "bg-white text-[#1C2028] hover:bg-[#F4F1EA] border border-[#1C2028]/30"
                   }`}
                 >
                   Diff Changes
@@ -374,10 +381,10 @@ export default function ResumeDetailPage() {
                         mode: "compare",
                       });
                     }}
-                    className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                    className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all neo-btn ${
                       viewMode === "compare"
-                        ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
+                        ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[1px_1px_0px_#1C2028]"
+                        : "bg-white text-[#1C2028] hover:bg-[#F4F1EA] border border-[#1C2028]/30"
                     }`}
                   >
                     Compare
@@ -427,8 +434,8 @@ export default function ResumeDetailPage() {
             )}
             {viewMode === "compare" && (
               <>
-                <div className="mb-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/60">
-                  <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
+                <div className="mb-4 p-4 rounded-xl neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028]">
+                  <p className="text-xs sm:text-sm font-mono font-bold text-[#1C2028] mb-3">
                     You have {versions.length} versions for this job. Compare any two:
                   </p>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -436,17 +443,17 @@ export default function ResumeDetailPage() {
                       <Link
                         key={v.id}
                         href={`/resume/${v.id}`}
-                        className={`px-2.5 py-1 text-xs sm:text-sm rounded-lg transition-colors ${
+                        className={`neo-btn px-2.5 py-1 text-xs font-mono font-bold rounded-lg transition-all ${
                           v.id === id
-                            ? "bg-cyan-500 text-white font-medium shadow-sm"
-                            : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+                            : "bg-white text-[#1C2028] border border-[#1C2028] hover:bg-[#F4F1EA]"
                         }`}
                       >
                         Version {v.version_number}
                       </Link>
                     ))}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#1C2028]/15">
                     <select
                       value={compareWithVersionId ?? ""}
                       onChange={(e) => {
@@ -454,7 +461,7 @@ export default function ResumeDetailPage() {
                         setCompareWithVersionId(val || null);
                         if (val) setViewMode("compare");
                       }}
-                      className="text-xs sm:text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                      className="text-xs font-mono font-bold border-2 border-[#1C2028] rounded-lg px-3 py-1.5 bg-white text-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
                     >
                       <option value="">Select version to compare...</option>
                       {versions.filter((v) => v.id !== id).map((v) => (
@@ -485,9 +492,9 @@ export default function ResumeDetailPage() {
                     }
                   />
                 ) : compareWithVersionId ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">Loading version to compare...</p>
+                  <p className="text-sm font-mono text-gray-500 py-4 text-center">Loading version to compare...</p>
                 ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">Select a version above to compare.</p>
+                  <p className="text-sm font-mono text-gray-500 py-4 text-center">Select a version above to compare.</p>
                 )}
               </>
             )}
@@ -497,10 +504,15 @@ export default function ResumeDetailPage() {
         {/* Stats & Insights Column (Shown in Diff/Compare modes or Mobile stats tab) */}
         <div className={`${viewMode === "resume" || viewMode === "changes" ? "hidden" : "md:col-span-4"} space-y-6 ${mobileTab === "stats" ? "block" : "hidden md:block"}`}>
           {/* Match Strength Card */}
-          <div className="output-container p-5 sm:p-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Job Match Strength
-            </h3>
+          <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] p-5 sm:p-6 rounded-xl space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="neo-tag bg-[#10B981] text-white text-[9px] font-mono font-bold px-2 py-0.5 border border-[#1C2028]">
+                CALIBRATION
+              </span>
+              <h3 className="text-base sm:text-lg font-mono font-bold text-[#1C2028]">
+                Job Match Strength
+              </h3>
+            </div>
             <AtsMatchGauge
               score={matchScore}
               sublabel={
@@ -510,23 +522,23 @@ export default function ResumeDetailPage() {
               }
             />
             {data.metrics && (
-              <div className="space-y-2 text-xs sm:text-sm pt-2 border-t border-gray-100 dark:border-gray-800">
+              <div className="space-y-2 text-xs sm:text-sm pt-3 border-t-2 border-[#1C2028]/15 font-mono">
                 {data.metrics.jdCoverage && data.metrics.jdCoverage.total > 0 && (
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                  <div className="flex justify-between text-gray-700">
                     <span>JD Requirements Coverage</span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-200">{data.metrics.jdCoverage.percentage}%</span>
+                    <span className="font-bold text-[#1C2028]">{data.metrics.jdCoverage.percentage}%</span>
                   </div>
                 )}
                 {data.metrics.criticalKeywords && data.metrics.criticalKeywords.total > 0 && (
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                  <div className="flex justify-between text-gray-700">
                     <span>Critical Keywords</span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-200">{data.metrics.criticalKeywords.matched}/{data.metrics.criticalKeywords.total}</span>
+                    <span className="font-bold text-[#1C2028]">{data.metrics.criticalKeywords.matched}/{data.metrics.criticalKeywords.total}</span>
                   </div>
                 )}
                 {data.metrics.concreteEvidence && (
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>Concrete Metrics & Evidence</span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-200">{data.metrics.concreteEvidence.percentage}%</span>
+                  <div className="flex justify-between text-gray-700">
+                    <span>Concrete Metrics &amp; Evidence</span>
+                    <span className="font-bold text-[#1C2028]">{data.metrics.concreteEvidence.percentage}%</span>
                   </div>
                 )}
               </div>
@@ -535,18 +547,23 @@ export default function ResumeDetailPage() {
 
           {/* Keyword Match Card */}
           {(data.keywordGap || (data.metrics?.criticalKeywords && data.metrics.criticalKeywords.total > 0)) && (
-            <div className="output-container p-5 sm:p-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                Target Keyword Match
-              </h3>
+            <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] p-5 sm:p-6 rounded-xl space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="neo-tag bg-[#FF5722] text-white text-[9px] font-mono font-bold px-2 py-0.5 border border-[#1C2028]">
+                  TARGET ALIGNMENT
+                </span>
+                <h3 className="text-base sm:text-lg font-mono font-bold text-[#1C2028]">
+                  Target Keyword Match
+                </h3>
+              </div>
               {data.keywordGap?.foundInResume && data.keywordGap.foundInResume.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">Matched in Your Resume:</p>
+                <div className="mb-3">
+                  <p className="text-xs font-mono font-bold text-[#065F46] mb-2">Matched in Your Resume:</p>
                   <div className="flex flex-wrap gap-1.5">
                     {data.keywordGap.foundInResume.map((kw) => (
                       <span
                         key={kw}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60"
+                        className="neo-tag inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-[#ECFDF5] text-[#065F46] border border-[#10B981]"
                       >
                         ✓ {kw}
                       </span>
@@ -556,14 +573,14 @@ export default function ResumeDetailPage() {
               )}
               {data.keywordGap?.missingKeywords && data.keywordGap.missingKeywords.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2">
+                  <p className="text-xs font-mono font-bold text-[#B45309] mb-2">
                     Missing Keywords to Consider:
                   </p>
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {data.keywordGap.missingKeywords.map((kw) => (
                       <span
                         key={kw}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60"
+                        className="neo-tag inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-[#FFFBEB] text-[#B45309] border border-[#F59E0B]"
                       >
                         + {kw}
                       </span>
@@ -572,7 +589,7 @@ export default function ResumeDetailPage() {
                   {data.resumeId && (
                     <Link
                       href={`/?prefillVersion=${encodeURIComponent(data.resumeId)}&keywordsToWeave=${encodeURIComponent(data.keywordGap.missingKeywords.join(","))}`}
-                      className="neo-btn inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-xs sm:text-sm font-mono font-bold uppercase bg-[#FF5722] text-white hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] transition-all"
+                      className="neo-btn inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-xs font-mono font-bold uppercase bg-[#FF5722] text-white hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] active:translate-x-[1px] active:translate-y-[1px] transition-all"
                     >
                       ⚡ Re-tailor with missing keywords
                     </Link>
@@ -583,26 +600,36 @@ export default function ResumeDetailPage() {
           )}
 
           {!data.isUnlocked && (
-            <div className="output-container p-5 sm:p-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Unlock Your Full Resume
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Get full access to copy, export to PDF/Word, and save all tailored versions.
+            <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] p-5 sm:p-6 rounded-xl space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="neo-tag bg-[#FF5722] text-white text-[9px] font-mono font-bold px-2 py-0.5 border border-[#1C2028]">
+                  FULL EXPORT
+                </span>
+                <h3 className="text-base sm:text-lg font-mono font-bold text-[#1C2028]">
+                  Unlock Your Full Resume
+                </h3>
+              </div>
+              <p className="text-xs sm:text-sm font-mono text-gray-700 leading-relaxed">
+                Get full access to copy, export to PDF/Word, and save all tailored versions without limits.
               </p>
               <button
                 onClick={() => setShowTierModal(true)}
-                className="neo-btn w-full py-2.5 px-4 rounded-lg font-mono font-bold text-xs sm:text-sm uppercase text-white bg-[#FF5722] hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] transition-all"
+                className="neo-btn w-full py-2.5 px-4 rounded-lg font-mono font-bold text-xs sm:text-sm uppercase text-white bg-[#FF5722] hover:bg-[#E64A19] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] active:translate-x-[1px] active:translate-y-[1px] transition-all"
               >
                 Choose Access Plan
               </button>
             </div>
           )}
 
-          <div className="improvement-container p-5 sm:p-6">
-            <h3 className="text-base sm:text-lg font-semibold mb-3 text-amber-600 dark:text-amber-400">
-              Improvement Highlights
-            </h3>
+          <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] p-5 sm:p-6 rounded-xl space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="neo-tag bg-[#10B981] text-white text-[9px] font-mono font-bold px-2 py-0.5 border border-[#1C2028]">
+                GAINS
+              </span>
+              <h3 className="text-base sm:text-lg font-mono font-bold text-[#1C2028]">
+                Improvement Highlights
+              </h3>
+            </div>
             <ImprovementHighlights
               metrics={metrics}
               metricsSnapshot={data.metrics ?? null}

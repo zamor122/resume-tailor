@@ -222,3 +222,53 @@ FACT-HANDLING RULES (absolute):
 - Use a fact ONLY where it fits the bullet it belongs to. If a fact does not fit, IGNORE it — do not force it, and do not substitute an invented figure.
 - Never combine facts to imply a larger claim than the candidate made.`;
 }
+
+export const ELICITATION_STORAGE_KEY = "airesumetailor_elicitation_history";
+
+/** Normalize question string for consistent storage lookup across minor phrasing variants */
+export function normalizeElicitationKey(question: string): string {
+  return question
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
+/** Get all previously saved answers from localStorage */
+export function getSavedElicitationAnswers(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(ELICITATION_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Save or update elicitation answers in localStorage */
+export function saveElicitationAnswers(
+  items: Array<{ question: string; answer: string }> | Record<string, string>
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = getSavedElicitationAnswers();
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        if (!item.question || !item.answer?.trim()) continue;
+        const key = normalizeElicitationKey(item.question);
+        existing[key] = item.answer.trim();
+      }
+    } else {
+      for (const [q, a] of Object.entries(items)) {
+        if (!q || !a?.trim()) continue;
+        const key = normalizeElicitationKey(q);
+        existing[key] = a.trim();
+      }
+    }
+    localStorage.setItem(ELICITATION_STORAGE_KEY, JSON.stringify(existing));
+  } catch {
+    // quota exceeded or private mode, gracefully ignore
+  }
+}
+

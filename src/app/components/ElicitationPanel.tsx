@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ElicitationFact, ElicitationQuestion } from "@/app/types/elicitation";
 import { useGamification } from "@/app/contexts/GamificationContext";
+import {
+  getSavedElicitationAnswers,
+  saveElicitationAnswers,
+  normalizeElicitationKey,
+} from "@/app/utils/elicitation";
 
 interface ElicitationPanelProps {
   isOpen: boolean;
@@ -31,6 +36,28 @@ export default function ElicitationPanel({
   const { playSfx, awardXp } = useGamification();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [skipped, setSkipped] = useState<Record<string, boolean>>({});
+  const [rememberedKeys, setRememberedKeys] = useState<Set<string>>(new Set());
+
+  // Pre-populate answers from previous sessions if available
+  useEffect(() => {
+    if (!isOpen || questions.length === 0) return;
+    const saved = getSavedElicitationAnswers();
+    const initial: Record<string, string> = {};
+    const remembered = new Set<string>();
+
+    for (const q of questions) {
+      const key = normalizeElicitationKey(q.question);
+      if (saved[key]) {
+        initial[q.id] = saved[key];
+        remembered.add(q.id);
+      }
+    }
+
+    if (Object.keys(initial).length > 0) {
+      setAnswers((prev) => ({ ...initial, ...prev }));
+      setRememberedKeys(remembered);
+    }
+  }, [isOpen, questions]);
 
   if (!isOpen) return null;
 
@@ -47,11 +74,14 @@ export default function ElicitationPanel({
       .map((q) => ({ question: q.question, answer: (answers[q.id] || "").trim() }))
       .filter((f) => f.answer.length > 0);
 
+    // Save answered facts into history for future tailoring
     if (facts.length > 0) {
+      saveElicitationAnswers(facts);
       awardXp(30, "Added Specific Metrics (+30 XP)");
     }
     onComplete(facts);
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-xs p-4 sm:p-6">
@@ -84,12 +114,21 @@ export default function ElicitationPanel({
               return (
                 <div key={q.id} className="neo-box bg-[#F4F1EA] p-4 border border-[#1C2028] shadow-[2px_2px_0px_#1C2028] rounded-lg">
                   <div className="flex items-start justify-between gap-3">
-                    <label
-                      htmlFor={`elicit-${q.id}`}
-                      className="text-xs sm:text-sm font-mono font-bold text-[#1C2028]"
-                    >
-                      {index + 1}. {q.question}
-                    </label>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor={`elicit-${q.id}`}
+                        className="text-xs sm:text-sm font-mono font-bold text-[#1C2028]"
+                      >
+                        {index + 1}. {q.question}
+                      </label>
+                      {rememberedKeys.has(q.id) && (
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                          <span className="neo-tag bg-[#10B981] text-white text-[9px] px-1.5 py-0.2 font-mono font-bold">
+                            ✓ SAVED ANSWER REPOPULATED
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleSkipQuestion(q.id)}
