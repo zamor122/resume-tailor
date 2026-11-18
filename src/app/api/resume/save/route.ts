@@ -68,8 +68,8 @@ export async function POST(req: NextRequest) {
       improvement_metrics: {
         ...(improvementMetrics || {}),
         ...(suggestions ? { suggestions } : {}),
+        ...(formatSpec ? { formatSpec } : {}),
       },
-      format_spec: formatSpec || (suggestions ? { suggestions } : null),
       free_reveal: obfuscationResult.freeReveal,
     };
 

@@ -430,11 +430,6 @@ export async function POST(req: NextRequest) {
               sectionGroups: agentResult.sectionGroups,
               resumeAST: agentResult.resumeAST,
             },
-            format_spec: {
-              suggestions: agentResult.suggestions,
-              sectionGroups: agentResult.sectionGroups,
-              resumeAST: agentResult.resumeAST,
-            },
             free_reveal: obfuscationResult.freeReveal,
             job_title: agentResult.jobTitle || clientJobTitle || null,
             company_name: null,
