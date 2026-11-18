@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/app/contexts/AuthContext";
 import AuthModal from "@/app/components/AuthModal";
+import TailorBot from "@/app/components/neo/TailorBot";
+import { useGamification } from "@/app/contexts/GamificationContext";
 import {
   FREE_RESUME_LIMIT,
   TIME_BASED_TIERS,
@@ -13,48 +15,50 @@ import { getStoredUtmParams } from "@/app/utils/utm";
 
 const VALUE_PROPS = [
   {
-    title: "Impact-First AI",
+    title: "Google X-Y-Z Formula",
     description:
-      "Our AI extracts real metrics and achievements—not generic buzzwords. Get bullet points that quantify your impact (e.g., \"Increased deployment speed by 20%\") instead of hollow keyword stuffing.",
+      "Our AI extracts real metrics and achievements—not generic buzzwords. We rewrite bullets into 'Accomplished [X] as measured by [Y] by doing [Z]' to impress hiring managers.",
     icon: "📊",
   },
   {
     title: "Technical Depth",
     description:
-      "Built for engineers. Structured skills by Languages, Frameworks, and Cloud. Clean formatting for GitHub links, project URLs, and tech stacks that recruiters actually scan.",
+      "Engineered for modern talent. Clean structuring for languages, cloud tools, frameworks, and portfolio links that both ATS scanners and recruiters parse instantly.",
     icon: "⚡",
   },
   {
     title: "Tailor & Go",
     description:
-      "No bloated CRM or endless bullet libraries. Paste your resume, paste the job—get a tailored version in seconds. Minimal workflow, maximum speed.",
+      "Zero bloated forms or subscription locks. Paste your resume, paste the target job, and walk away with an optimized draft in under 15 seconds.",
     icon: "🚀",
   },
   {
-    title: "Transparent Pricing",
+    title: "Zero Subscription Traps",
     description:
-      "One-time payment for access. No weekly subscriptions that add up. Pay for 2 days, a week, or a month—use it all. Perfect when you're actively job searching.",
-    icon: "✓",
+      "One-time payment for exact access. No sneaky weekly rebilling that drains your account. Pay once, use freely, and cancel nothing—it never auto-renews.",
+    icon: "🛡️",
   },
 ];
 
 const FEATURES = [
-  "Human-sounding output (no robotic AI tone)",
-  "Real-time relevancy scoring",
-  "ATS-optimized formatting",
-  "PDF & Markdown download",
-  "Technical impact extraction",
-  "No keyword stuffing",
-  "One-time payment—no subscription",
+  "Human-sounding output (no robotic AI fluff)",
+  "Real-time ATS keyword relevancy gauge",
+  "ATS-optimized PDF & Markdown export",
+  "TailorBot MK-II guidance & audit rationale",
+  "Google X-Y-Z impact quantification",
+  "Granular line-by-line diff approval",
+  "Zero auto-renewals or subscription traps",
 ];
 
 export default function PricingPage() {
   const { user, session } = useAuth();
+  const { playSfx } = useGamification();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const handleSelectTier = async (tier: "2D" | "7D" | "30D") => {
+    playSfx("click");
     if (!user?.email) {
       setShowAuthModal(true);
       return;
@@ -97,90 +101,112 @@ export default function PricingPage() {
         throw new Error("No checkout URL returned");
       }
     } catch (err) {
+      playSfx("alert");
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(null);
     }
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Hero */}
-      <section className="relative py-16 md:py-24 overflow-hidden">
-        <div className="absolute inset-0 grid-pattern opacity-50" />
-        <div className="container mx-auto px-4 relative">
-          <h1 className="text-4xl md:text-5xl font-bold text-center mb-6">
-            <span className="gradient-text-cyber">Simple, Transparent Pricing</span>
-          </h1>
-          <p className="text-xl text-gray-500 dark:text-gray-400 text-center max-w-2xl mx-auto mb-12">
-            Get job-ready resumes without the bloat. Start free—no credit card required.
-          </p>
+    <div className="min-h-screen bg-[#FAF7F0] text-[#1C2028]">
+      {/* Hero Header HUD */}
+      <section className="py-12 md:py-16">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="neo-box bg-[#F4F1EA] p-6 sm:p-10 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl flex flex-col md:flex-row items-center justify-between gap-8 mb-12">
+            <div className="flex-1 text-center md:text-left space-y-3">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 font-mono font-bold uppercase tracking-wider">
+                  HONEST PRICING
+                </span>
+                <span className="text-xs font-mono text-gray-500">
+                  NO HIDDEN RECURRING FEES
+                </span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-mono tracking-tight text-[#1C2028]">
+                One-Time Access. <span className="bg-[#10B981] text-white px-2 py-0.5 neo-box-sm inline-block">Zero Traps.</span>
+              </h1>
+              <p className="text-sm sm:text-base text-gray-700 font-sans max-w-xl leading-relaxed">
+                Most resume builders quietly bill you \$39/month until you notice. We never auto-renew. Your first {FREE_RESUME_LIMIT} audits are 100% free forever, and paid passes are strictly one-time.
+              </p>
+            </div>
+
+            <div className="shrink-0 flex flex-col items-center">
+              <TailorBot
+                size={130}
+                state="idle"
+                onPoke={() => playSfx("boop")}
+                showPokeTag={true}
+              />
+            </div>
+          </div>
 
           {/* Value Props Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
             {VALUE_PROPS.map((prop) => (
               <div
                 key={prop.title}
-                className="glass rounded-2xl p-6 hover:border-cyan-500/30 transition-all duration-300"
+                className="neo-box bg-white p-6 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-2"
               >
-                <span className="text-3xl mb-3 block">{prop.icon}</span>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{prop.title}</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{prop.description}</p>
+                <span className="text-3xl block">{prop.icon}</span>
+                <h3 className="text-base font-bold font-mono text-[#1C2028]">{prop.title}</h3>
+                <p className="text-gray-600 font-sans text-xs sm:text-sm leading-relaxed">{prop.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Pricing Cards */}
-      <section className="py-12 md:py-20">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-            {/* Free Plan - Prominent */}
-            <div className="lg:col-span-1 glass rounded-2xl p-8 border-2 border-emerald-500/40 relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-emerald-500/20 px-4 py-1 rounded-bl-lg text-emerald-400 text-sm font-semibold">
-                Start Here
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Free</h2>
-              <p className="text-4xl font-bold text-emerald-400 mb-1">$0</p>
-              <p className="text-gray-400 text-sm mb-6">Forever free to try</p>
+      {/* Pricing Cards Hardware Rack */}
+      <section className="py-6 pb-20">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="grid lg:grid-cols-4 gap-6">
+            {/* Free Plan - Chassis */}
+            <div className="lg:col-span-1 neo-box bg-white p-6 sm:p-8 border-2 border-[#10B981] shadow-[4px_4px_0px_#1C2028] rounded-xl relative flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="neo-tag bg-[#10B981] text-white text-[10px] px-2 py-0.5 font-mono font-bold uppercase">
+                    FOREVER FREE
+                  </span>
+                </div>
+                <h2 className="text-2xl font-mono font-bold text-[#1C2028] mb-1">Starter</h2>
+                <p className="text-4xl font-mono font-extrabold text-[#10B981] mb-1">$0</p>
+                <p className="text-gray-500 font-mono text-xs mb-6">No credit card needed</p>
 
-              <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                <p className="text-emerald-300 font-semibold text-lg">
-                  {FREE_RESUME_LIMIT} Free AI Resume Tailors
-                </p>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                  Full access to view & download each one. No credit card.
-                </p>
-              </div>
+                <div className="mb-6 p-3.5 rounded-lg bg-[#FAF7F0] border-2 border-[#1C2028] space-y-1">
+                  <p className="text-[#1C2028] font-mono font-bold text-sm">
+                    {FREE_RESUME_LIMIT} Free AI Tailors
+                  </p>
+                  <p className="text-gray-600 text-xs">
+                    Full keyword audit, Google X-Y-Z rewrites, and PDF exports.
+                  </p>
+                </div>
 
-              <ul className="space-y-3 mb-8 text-gray-600 dark:text-gray-300 text-sm">
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  {FREE_RESUME_LIMIT} tailored resumes included
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  PDF & Markdown download
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  Relevancy scoring
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  Human-sounding output
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  ATS-optimized formatting
-                </li>
-              </ul>
+                <ul className="space-y-2.5 mb-8 text-xs font-mono text-gray-700">
+                  <li className="flex items-center gap-2">
+                    <span className="text-[#10B981] font-bold">✓</span>
+                    {FREE_RESUME_LIMIT} tailored resumes included
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-[#10B981] font-bold">✓</span>
+                    PDF & Markdown export
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-[#10B981] font-bold">✓</span>
+                    Live ATS relevancy scoring
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-[#10B981] font-bold">✓</span>
+                    Granular diff acceptance
+                  </li>
+                </ul>
+              </div>
 
               <Link
-                href="/"
-                className="block w-full py-3 px-4 rounded-xl font-semibold text-center bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30 hover:border-emerald-500/70 transition-all"
+                href="/#tailorResume"
+                onClick={() => playSfx("click")}
+                className="neo-btn block w-full py-3 px-4 text-center font-mono font-bold text-xs uppercase tracking-wider bg-white hover:bg-[#FAF7F0] text-[#1C2028] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] active:translate-x-[2px] active:translate-y-[2px]"
               >
-                Get Started Free
+                Start Free Tailor
               </Link>
             </div>
 
@@ -188,113 +214,113 @@ export default function PricingPage() {
             {TIME_BASED_TIERS.map((tier) => (
               <div
                 key={tier.tier}
-                className={`glass rounded-2xl p-8 relative ${
+                className={`neo-box p-6 sm:p-8 rounded-xl border-2 border-[#1C2028] flex flex-col justify-between relative ${
                   tier.popular
-                    ? "border-2 border-cyan-500/50 ring-2 ring-cyan-500/20 scale-[1.02]"
-                    : "border border-gray-700/50"
+                    ? "bg-[#FAF7F0] shadow-[6px_6px_0px_#1C2028] scale-[1.02]"
+                    : "bg-white shadow-[4px_4px_0px_#1C2028]"
                 }`}
               >
-                {tier.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyan-500 text-gray-900 px-4 py-1 rounded-full text-sm font-bold">
-                    Most Popular
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    {tier.popular ? (
+                      <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 font-mono font-bold uppercase tracking-wider">
+                        ★ MOST POPULAR
+                      </span>
+                    ) : (
+                      <span className="neo-tag bg-[#FAF7F0] text-gray-600 text-[10px] px-2 py-0.5 font-mono font-bold uppercase">
+                        PASS
+                      </span>
+                    )}
                   </div>
-                )}
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{tier.label}</h2>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">${tier.price.toFixed(2)}</p>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{tier.description}</p>
 
-                <ul className="space-y-3 mb-8 text-gray-600 dark:text-gray-300 text-sm">
-                  <li className="flex items-center gap-2">
-                    <span className="text-cyan-500 dark:text-cyan-400">✓</span>
-                    Unlimited AI resume tailors
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-cyan-500 dark:text-cyan-400">✓</span>
-                    Download all resumes
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-cyan-500 dark:text-cyan-400">✓</span>
-                    Full access to all features
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-cyan-500 dark:text-cyan-400">✓</span>
-                    One-time payment
-                  </li>
-                </ul>
+                  <h2 className="text-xl font-mono font-bold text-[#1C2028] mb-1">{tier.label}</h2>
+                  <div className="flex items-baseline gap-1 mb-1">
+                    <span className="text-4xl font-mono font-extrabold text-[#1C2028]">
+                      ${tier.price.toFixed(2)}
+                    </span>
+                    <span className="text-xs font-mono text-gray-500 uppercase">one-time</span>
+                  </div>
+                  <p className="text-gray-600 font-sans text-xs mb-6">{tier.description}</p>
+
+                  <ul className="space-y-2.5 mb-8 text-xs font-mono text-gray-700">
+                    <li className="flex items-center gap-2">
+                      <span className="text-[#FF5722] font-bold">✓</span>
+                      Unlimited AI resume tailors
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-[#FF5722] font-bold">✓</span>
+                      Download unlimited PDF & Docs
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-[#FF5722] font-bold">✓</span>
+                      All ATS algorithms unlocked
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-[#10B981] font-bold">✓</span>
+                      One-time payment • Never recurs
+                    </li>
+                  </ul>
+                </div>
 
                 <button
                   onClick={() => handleSelectTier(tier.tier)}
                   disabled={!!loading}
-                  className={`w-full py-3 px-4 rounded-xl font-semibold transition-all ${
+                  className={`neo-btn w-full py-3.5 px-4 font-mono font-bold text-xs uppercase tracking-wider border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] active:translate-x-[2px] active:translate-y-[2px] ${
                     tier.popular
-                      ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-400 hover:to-purple-400 hover:shadow-lg hover:shadow-cyan-500/25"
-                      : "bg-gray-700/50 text-white hover:bg-gray-700 border border-gray-600"
+                      ? "bg-[#FF5722] text-white hover:bg-[#E64A19]"
+                      : "bg-[#1C2028] text-white hover:bg-black"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {loading === tier.tier ? "Processing…" : "Get Access"}
+                  {loading === tier.tier ? "CONNECTING TO STRIPE..." : `⚡ UNLOCK ${tier.label.toUpperCase()}`}
                 </button>
               </div>
             ))}
           </div>
 
           {/* Non-subscription note */}
-          <p className="text-center text-gray-600 dark:text-gray-500 text-sm mt-8 max-w-xl mx-auto">
-            {NON_SUBSCRIPTION_MESSAGE}
-          </p>
+          <div className="neo-box bg-[#F4F1EA] p-4 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl text-center max-w-xl mx-auto mt-10">
+            <p className="text-xs font-mono font-bold text-gray-700">
+              🛡️ {NON_SUBSCRIPTION_MESSAGE}
+            </p>
+          </div>
 
           {error && (
-            <p className="text-center text-red-400 text-sm mt-4">{error}</p>
+            <p className="text-center font-mono font-bold text-[#FF5722] text-sm mt-4">{error}</p>
           )}
 
           {!user && (
             <div className="text-center mt-6">
               <button
-                onClick={() => setShowAuthModal(true)}
-                className="text-cyan-400 hover:text-cyan-300 underline text-sm"
+                onClick={() => {
+                  playSfx("click");
+                  setShowAuthModal(true);
+                }}
+                className="text-xs font-mono font-bold text-[#FF5722] hover:underline"
               >
-                Sign in to purchase access
+                Sign in to purchase access →
               </button>
             </div>
           )}
         </div>
       </section>
 
-      {/* Feature List */}
-      <section className="py-16 border-t border-gray-200 dark:border-gray-800">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-12">
-            Everything You Need to Land Interviews
+      {/* Feature List HUD */}
+      <section className="py-12 border-t-2 border-[#1C2028] bg-white">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <h2 className="text-xl sm:text-2xl font-mono font-bold text-center text-[#1C2028] mb-8">
+            Engineered For Modern Career Applications
           </h2>
-          <div className="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto">
+          <div className="flex flex-wrap justify-center gap-3">
             {FEATURES.map((feature) => (
               <div
                 key={feature}
-                className="flex items-center gap-2 px-4 py-2 rounded-full glass text-sm text-gray-600 dark:text-gray-300"
+                className="neo-tag bg-[#FAF7F0] border border-[#1C2028] px-3.5 py-1.5 text-xs font-mono font-bold text-gray-800 flex items-center gap-2"
               >
-                <span className="text-cyan-500 dark:text-cyan-400">✓</span>
-                {feature}
+                <span className="text-[#10B981]">✓</span>
+                <span>{feature}</span>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Try Your First Tailor Free
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-lg mx-auto">
-            Paste your resume and a job description. Get a tailored version in seconds.
-            Your first {FREE_RESUME_LIMIT} are on us—no credit card required.
-          </p>
-          <Link
-            href="/"
-            className="inline-block px-8 py-4 rounded-xl font-semibold bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-400 hover:to-purple-400 transition-all hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/25"
-          >
-            Start Tailoring Now
-          </Link>
         </div>
       </section>
 

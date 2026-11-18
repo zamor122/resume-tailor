@@ -5,9 +5,10 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import AuthModal from "./AuthModal";
 import { TIME_BASED_TIERS, NON_SUBSCRIPTION_MESSAGE } from "@/app/config/pricing";
 import { getStoredUtmParams } from "@/app/utils/utm";
+import { useGamification } from "@/app/contexts/GamificationContext";
 
-const XIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+const XIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <line x1="18" y1="6" x2="6" y2="18"></line>
     <line x1="6" y1="6" x2="18" y2="18"></line>
   </svg>
@@ -27,11 +28,13 @@ export default function TierSelectionModal({
   resumeId,
 }: TierSelectionModalProps) {
   const { user, session } = useAuth();
+  const { playSfx } = useGamification();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const handleSelectTier = async (tier: "2D" | "7D" | "30D") => {
+    playSfx("click");
     if (!user?.email) {
       setShowAuthModal(true);
       return;
@@ -74,6 +77,7 @@ export default function TierSelectionModal({
         throw new Error("No checkout URL returned");
       }
     } catch (err) {
+      playSfx("alert");
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(null);
     }
@@ -84,60 +88,95 @@ export default function TierSelectionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full border border-gray-800 shadow-xl">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-white">Choose Access Plan</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+      <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[6px_6px_0px_#1C2028] rounded-xl p-6 max-w-md w-full text-[#1C2028]">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-2">
+            <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2 py-0.5 font-mono font-bold uppercase">
+              ONE-TIME PASS
+            </span>
+            <h2 className="text-lg font-mono font-bold text-[#1C2028]">
+              Choose Access Plan
+            </h2>
+          </div>
           <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-1"
+            onClick={() => {
+              playSfx("boop");
+              onClose();
+            }}
+            className="p-1 rounded-sm border border-[#1C2028] bg-white hover:bg-[#F4F1EA] text-[#1C2028] transition-colors"
+            aria-label="Close modal"
           >
-            <XIcon size={24} />
+            <XIcon size={18} />
           </button>
         </div>
 
-        <p className="text-gray-300 text-sm mb-6">{NON_SUBSCRIPTION_MESSAGE}</p>
+        <p className="text-gray-600 text-xs font-mono mb-4 leading-relaxed">
+          {NON_SUBSCRIPTION_MESSAGE}
+        </p>
 
         {!user && (
-          <div className="mb-6 p-4 rounded-lg bg-blue-500/20 border border-blue-500/40">
-            <p className="text-white text-sm mb-3">Sign in to purchase access.</p>
+          <div className="mb-4 p-3.5 rounded-lg bg-[#F4F1EA] border-2 border-[#1C2028] space-y-2">
+            <p className="text-xs font-mono font-bold text-[#1C2028]">
+              Sign in to unlock full tailoring access.
+            </p>
             <button
-              onClick={() => setShowAuthModal(true)}
-              className="w-full py-2 px-4 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              onClick={() => {
+                playSfx("click");
+                setShowAuthModal(true);
+              }}
+              className="neo-btn w-full py-2 px-3 font-mono font-bold text-xs uppercase bg-[#1C2028] text-white hover:bg-black border border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
             >
               Sign In / Create Account
             </button>
           </div>
         )}
 
-        <div className="space-y-3 mb-6">
+        <div className="space-y-2.5 mb-5">
           {TIME_BASED_TIERS.map((tier) => (
             <button
               key={tier.tier}
               onClick={() => handleSelectTier(tier.tier)}
               disabled={!!loading}
-              className={`w-full py-3 px-4 rounded-lg border text-left transition-all flex justify-between items-center ${
+              className={`neo-btn w-full p-3.5 rounded-lg border-2 border-[#1C2028] text-left transition-all flex justify-between items-center ${
                 tier.popular
-                  ? "border-blue-500 bg-blue-500/10 hover:bg-blue-500/20"
-                  : "border-gray-700 bg-gray-800/50 hover:bg-gray-800"
+                  ? "bg-[#FF5722] text-white shadow-[3px_3px_0px_#1C2028] hover:bg-[#E64A19]"
+                  : "bg-white text-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#F4F1EA]"
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <div>
-                <span className="font-semibold text-white">{tier.label}</span>
-                <span className="text-gray-400 text-sm block">{tier.description}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono font-bold text-sm">{tier.label}</span>
+                  {tier.popular && (
+                    <span className="bg-black/25 text-white text-[9px] px-1.5 py-0.5 rounded-xs font-mono font-bold">
+                      POPULAR
+                    </span>
+                  )}
+                </div>
+                <span className={`text-xs block font-sans ${tier.popular ? "text-white/90" : "text-gray-600"}`}>
+                  {tier.description}
+                </span>
               </div>
-              <span className="font-bold text-white">${tier.price.toFixed(2)}</span>
+              <span className="font-mono font-extrabold text-base">
+                ${tier.price.toFixed(2)}
+              </span>
             </button>
           ))}
         </div>
 
         {error && (
-          <p className="text-red-400 text-sm mb-4">{error}</p>
+          <p className="text-xs font-mono font-bold text-[#FF5722] mb-3 text-center">
+            {error}
+          </p>
         )}
 
         <button
-          onClick={onClose}
-          className="w-full py-2 text-gray-400 hover:text-white transition-colors"
+          onClick={() => {
+            playSfx("boop");
+            onClose();
+          }}
+          className="w-full py-2 text-xs font-mono text-gray-500 hover:text-[#1C2028] transition-colors text-center"
         >
           Cancel
         </button>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { getPostBySlug } from "@/app/utils/blog";
 import { BlogArticleStructuredData } from "@/app/components/StructuredData";
+import BlogCtaBanner from "@/app/components/BlogCtaBanner";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   const url = `${SITE_URL}/blog/${slug}`;
   return {
-    title: post.title,
+    title: `${post.title} - AI Resume Tailor Field Manual`,
     description: post.description,
     alternates: {
       canonical: url,
@@ -59,20 +60,28 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   if (!post) {
     return (
-      <section
-        className="max-w-[65ch] mx-auto px-4 sm:px-6 py-16"
-        aria-label="Blog post not found"
-      >
-        <p className="text-gray-500 dark:text-gray-400">Post not found.</p>
-        <nav aria-label="Breadcrumb">
-          <Link
-            href="/blog"
-            className="mt-4 inline-block text-cyan-600 dark:text-cyan-400 hover:underline"
-          >
-            ← Back to Blog
-          </Link>
-        </nav>
-      </section>
+      <div className="min-h-screen bg-[#FAF7F0] text-[#1C2028] py-16 px-4">
+        <section
+          className="max-w-2xl mx-auto neo-box bg-[#F4F1EA] p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl text-center"
+          aria-label="Blog post not found"
+        >
+          <span className="text-4xl block mb-2">🔍</span>
+          <h1 className="text-xl font-mono font-bold text-[#1C2028] mb-2">
+            Dispatch Not Found
+          </h1>
+          <p className="text-sm text-gray-600 mb-6 font-mono">
+            The requested manual page does not exist or has moved.
+          </p>
+          <nav aria-label="Breadcrumb">
+            <Link
+              href="/blog"
+              className="neo-btn inline-block bg-[#1C2028] text-white px-5 py-2 text-xs font-mono font-bold uppercase tracking-wider"
+            >
+              ← Return to Manual Index
+            </Link>
+          </nav>
+        </section>
+      </div>
     );
   }
 
@@ -83,7 +92,7 @@ export default async function BlogPostPage({ params }: PageProps) {
   );
 
   return (
-    <>
+    <div className="min-h-screen bg-[#FAF7F0] text-[#1C2028] py-8 sm:py-12">
       <BlogArticleStructuredData
         title={post.title}
         description={post.description}
@@ -91,70 +100,68 @@ export default async function BlogPostPage({ params }: PageProps) {
         publishedAt={post.published_at}
         modifiedAt={post.created_at}
       />
-      <section
-        className="blog-post-page"
-        aria-label="Blog post"
-      >
-        <nav
-          aria-label="Breadcrumb"
-          className="max-w-[65ch] mx-auto px-4 sm:px-6 pt-8 pb-4"
-        >
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
+        {/* Breadcrumb HUD */}
+        <nav aria-label="Breadcrumb" className="flex items-center justify-between">
           <Link
             href="/blog"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+            className="neo-tag bg-white hover:bg-[#F4F1EA] text-[#1C2028] text-xs font-mono font-bold px-3 py-1.5 border border-[#1C2028] inline-flex items-center gap-1.5 transition-colors"
           >
             <span aria-hidden>←</span>
-            Back to Blog
+            <span>FIELD MANUAL</span>
           </Link>
+          <span className="text-xs font-mono text-gray-500">
+            {readingMinutes} MIN READ
+          </span>
         </nav>
 
+        {/* Article Container */}
         <article
-          className="max-w-[65ch] mx-auto px-4 sm:px-6 pb-16"
+          className="neo-box bg-white p-6 sm:p-10 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl"
           itemScope
           itemType="https://schema.org/Article"
         >
-          <header className="blog-post-header">
+          <header className="mb-8 pb-6 border-b-2 border-[#1C2028]">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 font-mono font-bold uppercase tracking-wider">
+                TACTICAL GUIDE
+              </span>
+              <time
+                dateTime={post.published_at}
+                itemProp="datePublished"
+                className="text-xs font-mono text-gray-500"
+              >
+                {formattedDate}
+              </time>
+            </div>
+
             <h1
-              className="blog-post-title"
+              className="text-2xl sm:text-3xl md:text-4xl font-extrabold font-mono text-[#1C2028] leading-tight tracking-tight mb-4"
               itemProp="headline"
             >
               {post.title}
             </h1>
-            <div className="blog-post-meta">
-              <time
-                dateTime={post.published_at}
-                itemProp="datePublished"
-                className="blog-post-date"
-              >
-                {formattedDate}
-              </time>
-              <span className="text-gray-400 dark:text-gray-500" aria-hidden>·</span>
-              <span className="blog-post-reading-time" aria-label={`${readingMinutes} min read`}>
-                {readingMinutes} min read
-              </span>
-            </div>
+
+            <p className="text-sm sm:text-base text-gray-600 font-sans leading-relaxed">
+              {post.description}
+            </p>
           </header>
 
-          <div className="blog-prose" itemProp="articleBody">
+          <div
+            className="prose prose-slate max-w-none text-[#1C2028] font-sans leading-relaxed space-y-4"
+            itemProp="articleBody"
+          >
             <ReactMarkdown>{post.body}</ReactMarkdown>
           </div>
 
-          <aside
-            className="blog-post-cta"
-            aria-label="Call to action"
-          >
-            <p className="blog-post-cta-text">
-              Ready to tailor your resume for your next role?
-            </p>
-            <Link
-              href="/#tailorResume"
-              className="blog-post-cta-button"
-            >
-              Get Started
-            </Link>
-          </aside>
+          {/* High-Converting Embedded TailorBot CTA Banner */}
+          <BlogCtaBanner
+            title="Put This Guide Into Practice"
+            subtitle="Let TailorBot MK-II scan your target job description and rewrite your resume in 15 seconds."
+            buttonText="⚡ RUN FREE RESUME AUDIT"
+          />
         </article>
-      </section>
-    </>
+      </div>
+    </div>
   );
 }

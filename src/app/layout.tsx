@@ -8,6 +8,7 @@ import SiteLinks from './components/SiteLinks';
 import Navigation from "./components/Navigation";
 import { ThemeProvider } from './components/ThemeProvider'
 import { AuthProvider } from './contexts/AuthContext';
+import { GamificationProvider } from './contexts/GamificationContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
 import ExitSurveyProvider from './components/ExitSurveyProvider';
 import UmamiVerifier from './components/UmamiVerifier';
@@ -162,23 +163,25 @@ export default function RootLayout({
         />
         <ThemeProvider>
           <AuthProvider>
-            <FeedbackProvider>
-              <ExitSurveyProvider>
-                <UmamiVerifier />
-                <UtmTracker />
-                <div className="glass-background" />
-                <Navigation />
-                <main className="flex-grow pt-2 relative" role="main">
-                  {children}
-                </main>
-                <Footer />
-                {/* Server-rendered internal link map — guarantees crawlers see a link
-                    graph on every page. See SiteLinks.tsx for why this exists. */}
-                <SiteLinks />
-                <Analytics />
-                <SpeedInsights />
-              </ExitSurveyProvider>
-            </FeedbackProvider>
+            <GamificationProvider>
+              <FeedbackProvider>
+                <ExitSurveyProvider>
+                  <UmamiVerifier />
+                  <UtmTracker />
+                  <div className="glass-background" />
+                  <Navigation />
+                  <main className="flex-grow pt-2 relative" role="main">
+                    {children}
+                  </main>
+                  <Footer />
+                  {/* Server-rendered internal link map — guarantees crawlers see a link
+                      graph on every page. See SiteLinks.tsx for why this exists. */}
+                  <SiteLinks />
+                  <Analytics />
+                  <SpeedInsights />
+                </ExitSurveyProvider>
+              </FeedbackProvider>
+            </GamificationProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

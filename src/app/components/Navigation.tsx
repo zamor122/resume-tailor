@@ -1,14 +1,20 @@
-"use client"
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { getAccessInfo, formatRemainingTime } from '@/app/utils/accessManager';
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useGamification } from "@/app/contexts/GamificationContext";
+import { getAccessInfo, formatRemainingTime } from "@/app/utils/accessManager";
+import TailorBot from "./neo/TailorBot";
 
 function AccessBadge() {
   const { user } = useAuth();
-  const [accessInfo, setAccessInfo] = useState<{ hasAccess: boolean; expiresAt: Date | null; tierLabel: string | null } | null>(null);
+  const [accessInfo, setAccessInfo] = useState<{
+    hasAccess: boolean;
+    expiresAt: Date | null;
+    tierLabel: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!user?.id) {
@@ -32,26 +38,30 @@ function AccessBadge() {
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/25 border border-emerald-500/50 text-emerald-400 text-xs font-medium shrink-0"
-      title={`${accessInfo.tierLabel || 'Access'} - ${formatRemainingTime(accessInfo.expiresAt)}`}
+      className="neo-box-sm bg-[#ECFDF5] text-[#065F46] px-3 py-1 text-xs font-mono font-bold flex items-center gap-1.5 shrink-0"
+      title={`${accessInfo.tierLabel || "Access"} - ${formatRemainingTime(
+        accessInfo.expiresAt
+      )}`}
     >
+      <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping"></span>
       <span className="hidden sm:inline">Active</span>
-      <span className="text-emerald-300 font-medium">{formatRemainingTime(accessInfo.expiresAt)}</span>
+      <span>{formatRemainingTime(accessInfo.expiresAt)}</span>
     </div>
   );
 }
 
 const navLinks = [
-  { href: '/', label: 'Resume Tailor' },
-  { href: '/profile', label: 'Profile' },
-  { href: '/pricing', label: 'Pricing' },
-  { href: '/faq', label: 'FAQ' },
-  { href: '/blog', label: 'Blog' },
+  { href: "/", label: "Tailor Console" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/blog", label: "Blog" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/profile", label: "Profile" },
 ];
 
 export default function Navigation() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { streak, xp, level, sfxEnabled, toggleSfx, playSfx } = useGamification();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -63,111 +73,200 @@ export default function Navigation() {
     setMenuOpen(false);
   }, [pathname]);
 
-  const navBackground = 'backdrop-blur-md bg-white/90 dark:bg-gray-900/30 border-gray-200 dark:border-gray-800';
-
   if (!mounted) {
-    return <nav className="h-16 backdrop-blur-md bg-transparent"></nav>;
+    return <nav className="h-16 bg-[#FAF7F0]"></nav>;
   }
 
   return (
-    <nav className={`sticky top-0 z-50 ${navBackground} border-b shadow-sm transition-all duration-300`}>
-      <div className="container mx-auto px-4 py-4">
+    <header className="sticky top-0 z-50 bg-[#FAF7F0] border-b-2 border-[#1C2028] shadow-[0px_4px_0px_rgba(28,32,40,0.06)]">
+      {/* Top Telemetry Ticker */}
+      <div className="bg-[#1C2028] text-white px-4 py-1.5 text-[11px] font-mono tracking-wider flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
+          <span className="text-[#10B981] font-bold">RADAR: ONLINE</span>
+          <span className="text-gray-500 hidden md:inline">|</span>
+          <span className="text-gray-300 hidden md:inline">
+            WARM RETROFUTURISTIC AI RELEVANCY SYSTEM
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => toggleSfx()}
+            className="text-gray-300 hover:text-white transition-colors uppercase font-bold text-[10px] flex items-center gap-1"
+            title="Toggle Mechanical SFX"
+          >
+            <span>{sfxEnabled ? "🔊 SFX ON" : "🔇 SFX MUTED"}</span>
+          </button>
+          <span className="neo-tag bg-[#FF5722] text-white px-2 py-0.5 text-[10px] font-bold">
+            3 FREE
+          </span>
+        </div>
+      </div>
+
+      {/* Main Console Navigation Bar */}
+      <nav aria-label="Main Navigation" role="navigation" className="max-w-6xl mx-auto px-4 py-3">
         <div className="flex justify-between items-center gap-3">
+          {/* Brand Logo with TailorBot Mascot */}
           <Link
             href="/"
-            className="text-xl font-bold inline-flex items-center gap-2 transition-all"
+            onClick={() => playSfx("boop")}
+            className="flex items-center gap-2.5 group"
             title="AI Resume Tailor"
           >
-            <span className="text-2xl" style={{ fontFamily: 'Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif' }}>🙋‍♀️</span>
-            <span className="hidden md:inline bg-gradient-to-r from-purple-600 to-blue-500 text-transparent bg-clip-text hover:from-purple-500 hover:to-blue-400 transition-all">
-              AI Resume Tailor
-            </span>
+            <div className="w-10 h-10 neo-box-sm bg-[#FF5722] flex items-center justify-center shrink-0">
+              <TailorBot size={32} state="idle" />
+            </div>
+            <div>
+              <span className="font-extrabold text-xl tracking-tight block leading-none text-[#1C2028]">
+                AI RESUME TAILOR
+              </span>
+              <span className="text-[10px] text-gray-600 font-mono font-bold tracking-wider uppercase block mt-0.5">
+                Target Match Optimizer
+              </span>
+            </div>
           </Link>
 
-          {/* Mobile: AccessBadge prominent, then hamburger */}
-          <div className="flex items-center gap-2 md:gap-6 flex-1 justify-end">
+          {/* Gamified Mission Status HUD */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Streak Counter */}
+            <div
+              className="neo-box-sm bg-white px-3 py-1 flex items-center gap-1.5 text-xs font-bold font-mono"
+              title="Daily Application Streak"
+            >
+              <span className="text-orange-500">🔥</span>
+              <span>{streak}D STREAK</span>
+            </div>
+
+            {/* XP Level Badge */}
+            <div
+              className="neo-box-sm bg-[#1C2028] text-white px-3 py-1 flex items-center gap-2 text-xs font-bold font-mono"
+              title="Mission Experience Points"
+            >
+              <span className="text-[#F59E0B]">⚡ {xp} XP</span>
+              <span className="bg-[#FF5722] text-white px-1.5 py-0.2 rounded text-[10px] uppercase font-mono">
+                LVL {level}
+              </span>
+            </div>
+
             <AccessBadge />
+
+            {/* Desktop Navigation Links */}
+            <div className="hidden lg:flex items-center gap-2 ml-2">
+              {navLinks.map(({ href, label }) => {
+                const isActive =
+                  href === "/" ? pathname === "/" : pathname?.startsWith(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => playSfx("click")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase transition-all ${
+                      isActive
+                        ? "bg-[#1C2028] text-white neo-box-sm shadow-none"
+                        : "text-[#1C2028] hover:bg-black/5"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+
+              {!user && (
+                <Link
+                  href="/#tailorResume"
+                  onClick={() => playSfx("click")}
+                  className="neo-btn bg-[#FF5722] text-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider ml-1"
+                >
+                  ⚡ START FREE
+                </Link>
+              )}
+            </div>
+
+            {/* Mobile Hamburger Button */}
             <button
               type="button"
-              onClick={() => setMenuOpen((o) => !o)}
-              className="md:hidden p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+              onClick={() => {
+                playSfx("click");
+                setMenuOpen((o) => !o);
+              }}
+              className="lg:hidden neo-box-sm bg-white p-2 text-[#1C2028] focus:outline-none"
               aria-expanded={menuOpen}
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
             >
               {menuOpen ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 </svg>
               )}
             </button>
-            <div className="hidden md:flex items-center gap-4">
-              {navLinks.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`transition-colors ${
-                    (href === '/' ? pathname === '/' : pathname?.startsWith(href))
-                      ? 'text-green-600 dark:text-green-500 font-medium'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-500'
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-              {!user && (
-                <Link
-                  href="/#tailorResume"
-                  className="px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-400 hover:to-purple-400 transition-all hover:scale-[1.02]"
-                >
-                  Get started
-                </Link>
-              )}
-            </div>
           </div>
         </div>
 
-        {/* Mobile dropdown menu */}
+        {/* Mobile Dropdown Menu */}
         {menuOpen && (
-          <div className="md:hidden mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <Link
-              href="/"
-              onClick={() => setMenuOpen(false)}
-              className="px-3 py-2 text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-500 text-transparent bg-clip-text hover:from-purple-500 hover:to-blue-400"
-            >
-              AI Resume Tailor
-            </Link>
-            <div className="flex flex-col gap-1 mt-1">
-              {navLinks.map(({ href, label }) => (
+          <div className="lg:hidden mt-3 pt-3 border-t-2 border-[#1C2028] flex flex-col gap-2">
+            {navLinks.map(({ href, label }) => {
+              const isActive =
+                href === "/" ? pathname === "/" : pathname?.startsWith(href);
+              return (
                 <Link
                   key={href}
                   href={href}
-                  onClick={() => setMenuOpen(false)}
-                  className={`px-3 py-2 rounded-lg transition-colors ${
-                    (href === '/' ? pathname === '/' : pathname?.startsWith(href))
-                      ? 'text-green-600 dark:text-green-500 font-medium bg-gray-100 dark:bg-gray-800/50'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-500 hover:bg-gray-100 dark:hover:bg-gray-800/50'
+                  onClick={() => {
+                    playSfx("click");
+                    setMenuOpen(false);
+                  }}
+                  className={`px-3 py-2 text-sm font-mono font-bold uppercase neo-box-sm ${
+                    isActive
+                      ? "bg-[#1C2028] text-white"
+                      : "bg-white text-[#1C2028]"
                   }`}
                 >
                   {label}
                 </Link>
-              ))}
-              {!user && (
-                <Link
-                  href="/#tailorResume"
-                  onClick={() => setMenuOpen(false)}
-                  className="mx-3 mt-2 py-3 rounded-xl font-semibold text-center bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-400 hover:to-purple-400 transition-all"
-                >
-                  Get started
-                </Link>
-              )}
-            </div>
+              );
+            })}
+
+            {!user && (
+              <Link
+                href="/#tailorResume"
+                onClick={() => {
+                  playSfx("click");
+                  setMenuOpen(false);
+                }}
+                className="neo-btn bg-[#FF5722] text-white py-3 text-center text-sm font-bold uppercase tracking-wider mt-1"
+              >
+                ⚡ START FREE
+              </Link>
+            )}
           </div>
         )}
-      </div>
-    </nav>
+      </nav>
+    </header>
   );
-} 
+}
