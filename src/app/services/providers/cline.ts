@@ -68,16 +68,18 @@ export class ClineProvider implements AIProvider {
         presence_penalty: options?.presencePenalty,
       });
 
-      // Guard the whole path: ClinePass occasionally returns a non-OpenAI-shaped
-      // body (no `choices`), which previously threw "Cannot read properties of
-      // undefined (reading '0')" and aborted the whole fallback chain.
-      const text = response?.choices?.[0]?.message?.content || '';
+      // Guard the whole path: ClinePass occasionally wraps choices in `data` (data.choices)
+      // or returns a non-OpenAI-shaped body.
+      const raw = response as any;
+      const choices = raw?.choices || raw?.data?.choices || [];
+      const text = choices[0]?.message?.content || '';
 
-      const usage = response.usage
+      const usageData = raw?.usage || raw?.data?.usage;
+      const usage = usageData
         ? {
-            promptTokens: response.usage.prompt_tokens,
-            completionTokens: response.usage.completion_tokens,
-            totalTokens: response.usage.total_tokens,
+            promptTokens: usageData.prompt_tokens,
+            completionTokens: usageData.completion_tokens,
+            totalTokens: usageData.total_tokens,
           }
         : undefined;
 
