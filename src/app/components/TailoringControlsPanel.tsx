@@ -88,21 +88,21 @@ export default function TailoringControlsPanel({
   const metricsDesc = METRICS_DESCRIPTIONS[activePrefs.metricsMode] || METRICS_DESCRIPTIONS.placeholders;
 
   return (
-    <div className="w-full mb-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white/70 dark:bg-gray-900/70 backdrop-blur-md shadow-sm transition-all overflow-hidden">
+    <div className="w-full mb-4 rounded-xl border-2 border-[#1C2028] bg-[#F4F1EA] dark:bg-[#161B22] shadow-[4px_4px_0px_#1C2028] transition-all overflow-hidden">
       {/* Top Header / Quick Status Bar */}
-      <div className="px-4 py-3 sm:px-5 flex items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800/80">
+      <div className="px-4 py-3 sm:px-5 flex items-center justify-between gap-3 border-b-2 border-[#1C2028] bg-[#FAF7F0] dark:bg-[#1A1F2C]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center text-white text-xs shadow-sm flex-shrink-0">
+          <div className="w-7 h-7 rounded-md bg-[#FF5722] text-white flex items-center justify-center font-mono font-bold text-xs border border-[#1C2028] shadow-[1px_1px_0px_#1C2028] flex-shrink-0">
             ⚡
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <span>Tailoring Style</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border border-cyan-200/60 dark:border-cyan-800/60">
+            <h3 className="text-sm font-bold font-mono text-[#1C2028] dark:text-[#FAF7F0] flex items-center gap-2">
+              <span>TAILORING STYLE</span>
+              <span className="neo-tag px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFD54F] text-[#1C2028] border border-[#1C2028]">
                 {intensityDesc.title}
               </span>
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            <p className="text-xs font-mono text-gray-600 dark:text-gray-400 truncate mt-0.5">
               {metricsDesc.title} • {activePrefs.seniorityLevel === "senior" ? "Senior Framing" : activePrefs.seniorityLevel === "executive" ? "Executive Framing" : "Mid-Level"}
             </p>
           </div>
@@ -111,7 +111,7 @@ export default function TailoringControlsPanel({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 border border-cyan-200/60 dark:border-cyan-800/60 transition-colors flex items-center gap-1 min-h-[36px]"
+          className="neo-btn flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] bg-white dark:bg-[#21262D] hover:bg-[#FFE0B2] border-1.5 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] transition-colors flex items-center gap-1.5 min-h-[36px]"
           aria-expanded={isOpen}
         >
           <span>{isOpen ? "Close Options" : "Fine-Tune Options"}</span>
@@ -127,28 +127,28 @@ export default function TailoringControlsPanel({
       </div>
 
       {/* Primary 1-Click Level Cards (Always visible for quick decision without hidden steps) */}
-      <div className="p-3.5 sm:p-4 bg-gray-50/40 dark:bg-gray-900/40">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+      <div className="p-3.5 sm:p-4 bg-[#FAF7F0] dark:bg-[#1A1F2C]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Minimal / Light Polish */}
           <button
             type="button"
             disabled={disabled}
             onClick={() => setIntensity("minimal")}
-            className={`p-3 rounded-xl border text-left transition-all min-h-[64px] flex flex-col justify-between ${
+            className={`p-3.5 rounded-xl border-2 text-left transition-all min-h-[70px] flex flex-col justify-between cursor-pointer ${
               activePrefs.intensity === "minimal"
-                ? "border-cyan-500 bg-cyan-500/10 text-cyan-950 dark:text-cyan-100 ring-2 ring-cyan-500/30 shadow-sm"
-                : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-gray-800/60 text-gray-700 dark:text-gray-300"
+                ? "border-[#1C2028] bg-[#FFE0B2] text-[#1C2028] shadow-[3px_3px_0px_#1C2028] font-bold"
+                : "border-[#1C2028]/40 hover:border-[#1C2028] bg-white dark:bg-[#21262D] text-[#1C2028] dark:text-gray-200 shadow-[1px_1px_0px_rgba(28,32,40,0.15)]"
             }`}
           >
             <div className="flex items-center justify-between w-full">
-              <span className="font-semibold text-xs sm:text-sm flex items-center gap-1.5">
+              <span className="font-mono font-bold text-xs sm:text-sm flex items-center gap-1.5">
                 <span>🟢</span> Light Polish
               </span>
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-[#1C2028] bg-white text-[#1C2028]">
                 ~15% edits
               </span>
             </div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+            <p className="text-[11px] font-mono text-gray-700 dark:text-gray-300 mt-1 line-clamp-2">
               Fix grammar, highlight keywords, keep 85%+ of your original wording intact.
             </p>
           </button>
@@ -158,21 +158,21 @@ export default function TailoringControlsPanel({
             type="button"
             disabled={disabled}
             onClick={() => setIntensity("targeted")}
-            className={`p-3 rounded-xl border text-left transition-all min-h-[64px] flex flex-col justify-between relative ${
+            className={`p-3.5 rounded-xl border-2 text-left transition-all min-h-[70px] flex flex-col justify-between relative cursor-pointer ${
               activePrefs.intensity === "targeted"
-                ? "border-cyan-500 bg-cyan-500/10 text-cyan-950 dark:text-cyan-100 ring-2 ring-cyan-500/30 shadow-sm"
-                : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-gray-800/60 text-gray-700 dark:text-gray-300"
+                ? "border-[#1C2028] bg-[#FFE0B2] text-[#1C2028] shadow-[3px_3px_0px_#1C2028] font-bold ring-1 ring-[#FF5722]"
+                : "border-[#1C2028]/40 hover:border-[#1C2028] bg-white dark:bg-[#21262D] text-[#1C2028] dark:text-gray-200 shadow-[1px_1px_0px_rgba(28,32,40,0.15)]"
             }`}
           >
             <div className="flex items-center justify-between w-full">
-              <span className="font-semibold text-xs sm:text-sm flex items-center gap-1.5">
+              <span className="font-mono font-bold text-xs sm:text-sm flex items-center gap-1.5">
                 <span>⚡</span> Balanced Match
               </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-300">
+              <span className="neo-tag text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#FF5722] text-white border border-[#1C2028]">
                 Recommended
               </span>
             </div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+            <p className="text-[11px] font-mono text-gray-700 dark:text-gray-300 mt-1 line-clamp-2">
               Rewrites key bullets to directly target this job while preserving your authentic story.
             </p>
           </button>
@@ -182,21 +182,21 @@ export default function TailoringControlsPanel({
             type="button"
             disabled={disabled}
             onClick={() => setIntensity("overhaul")}
-            className={`p-3 rounded-xl border text-left transition-all min-h-[64px] flex flex-col justify-between ${
+            className={`p-3.5 rounded-xl border-2 text-left transition-all min-h-[70px] flex flex-col justify-between cursor-pointer ${
               activePrefs.intensity === "overhaul"
-                ? "border-purple-500 bg-purple-500/10 text-purple-950 dark:text-purple-100 ring-2 ring-purple-500/30 shadow-sm"
-                : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-gray-800/60 text-gray-700 dark:text-gray-300"
+                ? "border-[#1C2028] bg-[#FFE0B2] text-[#1C2028] shadow-[3px_3px_0px_#1C2028] font-bold"
+                : "border-[#1C2028]/40 hover:border-[#1C2028] bg-white dark:bg-[#21262D] text-[#1C2028] dark:text-gray-200 shadow-[1px_1px_0px_rgba(28,32,40,0.15)]"
             }`}
           >
             <div className="flex items-center justify-between w-full">
-              <span className="font-semibold text-xs sm:text-sm flex items-center gap-1.5">
+              <span className="font-mono font-bold text-xs sm:text-sm flex items-center gap-1.5">
                 <span>🔥</span> Full Rewrite
               </span>
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-[#1C2028] bg-white text-[#1C2028]">
                 Max ATS match
               </span>
             </div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+            <p className="text-[11px] font-mono text-gray-700 dark:text-gray-300 mt-1 line-clamp-2">
               Completely rebuilds every bullet for maximum keyword density and executive framing.
             </p>
           </button>
@@ -205,10 +205,10 @@ export default function TailoringControlsPanel({
 
       {/* Expanded Fine-Tuning Drawer */}
       {isOpen && (
-        <div className="px-4 py-4 space-y-4 border-t border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 text-xs sm:text-sm">
+        <div className="px-4 py-4 space-y-4 border-t-2 border-[#1C2028] bg-[#F4F1EA] dark:bg-[#161B22] text-xs sm:text-sm">
           {/* Numbers & Metrics Handling */}
           <div>
-            <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-2">
+            <label className="block font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-2 uppercase text-xs tracking-wider">
               Numbers & Metrics in Experience Bullets
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -235,14 +235,14 @@ export default function TailoringControlsPanel({
                     type="button"
                     disabled={disabled}
                     onClick={() => setMetricsMode(mode)}
-                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                    className={`p-2.5 rounded-xl border-1.5 text-left transition-all ${
                       isSelected
-                        ? "border-purple-500 bg-purple-500/10 text-purple-900 dark:text-purple-200 font-medium ring-1 ring-purple-500/40"
-                        : "border-gray-200 dark:border-gray-800 hover:border-gray-300 bg-white/60 dark:bg-gray-800/40 text-gray-700 dark:text-gray-300"
+                        ? "border-[#1C2028] bg-[#FFE0B2] text-[#1C2028] shadow-[2px_2px_0px_#1C2028] font-bold"
+                        : "border-[#1C2028]/40 hover:border-[#1C2028] bg-white dark:bg-[#21262D] text-[#1C2028] dark:text-gray-300 shadow-[1px_1px_0px_rgba(28,32,40,0.1)]"
                     }`}
                   >
-                    <div className="font-semibold text-xs sm:text-sm">{item.title}</div>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{item.subtitle}</p>
+                    <div className="font-mono font-bold text-xs sm:text-sm">{item.title}</div>
+                    <p className="text-[11px] font-mono text-gray-600 dark:text-gray-400 mt-0.5">{item.subtitle}</p>
                   </button>
                 );
               })}
@@ -253,7 +253,7 @@ export default function TailoringControlsPanel({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             {/* Career Level */}
             <div>
-              <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-2">
+              <label className="block font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-2 uppercase text-xs tracking-wider">
                 Target Career Level
               </label>
               <div className="grid grid-cols-3 gap-1.5">
@@ -270,10 +270,10 @@ export default function TailoringControlsPanel({
                       type="button"
                       disabled={disabled}
                       onClick={() => setSeniority(s)}
-                      className={`py-2 px-2 rounded-lg border text-center font-medium text-xs transition-all ${
+                      className={`py-2 px-2 rounded-lg border-1.5 text-center font-mono font-bold text-xs transition-all ${
                         isSelected
-                          ? "border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-500/40"
-                          : "border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 bg-white/60 dark:bg-gray-800/40"
+                          ? "border-[#1C2028] bg-[#10B981] text-white shadow-[2px_2px_0px_#1C2028]"
+                          : "border-[#1C2028]/40 hover:border-[#1C2028] text-[#1C2028] dark:text-gray-300 bg-white dark:bg-[#21262D] shadow-[1px_1px_0px_rgba(28,32,40,0.1)]"
                       }`}
                     >
                       {labelMap[s]}
@@ -285,21 +285,21 @@ export default function TailoringControlsPanel({
 
             {/* Sections to update */}
             <div>
-              <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-2">
+              <label className="block font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-2 uppercase text-xs tracking-wider">
                 Sections to Tailor
               </label>
               <div className="flex items-center gap-3 pt-1">
                 {(["summary", "experience", "skills"] as const).map((sec) => (
                   <label
                     key={sec}
-                    className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-gray-700 dark:text-gray-300 capitalize"
+                    className="flex items-center gap-1.5 cursor-pointer text-xs font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] capitalize"
                   >
                     <input
                       type="checkbox"
                       checked={activePrefs.sectionsToModify[sec]}
                       onChange={() => toggleSection(sec)}
                       disabled={disabled}
-                      className="w-4 h-4 rounded text-cyan-600 focus:ring-cyan-500"
+                      className="w-4 h-4 rounded border-[#1C2028] text-[#FF5722] focus:ring-[#FF5722]"
                     />
                     {sec}
                   </label>
@@ -310,8 +310,8 @@ export default function TailoringControlsPanel({
 
           {/* Optional Keywords to Weave */}
           {onKeywordsChange && (
-            <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-              <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
+            <div className="pt-2 border-t border-[#1C2028]/20">
+              <label className="block font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-1.5 uppercase text-xs tracking-wider">
                 Must-Include Keywords (Optional)
               </label>
               {keywordsToWeave.length > 0 && (
@@ -319,13 +319,13 @@ export default function TailoringControlsPanel({
                   {keywordsToWeave.map((kw) => (
                     <span
                       key={kw}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-100 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-200 text-xs font-medium"
+                      className="neo-tag inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#FFE0B2] text-[#1C2028] border border-[#1C2028] text-xs font-mono font-bold shadow-[1px_1px_0px_#1C2028]"
                     >
                       {kw}
                       <button
                         type="button"
                         onClick={() => handleRemoveKeyword(kw)}
-                        className="rounded-full hover:bg-cyan-200 dark:hover:bg-cyan-800 p-0.5"
+                        className="rounded hover:bg-[#FFCC80] p-0.5 ml-0.5"
                         aria-label={`Remove ${kw}`}
                       >
                         ✕
@@ -346,14 +346,14 @@ export default function TailoringControlsPanel({
                     }
                   }}
                   placeholder="e.g. Kubernetes, React, Python, SOC2 (Press Enter to add)"
-                  className="flex-1 min-w-0 px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-cyan-500"
+                  className="flex-1 min-w-0 px-3 py-2 text-xs sm:text-sm rounded-lg border-1.5 border-[#1C2028] bg-white dark:bg-[#21262D] text-[#1C2028] dark:text-[#FAF7F0] placeholder-gray-500 font-mono shadow-[2px_2px_0px_#1C2028] focus:outline-none focus:ring-1 focus:ring-[#FF5722]"
                 />
                 <button
                   type="button"
                   onClick={handleAddKeyword}
-                  className="px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  className="neo-btn px-4 py-2 text-xs sm:text-sm font-mono font-bold rounded-lg bg-[#FF5722] text-white border-1.5 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:bg-[#F4511E] transition-colors"
                 >
-                  Add
+                  ADD
                 </button>
               </div>
             </div>
@@ -362,7 +362,7 @@ export default function TailoringControlsPanel({
           {/* Optional Custom Instructions */}
           {onCustomInstructionsChange && (
             <div className="pt-2">
-              <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
+              <label className="block font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-1.5 uppercase text-xs tracking-wider">
                 Special Focus or Custom Notes (Optional)
               </label>
               <textarea
@@ -370,7 +370,7 @@ export default function TailoringControlsPanel({
                 onChange={(e) => onCustomInstructionsChange(e.target.value)}
                 placeholder="e.g. Emphasize my client-facing leadership and enterprise sales achievements..."
                 rows={2}
-                className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-cyan-500 resize-y"
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border-1.5 border-[#1C2028] bg-white dark:bg-[#21262D] text-[#1C2028] dark:text-[#FAF7F0] placeholder-gray-500 font-mono shadow-[2px_2px_0px_#1C2028] focus:outline-none focus:ring-1 focus:ring-[#FF5722] resize-y"
               />
             </div>
           )}

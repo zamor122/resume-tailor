@@ -448,7 +448,7 @@ B.S. Computer Science`;
     // Initial state: Accept button is primary CTA "Accept Change" (not yet accepted)
     const acceptBtn = screen.getByRole("button", { name: /^Accept Change$/i });
     expect(acceptBtn).toBeInTheDocument();
-    expect(acceptBtn.className).toContain("bg-blue-600");
+    expect(acceptBtn.className).toContain("bg-[#FF5722]");
 
     // Accept change 1
     fireEvent.click(acceptBtn);
@@ -475,7 +475,7 @@ B.S. Computer Science`;
     expect(screen.getByText(/Change 1 of 3/i)).toBeInTheDocument();
     const acceptedBtn = screen.getByRole("button", { name: /✓ Accepted/i });
     expect(acceptedBtn).toBeInTheDocument();
-    expect(acceptedBtn.className).toContain("bg-emerald-600");
+    expect(acceptedBtn.className).toContain("bg-[#10B981]");
 
     // User can advance to Change 2 using Next Change
     const nextChangeBtn = screen.getByRole("button", { name: /Next Change/i });

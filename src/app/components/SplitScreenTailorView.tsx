@@ -268,7 +268,7 @@ export default function SplitScreenTailorView() {
 
   // Guided elicitation ("A few things your resume didn't say").
   const [showElicitation, setShowElicitation] = useState(false);
-  const { playSfx, awardXp, completeQuest } = useGamification();
+  const { playSfx, awardXp, completeQuest, pokeMascot } = useGamification();
   const [elicitationQuestions, setElicitationQuestions] = useState<ElicitationQuestion[]>([]);
   const elicitationResolvedRef = useRef(false);
   const elicitationFactsRef = useRef<ElicitationFact[]>([]);
@@ -619,7 +619,11 @@ export default function SplitScreenTailorView() {
   const handleFileAccepted = useCallback((text: string) => {
     setResume(text);
     setError(null);
-  }, []);
+    if (text.trim().length >= 100) {
+      playSfx("success");
+      awardXp(20, "Resume Document Loaded");
+    }
+  }, [playSfx, awardXp]);
 
   const handleFileError = useCallback((message: string) => {
     setError(message);
@@ -688,7 +692,7 @@ export default function SplitScreenTailorView() {
               <TailorBot
                 state="idle"
                 size={140}
-                onPoke={() => playSfx("boop")}
+                onPoke={() => pokeMascot()}
                 showPokeTag={true}
               />
             </div>
@@ -709,33 +713,39 @@ export default function SplitScreenTailorView() {
         )}
 
         {/* Mobile Step Switcher (md:hidden) */}
-        <div className="md:hidden flex items-center justify-between p-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700/80 shadow-inner">
+        <div className="md:hidden flex items-center justify-between p-1.5 rounded-xl bg-[#FAF7F0] dark:bg-[#1C2028] border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] gap-2">
           <button
             type="button"
-            onClick={() => setActiveMobileTab("resume")}
-            className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+            onClick={() => {
+              playSfx("click");
+              setActiveMobileTab("resume");
+            }}
+            className={`flex-1 py-2 px-2 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all neo-btn ${
               activeMobileTab === "resume"
-                ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-                : "text-gray-600 dark:text-gray-400"
+                ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+                : "bg-white dark:bg-[#21262D] text-[#1C2028] dark:text-gray-300 border border-[#1C2028]/40"
             }`}
           >
-            <span>📄 1. Resume</span>
+            <span>📄 1. RESUME</span>
             {resume.trim().length >= 100 ? (
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="w-2 h-2 rounded-full bg-[#10B981] border border-[#1C2028]" />
             ) : null}
           </button>
           <button
             type="button"
-            onClick={() => setActiveMobileTab("job")}
-            className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+            onClick={() => {
+              playSfx("click");
+              setActiveMobileTab("job");
+            }}
+            className={`flex-1 py-2 px-2 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all neo-btn ${
               activeMobileTab === "job"
-                ? "bg-white dark:bg-gray-900 text-purple-600 dark:text-purple-400 shadow-sm"
-                : "text-gray-600 dark:text-gray-400"
+                ? "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+                : "bg-white dark:bg-[#21262D] text-[#1C2028] dark:text-gray-300 border border-[#1C2028]/40"
             }`}
           >
-            <span>💼 2. Target Job</span>
+            <span>💼 2. TARGET JOB</span>
             {jobDescription.trim().length >= 100 ? (
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="w-2 h-2 rounded-full bg-[#10B981] border border-[#1C2028]" />
             ) : null}
           </button>
         </div>
@@ -870,24 +880,24 @@ export default function SplitScreenTailorView() {
 
         {/* How It Works - below the form */}
         <section id="howItWorks" className="py-6 md:py-8" data-parallax="0.08">
-          <h2 className="text-xl md:text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-6 md:mb-8">
+          <h2 className="text-xl md:text-2xl font-mono font-bold text-center text-[#1C2028] dark:text-[#FAF7F0] mb-6 md:mb-8 uppercase tracking-wide">
             How to Optimize Your Resume for ATS and Job Descriptions
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8">
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400 font-bold">1</div>
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Add your resume</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Upload a PDF or paste your resume</p>
+            <div className="text-center p-4 rounded-xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028]">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#FF5722] text-white flex items-center justify-center font-mono font-bold text-lg border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]">1</div>
+              <h3 className="font-mono font-bold text-sm sm:text-base text-[#1C2028] dark:text-[#FAF7F0] mb-2 uppercase">Add your resume</h3>
+              <p className="text-xs font-mono text-gray-600 dark:text-gray-400">Upload a PDF or paste your resume text</p>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 font-bold">2</div>
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Paste the job posting</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Copy the job description you&apos;re applying for</p>
+            <div className="text-center p-4 rounded-xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028]">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#F59E0B] text-white flex items-center justify-center font-mono font-bold text-lg border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]">2</div>
+              <h3 className="font-mono font-bold text-sm sm:text-base text-[#1C2028] dark:text-[#FAF7F0] mb-2 uppercase">Paste the job posting</h3>
+              <p className="text-xs font-mono text-gray-600 dark:text-gray-400">Copy the job description you&apos;re applying for</p>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold">3</div>
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Get an ATS-Optimized Resume That Sounds Like You</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Receive a version that matches the job, sounds human, and keeps your voice</p>
+            <div className="text-center p-4 rounded-xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028]">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#10B981] text-white flex items-center justify-center font-mono font-bold text-lg border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]">3</div>
+              <h3 className="font-mono font-bold text-sm sm:text-base text-[#1C2028] dark:text-[#FAF7F0] mb-2 uppercase">Get ATS-Optimized Bullets</h3>
+              <p className="text-xs font-mono text-gray-600 dark:text-gray-400">Receive a tailored version that matches the job, sounds human, and keeps your voice</p>
             </div>
           </div>
         </section>
@@ -895,7 +905,7 @@ export default function SplitScreenTailorView() {
         {error && (
           <div
             key={errorShakeKey}
-            className="animate-shake p-4 rounded-xl bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800/30 text-pink-700 dark:text-pink-400" role="alert"
+            className="animate-shake p-4 rounded-xl bg-[#FFE4E6] dark:bg-pink-900/20 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] text-[#9F1239] dark:text-pink-300 font-mono text-xs font-bold" role="alert"
           >
             {error}
           </div>
@@ -914,9 +924,9 @@ export default function SplitScreenTailorView() {
                 });
                 setShowResetModal(true);
               }}
-              className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+              className="neo-btn px-4 py-2 text-xs font-mono font-bold rounded-lg border-2 border-[#1C2028] text-[#1C2028] dark:text-[#FAF7F0] bg-[#FAF7F0] dark:bg-[#21262D] hover:bg-[#FFE0B2] shadow-[2px_2px_0px_#1C2028] transition-colors"
             >
-              Start over
+              START OVER
             </button>
           </div>
         )}
@@ -953,24 +963,27 @@ export default function SplitScreenTailorView() {
               downloadJobTitle={detectedJobTitle ?? undefined}
             />
             {results.matchScore != null && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Match score: <span className="font-medium text-cyan-600 dark:text-cyan-400">{results.matchScore}</span>
+              <p className="text-xs sm:text-sm font-mono text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <span>MATCH SCORE:</span>
+                <span className="neo-tag px-2.5 py-0.5 rounded font-mono font-bold bg-[#10B981] text-white border border-[#1C2028]">
+                  {results.matchScore}%
+                </span>
               </p>
             )}
             <div className="flex flex-col items-center gap-3 pt-4">
               <button
                 type="button"
                 onClick={() => setShowAuthModalMode("signup")}
-                className="px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-400 hover:to-purple-400 transition-all hover:scale-[1.02]"
+                className="neo-btn px-6 py-3.5 rounded-xl font-mono font-bold text-sm bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] hover:bg-[#F4511E] transition-all"
               >
-                Create free account to save this resume and get 2 more free
+                ⚡ CREATE FREE ACCOUNT TO SAVE & GET 2 MORE FREE
               </button>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-xs font-mono text-gray-600 dark:text-gray-400">
                 Already have an account?{" "}
                 <button
                   type="button"
                   onClick={() => setShowAuthModalMode("signin")}
-                  className="text-cyan-600 dark:text-cyan-400 hover:underline font-medium"
+                  className="text-[#FF5722] hover:underline font-bold"
                 >
                   Sign in to save it
                 </button>

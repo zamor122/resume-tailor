@@ -13,4 +13,14 @@ export interface GamificationState {
   sfxEnabled: boolean;
   completedQuests: string[];
   totalTailoredCount: number;
+  readArticleSlugs: string[];
+  dailyPokes: number;
+  lastPokeDate?: string;
+}
+
+export interface XpNotification {
+  id: string;
+  amount: number;
+  reason: string;
+  timestamp: number;
 }
