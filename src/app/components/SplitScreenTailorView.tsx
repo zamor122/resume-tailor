@@ -440,7 +440,7 @@ export default function SplitScreenTailorView() {
     setHasStartedTailoring(true);
     setAgentMessage("Analyzing your resume and target job requirements...");
     setAgentProgress(10);
-    playSfx("start");
+    playSfx("click");
 
     const source = prefillResumeId ? "prefill" : (resume.trim().length > 0 ? "return_visit" : "blank");
     analytics.trackEvent(analytics.events.RESUME_TAILOR, {
@@ -515,7 +515,7 @@ export default function SplitScreenTailorView() {
         setResults(data);
       }
     } catch (err) {
-      playSfx("error");
+      playSfx("alert");
       const rawMessage = err instanceof Error ? err.message : "An error occurred";
       const isAbort = err instanceof Error && err.name === "AbortError";
       const isNetwork =

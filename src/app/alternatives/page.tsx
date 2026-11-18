@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import Breadcrumbs from "@/app/components/Breadcrumbs";
+import BlogCtaBanner from "@/app/components/BlogCtaBanner";
 
 export const metadata: Metadata = {
   title: "Free Alternatives to Popular Resume Tools - AI Resume Tailor",
@@ -23,40 +24,61 @@ const COMPETITORS = [
 
 export default function AlternativesIndexPage() {
   return (
-    <div className="max-w-3xl mx-auto px-4 py-16 space-y-8">
-      <Breadcrumbs
-        items={[{ name: "Home", href: "/" }, { name: "Alternatives" }]}
-      />
+    <div className="min-h-screen bg-[#FAF7F0] text-[#1C2028] py-12 px-4 sm:px-6">
+      <div className="max-w-3xl mx-auto space-y-8">
+        <Breadcrumbs
+          items={[{ name: "Home", href: "/" }, { name: "Alternatives" }]}
+        />
 
-      <div className="space-y-4">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100">
-          Free Alternatives to Popular Resume Tools
-        </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-          AI Resume Tailor tailors your existing resume to a specific job
-          posting. If you are comparing it with the tools below, each
-          comparison page covers pricing, free offerings, and how the two
-          approaches differ.
-        </p>
-      </div>
+        <div className="neo-box bg-[#F4F1EA] p-6 sm:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 font-mono font-bold uppercase tracking-wider">
+              COMPARISON AUDIT
+            </span>
+            <span className="text-xs font-mono text-gray-500">
+              ZERO SUBSCRIPTION TRAPS
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-mono text-[#1C2028]">
+            Free Alternatives to Popular Resume Tools
+          </h1>
+          <p className="text-sm sm:text-base text-gray-700 font-sans leading-relaxed">
+            Unlike recurring subscription traps that bill you \$29–\$49/month, AI Resume Tailor gives you 3 free tailors upfront and affordable one-time passes from \$9 with zero auto-renewals.
+          </p>
+        </div>
 
-      <ul className="space-y-3">
-        {COMPETITORS.map((c) => (
-          <li key={c.slug}>
-            <Link
-              href={`/alternatives/${c.slug}`}
-              className="text-cyan-600 dark:text-cyan-400 hover:underline font-medium"
-            >
-              Free alternative to {c.name}
-            </Link>
-          </li>
-        ))}
-      </ul>
+        <div className="neo-box bg-white p-6 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-4">
+          <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-gray-500">
+            Compare Head-to-Head
+          </h2>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {COMPETITORS.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  href={`/alternatives/${c.slug}`}
+                  className="neo-btn block p-3 bg-[#FAF7F0] hover:bg-white text-xs font-mono font-bold text-[#1C2028] border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] active:translate-x-[1px] active:translate-y-[1px] transition-all"
+                >
+                  ⚡ Free alternative to {c.name} →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
 
-      <div className="pt-8 border-t border-gray-200 dark:border-gray-700">
-        <Link href="/" className="text-cyan-600 dark:text-cyan-400 hover:underline">
-          ← Back to AI Resume Tailor
-        </Link>
+        <BlogCtaBanner
+          title="Try AI Resume Tailor Free"
+          subtitle="No credit card, no recurring monthly fees. Get 3 free ATS tailors right now."
+          buttonText="⚡ START FREE TAILOR"
+        />
+
+        <div className="pt-4">
+          <Link
+            href="/"
+            className="text-xs font-mono font-bold text-[#1C2028] hover:text-[#FF5722] transition-colors"
+          >
+            ← Back to AI Resume Tailor Home
+          </Link>
+        </div>
       </div>
     </div>
   );
