@@ -11,6 +11,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
 import ExitSurveyProvider from './components/ExitSurveyProvider';
 import UmamiVerifier from './components/UmamiVerifier';
+import UtmTracker from './components/UtmTracker';
 import Script from "next/script";
 import { RootStructuredData } from './components/StructuredData';
 
@@ -164,6 +165,7 @@ export default function RootLayout({
             <FeedbackProvider>
               <ExitSurveyProvider>
                 <UmamiVerifier />
+                <UtmTracker />
                 <div className="glass-background" />
                 <Navigation />
                 <main className="flex-grow pt-2 relative" role="main">

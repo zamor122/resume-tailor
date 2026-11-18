@@ -9,6 +9,7 @@ import {
   TIME_BASED_TIERS,
   NON_SUBSCRIPTION_MESSAGE,
 } from "@/app/config/pricing";
+import { getStoredUtmParams } from "@/app/utils/utm";
 
 const VALUE_PROPS = [
   {
@@ -80,6 +81,7 @@ export default function PricingPage() {
           email: user.email,
           accessToken: session.access_token,
           returnUrl: typeof window !== "undefined" ? window.location.href : undefined,
+          utm: getStoredUtmParams(),
         }),
       });
 

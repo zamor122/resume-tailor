@@ -282,6 +282,24 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     baseUrl: 'https://api.cline.bot/api/v1',
     description: 'Penny-inference engine — target <$0.005 per tailored resume',
   },
+  'cline:deepseek/deepseek-v4.1-flash': {
+    provider: 'cline',
+    modelId: 'deepseek/deepseek-v4.1-flash',
+    name: 'DeepSeek v4.1 Flash (Direct)',
+    requiresApiKey: true,
+    apiKeyEnvVar: 'CLINE_API_KEY',
+    baseUrl: 'https://api.cline.bot/api/v1',
+    description: 'Direct DeepSeek v4.1 Flash via ClinePass',
+  },
+  'cline:meta-llama/llama-3.3-70b-instruct': {
+    provider: 'cline',
+    modelId: 'meta-llama/llama-3.3-70b-instruct',
+    name: 'Llama 3.3 70B Instruct (ClinePass)',
+    requiresApiKey: true,
+    apiKeyEnvVar: 'CLINE_API_KEY',
+    baseUrl: 'https://api.cline.bot/api/v1',
+    description: 'Open-weight executive resume prose engine via ClinePass',
+  },
 };
 
 /**

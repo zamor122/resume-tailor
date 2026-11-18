@@ -10,7 +10,7 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { tier, resumeId, userId, email, accessToken, returnUrl } = body;
+    const { tier, resumeId, userId, email, accessToken, returnUrl, utm } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -71,6 +71,11 @@ export async function POST(req: NextRequest) {
         tier,
         resumeId: resumeId || "",
         userId: userId || "",
+        ...(utm?.source && { utm_source: String(utm.source).slice(0, 100) }),
+        ...(utm?.medium && { utm_medium: String(utm.medium).slice(0, 100) }),
+        ...(utm?.campaign && { utm_campaign: String(utm.campaign).slice(0, 100) }),
+        ...(utm?.content && { utm_content: String(utm.content).slice(0, 100) }),
+        ...(utm?.term && { utm_term: String(utm.term).slice(0, 100) }),
       },
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl,

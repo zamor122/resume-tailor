@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
 import AuthModal from "./AuthModal";
 import { TIME_BASED_TIERS, NON_SUBSCRIPTION_MESSAGE } from "@/app/config/pricing";
+import { getStoredUtmParams } from "@/app/utils/utm";
 
 const XIcon = ({ size = 24 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -57,6 +58,7 @@ export default function TierSelectionModal({
           email: user.email,
           accessToken: session.access_token,
           returnUrl: typeof window !== "undefined" ? window.location.href : undefined,
+          utm: getStoredUtmParams(),
         }),
       });
 
