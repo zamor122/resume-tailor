@@ -174,10 +174,22 @@ export function GamificationProvider({
   );
 }
 
+const DEFAULT_GAMIFICATION_FALLBACK: GamificationContextValue = {
+  streak: 1,
+  xp: 0,
+  level: 1,
+  sfxEnabled: true,
+  quests: [],
+  toggleSfx: () => {},
+  playSfx: () => {},
+  awardXp: () => {},
+  completeQuest: () => {},
+};
+
 export function useGamification() {
   const ctx = useContext(GamificationContext);
   if (!ctx) {
-    throw new Error("useGamification must be used within a GamificationProvider");
+    return DEFAULT_GAMIFICATION_FALLBACK;
   }
   return ctx;
 }

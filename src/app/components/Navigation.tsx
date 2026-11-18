@@ -105,7 +105,7 @@ export default function Navigation() {
       </div>
 
       {/* Main Console Navigation Bar */}
-      <div className="max-w-6xl mx-auto px-4 py-3">
+      <nav aria-label="Main Navigation" role="navigation" className="max-w-6xl mx-auto px-4 py-3">
         <div className="flex justify-between items-center gap-3">
           {/* Brand Logo with TailorBot Mascot */}
           <Link
@@ -266,7 +266,7 @@ export default function Navigation() {
             )}
           </div>
         )}
-      </div>
+      </nav>
     </header>
   );
 }
