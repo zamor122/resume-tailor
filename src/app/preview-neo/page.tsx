@@ -1,35 +1,87 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import React, { useState, useRef } from "react";
 
-export default function PreviewNeoPage() {
+export default function PreviewNeoRetrofuturisticPage() {
   const [isBoosted, setIsBoosted] = useState(false);
   const [score, setScore] = useState(44);
   const [xp, setXp] = useState(350);
   const [streak, setStreak] = useState(3);
   const [pokeCount, setPokeCount] = useState(0);
-  const [mascotText, setMascotText] = useState("Ready to scan! Drop your resume.");
+  const [mascotText, setMascotText] = useState("SYSTEM READY. INPUT RESUME & TARGET ROLE.");
   const [questCompleted, setQuestCompleted] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // Web Audio API Synthesizer for Retro-Tech Sound Effects (0 network assets needed)
+  const playSound = (type: "click" | "boop" | "success") => {
+    if (!audioEnabled || typeof window === "undefined") return;
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AudioCtx();
+
+      if (type === "click") {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+      } else if (type === "boop") {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.setValueAtTime(660, ctx.currentTime + 0.06);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      } else if (type === "success") {
+        const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+          gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.08 + 0.25);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.08);
+          osc.stop(ctx.currentTime + idx * 0.08 + 0.25);
+        });
+      }
+    } catch {
+      // AudioContext not allowed or unsupported
+    }
+  };
+
   const mascotPhrases = [
-    "Hey! That tickles! 🤖",
-    "Keep tailoring, you're on a 3-day roll!",
-    "Fun fact: Google X-Y-Z bullets double callback rates!",
-    "I eat ATS keyword filters for breakfast 🥐",
-    "Recruiters scan resumes in 6 seconds — make it count!",
+    "DIAGNOSTIC ACTIVE: Scanning recruiter criteria...",
+    "ANALYSIS: Google X-Y-Z formula doubles interview invitations!",
+    "ATS RADAR: Calibrated and sweeping for keyword gaps.",
+    "STATUS: 3-day mission streak verified! Keep momentum.",
+    "TIP: Lead every bullet with a power action verb.",
   ];
 
   const handlePoke = () => {
+    playSound("boop");
     const nextCount = pokeCount + 1;
     setPokeCount(nextCount);
     setMascotText(mascotPhrases[nextCount % mascotPhrases.length]);
   };
 
   const handleBoost = () => {
+    playSound("click");
     if (!isBoosted) {
-      // Animate score counter from 44 to 94
       let current = 44;
       const target = 94;
       const step = 2;
@@ -42,20 +94,20 @@ export default function PreviewNeoPage() {
           setXp((prev) => prev + 150);
           setStreak((prev) => prev + 1);
           setQuestCompleted(true);
-          setMascotText("BAM! 94% Match! Recruiter eyes guaranteed! 🚀");
+          setMascotText("SURGE COMPLETE! 94% RELEVANCY — RECRUITER READY 🚀");
+          playSound("success");
           triggerConfetti();
         } else {
           setScore(current);
         }
       }, 25);
     } else {
-      // Reset
       setIsBoosted(false);
       setScore(44);
       setXp(350);
       setStreak(3);
       setQuestCompleted(false);
-      setMascotText("Ready to scan! Drop your resume.");
+      setMascotText("SYSTEM READY. INPUT RESUME & TARGET ROLE.");
     }
   };
 
@@ -68,8 +120,9 @@ export default function PreviewNeoPage() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const colors = ["#FFE600", "#00E599", "#706BF6", "#FF5C5C", "#121212"];
-    const particles = Array.from({ length: 80 }).map(() => ({
+    // Retrofuturistic Palette Confetti
+    const colors = ["#FF5722", "#10B981", "#F59E0B", "#3B82F6", "#1C2028"];
+    const particles = Array.from({ length: 90 }).map(() => ({
       x: canvas.width / 2 + (Math.random() * 200 - 100),
       y: canvas.height * 0.4,
       w: Math.random() * 10 + 6,
@@ -90,7 +143,7 @@ export default function PreviewNeoPage() {
       particles.forEach((p) => {
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.45; // gravity
+        p.vy += 0.45;
         p.rot += p.vrot;
         p.opacity -= 0.015;
 
@@ -117,59 +170,84 @@ export default function PreviewNeoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFFDF8] text-[#121212] p-4 md:p-8 relative selection:bg-[#FFE600]">
+    <div
+      className="min-h-screen text-[#1C2028] p-4 md:p-8 relative selection:bg-[#FF5722] selection:text-white"
+      style={{
+        backgroundColor: "#FAF7F0",
+        backgroundImage: "radial-gradient(#1C2028 0.75px, transparent 0.75px)",
+        backgroundSize: "22px 22px",
+      }}
+    >
       <canvas
         ref={canvasRef}
         className="fixed inset-0 pointer-events-none z-50 w-full h-full"
       />
 
-      {/* Top Notification / Beta Banner */}
+      {/* Top Retro Console Control Bar */}
       <div className="max-w-6xl mx-auto mb-4">
-        <div className="neo-box-sm bg-[#FFE600] px-4 py-2 flex items-center justify-between text-xs font-bold">
-          <span className="flex items-center gap-2">
-            <span>✨</span>
-            <span>V2.0 SOFT NEO-BRUTALIST PREVIEW — INTERACTIVE GAMIFICATION DEMO</span>
-          </span>
-          <span className="neo-tag bg-white text-black px-2 py-0.5 text-[10px]">
-            Live Sandbox
-          </span>
+        <div className="neo-box-sm bg-[#1C2028] text-white px-4 py-2 flex items-center justify-between text-xs font-mono tracking-wider flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 text-[#10B981]">
+              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping"></span>
+              <span>CONSOLE STATUS: ONLINE</span>
+            </span>
+            <span className="text-gray-500 hidden sm:inline">|</span>
+            <span className="text-gray-300 hidden sm:inline">SERIES-2026 RETROFUTURISTIC EDITION</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setAudioEnabled(!audioEnabled)}
+              className="text-gray-300 hover:text-white flex items-center gap-1 text-[11px] font-bold uppercase transition-colors"
+            >
+              <span>{audioEnabled ? "🔊 SFX ON" : "🔇 SFX MUTED"}</span>
+            </button>
+            <span className="neo-tag bg-[#FF5722] text-white px-2 py-0.5 text-[10px] font-bold">
+              WARM TECH
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Sticky Top Pill Navigation */}
+      {/* Navigation Bar / Console Header */}
       <header className="max-w-6xl mx-auto mb-8">
         <nav className="neo-box bg-white px-6 py-4 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FFE600] neo-box-sm flex items-center justify-center font-black text-xl">
-              ✂️
+            <div className="w-11 h-11 bg-[#FF5722] neo-box-sm flex items-center justify-center font-black text-xl text-white shadow-[2px_2px_0px_#1C2028]">
+              ⚡
             </div>
             <div>
-              <span className="font-extrabold text-xl tracking-tight block leading-none">
-                AI Resume Tailor
+              <span className="font-extrabold text-2xl tracking-tight block leading-none font-display text-[#1C2028]">
+                AI RESUME TAILOR
               </span>
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                Zero Generic Buzzwords
+              <span className="text-[11px] text-gray-600 font-mono font-bold tracking-wider uppercase mt-0.5 block">
+                Target Match & Relevancy Engine
               </span>
             </div>
           </div>
 
-          {/* Gamified User Status Pill */}
-          <div className="flex items-center gap-3">
-            <div className="neo-box-sm bg-[#FFFDF8] px-3.5 py-1.5 flex items-center gap-2 text-xs font-bold">
-              <span className="text-orange-500 animate-bounce">🔥</span>
-              <span>{streak} Day Streak</span>
+          {/* Gamified HUD Indicators */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Daily Streak Counter */}
+            <div className="neo-box-sm bg-[#FFFDF8] px-3.5 py-1.5 flex items-center gap-2 text-xs font-bold font-mono">
+              <span className="text-orange-500 text-sm">🔥</span>
+              <span>{streak} DAY MISSION</span>
             </div>
 
-            <div className="neo-box-sm bg-[#706BF6] text-white px-3.5 py-1.5 flex items-center gap-2 text-xs font-bold">
-              <span>⚡ {xp} XP</span>
-              <span className="bg-black/20 px-1.5 py-0.5 rounded text-[10px]">
-                {xp >= 500 ? "Lvl 3" : "Lvl 2"}
+            {/* XP & Level Badge */}
+            <div className="neo-box-sm bg-[#1C2028] text-white px-3.5 py-1.5 flex items-center gap-2 text-xs font-bold font-mono">
+              <span className="text-[#F59E0B]">⚡ {xp} XP</span>
+              <span className="bg-[#FF5722] text-white px-1.5 py-0.5 rounded text-[10px] uppercase font-mono">
+                {xp >= 500 ? "LVL 3" : "LVL 2"}
               </span>
             </div>
 
             <button
-              onClick={() => alert("Sign In modal triggered!")}
-              className="neo-btn bg-[#FFE600] px-4 py-2 text-sm font-bold"
+              onClick={() => {
+                playSound("click");
+                alert("Sign In modal triggered!");
+              }}
+              className="neo-btn bg-[#FF5722] text-white px-5 py-2 text-sm font-bold tracking-wide uppercase"
             >
               Sign In
             </button>
@@ -177,306 +255,353 @@ export default function PreviewNeoPage() {
         </nav>
       </header>
 
-      {/* Main Hero & Interactive Workspace Grid */}
+      {/* Main Grid: Mission Hero & Interactive Lab */}
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Value Prop & Interactive Input (7 cols) */}
+        
+        {/* Left Column: Command & Interactive Tailor Panel (7 cols) */}
         <div className="lg:col-span-7 flex flex-col gap-6">
-          {/* Headline Card */}
-          <div className="neo-box bg-[#FFE600] p-6 md:p-8 relative overflow-hidden">
-            <div className="neo-tag bg-white text-xs px-3 py-1 inline-flex items-center gap-1.5 mb-3 font-bold">
-              <span>🎯</span> Beat the ATS Robot in 10 Seconds
+          
+          {/* Hero Banner / Mission Brief */}
+          <div className="neo-box bg-[#F4F1EA] p-6 md:p-8 relative overflow-hidden border-2 border-[#1C2028]">
+            <div className="flex items-center justify-between mb-3">
+              <div className="neo-tag bg-[#FF5722] text-white text-xs px-3 py-1 inline-flex items-center gap-1.5 font-bold uppercase tracking-wider font-mono">
+                <span>🚀</span> Universal Application Optimizer
+              </div>
+              <span className="text-xs font-mono text-gray-500 hidden sm:inline">REF: ART-2026</span>
             </div>
-            <h1 className="font-black text-3xl md:text-5xl leading-tight mb-4 tracking-tight">
-              Turn your boring resume into an{" "}
-              <span className="bg-white px-2 py-0.5 neo-box-sm inline-block rotate-[-1deg]">
-                interview magnet.
-              </span>
+
+            <h1 className="font-extrabold text-3xl md:text-5xl leading-tight mb-4 tracking-tight text-[#1C2028]">
+              Engineered to make your resume <span className="bg-[#FF5722] text-white px-2 py-0.5 neo-box-sm inline-block rotate-[-1deg]">impossible to overlook.</span>
             </h1>
-            <p className="text-sm md:text-base font-medium text-black/80 max-w-xl">
-              No generic filler. We extract your real achievements, rewrite
-              bullets using Google&apos;s X-Y-Z formula, and boost your job match
-              score before your eyes.
+
+            <p className="text-sm md:text-base font-medium text-gray-700 max-w-xl leading-relaxed">
+              Designed for everyone—from entry-level grads to seasoned professionals. We extract your concrete career achievements, format them with Google&apos;s proven X-Y-Z formula, and boost ATS keyword match rates instantly.
             </p>
+
+            <div className="mt-5 pt-4 border-t-2 border-black/10 flex items-center gap-6 text-xs font-mono font-bold text-gray-600 flex-wrap">
+              <span className="flex items-center gap-1.5">
+                <span className="text-[#10B981]">✓</span> 3 Free Tailors Included
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="text-[#10B981]">✓</span> Zero Credit Card Required
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="text-[#10B981]">✓</span> Instant PDF & Word Ready
+              </span>
+            </div>
           </div>
 
-          {/* Live Interactive Tailor Challenge Card */}
+          {/* Interactive Diagnostic Lab Chassis */}
           <div className="neo-box bg-white p-6 relative">
             <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-black/10">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🧪</span>
-                <h2 className="font-bold text-lg">Interactive Tailor Lab</h2>
+                <div className="w-6 h-6 rounded-md bg-[#1C2028] text-white flex items-center justify-center font-mono text-xs font-bold">
+                  01
+                </div>
+                <h2 className="font-bold text-lg text-[#1C2028]">
+                  Interactive Resume Laboratory
+                </h2>
               </div>
-              <span className="neo-tag bg-[#A7F3D0] text-[11px] px-2.5 py-0.5 text-emerald-900 font-bold">
-                First 3 Free
+              <span className="neo-tag bg-[#ECFDF5] text-[#065F46] text-[11px] px-2.5 py-0.5 font-mono font-bold">
+                PROVEN X-Y-Z FORMULA
               </span>
             </div>
 
-            {/* Sample Resume Bullet */}
+            {/* Original Input Preview */}
             <div className="mb-4">
-              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
-                Original Bullet Point (Drab):
-              </label>
-              <div className="neo-box-sm bg-gray-50 p-3 text-xs md:text-sm text-gray-700 font-mono">
-                &ldquo;Responsible for writing software and helping the backend
-                team deploy changes to Kubernetes.&rdquo;
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider font-mono">
+                  Current Bullet (Generic / Passive):
+                </label>
+                <span className="text-[10px] font-mono text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                  ⚠️ Weak Metrics Detected
+                </span>
+              </div>
+              <div className="neo-box-sm bg-[#FAF8F5] p-3 text-xs md:text-sm text-gray-800 font-mono border border-gray-300">
+                &ldquo;Managed internal web tools, collaborated with cross-functional teams, and helped resolve ticket backlogs.&rdquo;
               </div>
             </div>
 
-            {/* Target Job Keyword Tag Cloud */}
+            {/* Target Job Keyword Radar */}
             <div className="mb-5">
-              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
-                Missing Target Keywords:
+              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider font-mono mb-2">
+                ATS Keyword Deficiencies (Target Job Match):
               </label>
               <div className="flex flex-wrap gap-2">
-                <span className="neo-tag bg-[#FFD8D8] text-xs px-3 py-1 text-red-900">
-                  ❌ CI/CD Latency
+                <span className="neo-tag bg-red-100 text-xs px-3 py-1 text-red-900 border border-red-300">
+                  ✕ Cycle Time Metric
                 </span>
-                <span className="neo-tag bg-[#FFD8D8] text-xs px-3 py-1 text-red-900">
-                  ❌ Microservices
+                <span className="neo-tag bg-red-100 text-xs px-3 py-1 text-red-900 border border-red-300">
+                  ✕ Jira / Agile Sprint SLA
                 </span>
-                <span className="neo-tag bg-[#FFD8D8] text-xs px-3 py-1 text-red-900">
-                  ❌ +35% Metric
+                <span className="neo-tag bg-red-100 text-xs px-3 py-1 text-red-900 border border-red-300">
+                  ✕ 30% Efficiency Gain
                 </span>
               </div>
             </div>
 
-            {/* Action Button with Tactile Feedback */}
+            {/* Action Button: Tactile Retro Switch */}
             <div className="flex flex-col sm:flex-row gap-3 items-center">
               <button
                 onClick={handleBoost}
                 className={`neo-btn ${
-                  isBoosted ? "bg-[#FFE600]" : "bg-[#00E599]"
-                } text-[#121212] px-6 py-3 text-base font-extrabold w-full sm:w-auto flex items-center justify-center gap-2`}
+                  isBoosted ? "bg-[#F59E0B]" : "bg-[#FF5722]"
+                } text-white px-7 py-3.5 text-base font-extrabold w-full sm:w-auto flex items-center justify-center gap-2.5 shadow-[4px_4px_0px_#1C2028]`}
               >
                 <span>
-                  {isBoosted ? "🎉 TAILORED (+150 XP)" : "⚡ BOOST ATS SCORE"}
+                  {isBoosted ? "🎉 RE-RUN CALIBRATION" : "⚡ ACTIVATE ATS SURGE"}
                 </span>
                 {!isBoosted && (
-                  <span className="bg-black text-white text-[11px] px-2 py-0.5 rounded-full">
+                  <span className="bg-black/25 text-white text-[11px] px-2 py-0.5 rounded-full font-mono">
                     +150 XP
                   </span>
                 )}
               </button>
-              <span className="text-xs text-gray-500 font-medium">
+              <span className="text-xs text-gray-600 font-medium">
                 {isBoosted
-                  ? "Click to reset demo"
-                  : "Click to test the live transformation"}
+                  ? "Click to reset and test again"
+                  : "Tap to simulate the instant optimization"}
               </span>
             </div>
 
-            {/* Dynamic Output Result */}
+            {/* Dynamic Output Result: Retro Terminal Printout */}
             {isBoosted && (
-              <div className="mt-5 p-4 neo-box-sm bg-[#FAF5FF] border-2 border-purple-500 animate-fadeIn">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-black text-sm text-[#706BF6] flex items-center gap-1.5">
-                    <span>✨</span> TAILORED REWRITE (Google X-Y-Z):
+              <div className="mt-5 p-4 neo-box-sm bg-[#1C2028] text-white border-2 border-[#1C2028] animate-fadeIn shadow-[3px_3px_0px_#10B981]">
+                <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-700">
+                  <span className="font-mono font-bold text-xs text-[#10B981] flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
+                    OPTIMIZED PRINTOUT [GOOGLE X-Y-Z]:
                   </span>
-                  <span className="neo-tag bg-[#706BF6] text-white text-[10px] px-2 py-0.5">
-                    ATS Match: 94%
+                  <span className="neo-tag bg-[#10B981] text-[#1C2028] text-[10px] px-2 py-0.5 font-mono font-bold">
+                    RELEVANCY: 94%
                   </span>
                 </div>
-                <p className="text-xs md:text-sm font-semibold text-gray-900 font-mono leading-relaxed">
-                  &ldquo;Architected automated CI/CD microservices pipeline on
-                  Kubernetes, reducing release cycle latency by 35% across 14
-                  distributed backend services.&rdquo;
+                <p className="text-xs md:text-sm font-medium text-emerald-100 font-mono leading-relaxed">
+                  &ldquo;Overhauled internal web ticketing operations across 4 cross-functional teams, cutting sprint resolution backlog by 32% and exceeding SLA targets by 14 days.&rdquo;
                 </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: TailorBot Mascot & Scoreboard (5 cols) */}
+        {/* Right Column: TailorBot MK-II & Relevancy Console (5 cols) */}
         <div className="lg:col-span-5 flex flex-col gap-6">
-          {/* TailorBot Mascot Card */}
-          <div className="neo-box bg-[#706BF6] p-6 text-white text-center relative overflow-hidden">
-            {/* Interactive Mascot SVG */}
+          
+          {/* TailorBot MK-II Retro Hardware Unit */}
+          <div className="neo-box bg-[#1C2028] p-6 text-white text-center relative overflow-hidden border-2 border-[#1C2028]">
+            <div className="flex items-center justify-between text-xs font-mono text-gray-400 mb-2">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#FF5722] animate-pulse"></span>
+                <span>TAILORBOT MK-II</span>
+              </span>
+              <span>CALIBRATION: OK</span>
+            </div>
+
+            {/* Interactive Vintage CRT Mascot SVG */}
             <div
-              className="w-36 h-36 mx-auto mb-3 relative cursor-pointer select-none transition-transform hover:scale-105 active:scale-95"
+              className="w-40 h-40 mx-auto mb-2 relative cursor-pointer select-none transition-transform hover:scale-105 active:scale-95"
               onClick={handlePoke}
-              title="Click me!"
+              title="Click TailorBot!"
             >
               <svg
                 viewBox="0 0 160 160"
-                className="w-full h-full drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]"
+                className="w-full h-full drop-shadow-[4px_4px_0px_rgba(0,0,0,0.8)]"
               >
-                {/* Antenna */}
+                {/* Antenna Rod & Glowing Warm Beacon */}
                 <line
                   x1="80"
-                  y1="20"
+                  y1="14"
                   x2="80"
-                  y2="45"
-                  stroke="#121212"
+                  y2="42"
+                  stroke="#FAF8F5"
                   strokeWidth="6"
                   strokeLinecap="round"
                 />
                 <circle
                   cx="80"
-                  cy="18"
+                  cy="12"
                   r="10"
-                  fill={isBoosted ? "#00E599" : "#FFE600"}
-                  stroke="#121212"
-                  strokeWidth="4"
+                  fill={isBoosted ? "#10B981" : "#FF5722"}
+                  stroke="#1C2028"
+                  strokeWidth="3.5"
                 />
 
-                {/* Head Body */}
+                {/* CRT Monitor Chassis (Warm Ivory) */}
                 <rect
-                  x="30"
-                  y="45"
-                  width="100"
-                  height="90"
-                  rx="24"
-                  fill="#FFFFFF"
-                  stroke="#121212"
+                  x="26"
+                  y="42"
+                  width="108"
+                  height="94"
+                  rx="26"
+                  fill="#FAF7F0"
+                  stroke="#1C2028"
                   strokeWidth="6"
                 />
 
-                {/* Visor Screen */}
+                {/* Bezel Screws */}
+                <circle cx="36" cy="52" r="2.5" fill="#1C2028" />
+                <circle cx="124" cy="52" r="2.5" fill="#1C2028" />
+                <circle cx="36" cy="126" r="2.5" fill="#1C2028" />
+                <circle cx="124" cy="126" r="2.5" fill="#1C2028" />
+
+                {/* CRT Inner Screen (Phosphor Dark Green) */}
                 <rect
-                  x="42"
-                  y="60"
-                  width="76"
-                  height="42"
+                  x="40"
+                  y="56"
+                  width="80"
+                  height="48"
                   rx="14"
-                  fill="#121212"
+                  fill="#0D1F17"
+                  stroke="#1C2028"
+                  strokeWidth="3"
                 />
 
-                {/* Eyes */}
+                {/* Eyes (Phosphor Green Glowing Slits/Discs) */}
                 <circle
                   cx="62"
-                  cy="81"
+                  cy="80"
                   r={isBoosted ? 9 : 7}
-                  fill="#00E599"
+                  fill="#10B981"
                 />
                 <circle
                   cx="98"
-                  cy="81"
+                  cy="80"
                   r={isBoosted ? 9 : 7}
-                  fill="#00E599"
+                  fill="#10B981"
                 />
 
-                {/* Blush Spots */}
-                <circle cx="48" cy="115" r="5" fill="#FF85A1" />
-                <circle cx="112" cy="115" r="5" fill="#FF85A1" />
+                {/* Analog Tuning Dial Knob on Lower Right */}
+                <circle cx="112" cy="118" r="8" fill="#1C2028" />
+                <line x1="112" y1="112" x2="112" y2="118" stroke="#FFFFFF" strokeWidth="2" />
 
-                {/* Smile */}
+                {/* Friendly Smile */}
                 <path
                   d={
                     isBoosted
-                      ? "M 65 118 Q 80 132 95 118"
-                      : "M 70 120 Q 80 128 90 120"
+                      ? "M 62 118 Q 80 134 98 118"
+                      : "M 66 120 Q 80 128 94 120"
                   }
-                  stroke="#121212"
+                  stroke="#1C2028"
                   strokeWidth="4"
                   fill="none"
                   strokeLinecap="round"
                 />
               </svg>
-              <span className="neo-tag bg-white text-black text-[10px] px-2 py-0.5 absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                Tap TailorBot! 👆
+
+              <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono font-bold">
+                TAP TO INTERACT 👆
               </span>
             </div>
 
-            <h3 className="font-extrabold text-lg mb-1">{mascotText}</h3>
-            <p className="text-xs text-white/80">
-              TailorBot scans 40+ ATS criteria in real-time.
+            <h3 className="font-mono font-bold text-sm text-[#FAF7F0] mt-3 mb-1">
+              {mascotText}
+            </h3>
+            <p className="text-[11px] text-gray-400 font-mono">
+              TailorBot checks 40+ ATS criteria across every scan.
             </p>
           </div>
 
-          {/* Real-time ATS Relevancy Score Gauge */}
+          {/* Analog Meter: ATS Relevancy Power Console */}
           <div className="neo-box bg-white p-6">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-extrabold text-xs uppercase tracking-wider text-gray-600">
-                Relevancy Power
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-bold text-xs uppercase tracking-wider text-gray-600 font-mono">
+                ATS Relevancy Console
               </span>
               <span
                 className={`neo-tag ${
                   score > 80
-                    ? "bg-[#00E599] text-black"
-                    : "bg-[#FF5C5C] text-white"
-                } text-xs px-2.5 py-0.5`}
+                    ? "bg-[#10B981] text-white"
+                    : "bg-[#FF5722] text-white"
+                } text-xs px-2.5 py-0.5 font-mono font-bold`}
               >
-                {score > 80 ? "Offer Magnet 🚀" : "Scrapped by Bot"}
+                {score > 80 ? "RECRUITER READY 🚀" : "BELOW THRESHOLD"}
               </span>
             </div>
 
-            {/* Big Score Number */}
-            <div className="flex items-baseline justify-center gap-1 my-3">
-              <span className="font-black text-6xl tracking-tight text-[#121212]">
+            {/* Seven-Segment / Digital Score Display */}
+            <div className="flex items-baseline justify-center gap-1 my-3 bg-[#FAF8F5] p-3 neo-box-sm border border-gray-300">
+              <span className="font-black text-6xl tracking-tight text-[#1C2028] font-mono">
                 {score}
               </span>
-              <span className="font-bold text-2xl text-gray-400">%</span>
+              <span className="font-bold text-2xl text-gray-500 font-mono">%</span>
             </div>
 
-            {/* Progress Bar Meter */}
-            <div className="w-full bg-gray-100 neo-box-sm h-6 overflow-hidden p-0.5 relative mb-4">
+            {/* Vintage Meter Bar */}
+            <div className="w-full bg-gray-200 neo-box-sm h-6 overflow-hidden p-0.5 relative mb-4">
               <div
-                className={`h-full rounded-lg transition-all duration-700 ease-out ${
-                  score > 80 ? "bg-[#00E599]" : "bg-[#FF5C5C]"
+                className={`h-full rounded-md transition-all duration-700 ease-out ${
+                  score > 80 ? "bg-[#10B981]" : "bg-[#FF5722]"
                 }`}
                 style={{ width: `${score}%` }}
               />
             </div>
 
-            {/* Quests & Badges List */}
+            {/* Daily Mission / Quest Checklist */}
             <div className="border-t-2 border-black/10 pt-4">
-              <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                Today&apos;s Mini-Quests:
-              </span>
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between p-2 neo-box-sm bg-[#FFFDF8]">
-                  <span className="font-semibold flex items-center gap-2">
-                    <span className="text-emerald-500 font-bold">✓</span> Tailor
-                    1 resume
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-gray-600 uppercase tracking-wider font-mono">
+                  Daily Mission Directives:
+                </span>
+                <span className="text-[10px] font-mono text-gray-400">RESET IN 4H</span>
+              </div>
+              
+              <div className="space-y-2 text-xs font-mono">
+                <div className="flex items-center justify-between p-2 neo-box-sm bg-[#FAF8F5]">
+                  <span className="font-bold flex items-center gap-2 text-gray-800">
+                    <span className="text-emerald-600">✓</span> Scan 1 Target Resume
                   </span>
-                  <span className="font-bold text-purple-600">+100 XP</span>
+                  <span className="font-bold text-[#FF5722]">+100 XP</span>
                 </div>
+                
                 <div
                   className={`flex items-center justify-between p-2 neo-box-sm ${
-                    questCompleted ? "bg-[#FFFDF8]" : "bg-gray-50"
+                    questCompleted ? "bg-[#ECFDF5] border-emerald-400" : "bg-gray-50"
                   }`}
                 >
-                  <span className="font-semibold flex items-center gap-2 text-gray-700">
+                  <span className="font-bold flex items-center gap-2 text-gray-800">
                     <span
                       className={
                         questCompleted
-                          ? "text-emerald-500 font-bold"
+                          ? "text-emerald-600"
                           : "text-gray-400"
                       }
                     >
                       {questCompleted ? "✓" : "○"}
                     </span>{" "}
-                    Boost match score &gt; 90%
+                    Achieve Relevancy &gt; 90%
                   </span>
-                  <span className="font-bold text-purple-600">+150 XP</span>
+                  <span className="font-bold text-[#FF5722]">+150 XP</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Unlocked Badge Showcase */}
-          <div className="neo-box bg-[#FFE600] p-4 flex items-center justify-between">
+          {/* Mission Milestone Unlock */}
+          <div className="neo-box bg-[#F59E0B] p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 neo-box-sm bg-white flex items-center justify-center text-xl">
-                🏆
+              <div className="w-10 h-10 neo-box-sm bg-white flex items-center justify-center text-xl text-[#1C2028] shadow-[2px_2px_0px_#1C2028]">
+                🎖️
               </div>
               <div>
-                <div className="font-bold text-sm">
+                <div className="font-bold text-sm text-[#1C2028]">
                   {xp >= 500
-                    ? "Unlocked: 'ATS Assassin'!"
-                    : "Next: 'ATS Assassin'"}
+                    ? "Unlocked: 'Interview Magnet'"
+                    : "Next: 'Interview Magnet'"}
                 </div>
-                <div className="text-[11px] text-black/70">
+                <div className="text-[11px] text-black/80 font-mono font-medium">
                   {xp >= 500
-                    ? "Tier unlocked! Priority queue active."
-                    : `${500 - xp} XP remaining to unlock next tier`}
+                    ? "Level 3 reached! Top-tier resume badge active."
+                    : `${500 - xp} XP needed to reach Level 3`}
                 </div>
               </div>
             </div>
-            <span className="neo-tag bg-black text-white text-[11px] px-2.5 py-1">
-              {xp >= 500 ? "Active" : "Lvl 3 Perk"}
+            <span className="neo-tag bg-[#1C2028] text-white text-[10px] px-2.5 py-1 font-mono font-bold">
+              {xp >= 500 ? "UNLOCKED" : "TIER 3"}
             </span>
           </div>
+
         </div>
+
       </main>
     </div>
   );
