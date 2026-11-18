@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { getPostBySlug } from "@/app/utils/blog";
 import { BlogArticleStructuredData } from "@/app/components/StructuredData";
 import BlogCtaBanner from "@/app/components/BlogCtaBanner";
+import ArticleReadTracker from "@/app/components/ArticleReadTracker";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -93,6 +94,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-[#FAF7F0] text-[#1C2028] py-8 sm:py-12">
+      <ArticleReadTracker slug={slug} title={post.title} />
       <BlogArticleStructuredData
         title={post.title}
         description={post.description}

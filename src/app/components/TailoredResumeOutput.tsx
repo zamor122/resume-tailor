@@ -665,25 +665,25 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   );
 
   return (
-    <div className="resume-output-container bg-white/90 dark:bg-gray-900/95 backdrop-blur-lg transition-all duration-300 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200/80 dark:border-gray-800">
+    <div className="resume-output-container bg-[#F4F1EA] dark:bg-[#161B22] transition-all duration-300 rounded-2xl p-4 sm:p-6 shadow-[5px_5px_0px_#1C2028] border-2 border-[#1C2028]">
       {/* Top Header & Layout Controls */}
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-3 border-b border-gray-100 dark:border-gray-800 pb-4">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-3 border-b-2 border-[#1C2028] pb-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Tailored Resume
+          <h2 className="text-xl sm:text-2xl font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0]">
+            TAILORED RESUME
           </h2>
           {hasSuggestions && (
-            <div className="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 shadow-inner">
+            <div className="flex rounded-xl bg-[#FAF7F0] dark:bg-[#1C2028] p-1 border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] gap-1">
               <button
                 type="button"
                 onClick={() => {
                   setUserToggledLayout(true);
                   setViewLayout("cockpit");
                 }}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                className={`px-3 py-1 text-xs font-mono font-bold rounded-lg transition-all neo-btn ${
                   viewLayout === "cockpit"
-                    ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                    ? "bg-[#FF5722] text-white border-1.5 border-[#1C2028] shadow-[1px_1px_0px_#1C2028]"
+                    : "text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white"
                 }`}
               >
                 ⚡ Review Cockpit ({effectiveSuggestions.length})
@@ -694,10 +694,10 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
                   setUserToggledLayout(true);
                   setViewLayout("document");
                 }}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                className={`px-3 py-1 text-xs font-mono font-bold rounded-lg transition-all neo-btn ${
                   viewLayout === "document"
-                    ? "bg-white dark:bg-gray-900 text-cyan-600 dark:text-cyan-400 shadow-sm"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                    ? "bg-[#FF5722] text-white border-1.5 border-[#1C2028] shadow-[1px_1px_0px_#1C2028]"
+                    : "text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white"
                 }`}
               >
                 📄 Full Document
@@ -746,34 +746,34 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
 
           {/* Right Live Resume Canvas */}
           <div className="xl:col-span-7 flex flex-col">
-            <div className="flex items-center justify-between pb-3 mb-3 px-1 border-b border-gray-200/80 dark:border-gray-800 text-xs">
+            <div className="flex items-center justify-between pb-3 mb-3 px-1 border-b-2 border-[#1C2028] text-xs">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+                <span className="font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] flex items-center gap-1.5">
                   <span>📄</span>
-                  <span>Live Document Preview</span>
+                  <span>LIVE DOCUMENT PREVIEW</span>
                 </span>
                 <span
                   data-testid="live-sync-badge"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"
+                  className="neo-tag inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#10B981]/20 text-[#065F46] dark:text-[#34D399] border border-[#1C2028]"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
                   {acceptedCount > 0
                     ? `${acceptedCount} change${acceptedCount === 1 ? "" : "s"} applied`
                     : "Original version"}
                 </span>
               </div>
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              <span className="text-[11px] font-mono text-gray-600 dark:text-gray-400">
                 Live sync
               </span>
             </div>
-            <div className="bg-white dark:bg-gray-900/95 p-6 sm:p-10 rounded-2xl border border-gray-200/90 dark:border-gray-800 shadow-xl ring-1 ring-black/5 dark:ring-white/5 transition-all">
+            <div className="bg-white dark:bg-[#0D1117] p-6 sm:p-10 rounded-xl border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] transition-all">
               {renderMarkdownCanvas(true)}
             </div>
           </div>
         </div>
       ) : (
         /* VIEW MODE 2: FULL DOCUMENT VIEW */
-        <div className="bg-white dark:bg-gray-950 p-6 sm:p-8 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm">
+        <div className="bg-white dark:bg-[#0D1117] p-6 sm:p-10 rounded-xl border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028]">
           {renderMarkdownCanvas(false)}
         </div>
       )}

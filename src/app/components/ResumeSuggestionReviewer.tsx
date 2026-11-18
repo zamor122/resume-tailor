@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
 import { isSubstantiveChange, isolatePreciseOriginalChange } from "@/app/utils/resumeReassemble";
+import { useGamification } from "@/app/contexts/GamificationContext";
 
 export interface ResumeSuggestionReviewerProps {
   originalResume?: string;
@@ -51,6 +52,7 @@ export default function ResumeSuggestionReviewer({
   onRejectSuggestion,
   onResetAll,
 }: ResumeSuggestionReviewerProps) {
+  const { playSfx, awardXp } = useGamification();
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>("");
@@ -135,6 +137,12 @@ export default function ResumeSuggestionReviewer({
 
     onAcceptSuggestion?.(targetId);
     const nextStatus: "pending" | "accepted" = currentSug?.status === "accepted" ? "pending" : "accepted";
+    if (nextStatus === "accepted") {
+      playSfx("success");
+      awardXp(15, "Bullet Optimized (+15 XP)");
+    } else {
+      playSfx("boop");
+    }
 
     const updated = suggestions.map((s) =>
       s.id === targetId ? { ...s, status: nextStatus } : s
@@ -146,6 +154,7 @@ export default function ResumeSuggestionReviewer({
     const targetId = id || substantiveSuggestions[activeIndex]?.id;
     if (!targetId) return;
 
+    playSfx("click");
     onRejectSuggestion?.(targetId);
     const currentSug = suggestions.find((s) => s.id === targetId);
     const nextStatus: "pending" | "rejected" = currentSug?.status === "rejected" ? "pending" : "rejected";
@@ -161,6 +170,8 @@ export default function ResumeSuggestionReviewer({
       onUnlockRequest?.();
       return;
     }
+    playSfx("success");
+    awardXp(50, "Full Section Optimization (+50 XP)");
     const updated = suggestions.map((s) =>
       !s.status || s.status === "pending" ? { ...s, status: "accepted" as const } : s
     );
@@ -334,19 +345,19 @@ export default function ResumeSuggestionReviewer({
     <div className={`space-y-4 ${className}`}>
       {/* Agent Audit Rationale Banner */}
       {currentSectionGroup?.auditRationale && (
-        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-purple-950/20 border border-cyan-500/30 text-xs shadow-sm flex items-start gap-3 backdrop-blur-xs">
+        <div className="p-3.5 rounded-xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] text-xs flex items-start gap-3">
           <span className="text-xl shrink-0 select-none">🤖</span>
           <div className="space-y-0.5 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                Agent Audit Rationale
+              <span className="neo-tag text-[10px] font-mono font-bold uppercase tracking-wider bg-[#FF5722] text-white px-1.5 py-0.5 rounded border border-[#1C2028]">
+                AGENT AUDIT RATIONALE
               </span>
-              <span className="text-gray-500">•</span>
-              <span className="text-[11px] font-medium text-gray-300 truncate">
+              <span className="text-gray-400">•</span>
+              <span className="text-[11px] font-mono font-bold text-gray-700 dark:text-gray-300 truncate">
                 {currentSectionGroup.title}
               </span>
             </div>
-            <p className="leading-relaxed text-gray-200">
+            <p className="font-mono text-xs leading-relaxed text-gray-800 dark:text-gray-200 mt-1">
               {currentSectionGroup.auditRationale}
             </p>
           </div>
@@ -681,27 +692,27 @@ export default function ResumeSuggestionReviewer({
                   <button
                     type="button"
                     onClick={() => onUnlockRequest?.()}
-                    className="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-sm flex items-center gap-1.5 active:scale-95 transition-all"
+                    className="neo-btn px-4 py-2 text-xs font-mono font-bold rounded-xl bg-[#FF5722] hover:bg-[#F4511E] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] flex items-center gap-1.5 active:scale-95 transition-all"
                   >
                     <span>🔒</span>
-                    <span>Unlock Plan to Apply</span>
+                    <span>UNLOCK PLAN TO APPLY</span>
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => handleAcceptChange(currentSuggestion.id)}
-                    className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 shadow-sm active:scale-95 ${
+                    className={`neo-btn px-4 py-2 text-xs font-mono font-bold rounded-xl border-2 border-[#1C2028] transition-all flex items-center gap-1.5 shadow-[2px_2px_0px_#1C2028] active:scale-95 ${
                       isAcc
-                        ? "bg-emerald-600 text-white border-emerald-600 shadow ring-2 ring-emerald-400/30"
-                        : "bg-blue-600 hover:bg-blue-500 text-white border-blue-600 shadow-sm"
+                        ? "bg-[#10B981] text-white"
+                        : "bg-[#FF5722] hover:bg-[#F4511E] text-white"
                     }`}
                   >
                     {isAcc ? (
                       <>
-                        <span>✓</span> {isAddition ? "Addition Accepted" : "Accepted"}
+                        <span>✓</span> {isAddition ? "ADDITION ACCEPTED" : "ACCEPTED"}
                       </>
                     ) : (
-                      <span>{isAddition ? "Accept Addition" : "Accept Change"}</span>
+                      <span>{isAddition ? "ACCEPT ADDITION" : "ACCEPT CHANGE"}</span>
                     )}
                   </button>
                 )}
@@ -709,18 +720,18 @@ export default function ResumeSuggestionReviewer({
                 <button
                   type="button"
                   onClick={() => handleKeepOriginal(currentSuggestion.id)}
-                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 active:scale-95 ${
+                  className={`neo-btn px-4 py-2 text-xs font-mono font-bold rounded-xl border-2 border-[#1C2028] transition-all flex items-center gap-1.5 active:scale-95 shadow-[2px_2px_0px_#1C2028] ${
                     isRej
-                      ? "bg-rose-600 text-white border-rose-600 shadow ring-2 ring-rose-400/30"
-                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      ? "bg-[#E11D48] text-white"
+                      : "bg-[#FAF7F0] text-[#1C2028] dark:bg-[#21262D] dark:text-[#FAF7F0] hover:bg-[#FFE0B2]"
                   }`}
                 >
                   {isRej ? (
                     <>
-                      <span>✕</span> {isAddition ? "Addition Dismissed" : "Kept Original"}
+                      <span>✕</span> {isAddition ? "ADDITION DISMISSED" : "KEPT ORIGINAL"}
                     </>
                   ) : (
-                    <span>{isAddition ? "Dismiss Addition" : "Keep Original"}</span>
+                    <span>{isAddition ? "DISMISS ADDITION" : "KEEP ORIGINAL"}</span>
                   )}
                 </button>
               </div>
@@ -729,9 +740,9 @@ export default function ResumeSuggestionReviewer({
                 <button
                   type="button"
                   onClick={() => handleSelectIndex(activeIndex + 1)}
-                  className="px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors flex items-center gap-1.5 ml-auto border border-gray-200 dark:border-gray-700"
+                  className="neo-btn px-3.5 py-2 text-xs font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] bg-[#FAF7F0] dark:bg-[#21262D] hover:bg-[#FFE0B2] rounded-xl transition-colors flex items-center gap-1.5 ml-auto border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
                 >
-                  <span>Next Change</span>
+                  <span>NEXT CHANGE</span>
                   <span>→</span>
                 </button>
               ) : (
@@ -739,9 +750,9 @@ export default function ResumeSuggestionReviewer({
                   <button
                     type="button"
                     onClick={onFinalize}
-                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow transition-all ml-auto"
+                    className="neo-btn px-4 py-2 text-xs font-mono font-bold text-white bg-[#10B981] hover:bg-[#059669] rounded-xl border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] transition-all ml-auto"
                   >
-                    Finish Review →
+                    FINISH REVIEW →
                   </button>
                 )
               )}

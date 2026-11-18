@@ -41,4 +41,40 @@ describe("GamificationContext", () => {
     });
     expect(result.current.sfxEnabled).toBe(!initial);
   });
+
+  it("awards XP when reading an article and avoids double-counting same slug", () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <GamificationProvider initialXp={0}>{children}</GamificationProvider>
+    );
+    const { result } = renderHook(() => useGamification(), { wrapper });
+
+    let firstReadSuccess = false;
+    act(() => {
+      firstReadSuccess = result.current.readArticle("ats-keywords-guide", "ATS Keywords");
+    });
+    expect(firstReadSuccess).toBe(true);
+    expect(result.current.xp).toBe(25);
+    expect(result.current.readArticleSlugs).toContain("ats-keywords-guide");
+
+    // Second read of same article should return false and not add duplicate XP
+    let secondReadSuccess = true;
+    act(() => {
+      secondReadSuccess = result.current.readArticle("ats-keywords-guide", "ATS Keywords");
+    });
+    expect(secondReadSuccess).toBe(false);
+    expect(result.current.xp).toBe(25);
+  });
+
+  it("awards +5 XP for poking TailorBot up to daily limit", () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <GamificationProvider initialXp={0}>{children}</GamificationProvider>
+    );
+    const { result } = renderHook(() => useGamification(), { wrapper });
+
+    act(() => {
+      result.current.pokeMascot();
+      result.current.pokeMascot();
+    });
+    expect(result.current.xp).toBe(10);
+  });
 });

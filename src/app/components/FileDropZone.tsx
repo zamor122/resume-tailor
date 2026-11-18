@@ -120,11 +120,11 @@ export default function FileDropZone({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={`
-        relative rounded-2xl border-2 border-dashed p-6 md:p-8
-        transition-all duration-300 cursor-pointer
+        relative rounded-xl border-2 border-dashed p-6 md:p-8
+        transition-all duration-200 cursor-pointer
         ${isDragging
-          ? "border-cyan-500 bg-cyan-500/10 dark:bg-cyan-500/10 shadow-lg shadow-cyan-500/20"
-          : "border-gray-300 dark:border-gray-600 hover:border-cyan-500/50 dark:hover:border-cyan-500/50 bg-gray-50/50 dark:bg-gray-800/30 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+          ? "border-[#FF5722] bg-[#FAF7F0] shadow-[4px_4px_0px_#1C2028]"
+          : "border-[#1C2028] bg-[#F4F1EA] hover:bg-[#FAF7F0] shadow-[3px_3px_0px_#1C2028]"
         }
       `}
     >
@@ -140,9 +140,9 @@ export default function FileDropZone({
       {uploadedFile ? (
         <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4 pointer-events-auto z-10">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-500/20 dark:bg-cyan-500/20 flex items-center justify-center">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#10B981] border-2 border-[#1C2028] flex items-center justify-center text-white">
               <svg
-                className="w-5 h-5 text-cyan-500 dark:text-cyan-400"
+                className="w-5 h-5 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -150,17 +150,17 @@ export default function FileDropZone({
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                 />
               </svg>
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              <p className="text-sm font-mono font-bold text-[#1C2028] truncate">
                 {uploadedFile.name}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {(uploadedFile.size / 1024).toFixed(1)} KB
+              <p className="text-xs font-mono text-gray-500">
+                {(uploadedFile.size / 1024).toFixed(1)} KB • LOADED
               </p>
             </div>
           </div>
@@ -172,7 +172,7 @@ export default function FileDropZone({
                 e.stopPropagation();
                 handleReplace();
               }}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/30 transition-colors"
+              className="neo-btn px-3 py-1.5 text-xs font-mono font-bold uppercase rounded-md bg-[#1C2028] text-white border border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
             >
               Replace
             </button>
@@ -183,7 +183,7 @@ export default function FileDropZone({
                 e.stopPropagation();
                 handleClear();
               }}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="neo-btn px-3 py-1.5 text-xs font-mono font-bold uppercase rounded-md bg-white text-[#1C2028] border border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
             >
               Clear
             </button>
@@ -193,16 +193,16 @@ export default function FileDropZone({
         <div className="flex flex-col items-center justify-center text-center gap-2">
           {isProcessing ? (
             <>
-              <div className="w-10 h-10 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" />
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Extracting text...
+              <div className="w-10 h-10 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+              <p className="text-sm font-mono font-bold text-[#1C2028]">
+                PARSING RESUME CONTENT...
               </p>
             </>
           ) : (
             <>
-              <div className="w-12 h-12 rounded-xl bg-cyan-500/20 dark:bg-cyan-500/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-[#FF5722] border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] flex items-center justify-center text-white">
                 <svg
-                  className="w-6 h-6 text-cyan-500 dark:text-cyan-400"
+                  className="w-6 h-6 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -210,16 +210,16 @@ export default function FileDropZone({
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                   />
                 </svg>
               </div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Drag PDF or click to upload
+              <p className="text-sm font-mono font-bold text-[#1C2028]">
+                DRAG PDF OR CLICK TO UPLOAD
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Supports .pdf and .txt
+              <p className="text-xs font-mono text-gray-500">
+                Supports .pdf and .txt • +20 XP on load
               </p>
             </>
           )}
