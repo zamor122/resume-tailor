@@ -21,6 +21,10 @@ import HomepageSEOSection from "./HomepageSEOSection";
 import TailoredResumeOutput from "./TailoredResumeOutput";
 import TailoringControlsPanel from "./TailoringControlsPanel";
 import ElicitationPanel from "./ElicitationPanel";
+import TailorBot from "./neo/TailorBot";
+import NeoButton from "./neo/NeoButton";
+import NeoBadge from "./neo/NeoBadge";
+import { useGamification } from "@/app/contexts/GamificationContext";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
 import type { ElicitationFact, ElicitationQuestion } from "@/app/types/elicitation";
@@ -264,6 +268,7 @@ export default function SplitScreenTailorView() {
 
   // Guided elicitation ("A few things your resume didn't say").
   const [showElicitation, setShowElicitation] = useState(false);
+  const { playSfx, awardXp, completeQuest } = useGamification();
   const [elicitationQuestions, setElicitationQuestions] = useState<ElicitationQuestion[]>([]);
   const elicitationResolvedRef = useRef(false);
   const elicitationFactsRef = useRef<ElicitationFact[]>([]);
@@ -435,6 +440,7 @@ export default function SplitScreenTailorView() {
     setHasStartedTailoring(true);
     setAgentMessage("Analyzing your resume and target job requirements...");
     setAgentProgress(10);
+    playSfx("start");
 
     const source = prefillResumeId ? "prefill" : (resume.trim().length > 0 ? "return_visit" : "blank");
     analytics.trackEvent(analytics.events.RESUME_TAILOR, {
@@ -497,6 +503,10 @@ export default function SplitScreenTailorView() {
         // ignore
       }
 
+      playSfx("success");
+      awardXp(150, "tailored_resume");
+      completeQuest("tailor_boost");
+
       if (data.resumeId) {
         didRedirect = true;
         setRedirecting(true);
@@ -505,6 +515,7 @@ export default function SplitScreenTailorView() {
         setResults(data);
       }
     } catch (err) {
+      playSfx("error");
       const rawMessage = err instanceof Error ? err.message : "An error occurred";
       const isAbort = err instanceof Error && err.name === "AbortError";
       const isNetwork =
@@ -618,35 +629,70 @@ export default function SplitScreenTailorView() {
     <>
       <ParallaxBackground />
       <ParallaxContainer className="container mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10 max-w-6xl space-y-8 md:space-y-12">
-        {/* Hero */}
-        <section className="py-8 md:py-12 text-center" data-parallax="0.05">
-          <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-cyan-600 dark:text-cyan-400 mb-3">
-            Free · No login to try · Nothing auto-renews
-          </p>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-3 md:mb-4">
-            Tailor your resume to any job — in seconds.
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6">
-            Paste your resume and a job description. Get your ATS keyword-match score and the keywords you&apos;re missing. Still you — just refined.
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-            No login needed to try it — your first {FREE_RESUME_LIMIT} saved resumes are free.
-          </p>
-          <button
-            onClick={() => {
-              analytics.trackEvent(analytics.events.CLICK, {
-                ...analytics.getTrackingContext({ section: "hero", element: "hero_cta", label: "Get Started" }),
-                destination: "#tailorResume",
-              });
-              scrollToSection("tailorResume");
-            }}
-            className="px-6 py-3 md:px-8 md:py-3.5 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-cyan-500/20"
-          >
-            Get Started
-          </button>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-4">
-            Free AI resume tailor to optimize your resume for any job posting — one-time payment from ${ENTRY_PRICE}, nothing auto-renews.
-          </p>
+        {/* Retrofuturistic Hero Console */}
+        <section className="py-6 md:py-8" data-parallax="0.05">
+          <div className="neo-box bg-[#F4F1EA] p-6 md:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="flex-1 text-left">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 font-mono font-bold tracking-wider uppercase">
+                  🚀 Target Match Optimizer
+                </span>
+                <span className="text-xs font-mono text-gray-500 hidden sm:inline">
+                  SERIES-2026 • RETROFUTURISTIC
+                </span>
+              </div>
+
+              <h1 className="font-extrabold text-3xl sm:text-4xl md:text-5xl leading-tight mb-3 tracking-tight text-[#1C2028] font-display">
+                Tailor your resume to any job — <span className="bg-[#FF5722] text-white px-2 py-0.5 neo-box-sm inline-block rotate-[-1deg]">in seconds.</span>
+              </h1>
+
+              <p className="text-sm md:text-base text-gray-700 max-w-xl mb-4 leading-relaxed font-medium">
+                No generic filler. We extract your real achievements, rewrite bullets using Google&apos;s X-Y-Z formula, and boost your ATS keyword match score before your eyes.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <button
+                  onClick={() => {
+                    playSfx("click");
+                    analytics.trackEvent(analytics.events.CLICK, {
+                      ...analytics.getTrackingContext({ section: "hero", element: "hero_cta", label: "Get Started" }),
+                      destination: "#tailorResume",
+                    });
+                    scrollToSection("tailorResume");
+                  }}
+                  className="neo-btn bg-[#FF5722] text-white px-6 py-3 text-sm font-bold font-mono uppercase tracking-wider flex items-center gap-2"
+                >
+                  <span>⚡ START FREE TAILOR</span>
+                  <span className="bg-black/25 text-white text-[10px] px-2 py-0.5 rounded-full">+50 XP</span>
+                </button>
+                <span className="text-xs font-mono text-gray-500">
+                  First {FREE_RESUME_LIMIT} free • No card required
+                </span>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-black/10 flex items-center gap-4 sm:gap-6 text-xs font-mono font-bold text-gray-600 flex-wrap">
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[#10B981]">✓</span> Google X-Y-Z Formula
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[#10B981]">✓</span> Real-Time Score Gauge
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[#10B981]">✓</span> One-Time Pass from ${ENTRY_PRICE}
+                </span>
+              </div>
+            </div>
+
+            {/* Interactive TailorBot Mascot Unit */}
+            <div className="shrink-0 flex flex-col items-center">
+              <TailorBot
+                state="idle"
+                size={140}
+                onPoke={() => playSfx("boop")}
+                showPokeTag={true}
+              />
+            </div>
+          </div>
         </section>
 
         {parentResumeId && prefillData && (
@@ -728,15 +774,23 @@ export default function SplitScreenTailorView() {
         </div>
 
         {/* Primary Action Button Container */}
-        <div className="input-container p-6 rounded-2xl bg-white/80 dark:bg-gray-900/80 border border-gray-200/80 dark:border-gray-800 shadow-sm">
+        <div className="input-container p-6 sm:p-8 neo-box bg-[#F4F1EA] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028]">
           {/* Status chips */}
           {(resume.trim() || jobDescription.trim()) && (
-            <div className="flex items-center justify-center gap-3 text-xs sm:text-sm mb-4">
-              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${resume.trim().length >= 100 ? "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800 font-semibold" : "bg-gray-50 dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800"}`}>
-                {resume.trim().length >= 100 ? "✓" : "○"} Resume {resume.trim().length >= 100 ? "Ready" : "(min 100 chars)"}
+            <div className="flex items-center justify-center gap-3 text-xs sm:text-sm mb-4 font-mono">
+              <span className={`neo-tag px-3 py-1 text-xs font-bold ${
+                resume.trim().length >= 100 
+                  ? "bg-[#10B981] text-white" 
+                  : "bg-white text-gray-600"
+              }`}>
+                {resume.trim().length >= 100 ? "✓ RESUME READY" : "○ RESUME (MIN 100 CHARS)"}
               </span>
-              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${jobDescription.trim().length >= 100 ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 font-semibold" : "bg-gray-50 dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800"}`}>
-                {jobDescription.trim().length >= 100 ? "✓" : "○"} Job {jobDescription.trim().length >= 100 ? "Ready" : "(min 100 chars)"}
+              <span className={`neo-tag px-3 py-1 text-xs font-bold ${
+                jobDescription.trim().length >= 100 
+                  ? "bg-[#10B981] text-white" 
+                  : "bg-white text-gray-600"
+              }`}>
+                {jobDescription.trim().length >= 100 ? "✓ JOB READY" : "○ JOB (MIN 100 CHARS)"}
               </span>
             </div>
           )}
@@ -745,6 +799,7 @@ export default function SplitScreenTailorView() {
             <TailorButton
               loading={loading}
               onClick={() => {
+                playSfx("click");
                 analytics.trackEvent(analytics.events.CTA_TAILOR_CLICK, {
                   ...analytics.getTrackingContext({
                     section: "tailorResume",
@@ -761,26 +816,26 @@ export default function SplitScreenTailorView() {
               disabled={!resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100}
               ready={resume.trim().length >= 100 && jobDescription.trim().length >= 100}
             />
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-xs sm:text-sm font-mono text-gray-600">
               Analyzes keyword alignment & proposes granular changes you can accept, deny, or adjust.
             </p>
           </div>
         </div>
 
         {/* Sticky Mobile Floating Action Bar */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 p-3 px-4 shadow-2xl flex items-center justify-between gap-3">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FAF7F0] border-t-2 border-[#1C2028] p-3 px-4 shadow-[0px_-4px_0px_rgba(28,32,40,0.15)] flex items-center justify-between gap-3">
           <div className="flex flex-col">
-            <span className="text-[11px] font-semibold text-gray-800 dark:text-gray-200">
+            <span className="text-[11px] font-mono font-bold text-[#1C2028]">
               {resume.trim().length >= 100 && jobDescription.trim().length >= 100
-                ? "✨ Ready to Tailor"
-                : `${resume.trim().length < 100 ? "Add Resume" : ""} ${jobDescription.trim().length < 100 ? "Add Job Posting" : ""}`}
+                ? "⚡ READY TO TAILOR"
+                : `${resume.trim().length < 100 ? "ADD RESUME" : ""} ${jobDescription.trim().length < 100 ? "ADD JOB POSTING" : ""}`}
             </span>
-            <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
-              <span className={resume.trim().length >= 100 ? "text-emerald-500 font-bold" : ""}>
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-gray-600">
+              <span className={resume.trim().length >= 100 ? "text-[#10B981] font-bold" : ""}>
                 Resume {resume.trim().length >= 100 ? "✓" : "..."}
               </span>
               <span>•</span>
-              <span className={jobDescription.trim().length >= 100 ? "text-emerald-500 font-bold" : ""}>
+              <span className={jobDescription.trim().length >= 100 ? "text-[#10B981] font-bold" : ""}>
                 Job {jobDescription.trim().length >= 100 ? "✓" : "..."}
               </span>
             </div>
@@ -789,11 +844,14 @@ export default function SplitScreenTailorView() {
           <button
             type="button"
             disabled={loading || !resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100}
-            onClick={() => handleTailor()}
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md flex items-center gap-1.5 ${
+            onClick={() => {
+              playSfx("click");
+              handleTailor();
+            }}
+            className={`neo-btn px-4 py-2 font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 ${
               loading || !resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100
-                ? "bg-gray-300 dark:bg-gray-800 text-gray-500 cursor-not-allowed"
-                : "bg-gradient-to-r from-cyan-500 to-purple-600 text-white shadow-cyan-500/25 active:scale-95"
+                ? "bg-[#E5E0D8] text-gray-400 border border-gray-400 cursor-not-allowed shadow-none"
+                : "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] active:translate-x-[1px] active:translate-y-[1px]"
             }`}
           >
             {loading ? (
@@ -805,7 +863,7 @@ export default function SplitScreenTailorView() {
                 <span>Tailoring...</span>
               </>
             ) : (
-              <span>✨ Tailor Resume</span>
+              <span>⚡ TAILOR RESUME</span>
             )}
           </button>
         </div>
