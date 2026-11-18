@@ -38,14 +38,15 @@ function AccessBadge() {
 
   return (
     <div
-      className="neo-box-sm bg-[#ECFDF5] text-[#065F46] px-3 py-1 text-xs font-mono font-bold flex items-center gap-1.5 shrink-0"
+      className="neo-box-sm bg-[#ECFDF5] text-[#065F46] px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-mono font-bold flex items-center gap-1 sm:gap-1.5 shrink-0"
       title={`${accessInfo.tierLabel || "Access"} - ${formatRemainingTime(
         accessInfo.expiresAt
       )}`}
     >
-      <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping"></span>
-      <span className="hidden sm:inline">Active</span>
-      <span>{formatRemainingTime(accessInfo.expiresAt)}</span>
+      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#10B981] animate-ping shrink-0"></span>
+      <span className="hidden lg:inline">Active</span>
+      <span className="hidden md:inline">{formatRemainingTime(accessInfo.expiresAt)}</span>
+      <span className="md:hidden uppercase tracking-wider">PRO</span>
     </div>
   );
 }
@@ -78,74 +79,74 @@ export default function Navigation() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-[#FAF7F0] border-b-2 border-[#1C2028] shadow-[0px_4px_0px_rgba(28,32,40,0.06)]">
+    <header className="sticky top-0 z-50 bg-[#FAF7F0] border-b-2 border-[#1C2028] shadow-[0px_4px_0px_rgba(28,32,40,0.06)] w-full max-w-full overflow-hidden">
       {/* Top Telemetry Ticker */}
-      <div className="bg-[#1C2028] text-white px-4 py-1.5 text-[11px] font-mono tracking-wider flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
-          <span className="text-[#10B981] font-bold">RADAR: ONLINE</span>
+      <div className="bg-[#1C2028] text-white px-3 sm:px-4 py-1.5 text-[10px] sm:text-[11px] font-mono tracking-wider flex items-center justify-between w-full max-w-full overflow-hidden">
+        <div className="flex items-center gap-1.5 sm:gap-2 truncate">
+          <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse shrink-0"></span>
+          <span className="text-[#10B981] font-bold shrink-0">RADAR: ONLINE</span>
           <span className="text-gray-500 hidden md:inline">|</span>
-          <span className="text-gray-300 hidden md:inline">
+          <span className="text-gray-300 hidden md:inline truncate">
             WARM RETROFUTURISTIC AI RELEVANCY SYSTEM
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             onClick={() => toggleSfx()}
-            className="text-gray-300 hover:text-white transition-colors uppercase font-bold text-[10px] flex items-center gap-1"
+            className="text-gray-300 hover:text-white transition-colors uppercase font-bold text-[9px] sm:text-[10px] flex items-center gap-1"
             title="Toggle Mechanical SFX"
           >
-            <span>{sfxEnabled ? "🔊 SFX ON" : "🔇 SFX MUTED"}</span>
+            <span>{sfxEnabled ? "🔊 SFX ON" : "🔇 MUTED"}</span>
           </button>
-          <span className="neo-tag bg-[#FF5722] text-white px-2 py-0.5 text-[10px] font-bold">
+          <span className="neo-tag bg-[#FF5722] text-white px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold">
             3 FREE
           </span>
         </div>
       </div>
 
       {/* Main Console Navigation Bar */}
-      <nav aria-label="Main Navigation" role="navigation" className="max-w-6xl mx-auto px-4 py-3">
-        <div className="flex justify-between items-center gap-3">
+      <nav aria-label="Main Navigation" role="navigation" className="max-w-6xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 w-full">
+        <div className="flex justify-between items-center gap-2 sm:gap-3">
           {/* Brand Logo with TailorBot Mascot */}
           <Link
             href="/"
             onClick={() => playSfx("boop")}
-            className="flex items-center gap-2.5 group"
+            className="flex items-center gap-2 sm:gap-2.5 group min-w-0 shrink"
             title="AI Resume Tailor"
           >
-            <div className="w-10 h-10 neo-box-sm bg-[#FF5722] flex items-center justify-center shrink-0">
-              <TailorBot size={32} state="idle" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 neo-box-sm bg-[#FF5722] flex items-center justify-center shrink-0">
+              <TailorBot size={28} state="idle" />
             </div>
-            <div>
-              <span className="font-extrabold text-xl tracking-tight block leading-none text-[#1C2028]">
+            <div className="min-w-0">
+              <span className="font-extrabold text-sm sm:text-xl tracking-tight block leading-none text-[#1C2028] truncate">
                 AI RESUME TAILOR
               </span>
-              <span className="text-[10px] text-gray-600 font-mono font-bold tracking-wider uppercase block mt-0.5">
+              <span className="text-[9px] sm:text-[10px] text-gray-600 font-mono font-bold tracking-wider uppercase block mt-0.5 truncate">
                 Target Match Optimizer
               </span>
             </div>
           </Link>
 
           {/* Gamified Mission Status HUD */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Streak Counter */}
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Streak Counter (hidden on xs mobile) */}
             <div
-              className="neo-box-sm bg-white px-3 py-1 flex items-center gap-1.5 text-xs font-bold font-mono"
+              className="hidden sm:flex neo-box-sm bg-white px-2.5 py-1 items-center gap-1.5 text-xs font-bold font-mono shrink-0"
               title="Daily Application Streak"
             >
               <span className="text-orange-500">🔥</span>
               <span>{streak}D STREAK</span>
             </div>
 
-            {/* XP Level Badge */}
+            {/* XP Level Badge (compact on mobile) */}
             <div
-              className="neo-box-sm bg-[#1C2028] text-white px-3 py-1 flex items-center gap-2 text-xs font-bold font-mono"
+              className="neo-box-sm bg-[#1C2028] text-white px-2 py-0.5 sm:px-3 sm:py-1 flex items-center gap-1.5 text-[10px] sm:text-xs font-bold font-mono shrink-0"
               title="Mission Experience Points"
             >
               <span className="text-[#F59E0B]">⚡ {xp} XP</span>
-              <span className="bg-[#FF5722] text-white px-1.5 py-0.2 rounded text-[10px] uppercase font-mono">
-                LVL {level}
+              <span className="bg-[#FF5722] text-white px-1 sm:px-1.5 py-0.2 rounded text-[9px] sm:text-[10px] uppercase font-mono">
+                L{level}
               </span>
             </div>
 
@@ -239,6 +240,20 @@ export default function Navigation() {
         {/* Mobile Dropdown Menu */}
         {menuOpen && (
           <div className="lg:hidden mt-3 pt-3 border-t-2 border-[#1C2028] flex flex-col gap-2">
+            {/* Mobile Mission Status HUD Card */}
+            <div className="p-3 mb-1 rounded-xl border-2 border-[#1C2028] bg-[#F4F1EA] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-orange-500 text-lg">🔥</span>
+                <div>
+                  <div className="text-xs font-mono font-bold text-[#1C2028]">{streak}D STREAK</div>
+                  <div className="text-[10px] text-gray-500 font-mono">Daily Application</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs font-mono font-bold text-[#F59E0B]">⚡ {xp} XP</div>
+                <div className="text-[10px] text-gray-500 font-mono">Rank: Level {level}</div>
+              </div>
+            </div>
             {navLinks.map(({ href, label }) => {
               const isActive =
                 href === "/" ? pathname === "/" : pathname?.startsWith(href);

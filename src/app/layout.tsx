@@ -173,10 +173,10 @@ export default function RootLayout({
                   <main className="flex-grow pt-2 relative" role="main">
                     {children}
                   </main>
-                  <Footer />
                   {/* Server-rendered internal link map — guarantees crawlers see a link
                       graph on every page. See SiteLinks.tsx for why this exists. */}
                   <SiteLinks />
+                  <Footer />
                   <Analytics />
                   <SpeedInsights />
                 </ExitSurveyProvider>
