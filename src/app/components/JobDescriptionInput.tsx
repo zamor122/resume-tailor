@@ -155,14 +155,15 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
 
   return (
     <div className={`input-container flex flex-col ${fillHeight ? "flex-1 min-h-0" : ""}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 flex-shrink-0">
-        <h2 className="text-lg md:text-xl font-mono font-bold text-[#1C2028] mb-0">
-          💼 {label}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b-2 border-[#1C2028] flex-shrink-0">
+        <h2 className="text-base sm:text-lg md:text-xl font-mono font-bold text-[#1C2028] flex items-center gap-2 mb-0">
+          <span className="w-6 h-6 rounded bg-[#FF5722] text-white flex items-center justify-center text-xs border border-[#1C2028] shadow-[1px_1px_0px_#1C2028]">02</span>
+          <span>JOB DESCRIPTION</span>
         </h2>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {/* URL fetch status badges */}
           {urlFetchState === "fetching" && (
-            <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2 py-0.5 font-mono font-bold flex items-center gap-1.5 animate-pulse">
+            <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2 py-0.5 font-mono font-bold flex items-center gap-1.5 animate-pulse border border-[#1C2028]">
               <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -171,31 +172,31 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
             </span>
           )}
           {urlFetchState === "success" && (
-            <span className="neo-tag bg-[#10B981] text-white text-[10px] px-2 py-0.5 font-mono font-bold flex items-center gap-1">
+            <span className="neo-tag bg-[#10B981] text-white text-[10px] px-2 py-0.5 font-mono font-bold flex items-center gap-1 border border-[#1C2028]">
               ✓ {fetchSource === "llm" ? "AI EXTRACTED" : "WEB PARSED"}
             </span>
           )}
           {detectedTitle && urlFetchState !== "fetching" && (
-            <span className="neo-tag bg-[#1C2028] text-white text-[10px] px-2 py-0.5 font-mono font-bold">
+            <span className="neo-tag bg-[#1C2028] text-white text-[10px] px-2 py-0.5 font-mono font-bold border border-[#1C2028]">
               {detectedTitle}
             </span>
           )}
           {urlFetchState !== "fetching" && (
             <span
-              className={`neo-tag text-[11px] font-mono font-bold px-2 py-0.5 ${
+              className={`neo-tag text-[11px] font-mono font-bold px-2 py-0.5 border border-[#1C2028] ${
                 charCount === 0
-                  ? "bg-white text-gray-500"
+                  ? "bg-white text-gray-500 shadow-[1px_1px_0px_#1C2028]"
                   : isSufficient
-                    ? "bg-[#10B981] text-white"
-                    : "bg-[#F59E0B] text-white"
+                    ? "bg-[#10B981] text-white shadow-[1px_1px_0px_#1C2028]"
+                    : "bg-[#F59E0B] text-white shadow-[1px_1px_0px_#1C2028]"
               }`}
             >
-              {charCount.toLocaleString()} chars
+              {charCount.toLocaleString()} CHARS
               {charCount > 0 && charCount < MIN_CHARS && (
-                <span className="ml-1 opacity-90">(min {MIN_CHARS})</span>
+                <span className="ml-1 opacity-90">(MIN {MIN_CHARS})</span>
               )}
               {isSufficient && charCount > 0 && (
-                <span className="ml-1">Ready</span>
+                <span className="ml-1">READY</span>
               )}
             </span>
           )}
