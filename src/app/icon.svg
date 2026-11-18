@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <!-- Antenna Rod & Glowing Warm Beacon -->
+  <line x1="80" y1="14" x2="80" y2="42" stroke="#FAF8F5" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="80" cy="12" r="12" fill="#FF5722" stroke="#1C2028" stroke-width="4"/>
+
+  <!-- CRT Monitor Chassis (Warm Ivory) -->
+  <rect x="24" y="42" width="112" height="96" rx="26" fill="#FAF7F0" stroke="#1C2028" stroke-width="7"/>
+
+  <!-- Bezel Screws -->
+  <circle cx="36" cy="54" r="3" fill="#1C2028" />
+  <circle cx="124" cy="54" r="3" fill="#1C2028" />
+  <circle cx="36" cy="126" r="3" fill="#1C2028" />
+  <circle cx="124" cy="126" r="3" fill="#1C2028" />
+
+  <!-- CRT Inner Screen (Phosphor Dark Green) -->
+  <rect x="38" y="56" width="84" height="50" rx="14" fill="#0D1F17" stroke="#1C2028" stroke-width="4"/>
+
+  <!-- Eyes (Phosphor Green Glowing Discs) -->
+  <circle cx="62" cy="81" r="8" fill="#10B981"/>
+  <circle cx="98" cy="81" r="8" fill="#10B981"/>
+
+  <!-- Friendly Smile -->
+  <path d="M 66 120 Q 80 128 94 120" stroke="#1C2028" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+</svg>
