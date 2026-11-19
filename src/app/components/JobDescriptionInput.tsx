@@ -9,6 +9,21 @@ const MIN_CHARS = 100;
 const PASTE_DELTA_THRESHOLD = 50;
 const CHAR_COUNT_MILESTONES = [100, 500];
 
+export const SAMPLE_JOB_PRESETS = [
+  {
+    role: "Full Stack Engineer",
+    text: "Senior Full Stack Engineer: Looking for an experienced engineer proficient in TypeScript, React, Next.js, and Node.js. Experience optimizing Core Web Vitals, building RESTful/GraphQL APIs, database modeling in PostgreSQL, unit testing with Vitest/Jest, and deploying cloud applications via CI/CD pipelines.",
+  },
+  {
+    role: "Product Manager",
+    text: "Senior Product Manager: Seeking an analytical PM to own the product lifecycle and user conversion funnels. Lead roadmap prioritization, conduct qualitative customer interviews, design A/B testing frameworks, and partner closely with engineering and growth design to maximize activation and retention.",
+  },
+  {
+    role: "Account Executive",
+    text: "Enterprise Account Executive: High-growth SaaS platform hiring an AE with demonstrated success exceeding $1M+ ARR quotas. Drive consultative software demos, navigate enterprise security and legal reviews, generate qualified pipeline, and close complex multi-year customer agreements.",
+  },
+];
+
 interface JobDescriptionInputProps {
   label: string;
   placeholder: string;
@@ -228,11 +243,32 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
         </div>
       )}
 
-      {/* Hint shown when the field is empty */}
+      {/* Hint and Quick Launch Sample Roles shown when empty */}
       {charCount === 0 && urlFetchState === "idle" && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
-          Paste the job description or a job listing URL — we'll pull the details automatically.
-        </p>
+        <div className="mb-2.5">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mb-1.5 flex items-center gap-1.5">
+            <span>💡 No job posting handy? Try a sample target role:</span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {SAMPLE_JOB_PRESETS.map((preset) => (
+              <button
+                key={preset.role}
+                type="button"
+                onClick={() => {
+                  if (onValueChange) {
+                    onValueChange(preset.text);
+                  }
+                  if (onTitleDetected) {
+                    onTitleDetected(preset.role, 0.95);
+                  }
+                }}
+                className="neo-btn text-[11px] font-mono font-bold px-2 py-1 bg-white hover:bg-[#FAF7F0] text-[#1C2028] border border-[#1C2028] rounded shadow-[1px_1px_0px_#1C2028] transition-all"
+              >
+                + {preset.role}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       <textarea

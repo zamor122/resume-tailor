@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
     const authResult = await requireAuth(req, { accessToken });
     if ("error" in authResult) {
       return new Response(
-        JSON.stringify({ error: "Sign in to tailor your resume. Your first 3 are free.", requireAuth: true }),
+        JSON.stringify({ error: `Sign in to tailor your resume. Your first ${FREE_RESUME_LIMIT} is free.`, requireAuth: true }),
         { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }

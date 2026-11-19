@@ -329,7 +329,7 @@ export default function PricingPage() {
         onClose={() => setShowAuthModal(false)}
         onSuccess={() => setShowAuthModal(false)}
         title="Sign in to get started"
-        description="Create an account to unlock your 3 free resume tailors and purchase access when you need more."
+        description={`Create an account to unlock your ${FREE_RESUME_LIMIT} free resume tailor and purchase access when you need more.`}
       />
     </div>
   );

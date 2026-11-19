@@ -37,6 +37,7 @@ import { analytics } from "@/app/services/analytics";
 import { saveResumeData, loadResumeData, clearResumeData } from "@/app/utils/dataPersistence";
 import { TAILORING_PRESET_LABELS } from "@/app/prompts/tailoringPresets";
 import { FREE_RESUME_LIMIT, TIME_BASED_TIERS } from "@/app/config/pricing";
+import LaunchOfferBanner from "@/app/components/LaunchOfferBanner";
 import type { HumanizeResponse } from "@/app/types/humanize";
 
 export { type HumanizeResponse } from "@/app/types/humanize";
@@ -688,6 +689,12 @@ export default function SplitScreenTailorView() {
     <>
       <ParallaxBackground />
       <ParallaxContainer className="container mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10 max-w-6xl space-y-8 md:space-y-12">
+        {user && (
+          <LaunchOfferBanner
+            userCreatedAt={user.created_at}
+            className="mt-2"
+          />
+        )}
         {/* Retrofuturistic Hero Console */}
         <section className="py-6 md:py-8" data-parallax="0.05">
           <div className="neo-box bg-[#F4F1EA] p-6 md:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] flex flex-col md:flex-row items-center justify-between gap-8">
@@ -1098,7 +1105,7 @@ export default function SplitScreenTailorView() {
         onSuccess={() => setShowAuthModalMode(null)}
         mode={showAuthModalMode ?? "signup"}
         title={showAuthModalMode === "signin" ? "Sign in to save your resume" : "Create account"}
-        description="Your first 3 resumes are free. No credit card required."
+        description={`Your first ${FREE_RESUME_LIMIT} resume is free. No credit card required.`}
       />
 
       <ResetConfirmationModal

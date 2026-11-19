@@ -56,7 +56,7 @@ export default function AlternativeComparisonTable({
       ours: "Yes — free, no card",
     },
     {
-      feature: `First ${FREE_RESUME_LIMIT} free`,
+      feature: `First ${FREE_RESUME_LIMIT === 1 ? "resume" : `${FREE_RESUME_LIMIT} resumes`} free`,
       competitor: "—",
       ours: "Yes",
     },
