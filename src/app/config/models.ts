@@ -300,6 +300,15 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     baseUrl: 'https://api.cline.bot/api/v1',
     description: 'Open-weight executive resume prose engine via ClinePass',
   },
+  'cline:qwen/qwen3.8-max-0902': {
+    provider: 'cline',
+    modelId: 'qwen/qwen3.8-max-0902',
+    name: 'Qwen 3.8 Max (ClinePass)',
+    requiresApiKey: true,
+    apiKeyEnvVar: 'CLINE_API_KEY',
+    baseUrl: 'https://api.cline.bot/api/v1',
+    description: 'Flagship open-weight reasoning and vision via ClinePass',
+  },
 };
 
 /**

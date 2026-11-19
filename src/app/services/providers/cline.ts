@@ -24,7 +24,7 @@ export class ClineProvider implements AIProvider {
   public provider = 'cline';
 
   constructor(
-    private modelId: string = process.env.CLINE_MODEL || 'cline-pass/deepseek-v4.1-flash',
+    private modelId: string = process.env.CLINE_MODEL || 'deepseek/deepseek-v4.1-flash',
     apiKey?: string
   ) {
     const key = apiKey || process.env.CLINE_API_KEY;
