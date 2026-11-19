@@ -741,6 +741,7 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
               activeSectionId={effectiveActiveSectionId}
               onActiveSectionChange={handleActiveSectionChange}
               resumeAST={resumeAST}
+              resumeId={resumeId}
             />
           </div>
 

@@ -1,6 +1,8 @@
+import React, { useState } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import ResumeSuggestionReviewer from "@/app/components/ResumeSuggestionReviewer";
+import { GamificationProvider, useGamification } from "@/app/contexts/GamificationContext";
 import type { ResumeSuggestion } from "@/app/agent/state";
 
 describe("ResumeSuggestionReviewer - Simplified GitHub Line-by-Line Diff Flow", () => {
@@ -564,5 +566,56 @@ B.S. Computer Science`;
     expect(
       screen.getByText(/Targeted scaling metrics \(\+40% throughput\) and authentic student tenure/i)
     ).toBeInTheDocument();
+  });
+
+  it("does not re-award EXP when toggling accept, reject, and re-accepting the same change", () => {
+    // Harness component to observe current live XP from GamificationContext
+    function TestCockpitHarness() {
+      const { xp } = useGamification();
+      const [sugs, setSugs] = React.useState<ResumeSuggestion[]>([...mockSuggestions]);
+      return (
+        <div>
+          <span data-testid="live-xp-counter">{xp}</span>
+          <ResumeSuggestionReviewer
+            originalResume="Original Resume"
+            suggestions={sugs}
+            onSuggestionsChange={setSugs}
+            beforeScore={50}
+            matchScore={80}
+            resumeId="test-resume-123"
+          />
+        </div>
+      );
+    }
+
+    render(
+      <GamificationProvider initialXp={0}>
+        <TestCockpitHarness />
+      </GamificationProvider>
+    );
+
+    const xpCounter = screen.getByTestId("live-xp-counter");
+    expect(xpCounter.textContent).toBe("0");
+
+    // 1. Accept first suggestion: +15 XP awarded
+    const acceptBtn = screen.getByRole("button", { name: /ACCEPT CHANGE/i });
+    fireEvent.click(acceptBtn);
+    expect(xpCounter.textContent).toBe("15");
+
+    // 2. Reject the change (Keep Original)
+    const keepBtn = screen.getByRole("button", { name: /KEEP ORIGINAL/i });
+    fireEvent.click(keepBtn);
+    // XP does not decrease, stays at 15
+    expect(xpCounter.textContent).toBe("15");
+
+    // 3. Re-accept the same change: EXP MUST NOT BE ADDED AGAIN!
+    const reAcceptBtn = screen.getByRole("button", { name: /ACCEPT CHANGE/i });
+    fireEvent.click(reAcceptBtn);
+    expect(xpCounter.textContent).toBe("15"); // Still 15, no double award!
+
+    // 4. Toggle back and forth again
+    fireEvent.click(keepBtn);
+    fireEvent.click(reAcceptBtn);
+    expect(xpCounter.textContent).toBe("15"); // Still strictly 15!
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
 import { isSubstantiveChange, isolatePreciseOriginalChange } from "@/app/utils/resumeReassemble";
 import { useGamification } from "@/app/contexts/GamificationContext";
@@ -18,6 +18,7 @@ export interface ResumeSuggestionReviewerProps {
   jobDescription?: string;
   jobTitle?: string;
   resumeAST?: any;
+  resumeId?: string;
   isUnlocked?: boolean;
   onUnlockRequest?: () => void;
   activeSuggestionId?: string | null;
@@ -33,6 +34,7 @@ export default function ResumeSuggestionReviewer({
   originalResume = "",
   suggestions = [],
   sectionGroups,
+  resumeId,
   onSectionGroupsChange,
   onSuggestionsChange,
   activeSectionId,
@@ -56,6 +58,19 @@ export default function ResumeSuggestionReviewer({
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>("");
+
+  // EXP Anti-Farm Guard: Each suggestion can only ever award EXP ONCE per review lifecycle
+  const awardedSuggestionIdsRef = useRef<Set<string>>(new Set());
+  const hasAwardedBulkRef = useRef<boolean>(false);
+
+  // Seed with any suggestions that are already accepted when component mounts or updates
+  useEffect(() => {
+    suggestions.forEach((s) => {
+      if (s.status === "accepted") {
+        awardedSuggestionIdsRef.current.add(s.id);
+      }
+    });
+  }, [suggestions]);
 
   // Topmost Layer Filtering: discard trivial newline, whitespace, bullet, and empty changes
   const substantiveSuggestions = useMemo(
@@ -139,7 +154,12 @@ export default function ResumeSuggestionReviewer({
     const nextStatus: "pending" | "accepted" = currentSug?.status === "accepted" ? "pending" : "accepted";
     if (nextStatus === "accepted") {
       playSfx("success");
-      awardXp(15, "Bullet Optimized (+15 XP)");
+      // Anti-Farm Guard: Only award EXP if this specific suggestion has not been awarded yet
+      if (!awardedSuggestionIdsRef.current.has(targetId)) {
+        awardedSuggestionIdsRef.current.add(targetId);
+        const dedupeKey = `accept_suggestion_${resumeId || ""}_${targetId}`;
+        awardXp(15, "Bullet Optimized (+15 XP)", dedupeKey);
+      }
     } else {
       playSfx("boop");
     }
@@ -171,7 +191,13 @@ export default function ResumeSuggestionReviewer({
       return;
     }
     playSfx("success");
-    awardXp(50, "Full Section Optimization (+50 XP)");
+    if (!hasAwardedBulkRef.current) {
+      hasAwardedBulkRef.current = true;
+      const dedupeKey = `accept_all_bulk_${resumeId || ""}_${substantiveSuggestions.map((s) => s.id).join("_")}`;
+      awardXp(50, "Full Section Optimization (+50 XP)", dedupeKey);
+    }
+    // Mark all substantive suggestions as awarded so toggling them later won't award duplicate EXP
+    substantiveSuggestions.forEach((s) => awardedSuggestionIdsRef.current.add(s.id));
     const updated = suggestions.map((s) =>
       !s.status || s.status === "pending" ? { ...s, status: "accepted" as const } : s
     );
@@ -196,6 +222,7 @@ export default function ResumeSuggestionReviewer({
   };
 
   const handleSaveEdit = (id: string) => {
+    awardedSuggestionIdsRef.current.add(id);
     const updated = suggestions.map((s) =>
       s.id === id ? { ...s, suggestedText: editText.trim(), status: "accepted" as const } : s
     );

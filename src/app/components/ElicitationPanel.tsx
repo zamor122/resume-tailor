@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ElicitationFact, ElicitationQuestion } from "@/app/types/elicitation";
 import { useGamification } from "@/app/contexts/GamificationContext";
 import {
@@ -37,6 +37,7 @@ export default function ElicitationPanel({
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [skipped, setSkipped] = useState<Record<string, boolean>>({});
   const [rememberedKeys, setRememberedKeys] = useState<Set<string>>(new Set());
+  const hasAwardedXpRef = useRef<boolean>(false);
 
   // Pre-populate answers from previous sessions if available
   useEffect(() => {
@@ -77,7 +78,11 @@ export default function ElicitationPanel({
     // Save answered facts into history for future tailoring
     if (facts.length > 0) {
       saveElicitationAnswers(facts);
-      awardXp(30, "Added Specific Metrics (+30 XP)");
+      if (!hasAwardedXpRef.current) {
+        hasAwardedXpRef.current = true;
+        const dedupeKey = `elicitation_${questions.map((q) => q.id).sort().join("_")}`;
+        awardXp(30, "Added Specific Metrics (+30 XP)", dedupeKey);
+      }
     }
     onComplete(facts);
   };
