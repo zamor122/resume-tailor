@@ -226,7 +226,7 @@ export default function ResumeSuggestionReviewer({
           return (
             <mark
               key={i}
-              className="bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 px-1 py-0.5 rounded font-semibold border-b border-emerald-500/40"
+              className="bg-[#10B981]/25 text-[#065F46] px-1 py-0.5 rounded font-mono font-bold border-b-2 border-[#10B981]"
             >
               {part}
             </mark>
@@ -314,21 +314,21 @@ export default function ResumeSuggestionReviewer({
   // threw "Rendered more hooks than during the previous render".
   if (totalCount === 0) {
     return (
-      <div className={`p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-center space-y-3 ${className}`}>
+      <div className={`p-6 rounded-xl border-2 border-[#1C2028] bg-[#FAF7F0] shadow-[4px_4px_0px_#1C2028] text-center space-y-3 ${className}`}>
         <span className="text-3xl">🎉</span>
-        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
+        <h3 className="text-base font-mono font-bold text-[#1C2028] uppercase">
           All Sections Aligned
         </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+        <p className="text-xs font-mono text-gray-700 max-w-md mx-auto leading-relaxed">
           Your resume content already matches the key qualifications and requirements for this role.
         </p>
         {onFinalize && (
           <button
             type="button"
             onClick={onFinalize}
-            className="px-5 py-2 text-xs font-bold rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 shadow transition-all"
+            className="neo-btn px-5 py-2 text-xs font-mono font-bold uppercase rounded-lg text-white bg-[#10B981] hover:bg-[#059669] border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] transition-all"
           >
-            Finish & View Resume →
+            Finish &amp; View Resume →
           </button>
         )}
       </div>
@@ -365,33 +365,33 @@ export default function ResumeSuggestionReviewer({
       )}
 
       {/* Sticky Top Header: Tri-Color Progress Bar & ATS Score Boost */}
-      <div className="sticky top-2 z-20 p-4 rounded-2xl bg-gradient-to-r from-gray-900 via-gray-900/95 to-gray-800 text-white border border-gray-700/80 shadow-lg space-y-3 backdrop-blur-md">
+      <div className="sticky top-2 z-20 p-4 rounded-xl neo-box bg-[#1C2028] text-white border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] space-y-3">
         {/* Score & Counters Header */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#FF5722]">
                 Change {activeIndex + 1} of {totalCount}
               </span>
               <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs font-medium text-gray-300">
+              <span className="text-xs font-mono font-bold text-gray-200 truncate">
                 {substantiveSuggestions[activeIndex]?.section || "Resume Review"}
               </span>
             </div>
           </div>
 
           {/* Dynamic Score Badge */}
-          <div className="flex items-center gap-2.5 bg-black/40 px-3 py-1.5 rounded-xl border border-gray-700/60 shrink-0">
-            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">
-              ATS Match:
+          <div className="flex items-center gap-2 bg-[#FAF7F0] text-[#1C2028] px-3 py-1 rounded-lg border-2 border-[#1C2028] shadow-[2px_2px_0px_rgba(255,255,255,0.2)] shrink-0 font-mono">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-700">
+              MATCH:
             </span>
             <div className="flex items-center gap-1 font-bold">
-              <span className="text-gray-400 text-xs">{beforeScore}%</span>
-              <span className="text-cyan-400 text-[10px]">→</span>
-              <span className="text-emerald-400 text-sm font-extrabold">{liveScore}%</span>
+              <span className="text-gray-500 text-xs">{beforeScore}%</span>
+              <span className="text-[#FF5722] text-[10px]">➔</span>
+              <span className="text-[#059669] text-sm font-extrabold">{liveScore}%</span>
             </div>
             {currentBoost > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded neo-tag bg-[#10B981] text-white border border-[#1C2028]">
                 +{currentBoost}%
               </span>
             )}
@@ -400,17 +400,17 @@ export default function ResumeSuggestionReviewer({
 
         {/* Tri-Color Segmented Progress Bar */}
         <div className="space-y-2">
-          <div className="flex items-center gap-1 w-full h-3 rounded-full bg-gray-800/80 p-0.5 overflow-hidden">
+          <div className="flex items-center gap-1 w-full h-3 rounded-full bg-black/60 p-0.5 border border-white/20 overflow-hidden">
             {substantiveSuggestions.map((s, idx) => {
               const isAcc = s.status === "accepted";
               const isRej = s.status === "rejected";
               const isCur = idx === activeIndex;
 
               const bg = isAcc
-                ? "bg-emerald-500"
+                ? "bg-[#10B981]"
                 : isRej
-                ? "bg-rose-500"
-                : "bg-gray-600/80";
+                ? "bg-[#EF4444]"
+                : "bg-gray-600";
 
               return (
                 <button
@@ -420,7 +420,7 @@ export default function ResumeSuggestionReviewer({
                   title={`Change ${idx + 1}: ${s.section} (${isAcc ? "Accepted" : isRej ? "Kept Original" : "Unreviewed"})`}
                   className={`h-full flex-1 rounded-[2px] transition-all cursor-pointer ${bg} ${
                     isCur
-                      ? "ring-2 ring-cyan-300 scale-y-125 z-10"
+                      ? "ring-2 ring-[#FF5722] scale-y-125 z-10"
                       : "opacity-80 hover:opacity-100"
                   }`}
                 />
@@ -429,19 +429,19 @@ export default function ResumeSuggestionReviewer({
           </div>
 
           {/* Metric Labels & Bulk Shortcuts */}
-          <div className="flex items-center justify-between text-xs text-gray-400 flex-wrap gap-2 pt-0.5">
+          <div className="flex items-center justify-between text-xs text-gray-300 font-mono flex-wrap gap-2 pt-0.5">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                <strong className="text-emerald-400 font-bold">{acceptedCount}</strong> Accepted
+                <span className="h-2 w-2 rounded-full bg-[#10B981] shrink-0" />
+                <strong className="text-[#10B981] font-bold">{acceptedCount}</strong> Accepted
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
-                <strong className="text-rose-400 font-bold">{dismissedCount}</strong> Kept
+                <span className="h-2 w-2 rounded-full bg-[#EF4444] shrink-0" />
+                <strong className="text-[#EF4444] font-bold">{dismissedCount}</strong> Kept
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-gray-500 shrink-0" />
-                <strong className="text-gray-300 font-bold">{remainingCount}</strong> Remaining
+                <span className="h-2 w-2 rounded-full bg-gray-400 shrink-0" />
+                <strong className="text-gray-200 font-bold">{remainingCount}</strong> Remaining
               </span>
             </div>
 
@@ -450,17 +450,17 @@ export default function ResumeSuggestionReviewer({
                 type="button"
                 onClick={handleAcceptAllRemaining}
                 disabled={remainingCount === 0}
-                className="px-2 py-0.5 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                className="neo-btn px-2 py-0.5 text-[10px] font-bold uppercase text-white bg-[#10B981] hover:bg-[#059669] disabled:opacity-30 disabled:pointer-events-none rounded border border-white/20 transition-colors"
                 title="Accept all remaining unreviewed changes"
               >
                 {!isUnlocked ? "🔒 Unlock to Accept All" : "Accept All Remaining"}
               </button>
-              <span className="text-gray-600">•</span>
+              <span className="text-gray-500">•</span>
               <button
                 type="button"
                 onClick={handleKeepAllRemaining}
                 disabled={remainingCount === 0}
-                className="px-2 py-0.5 text-[10px] font-semibold text-gray-400 hover:text-gray-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                className="neo-btn px-2 py-0.5 text-[10px] font-bold uppercase text-gray-200 bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:pointer-events-none rounded border border-white/20 transition-colors"
                 title="Keep all remaining unreviewed changes as original"
               >
                 Keep All Remaining
@@ -470,13 +470,13 @@ export default function ResumeSuggestionReviewer({
         </div>
 
         {/* Global Navigation Controls */}
-        <div className="flex items-center justify-between pt-1 border-t border-gray-700/60 text-xs">
+        <div className="flex items-center justify-between pt-1 border-t border-white/20 text-xs font-mono">
           <div className="flex items-center gap-2">
             <button
               type="button"
               disabled={activeIndex === 0}
               onClick={handlePrevious}
-              className="px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              className="neo-btn px-3 py-1 text-xs font-bold rounded-lg bg-white text-[#1C2028] hover:bg-[#F4F1EA] disabled:opacity-30 disabled:pointer-events-none transition-colors border border-[#1C2028]"
             >
               ← Previous
             </button>
@@ -484,7 +484,7 @@ export default function ResumeSuggestionReviewer({
               type="button"
               disabled={activeIndex === totalCount - 1}
               onClick={handleNext}
-              className="px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              className="neo-btn px-3 py-1 text-xs font-bold rounded-lg bg-white text-[#1C2028] hover:bg-[#F4F1EA] disabled:opacity-30 disabled:pointer-events-none transition-colors border border-[#1C2028]"
             >
               Next →
             </button>
@@ -494,9 +494,9 @@ export default function ResumeSuggestionReviewer({
             <button
               type="button"
               onClick={onFinalize}
-              className="px-3.5 py-1 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-500 shadow transition-all active:scale-95"
+              className="neo-btn px-3.5 py-1 text-xs font-bold uppercase rounded-lg text-white bg-[#FF5722] hover:bg-[#E64A19] border border-[#1C2028] shadow-[1px_1px_0px_#1C2028] transition-all active:scale-95"
             >
-              ✓ Finish & View Resume →
+              ✓ Finish &amp; View Resume →
             </button>
           )}
         </div>
@@ -504,60 +504,52 @@ export default function ResumeSuggestionReviewer({
 
       {/* Focused Single-Change Card (Showing ONE change at a time) */}
       {currentSuggestion && (
-        <div
-          className={`rounded-2xl border bg-white dark:bg-gray-900 shadow-sm overflow-hidden transition-all ${
-            isAcc
-              ? "border-emerald-500/40 dark:border-emerald-500/30"
-              : isRej
-              ? "border-rose-500/40 dark:border-rose-500/30"
-              : "border-gray-200 dark:border-gray-800"
-          }`}
-        >
+        <div className="neo-box bg-white border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl overflow-hidden transition-all">
           {/* Card Header: Section, Change #, Status & Adjust/Edit */}
-          <div className="px-5 py-3.5 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700/80 flex items-center justify-between gap-3 flex-wrap">
+          <div className="px-5 py-3.5 bg-[#FAF7F0] border-b-2 border-[#1C2028] flex items-center justify-between gap-3 flex-wrap">
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="font-bold text-gray-800 dark:text-gray-200 text-xs flex items-center gap-1.5">
+                <span className="font-mono font-bold text-[#1C2028] text-xs flex items-center gap-1.5">
                   <span>📁</span>
                   <span>{currentSuggestion.section || "Resume Section"}</span>
                 </span>
-                <span className="text-gray-300 dark:text-gray-600">•</span>
-                <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400">
+                <span className="text-gray-400">•</span>
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#FF5722]">
                   Active Suggestion
                 </span>
               </div>
               {currentSuggestion.jevJudge && (
-                <div className="flex flex-wrap items-center gap-2 mt-1 mb-2">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex flex-wrap items-center gap-2 mt-1 mb-1 font-mono">
+                  <span className="neo-tag inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#ECFDF5] text-[#065F46] border border-[#10B981]">
+                    <svg className="w-3 h-3 text-[#10B981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                     Jev Verified
                   </span>
-                  <span className="text-xs text-emerald-400 font-semibold">
+                  <span className="text-xs text-[#065F46] font-bold">
                     +{currentSuggestion.jevJudge.scoreDeltaPercent}% Match
                   </span>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-gray-600">
                     • {currentSuggestion.jevJudge.toneOfVoiceRating === 'strong_authentic' ? 'Authentic Tone' : 'Professional Tone'}
                   </span>
-                  <span className="text-xs text-amber-400 font-medium">
+                  <span className="text-xs text-[#B45309] font-bold">
                     • {currentSuggestion.jevJudge.overallImpactScore}/5 Impact
                   </span>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 font-mono">
               {isPending ? (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                <span className="neo-tag px-2.5 py-0.5 rounded text-[10px] font-bold bg-[#FFFBEB] text-[#B45309] border border-[#F59E0B]">
                   ● Pending Choice
                 </span>
               ) : isAcc ? (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="neo-tag px-2.5 py-0.5 rounded text-[10px] font-bold bg-[#ECFDF5] text-[#065F46] border border-[#10B981]">
                   ✓ Tailored Active
                 </span>
               ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
+                <span className="neo-tag px-2.5 py-0.5 rounded text-[10px] font-bold bg-[#FEE2E2] text-[#991B1B] border border-[#EF4444]">
                   ✕ Original Kept
                 </span>
               )}
@@ -566,7 +558,7 @@ export default function ResumeSuggestionReviewer({
                 <button
                   type="button"
                   onClick={() => handleStartEdit(currentSuggestion)}
-                  className="px-2.5 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-200/60 dark:hover:bg-gray-700 transition-colors"
+                  className="neo-btn px-2.5 py-1 text-xs font-mono font-bold text-[#1C2028] bg-white hover:bg-[#F4F1EA] rounded-lg border border-[#1C2028] shadow-[1px_1px_0px_#1C2028] transition-colors"
                 >
                   ✎ Adjust / Edit
                 </button>
@@ -575,101 +567,101 @@ export default function ResumeSuggestionReviewer({
           </div>
 
           {/* Card Body */}
-          <div className="p-5 space-y-4">
+          <div className="p-5 space-y-4 font-mono">
             {/* Inline Edit Mode */}
             {isEditing ? (
               <div className="space-y-3">
-                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block">
+                <label className="text-xs font-mono font-bold text-[#1C2028] block">
                   Edit tailored bullet text:
                 </label>
                 <textarea
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
                   rows={3}
-                  className="w-full p-3 text-sm rounded-xl border border-cyan-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 leading-relaxed"
+                  className="w-full p-3 text-xs sm:text-sm font-mono rounded-lg border-2 border-[#1C2028] bg-[#FAF7F0] text-[#1C2028] focus:outline-none leading-relaxed shadow-[2px_2px_0px_#1C2028]"
                 />
                 <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={handleCancelEdit}
-                    className="px-3.5 py-1.5 text-xs font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="neo-btn px-3.5 py-1.5 text-xs font-mono font-bold rounded-lg bg-white text-[#1C2028] border border-[#1C2028] hover:bg-[#F4F1EA]"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSaveEdit(currentSuggestion.id)}
-                    className="px-4 py-1.5 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white shadow"
+                    className="neo-btn px-4 py-1.5 text-xs font-mono font-bold uppercase rounded-lg bg-[#10B981] hover:bg-[#059669] text-white border border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
                   >
-                    Save & Accept
+                    Save &amp; Accept
                   </button>
                 </div>
               </div>
             ) : (
               /* Simplified Line Diff: Soft Red (-) & Soft Green (+) */
-              <div className="space-y-3 font-sans">
+              <div className="space-y-3 font-mono">
                 {/* Red Line: Original (Only shown if modifying an existing line) */}
                 {!isAddition && (
-                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-500/10 dark:bg-rose-950/25 border-l-4 border-rose-500 text-rose-950 dark:text-rose-200">
-                    <span className="font-mono font-bold text-rose-600 dark:text-rose-400 select-none shrink-0 text-base leading-snug">
+                  <div className="neo-box-sm flex items-start gap-3 p-3.5 rounded-xl bg-[#FEE2E2] border-2 border-[#1C2028] text-[#991B1B] shadow-[2px_2px_0px_#1C2028]">
+                    <span className="font-mono font-bold text-[#EF4444] select-none shrink-0 text-base leading-snug">
                       -
                     </span>
-                    <div className="text-sm leading-relaxed flex-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 block mb-1">
+                    <div className="text-xs sm:text-sm leading-relaxed flex-1">
+                      <span className="neo-tag text-[9px] font-mono font-bold uppercase tracking-wider bg-[#EF4444] text-white px-1.5 py-0.5 rounded border border-[#1C2028] inline-block mb-1">
                         Original (Before):
                       </span>
-                      <span>{currentOriginalText.replace(/^[-*•–—]\s*/, "")}</span>
+                      <p className="mt-1 text-gray-800">{currentOriginalText.replace(/^[-*•–—]\s*/, "")}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Green Line: Tailored Replacement or Addition */}
                 {!isUnlocked && !(currentSuggestion as any)?.isFreeReveal ? (
-                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/25 border-l-4 border-amber-500 text-amber-950 dark:text-amber-200">
-                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400 select-none shrink-0 text-base leading-snug">
+                  <div className="neo-box-sm flex items-start gap-3 p-3.5 rounded-xl bg-[#FEF3C7] border-2 border-[#1C2028] text-[#92400E] shadow-[2px_2px_0px_#1C2028]">
+                    <span className="font-mono font-bold text-[#F59E0B] select-none shrink-0 text-base leading-snug">
                       🔒
                     </span>
-                    <div className="text-sm leading-relaxed flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                    <div className="text-xs sm:text-sm leading-relaxed flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="neo-tag text-[9px] font-mono font-bold uppercase tracking-wider bg-[#F59E0B] text-[#1C2028] px-1.5 py-0.5 rounded border border-[#1C2028]">
                           Tailored Accomplishment (Locked):
                         </span>
-                        <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                        <span className="text-[10px] font-mono font-bold text-gray-600">
                           Access pass required
                         </span>
                       </div>
-                      <span className="text-gray-700 dark:text-gray-300 font-medium">
+                      <p className="mt-1 text-gray-700 font-medium">
                         {currentSuggestion.suggestedText}
-                      </span>
+                      </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/25 border-l-4 border-emerald-500 text-emerald-950 dark:text-emerald-200">
-                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 select-none shrink-0 text-base leading-snug">
+                  <div className="neo-box-sm flex items-start gap-3 p-3.5 rounded-xl bg-[#ECFDF5] border-2 border-[#1C2028] text-[#065F46] shadow-[2px_2px_0px_#1C2028]">
+                    <span className="font-mono font-bold text-[#10B981] select-none shrink-0 text-base leading-snug">
                       +
                     </span>
-                    <div className="text-sm leading-relaxed flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                    <div className="text-xs sm:text-sm leading-relaxed flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="neo-tag text-[9px] font-mono font-bold uppercase tracking-wider bg-[#10B981] text-white px-1.5 py-0.5 rounded border border-[#1C2028]">
                           {isAddition ? "Tailored (Addition):" : "Tailored (Enhanced):"}
                         </span>
                         {isAddition && (
-                          <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded neo-tag bg-[#1C2028] text-white">
                             + New bullet added
                           </span>
                         )}
                         {Boolean((currentSuggestion as any)?.isFreeReveal) && (
-                          <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded neo-tag bg-[#FF5722] text-white">
                             ✓ Free sample preview
                           </span>
                         )}
                       </div>
-                      <span>
+                      <p className="mt-1 text-[#1C2028] font-bold">
                         {renderHighlightedKeywords(
                           currentSuggestion.suggestedText.replace(/^[-*•–—]\s*/, ""),
                           currentSuggestion.keywords
                         )}
-                      </span>
+                      </p>
                     </div>
                   </div>
                 )}
@@ -678,15 +670,18 @@ export default function ResumeSuggestionReviewer({
 
             {/* Plain-English Rationale */}
             {currentSuggestion.reason && (
-              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
-                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                  💡 <span className="font-semibold text-gray-800 dark:text-gray-200">Why this change:</span> {currentSuggestion.reason}
+              <div className="neo-box-sm p-3 rounded-xl bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] flex items-start gap-2">
+                <span className="neo-tag bg-[#FF5722] text-white text-[9px] font-mono font-bold px-1.5 py-0.5 shrink-0 border border-[#1C2028]">
+                  WHY
+                </span>
+                <p className="text-xs font-mono font-medium text-[#1C2028] leading-relaxed">
+                  {currentSuggestion.reason}
                 </p>
               </div>
             )}
 
             {/* Action Controls for Active Change */}
-            <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex-wrap">
+            <div className="flex items-center justify-between gap-3 pt-3 border-t-2 border-[#1C2028]/15 flex-wrap">
               <div className="flex items-center gap-2.5">
                 {!isUnlocked && !(currentSuggestion as any)?.isFreeReveal ? (
                   <button
@@ -722,8 +717,8 @@ export default function ResumeSuggestionReviewer({
                   onClick={() => handleKeepOriginal(currentSuggestion.id)}
                   className={`neo-btn px-4 py-2 text-xs font-mono font-bold rounded-xl border-2 border-[#1C2028] transition-all flex items-center gap-1.5 active:scale-95 shadow-[2px_2px_0px_#1C2028] ${
                     isRej
-                      ? "bg-[#E11D48] text-white"
-                      : "bg-[#FAF7F0] text-[#1C2028] dark:bg-[#21262D] dark:text-[#FAF7F0] hover:bg-[#FFE0B2]"
+                      ? "bg-[#EF4444] text-white"
+                      : "bg-white text-[#1C2028] hover:bg-[#F4F1EA]"
                   }`}
                 >
                   {isRej ? (
@@ -740,7 +735,7 @@ export default function ResumeSuggestionReviewer({
                 <button
                   type="button"
                   onClick={() => handleSelectIndex(activeIndex + 1)}
-                  className="neo-btn px-3.5 py-2 text-xs font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] bg-[#FAF7F0] dark:bg-[#21262D] hover:bg-[#FFE0B2] rounded-xl transition-colors flex items-center gap-1.5 ml-auto border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+                  className="neo-btn px-3.5 py-2 text-xs font-mono font-bold text-[#1C2028] bg-white hover:bg-[#F4F1EA] rounded-xl transition-colors flex items-center gap-1.5 ml-auto border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
                 >
                   <span>NEXT CHANGE</span>
                   <span>→</span>
