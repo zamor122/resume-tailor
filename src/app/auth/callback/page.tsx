@@ -23,14 +23,27 @@ function AuthCallbackPageInner() {
         return;
       }
 
+      const triggerWelcomeEmail = (email?: string, name?: string) => {
+        if (!email) return;
+        fetch("/api/email/welcome", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to: email, name }),
+        }).catch((e) => console.warn("[AuthCallback] Welcome email trigger non-blocking error:", e));
+      };
+
       if (code) {
         // OAuth: exchange code for session
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError) {
           console.error("Error exchanging code for session:", exchangeError);
           setError(exchangeError.message);
           setTimeout(() => router.push("/?auth_error=true"), 2000);
           return;
+        }
+        if (data?.user?.email) {
+          const name = data.user.user_metadata?.full_name || data.user.user_metadata?.name;
+          triggerWelcomeEmail(data.user.email, name);
         }
         setTimeout(() => router.push("/"), 500);
         return;
@@ -39,6 +52,10 @@ function AuthCallbackPageInner() {
       // Email confirmation: Supabase redirects with hash (#access_token=...&type=signup)
       // Client auto-processes hash; wait for session to be established
       if (hasHash && user) {
+        if (user.email) {
+          const name = user.user_metadata?.full_name || user.user_metadata?.name;
+          triggerWelcomeEmail(user.email, name);
+        }
         router.push("/");
         return;
       }
