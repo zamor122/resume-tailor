@@ -295,6 +295,7 @@ export default function SplitScreenTailorView() {
   const [elicitationQuestions, setElicitationQuestions] = useState<ElicitationQuestion[]>([]);
   const elicitationResolvedRef = useRef(false);
   const elicitationFactsRef = useRef<ElicitationFact[]>([]);
+  const hasAwardedDocLoadRef = useRef(false);
 
   const keywordsToWeaveParam = searchParams?.get("keywordsToWeave") ?? null;
   const prefillId = prefillVersion ?? prefillResumeId;
@@ -554,7 +555,8 @@ export default function SplitScreenTailorView() {
       }
 
       playSfx("success");
-      awardXp(150, "tailored_resume");
+      const tailorDedupeKey = `tailored_resume_${data.resumeId || "session"}`;
+      awardXp(150, "tailored_resume", tailorDedupeKey);
       completeQuest("tailor_boost");
 
       if (data.resumeId) {
@@ -671,7 +673,10 @@ export default function SplitScreenTailorView() {
     setError(null);
     if (text.trim().length >= 100) {
       playSfx("success");
-      awardXp(20, "Resume Document Loaded");
+      if (!hasAwardedDocLoadRef.current) {
+        hasAwardedDocLoadRef.current = true;
+        awardXp(20, "Resume Document Loaded", "resume_doc_loaded");
+      }
     }
   }, [playSfx, awardXp]);
 

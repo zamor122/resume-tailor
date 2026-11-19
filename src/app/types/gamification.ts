@@ -16,6 +16,7 @@ export interface GamificationState {
   readArticleSlugs: string[];
   dailyPokes: number;
   lastPokeDate?: string;
+  awardedActionKeys?: string[];
 }
 
 export interface XpNotification {

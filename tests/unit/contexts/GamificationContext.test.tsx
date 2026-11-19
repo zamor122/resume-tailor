@@ -77,4 +77,35 @@ describe("GamificationContext", () => {
     });
     expect(result.current.xp).toBe(10);
   });
+
+  it("prevents duplicate XP when calling awardXp with the same dedupeKey", () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <GamificationProvider initialXp={0}>{children}</GamificationProvider>
+    );
+    const { result } = renderHook(() => useGamification(), { wrapper });
+
+    let firstAward = false;
+    act(() => {
+      firstAward = result.current.awardXp(15, "Bullet Optimized", "accept_suggestion_sug-1");
+    });
+    expect(firstAward).toBe(true);
+    expect(result.current.xp).toBe(15);
+    expect(result.current.awardedActionKeys).toContain("accept_suggestion_sug-1");
+
+    // Second call with same dedupeKey should be rejected
+    let secondAward = true;
+    act(() => {
+      secondAward = result.current.awardXp(15, "Bullet Optimized", "accept_suggestion_sug-1");
+    });
+    expect(secondAward).toBe(false);
+    expect(result.current.xp).toBe(15); // Unchanged!
+
+    // Different dedupeKey should be accepted
+    let differentAward = false;
+    act(() => {
+      differentAward = result.current.awardXp(15, "Bullet Optimized", "accept_suggestion_sug-2");
+    });
+    expect(differentAward).toBe(true);
+    expect(result.current.xp).toBe(30);
+  });
 });

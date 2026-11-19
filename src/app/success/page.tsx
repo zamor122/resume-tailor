@@ -55,7 +55,7 @@ function SuccessPageInner() {
 
           if (!xpAwardedRef.current) {
             xpAwardedRef.current = true;
-            awardXp(100, "Access Pass Activated!");
+            awardXp(100, "Access Pass Activated!", `activated_pass_${sessionId}`);
           }
 
           const meta = data.metadata || {};

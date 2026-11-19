@@ -35,8 +35,9 @@ export interface GamificationContextValue {
   sfxEnabled: boolean;
   quests: DailyQuest[];
   readArticleSlugs: string[];
+  awardedActionKeys: string[];
   activeToast: XpNotification | null;
-  awardXp: (amount: number, reason?: string) => void;
+  awardXp: (amount: number, reason?: string, dedupeKey?: string) => boolean;
   completeQuest: (questId: string) => void;
   readArticle: (slug: string, title?: string) => boolean;
   pokeMascot: () => void;
@@ -61,6 +62,7 @@ export function GamificationProvider({
   const [sfxEnabled, setSfxEnabled] = useState(true);
   const [completedQuestIds, setCompletedQuestIds] = useState<string[]>([]);
   const [readArticleSlugs, setReadArticleSlugs] = useState<string[]>([]);
+  const [awardedActionKeys, setAwardedActionKeys] = useState<string[]>([]);
   const [dailyPokes, setDailyPokes] = useState(0);
   const [activeToast, setActiveToast] = useState<XpNotification | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -83,6 +85,9 @@ export function GamificationProvider({
         if (Array.isArray(parsed.readArticleSlugs)) {
           setReadArticleSlugs(parsed.readArticleSlugs);
         }
+        if (Array.isArray(parsed.awardedActionKeys)) {
+          setAwardedActionKeys(parsed.awardedActionKeys);
+        }
         if (parsed.lastPokeDate === today) {
           setDailyPokes(parsed.dailyPokes || 0);
         } else {
@@ -101,6 +106,7 @@ export function GamificationProvider({
           readArticleSlugs: [],
           dailyPokes: 0,
           lastPokeDate: getTodayString(),
+          awardedActionKeys: [],
         });
       }
     } catch {
@@ -131,7 +137,16 @@ export function GamificationProvider({
     }, 2800);
   };
 
-  const awardXp = (amount: number, reason?: string) => {
+  const awardXp = (amount: number, reason?: string, dedupeKey?: string): boolean => {
+    if (dedupeKey && awardedActionKeys.includes(dedupeKey)) {
+      return false;
+    }
+
+    const nextKeys = dedupeKey ? [...awardedActionKeys, dedupeKey] : awardedActionKeys;
+    if (dedupeKey) {
+      setAwardedActionKeys(nextKeys);
+    }
+
     setXp((prev) => {
       const nextXp = prev + amount;
       const nextLevel = calculateLevel(nextXp);
@@ -147,6 +162,7 @@ export function GamificationProvider({
         readArticleSlugs,
         dailyPokes,
         lastPokeDate: getTodayString(),
+        awardedActionKeys: nextKeys,
       });
       return nextXp;
     });
@@ -154,6 +170,7 @@ export function GamificationProvider({
     if (reason) {
       showToast(amount, reason);
     }
+    return true;
   };
 
   const readArticle = (slug: string, title?: string): boolean => {
@@ -166,7 +183,7 @@ export function GamificationProvider({
     // Award +25 XP for reading an article
     const earned = 25;
     const label = title ? `Read: ${title.slice(0, 24)}...` : "Field Manual Read";
-    awardXp(earned, label);
+    awardXp(earned, label, `article_${slug}`);
     playSfx("success");
     completeQuest("read_manual");
 
@@ -181,6 +198,7 @@ export function GamificationProvider({
       readArticleSlugs: nextArticles,
       dailyPokes,
       lastPokeDate: getTodayString(),
+      awardedActionKeys,
     });
 
     return true;
@@ -191,7 +209,7 @@ export function GamificationProvider({
     if (dailyPokes < 5) {
       const nextPokes = dailyPokes + 1;
       setDailyPokes(nextPokes);
-      awardXp(5, `Bot Calibration (${nextPokes}/5)`);
+      awardXp(5, `Bot Calibration (${nextPokes}/5)`, `poke_${getTodayString()}_${nextPokes}`);
       saveState({
         xp: xp + 5,
         level: calculateLevel(xp + 5),
@@ -203,6 +221,7 @@ export function GamificationProvider({
         readArticleSlugs,
         dailyPokes: nextPokes,
         lastPokeDate: getTodayString(),
+        awardedActionKeys,
       });
     }
   };
@@ -222,6 +241,7 @@ export function GamificationProvider({
         readArticleSlugs,
         dailyPokes,
         lastPokeDate: getTodayString(),
+        awardedActionKeys,
       });
     }
   };
@@ -240,6 +260,7 @@ export function GamificationProvider({
         readArticleSlugs,
         dailyPokes,
         lastPokeDate: getTodayString(),
+        awardedActionKeys,
       });
       return next;
     });
@@ -279,6 +300,7 @@ export function GamificationProvider({
         sfxEnabled,
         quests,
         readArticleSlugs,
+        awardedActionKeys,
         activeToast,
         awardXp,
         completeQuest,
@@ -323,8 +345,9 @@ const DEFAULT_GAMIFICATION_FALLBACK: GamificationContextValue = {
   sfxEnabled: true,
   quests: [],
   readArticleSlugs: [],
+  awardedActionKeys: [],
   activeToast: null,
-  awardXp: () => {},
+  awardXp: () => false,
   completeQuest: () => {},
   readArticle: () => false,
   pokeMascot: () => {},
