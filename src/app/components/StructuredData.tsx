@@ -26,7 +26,7 @@ const softwareApplicationSchema = {
   operatingSystem: "Web",
   url: BASE_URL,
   description:
-    "Free AI-powered resume tailoring tool with LangGraph agent intelligence and real-time relevancy scoring. Tailor your resume for each job in under 4 seconds. Your first 3 tailored resumes are free.",
+    `Free AI-powered resume tailoring tool with LangGraph agent intelligence and real-time relevancy scoring. Tailor your resume for each job in under 4 seconds. Your first ${FREE_RESUME_LIMIT} tailored resume is free.`,
   offers: {
     "@type": "Offer",
     price: "0",
@@ -152,7 +152,7 @@ export function ProductOfferStructuredData() {
     "@context": "https://schema.org",
     "@type": "Product",
     name: "AI Resume Tailor",
-    description: `Web app that tailors an existing resume to a specific job description with ATS-friendly, human-sounding output. Your first ${FREE_RESUME_LIMIT} tailored resumes are free. ${NON_SUBSCRIPTION_MESSAGE}`,
+    description: `Web app that tailors an existing resume to a specific job description with ATS-friendly, human-sounding output. Your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume is" : "resumes are"} free. ${NON_SUBSCRIPTION_MESSAGE}`,
     url: `${BASE_URL}/pricing`,
     brand: {
       "@type": "Brand",

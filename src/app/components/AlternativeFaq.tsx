@@ -43,7 +43,7 @@ export default function AlternativeFaq({
   const items = [
     {
       q: `Is there a free ${competitorName} alternative?`,
-      a: `Yes. AI Resume Tailor is a free ${competitorName} alternative for tailoring your existing resume to a specific job posting. Your first ${FREE_RESUME_LIMIT} tailored resumes are free, with no credit card required. Unlimited access after that starts at $${entryPrice} as a one-time payment.`,
+      a: `Yes. AI Resume Tailor is a free ${competitorName} alternative for tailoring your existing resume to a specific job posting. Your first ${FREE_RESUME_LIMIT === 1 ? "tailored resume is" : `${FREE_RESUME_LIMIT} tailored resumes are`} free, with no credit card required. Unlimited access after that starts at $${entryPrice} as a one-time payment.`,
     },
     {
       q: `How much does ${competitorName} cost?`,
@@ -51,7 +51,7 @@ export default function AlternativeFaq({
     },
     {
       q: `Does ${competitorName} have a free trial or free tier?`,
-      a: `Based on our research, ${competitorName}'s free offering is: ${competitorFreeTier}.${renewalNote} AI Resume Tailor gives you ${FREE_RESUME_LIMIT} tailored resumes free and never auto-renews.`,
+      a: `Based on our research, ${competitorName}'s free offering is: ${competitorFreeTier}.${renewalNote} AI Resume Tailor gives you ${FREE_RESUME_LIMIT === 1 ? "your first tailored resume" : `${FREE_RESUME_LIMIT} tailored resumes`} free and never auto-renews.`,
     },
     {
       q: `What is the difference between ${competitorName} and AI Resume Tailor?`,

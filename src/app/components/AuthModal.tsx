@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useGamification } from "@/app/contexts/GamificationContext";
+import { FREE_RESUME_LIMIT } from "@/app/config/pricing";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -169,7 +170,7 @@ export default function AuthModal({
                 (mode === "forgot"
                   ? "Enter your email and we'll dispatch a secure recovery link."
                   : mode === "signup"
-                    ? "Your first 3 tailored resumes are 100% free. No card needed."
+                    ? `Your first ${FREE_RESUME_LIMIT} tailored resume is 100% free. No card needed.`
                     : "Sign in to access your saved resumes and tailored documents.")}
             </p>
           </div>

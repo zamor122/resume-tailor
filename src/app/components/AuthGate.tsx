@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { analytics } from "@/app/services/analytics";
+import { FREE_RESUME_LIMIT } from "@/app/config/pricing";
 import AuthModal from "./AuthModal";
 
 interface AuthGateProps {
@@ -70,7 +71,7 @@ export default function AuthGate({
 
   const tailorCopy = action === "tailor";
   const title = tailorCopy ? "Sign in to tailor your resume" : `Sign in to ${action}`;
-  const description = tailorCopy ? "Your first 3 resumes are free. No credit card required. Create a free account to get started." : `Create a free account to ${action} your tailored resume and access it anytime. No credit card required.`;
+  const description = tailorCopy ? `Your first ${FREE_RESUME_LIMIT} resume is free. No credit card required. Create a free account to get started.` : `Create a free account to ${action} your tailored resume and access it anytime. No credit card required.`;
 
   if (loading) {
     return (
