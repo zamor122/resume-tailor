@@ -12,6 +12,7 @@ export function useEngagementTracking() {
   const startTime = useRef<number>(Date.now());
   const scrollDepthTracked = useRef<{ [key: number]: boolean }>({});
   const interactionCount = useRef(0);
+  const lastInteractionTracked = useRef<number>(0);
 
   useEffect(() => {
     // Track engagement event immediately to prevent false bounce
@@ -25,16 +26,19 @@ export function useEngagementTracking() {
       }
     };
 
-    // Track engagement on any user interaction
+    // Track engagement on user interaction (throttled to at most once per 60s to prevent quota exhaustion)
     const handleInteraction = () => {
       interactionCount.current++;
       trackEngagement();
       
-      // Track interaction event
-      analytics.trackEvent(analytics.events.INTERACTION, {
-        ...analytics.getTrackingContext(),
-        count: interactionCount.current,
-      });
+      const now = Date.now();
+      if (now - lastInteractionTracked.current > 60000) {
+        lastInteractionTracked.current = now;
+        analytics.trackEvent(analytics.events.INTERACTION, {
+          ...analytics.getTrackingContext(),
+          count: interactionCount.current,
+        });
+      }
     };
 
     // Track scroll depth
@@ -97,8 +101,8 @@ export function useEngagementTracking() {
       }
     };
 
-    // Add event listeners
-    const events = ['click', 'keydown', 'touchstart', 'mousemove'];
+    // Add event listeners (exclude high-frequency events like mousemove/keydown to protect quota)
+    const events = ['click', 'touchstart'];
     events.forEach(event => {
       document.addEventListener(event, handleInteraction, { once: false, passive: true });
     });

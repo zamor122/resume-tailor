@@ -38,19 +38,7 @@ export default function UmamiVerifier() {
     const verifyUmami = (): boolean => {
       // Check if Umami is available
       if (window.umami && typeof window.umami.track === 'function') {
-        console.log('[Umami] ✅ Analytics verified and ready');
         setStatus('ready');
-        
-        // Test tracking a verification event (only in production)
-        try {
-          window.umami.track('umami_verified', { 
-            timestamp: new Date().toISOString(),
-            page: window.location.pathname
-          });
-          console.log('[Umami] ✅ Test event tracked successfully');
-        } catch (error) {
-          console.error('[Umami] ❌ Error tracking test event:', error);
-        }
         return true;
       }
       return false;
