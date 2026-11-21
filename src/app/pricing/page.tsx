@@ -44,7 +44,7 @@ const FEATURES = [
   "Human-sounding output (no robotic AI fluff)",
   "Real-time ATS keyword relevancy gauge",
   "ATS-optimized PDF & Markdown export",
-  "TailorBot MK-II guidance & audit rationale",
+  "Clear line-by-line rationale for every change",
   "Google X-Y-Z impact quantification",
   "Granular line-by-line diff approval",
   "Zero auto-renewals or subscription traps",
@@ -126,7 +126,7 @@ export default function PricingPage() {
                 One-Time Access. <span className="bg-[#10B981] text-white px-2 py-0.5 neo-box-sm inline-block">Zero Traps.</span>
               </h1>
               <p className="text-sm sm:text-base text-gray-700 font-sans max-w-xl leading-relaxed">
-                Most resume builders quietly bill you \$39/month until you notice. We never auto-renew. Your first {FREE_RESUME_LIMIT} audits are 100% free forever, and paid passes are strictly one-time.
+                Most resume builders quietly bill you $39/month until you notice. We never auto-renew. Your first {FREE_RESUME_LIMIT === 1 ? "resume tailor is" : `${FREE_RESUME_LIMIT} audits are`} 100% free forever, and paid passes are strictly one-time.
               </p>
             </div>
 
