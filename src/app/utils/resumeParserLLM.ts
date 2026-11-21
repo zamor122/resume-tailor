@@ -32,7 +32,7 @@ export function sanitizeParsedResumeAST(data: any): ParsedResume {
           }
 
           return {
-            title: String(e.title || "Software Engineer").trim(),
+            title: String(e.title || "Team Member").trim(),
             company: String(e.company || "Company").trim(),
             dates: e.dates ? String(e.dates).trim() : null,
             location: e.location ? String(e.location).trim() : null,

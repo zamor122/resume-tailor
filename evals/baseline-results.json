@@ -1,0 +1,41 @@
+{
+  "runAt": "2026-11-21T17:41:15.758Z",
+  "results": [
+    {
+      "id": "real_24cbaa65",
+      "category": "real_production",
+      "jobTitle": "Administrative Assistant",
+      "elapsedMs": 82143,
+      "originalLength": 1842,
+      "finalLength": 1865,
+      "lengthRatio": 1.01,
+      "beforeScore": 49,
+      "afterScore": 54,
+      "scoreDelta": 5,
+      "suggestionsCount": 7,
+      "missingKeywordsCount": 13,
+      "seniorityTier": "entry",
+      "industryCategory": "finance_accounting",
+      "errors": [],
+      "sampleTailoredHead": "Thy Nguyen Raritan, NJ (555) 010-0000 candidate@example.com Experienced finance and administrative professional adept in accounts receivable, payroll management, and financial analysis. WORK EXPERIENCE PNC - Bridgewater, NJ - 08/2024 - Present Bank Teller - Processed customer payments, deposits, withdrawals, wire transfers, and foreign currency exc"
+    },
+    {
+      "id": "edge_messy_no_bullets",
+      "category": "edge_case",
+      "jobTitle": "Warehouse Operations Supervisor",
+      "elapsedMs": 19530,
+      "originalLength": 350,
+      "finalLength": 573,
+      "lengthRatio": 1.64,
+      "beforeScore": 47,
+      "afterScore": 52,
+      "scoreDelta": 5,
+      "suggestionsCount": 2,
+      "missingKeywordsCount": 1,
+      "seniorityTier": "lead_manager",
+      "industryCategory": "operations_logistics",
+      "errors": [],
+      "sampleTailoredHead": "Alex Morgan candidate@example.com 555-010-0000\nWork history: Worked at Acme Logistics from 2021 to now as lead picker and forklift driver. Trained new warehouse associates, conducted weekly inventory cycle counts, and ensured on-time departure of outbound trucks to support fulfillment schedules. Before that I worked at Bob Hardware store 2019-2021 "
+    }
+  ]
+}

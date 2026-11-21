@@ -334,7 +334,7 @@ export function parseResume(resumeText: string): ParsedResume {
       if (isBullet(line)) {
         if (!currentExp) {
           currentExp = {
-            title: 'Software Engineer',
+            title: 'Team Member',
             company: 'Experience',
             dates: null,
             location: null,
