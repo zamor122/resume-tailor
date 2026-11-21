@@ -61,13 +61,13 @@ const READ_STEPS = new Set<StepId>(['readResume', 'extractKeywords', 'researchCo
  * burns a wasted round-trip before falling back. Re-enable with PENNY_ENABLED=1
  * once the model id is verified against `GET $CLINE_API_URL/models`.
  */
-export const PENNY_MODEL = 'cline:cline-pass/deepseek-v4.1-flash';
+export const PENNY_MODEL = 'cline:cline-pass/kimi-k3';
 
 const PENNY_ENABLED_CTRL = 'PENNY_ENABLED';
 
 function pennyAvailable(): boolean {
-  // Read at call time so the flag is env-configurable (and testable) per call.
-  if (process.env[PENNY_ENABLED_CTRL] !== '1') return false;
+  // Enabled by default whenever CLINE_API_KEY is present; set PENNY_ENABLED=0 to disable.
+  if (process.env[PENNY_ENABLED_CTRL] === '0') return false;
   const config = getModelConfig(PENNY_MODEL);
   return !!(config?.apiKeyEnvVar && process.env[config.apiKeyEnvVar]);
 }
@@ -76,9 +76,9 @@ export function resolveStepModel(stepId: StepId, userModelKey?: string): string 
   // User override always wins (e.g., from session preferences).
   if (userModelKey) return userModelKey;
 
-  // Penny engine for heavy generation + structured extraction when the
-  // server-side key is present (cheap, operator-funded, <$0.005/run).
-  if (pennyAvailable() && (HEAVY_GEN_STEPS.has(stepId) || STRUCTURED_STEPS.has(stepId))) {
+  // Use ClinePass subscription model (kimi-k3) for heavy resume rewriting steps;
+  // keep lightweight JSON extraction / read steps on the fast non-reasoning chain.
+  if (pennyAvailable() && HEAVY_GEN_STEPS.has(stepId)) {
     return PENNY_MODEL;
   }
 

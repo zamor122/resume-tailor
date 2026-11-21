@@ -19,6 +19,7 @@ vi.mock('@/app/config/models', () => ({
       'anthropic:claude-3-5-haiku-20241022': { apiKeyEnvVar: 'ANTHROPIC_API_KEY' },
       'deepseek:deepseek-chat': { apiKeyEnvVar: 'DEEPSEEK_API_KEY' },
       'mistral:mistral-small-latest': { apiKeyEnvVar: 'MISTRAL_API_KEY' },
+      'cline:cline-pass/kimi-k3': { apiKeyEnvVar: 'CLINE_API_KEY' },
       'cline:cline-pass/deepseek-v4.1-flash': { apiKeyEnvVar: 'CLINE_API_KEY' },
     };
     return catalog[key] ?? null;
@@ -172,18 +173,18 @@ describe('Cost guard', () => {
       expect(result.allowed).toBe(true);
     });
 
-    it('does NOT route to the penny engine by default (penny disabled)', () => {
+    it('does NOT route to the penny engine when PENNY_ENABLED=0', () => {
       vi.stubEnv('CLINE_API_KEY', 'cline-server-key');
-      vi.stubEnv('PENNY_ENABLED', '');
+      vi.stubEnv('PENNY_ENABLED', '0');
       expect(resolveStepModel('tailor')).toBe('gemini:gemini-2.5-flash');
       expect(resolveStepModel('extractKeywords')).toBe('gemini:gemini-2.5-flash-lite');
     });
 
-    it('routes heavy generation + structured extraction to the penny engine when PENNY_ENABLED=1', () => {
+    it('routes heavy generation to ClinePass kimi-k3 by default when CLINE_API_KEY is set', () => {
       vi.stubEnv('CLINE_API_KEY', 'cline-server-key');
-      vi.stubEnv('PENNY_ENABLED', '1');
-      expect(resolveStepModel('tailor')).toBe('cline:cline-pass/deepseek-v4.1-flash');
-      expect(resolveStepModel('extractKeywords')).toBe('cline:cline-pass/deepseek-v4.1-flash');
+      vi.stubEnv('PENNY_ENABLED', '');
+      expect(resolveStepModel('tailor')).toBe('cline:cline-pass/kimi-k3');
+      expect(resolveStepModel('extractKeywords')).toBe('gemini:gemini-2.5-flash-lite');
     });
 
     it('falls back to the free chain when the penny key is absent', () => {

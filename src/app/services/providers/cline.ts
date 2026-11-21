@@ -24,7 +24,7 @@ export class ClineProvider implements AIProvider {
   public provider = 'cline';
 
   constructor(
-    private modelId: string = process.env.CLINE_MODEL || 'cline-pass/deepseek-v4.1-flash',
+    private modelId: string = process.env.CLINE_MODEL || 'cline-pass/kimi-k3',
     apiKey?: string
   ) {
     const key = apiKey || process.env.CLINE_API_KEY;
@@ -62,7 +62,7 @@ export class ClineProvider implements AIProvider {
           },
         ],
         temperature: options?.temperature,
-        max_tokens: options?.maxTokens,
+        max_completion_tokens: options?.maxTokens ? Math.min(Math.max(options.maxTokens, 512), 1800) : 1500,
         top_p: options?.topP,
         frequency_penalty: options?.frequencyPenalty,
         presence_penalty: options?.presencePenalty,

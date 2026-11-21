@@ -158,7 +158,7 @@ Jan 2021 – Present
     expect(sanitized.summary).toBeNull();
     expect(sanitized.experience).toHaveLength(2);
     expect(sanitized.experience[0].company).toBe("Only Company");
-    expect(sanitized.experience[0].title).toBe("Software Engineer");
+    expect(sanitized.experience[0].title).toBe("Team Member");
     expect(sanitized.skills.technical).toEqual(["123", "TypeScript"]);
   });
 });

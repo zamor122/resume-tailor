@@ -58,19 +58,35 @@ export async function keywordAnalyzerNode(
     }
   }
 
+  // Filter out generic JD filler words that are not real ATS skills/keywords
+  const GENERIC_JD_STOPWORDS = new Set([
+    "performs", "perform", "duties", "duty", "ensure", "ensures", "ensuring",
+    "ability", "experience", "responsibilities", "responsibility", "requirements",
+    "requirement", "required", "preferred", "including", "include", "related",
+    "strong", "excellent", "working", "support", "supports", "provide", "provides",
+    "assist", "assists", "maintain", "maintains", "various", "other", "using",
+    "based", "within", "across", "must", "able", "skills", "skill", "knowledge",
+    "years", "year", "work", "role", "position", "team", "company", "organization",
+    "candidate", "candidates", "ideal", "looking", "seeking", "join", "help",
+  ]);
+
+  const isRealKeyword = (kw: string): boolean => {
+    const term = (kw || "").trim().toLowerCase();
+    return term.length >= 3 && !GENERIC_JD_STOPWORDS.has(term);
+  };
+
   // Calculate missing keywords
   const resumeLower = resume.toLowerCase();
-  const criticalKeywords = keywordResult.criticalKeywords || [];
+  const criticalKeywords = (keywordResult.criticalKeywords || []).filter(isRealKeyword);
   const missingCritical = criticalKeywords.filter((kw: string) => {
     const term = (kw || "").toLowerCase();
-    if (term.length < 3) return false;
     const variations = [term, term.replace(/\s+/g, ""), term.replace(/\s+/g, "-"), term.replace(/\s+/g, "_")];
     return !variations.some((v) => resumeLower.includes(v));
   });
 
   const technicalKeywords = (keywordResult.keywords?.technical || [])
     .map((k) => k.term)
-    .filter((term) => term && term.length > 2 && !resumeLower.includes(term.toLowerCase()));
+    .filter((term) => isRealKeyword(term) && !resumeLower.includes(term.toLowerCase()));
 
   const allMissing = Array.from(new Set([...missingCritical, ...technicalKeywords])).slice(0, 20);
 
