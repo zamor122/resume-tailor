@@ -13,7 +13,6 @@ if (fs.existsSync(envPath)) {
 }
 
 import { runResumeAgent } from "../src/app/agent/graph";
-import { DEFAULT_TAILORING_PREFERENCES } from "../src/app/types/tailoringPreferences";
 
 interface GoldenCase {
   id: string;
@@ -52,7 +51,7 @@ async function main() {
         rawResume: c.originalResume,
         rawJobDescription: c.jobDescription,
         jobTitle: c.jobTitle,
-        preferences: { ...DEFAULT_TAILORING_PREFERENCES, intensity: "targeted" },
+        preferences: { intensity: "targeted" },
         logs: [],
         errors: [],
       } as any);
