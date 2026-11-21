@@ -76,9 +76,8 @@ export function resolveStepModel(stepId: StepId, userModelKey?: string): string 
   // User override always wins (e.g., from session preferences).
   if (userModelKey) return userModelKey;
 
-  // Use ClinePass subscription model (kimi-k3) for heavy resume rewriting steps;
-  // keep lightweight JSON extraction / read steps on the fast non-reasoning chain.
-  if (pennyAvailable() && HEAVY_GEN_STEPS.has(stepId)) {
+  // Route 100% of steps to ClinePass (kimi-k3) whenever CLINE_API_KEY is configured.
+  if (pennyAvailable()) {
     return PENNY_MODEL;
   }
 

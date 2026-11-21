@@ -180,11 +180,12 @@ describe('Cost guard', () => {
       expect(resolveStepModel('extractKeywords')).toBe('gemini:gemini-2.5-flash-lite');
     });
 
-    it('routes heavy generation to ClinePass kimi-k3 by default when CLINE_API_KEY is set', () => {
+    it('routes all steps to ClinePass kimi-k3 by default when CLINE_API_KEY is set', () => {
       vi.stubEnv('CLINE_API_KEY', 'cline-server-key');
       vi.stubEnv('PENNY_ENABLED', '');
       expect(resolveStepModel('tailor')).toBe('cline:cline-pass/kimi-k3');
-      expect(resolveStepModel('extractKeywords')).toBe('gemini:gemini-2.5-flash-lite');
+      expect(resolveStepModel('extractKeywords')).toBe('cline:cline-pass/kimi-k3');
+      expect(resolveStepModel('readResume')).toBe('cline:cline-pass/kimi-k3');
     });
 
     it('falls back to the free chain when the penny key is absent', () => {
