@@ -276,14 +276,16 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
   'cline:cline-pass/kimi-k3': {
     provider: 'cline',
     modelId: 'cline-pass/kimi-k3',
-    displayName: 'Kimi K3 (ClinePass)',
+    name: 'Kimi K3 (ClinePass)',
+    requiresApiKey: true,
     apiKeyEnvVar: 'CLINE_API_KEY',
     baseUrl: 'https://api.cline.bot/api/v1',
   },
   'cline:cline-pass/qwen3.8-max': {
     provider: 'cline',
     modelId: 'cline-pass/qwen3.8-max',
-    displayName: 'Qwen 3.8 Max (ClinePass)',
+    name: 'Qwen 3.8 Max (ClinePass)',
+    requiresApiKey: true,
     apiKeyEnvVar: 'CLINE_API_KEY',
     baseUrl: 'https://api.cline.bot/api/v1',
   },
