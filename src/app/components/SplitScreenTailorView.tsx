@@ -1054,7 +1054,7 @@ export default function SplitScreenTailorView() {
                 onClick={() => setShowAuthModalMode("signup")}
                 className="neo-btn px-6 py-3.5 rounded-xl font-mono font-bold text-sm bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] hover:bg-[#F4511E] transition-all"
               >
-                ⚡ CREATE FREE ACCOUNT TO SAVE & GET 2 MORE FREE
+                ⚡ CREATE FREE ACCOUNT TO SAVE &amp; GET 2 FREE AUDITS
               </button>
               <p className="text-xs font-mono text-gray-600 dark:text-gray-400">
                 Already have an account?{" "}
