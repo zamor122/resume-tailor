@@ -273,6 +273,22 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
   // ClinePass Models (OpenAI-compatible gateway) — penny-inference engine
   // Operator-funded (server-side CLINE_API_KEY); classified as `penny` by the
   // runtime cost-guard. See 100-dollar-startup/SPRINT-SPEC.md §Penny-inference.
+  'cline:cline-pass/deepseek-v4-pro': {
+    provider: 'cline',
+    modelId: 'cline-pass/deepseek-v4-pro',
+    name: 'DeepSeek v4 Pro (ClinePass)',
+    requiresApiKey: true,
+    apiKeyEnvVar: 'CLINE_API_KEY',
+    baseUrl: 'https://api.cline.bot/api/v1',
+  },
+  'cline:cline-pass/minimax-m3.1-flash': {
+    provider: 'cline',
+    modelId: 'cline-pass/minimax-m3.1-flash',
+    name: 'MiniMax M3.1 Flash (ClinePass)',
+    requiresApiKey: true,
+    apiKeyEnvVar: 'CLINE_API_KEY',
+    baseUrl: 'https://api.cline.bot/api/v1',
+  },
   'cline:cline-pass/kimi-k3': {
     provider: 'cline',
     modelId: 'cline-pass/kimi-k3',

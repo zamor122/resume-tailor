@@ -19,6 +19,9 @@ vi.mock('@/app/config/models', () => ({
       'anthropic:claude-3-5-haiku-20241022': { apiKeyEnvVar: 'ANTHROPIC_API_KEY' },
       'deepseek:deepseek-chat': { apiKeyEnvVar: 'DEEPSEEK_API_KEY' },
       'mistral:mistral-small-latest': { apiKeyEnvVar: 'MISTRAL_API_KEY' },
+      'cline:cline-pass/qwen3.8-max': { apiKeyEnvVar: 'CLINE_API_KEY' },
+      'cline:cline-pass/deepseek-v4-pro': { apiKeyEnvVar: 'CLINE_API_KEY' },
+      'cline:cline-pass/minimax-m3.1-flash': { apiKeyEnvVar: 'CLINE_API_KEY' },
       'cline:cline-pass/kimi-k3': { apiKeyEnvVar: 'CLINE_API_KEY' },
       'cline:cline-pass/deepseek-v4.1-flash': { apiKeyEnvVar: 'CLINE_API_KEY' },
     };
@@ -180,12 +183,12 @@ describe('Cost guard', () => {
       expect(resolveStepModel('extractKeywords')).toBe('gemini:gemini-2.5-flash-lite');
     });
 
-    it('routes all steps to ClinePass kimi-k3 by default when CLINE_API_KEY is set', () => {
+    it('routes all steps to ClinePass models by default when CLINE_API_KEY is set', () => {
       vi.stubEnv('CLINE_API_KEY', 'cline-server-key');
       vi.stubEnv('PENNY_ENABLED', '');
-      expect(resolveStepModel('tailor')).toBe('cline:cline-pass/kimi-k3');
-      expect(resolveStepModel('extractKeywords')).toBe('cline:cline-pass/kimi-k3');
-      expect(resolveStepModel('readResume')).toBe('cline:cline-pass/kimi-k3');
+      expect(resolveStepModel('tailor')).toBe('cline:cline-pass/qwen3.8-max');
+      expect(resolveStepModel('extractKeywords')).toBe('cline:cline-pass/minimax-m3.1-flash');
+      expect(resolveStepModel('readResume')).toBe('cline:cline-pass/minimax-m3.1-flash');
     });
 
     it('falls back to the free chain when the penny key is absent', () => {

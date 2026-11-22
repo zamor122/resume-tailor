@@ -24,17 +24,19 @@ export class ClineProvider implements AIProvider {
   public provider = 'cline';
 
   constructor(
-    private modelId: string = process.env.CLINE_MODEL || 'cline-pass/kimi-k3',
+    private modelId: string = process.env.CLINE_MODEL || 'cline-pass/qwen3.8-max',
     apiKey?: string
   ) {
     const key = apiKey || process.env.CLINE_API_KEY;
     if (!key) {
       throw new Error('CLINE_API_KEY is not defined');
     }
-    // ClinePass exposes an OpenAI-compatible API.
+    // ClinePass exposes an OpenAI-compatible API. Disable SDK retries so ai-provider
+    // falls back to another ClinePass model immediately on transient 500s.
     this.client = new OpenAI({
       apiKey: key,
       baseURL: process.env.CLINE_API_URL || 'https://api.cline.bot/api/v1',
+      maxRetries: 0,
     });
   }
 
@@ -53,6 +55,9 @@ export class ClineProvider implements AIProvider {
     try {
       const promptText = Array.isArray(prompt) ? prompt.join('\n\n') : prompt;
 
+      // Disable hidden chain-of-thought on models that support reasoning toggle
+      // (minimax-m3.1-flash, qwen3.8-max, kimi-k3) so calls stay 3-7s without starving tokens.
+      const useNoReasoning = /minimax|qwen3\.8|kimi/i.test(this.modelId);
       const response = await this.client.chat.completions.create({
         model: this.modelId,
         messages: [
@@ -62,11 +67,12 @@ export class ClineProvider implements AIProvider {
           },
         ],
         temperature: options?.temperature,
-        max_completion_tokens: options?.maxTokens ? Math.min(Math.max(options.maxTokens, 512), 1800) : 1500,
+        max_completion_tokens: Math.min(Math.max((options?.maxTokens ?? 1500), 1024), 4096),
         top_p: options?.topP,
         frequency_penalty: options?.frequencyPenalty,
         presence_penalty: options?.presencePenalty,
-      });
+        ...(useNoReasoning ? { reasoning: { enabled: false } } : {}),
+      } as any);
 
       // Guard the whole path: ClinePass occasionally wraps choices in `data` (data.choices)
       // or returns a non-OpenAI-shaped body.

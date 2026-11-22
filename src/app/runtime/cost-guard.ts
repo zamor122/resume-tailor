@@ -61,14 +61,15 @@ const READ_STEPS = new Set<StepId>(['readResume', 'extractKeywords', 'researchCo
  * burns a wasted round-trip before falling back. Re-enable with PENNY_ENABLED=1
  * once the model id is verified against `GET $CLINE_API_URL/models`.
  */
-export const PENNY_MODEL = 'cline:cline-pass/kimi-k3';
+export const PENNY_MODEL = 'cline:cline-pass/qwen3.8-max';
+export const PENNY_FAST_MODEL = 'cline:cline-pass/minimax-m3.1-flash';
 
 const PENNY_ENABLED_CTRL = 'PENNY_ENABLED';
 
-function pennyAvailable(): boolean {
+function pennyAvailable(modelKey: string = PENNY_MODEL): boolean {
   // Enabled by default whenever CLINE_API_KEY is present; set PENNY_ENABLED=0 to disable.
   if (process.env[PENNY_ENABLED_CTRL] === '0') return false;
-  const config = getModelConfig(PENNY_MODEL);
+  const config = getModelConfig(modelKey);
   return !!(config?.apiKeyEnvVar && process.env[config.apiKeyEnvVar]);
 }
 
@@ -76,8 +77,11 @@ export function resolveStepModel(stepId: StepId, userModelKey?: string): string 
   // User override always wins (e.g., from session preferences).
   if (userModelKey) return userModelKey;
 
-  // Route 100% of steps to ClinePass (kimi-k3) whenever CLINE_API_KEY is configured.
-  if (pennyAvailable()) {
+  // Route 100% of steps to ClinePass with reasoning disabled (3-7s reliable response):
+  // Qwen 3.8 Max (~6s) for heavy tailoring, MiniMax M3.1 Flash (~3s) for fast read/JSON steps.
+  if (pennyAvailable(PENNY_MODEL)) {
+    if (HEAVY_GEN_STEPS.has(stepId)) return PENNY_MODEL;
+    if (READ_STEPS.has(stepId) || STRUCTURED_STEPS.has(stepId)) return PENNY_FAST_MODEL;
     return PENNY_MODEL;
   }
 
