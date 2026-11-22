@@ -91,8 +91,18 @@ export async function generateContentWithFallback(
   sessionApiKeys?: Record<string, string>,
   fallbackModels?: string[]
 ): Promise<GenerateContentResult> {
+  const clineBackups =
+    modelKey?.startsWith('cline:') && process.env.CLINE_API_KEY
+      ? [
+          'cline:cline-pass/kimi-k3',
+          'cline:cline-pass/minimax-m3.1-flash',
+          'cline:cline-pass/qwen3.8-max',
+        ]
+      : [];
+
   const modelsToTry = [
     modelKey,
+    ...clineBackups,
     DEFAULT_MODEL,
     ...(fallbackModels || FALLBACK_MODELS),
     // NOTE: deliberately no paid provider in this default tail — the cost guard

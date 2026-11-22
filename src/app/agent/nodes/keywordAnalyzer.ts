@@ -1,7 +1,6 @@
 import type { AgentState } from "../state";
 import { generateWithFallback } from "@/app/services/model-fallback";
 import { resolveStepModel } from "@/app/runtime/cost-guard";
-import { getJDInterpreterPrompt } from "@/app/prompts";
 import { parseJSONFromText } from "@/app/utils/json-extractor";
 import {
   normalizeJDInterpreterResponse,
@@ -9,6 +8,32 @@ import {
   type JDInterpreterResult,
 } from "@/app/utils/keyword-extraction";
 import { cleanJobDescription } from "@/app/utils/jobDescriptionCleaner";
+
+function buildCompactKeywordPrompt(cleanedJD: string, resume: string, titleHint?: string): string {
+  return `Extract high-weight ATS skills and keywords from this job description.
+Do NOT repeat the job description text. Output ONLY valid JSON matching this schema:
+{
+  "jobTitle": "${titleHint || "Role Title"}",
+  "criticalKeywords": ["up to 12 most important skills, tools, certifications, or domain terms"],
+  "keywords": {
+    "technical": [{"term": "skill or tool", "importance": "critical|high|medium", "importanceScore": 80, "frequency": 1}],
+    "soft": [{"term": "competency", "importance": "high|medium", "importanceScore": 60, "frequency": 1}],
+    "industry": [{"term": "domain term", "importance": "high|medium", "importanceScore": 70, "frequency": 1}]
+  }
+}
+
+Rules:
+- Exclude generic filler ("experience", "performs", "duties", "ensure", "ability", "team", "work", "support", "required", "years").
+- Mark terms MISSING from the resume as higher importance.
+
+Resume snippet:
+${resume.slice(0, 2000)}
+
+Job Description:
+${cleanedJD.slice(0, 4500)}
+
+JSON only:`;
+}
 
 export async function keywordAnalyzerNode(
   state: AgentState
@@ -27,16 +52,15 @@ export async function keywordAnalyzerNode(
     };
   } else {
     try {
-      const prompt = getJDInterpreterPrompt(
+      const prompt = buildCompactKeywordPrompt(
         cleanedJD,
-        resume || undefined,
+        resume || "",
         state.jobTitle || state.candidateProfile?.primaryTitle
       );
       const res = await generateWithFallback(
         prompt,
-        // Structured-extraction node -> penny engine when keyed, free chain otherwise.
         resolveStepModel("extractKeywords", state.modelKey),
-        { maxTokens: 800, temperature: 0.1 },
+        { maxTokens: 1200, temperature: 0.1 },
         state.sessionApiKeys
       );
       const parsed = parseJSONFromText<Record<string, unknown>>(res.text);

@@ -34,11 +34,10 @@ async function main() {
   const allCases: GoldenCase[] = JSON.parse(fs.readFileSync(datasetPath, "utf8"));
 
   const filterIds = process.argv.slice(2);
-  const cases = filterIds.length > 0
-    ? allCases.filter((c) => filterIds.includes(c.id))
-    : allCases.filter((c) =>
-        ["real_24cbaa65", "real_2bdb399f", "edge_career_changer", "edge_messy_no_bullets"].includes(c.id)
-      );
+  const cases =
+    filterIds.length > 0 && !filterIds.includes("--all")
+      ? allCases.filter((c) => filterIds.includes(c.id))
+      : allCases;
 
   console.log(`Running baseline eval on ${cases.length} cases...`);
   const results = [];
@@ -75,6 +74,8 @@ async function main() {
         afterScore: after,
         scoreDelta: delta,
         suggestionsCount: state.suggestions?.length || 0,
+        summaryUpdated: Boolean(state.suggestions?.some((s) => s.category === "summary" || s.id === "sug-summary")),
+        keywordsAdded: state.improvementMetrics?.keywordsAdded ?? 0,
         missingKeywordsCount: state.sortedMissingKeywords?.length || 0,
         seniorityTier: state.seniorityTier || null,
         industryCategory: state.industryCategory || null,
