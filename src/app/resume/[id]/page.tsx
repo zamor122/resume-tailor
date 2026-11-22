@@ -394,7 +394,19 @@ export default function ResumeDetailPage() {
             </div>
 
             {viewMode === "changes" && (
-              <ChangedAndWhy suggestions={data.suggestions || []} />
+              <ChangedAndWhy
+                suggestions={data.suggestions || []}
+                originalResume={data.originalResume}
+                resumeId={data.resumeId}
+                userId={user?.id}
+                accessToken={session?.access_token ?? undefined}
+                sessionId={sessionId}
+                onSuggestionsChange={(updated) => {
+                  if (json) {
+                    mutate({ ...json, success: json.success ?? true, suggestions: updated }, false);
+                  }
+                }}
+              />
             )}
             {viewMode === "resume" && (
               <TailoredResumeOutput
@@ -417,6 +429,9 @@ export default function ResumeDetailPage() {
                 showDownload={data.isUnlocked}
                 downloadJobTitle={data.jobTitle ?? undefined}
                 resumeId={data.resumeId}
+                userId={user?.id}
+                accessToken={session?.access_token ?? undefined}
+                sessionId={sessionId}
                 isUnlocked={data.isUnlocked}
                 onUnlockRequest={() => setShowTierModal(true)}
                 matchScore={matchScore}

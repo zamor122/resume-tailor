@@ -74,6 +74,10 @@ export interface ResumeSuggestion {
   jobIndex?: number;
   bulletIndex?: number;
   jevJudge?: JevJudgeResult;
+  /** Missing JD keywords not in the original resume that were introduced in this change */
+  addedMissingKeywords?: string[];
+  /** Candidate reaction capturing whether the keyword addition/change was helpful */
+  reaction?: "helpful" | "not_helpful";
 }
 
 export type SectionGroupType = "experience" | "skills" | "summary" | "other";

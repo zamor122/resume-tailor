@@ -88,6 +88,7 @@ export const events = {
   // Feedback
   GENERATION_REJECTED: 'generation_rejected',
   FEEDBACK_SUBMITTED: 'feedback_submitted',
+  SUGGESTION_KEYWORD_REACTION: 'suggestion_keyword_reaction',
   EXIT_SURVEY_SHOWN: 'exit_survey_shown',
   EXIT_SURVEY_DISMISSED: 'exit_survey_dismissed',
   EXIT_SURVEY_SUBMITTED: 'exit_survey_submitted',
