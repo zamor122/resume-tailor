@@ -15,6 +15,8 @@ import TailorButton from "./TailorButton";
 import AuthGate from "./AuthGate";
 import AuthModal from "./AuthModal";
 import TierSelectionModal from "./TierSelectionModal";
+import LimitNoticeAlert from "./LimitNoticeAlert";
+import { classifyTailorError, type LimitAction } from "@/app/utils/tailorLimitError";
 import ProgressStepper from "./ProgressStepper";
 import ResetConfirmationModal from "./ResetConfirmationModal";
 import FileDropZone from "./FileDropZone";
@@ -291,7 +293,7 @@ export default function SplitScreenTailorView() {
   const [tailoringOptionsOpen, setTailoringOptionsOpen] = useState(false);
   const [showAuthModalMode, setShowAuthModalMode] = useState<"signup" | "signin" | null>(null);
   const [showTierModal, setShowTierModal] = useState(false);
-  const [limitAction, setLimitAction] = useState<"upgrade" | "auth" | null>(null);
+  const [limitAction, setLimitAction] = useState<LimitAction>(null);
   const [preferences, setPreferences] = useState<TailoringPreferences>(DEFAULT_PREFERENCES);
   const [agentMessage, setAgentMessage] = useState<string>("");
   const [agentProgress, setAgentProgress] = useState<number | undefined>(undefined);
@@ -579,44 +581,14 @@ export default function SplitScreenTailorView() {
     } catch (err) {
       playSfx("alert");
       const rawMessage = err instanceof Error ? err.message : "An error occurred";
-      const isAbort = err instanceof Error && err.name === "AbortError";
-      const isNetwork =
-        err instanceof TypeError && (
-          rawMessage.includes("fetch") ||
-          rawMessage.includes("network") ||
-          rawMessage.includes("Failed to fetch")
-        );
       const statusCode = (err as Error & { statusCode?: number }).statusCode;
-      const anonymousLimitExceeded = (err as Error & { anonymousLimitExceeded?: boolean }).anonymousLimitExceeded;
-      const requireUpgrade = (err as Error & { requireUpgrade?: boolean }).requireUpgrade;
+      const classified = classifyTailorError(err);
 
-      let userMessage = rawMessage;
-      let errorType = "unknown";
-      if (statusCode === 402 || requireUpgrade) {
-        userMessage = rawMessage;
-        errorType = "upgrade_required";
-        setLimitAction("upgrade");
-        setShowTierModal(true);
-      } else if (statusCode === 401 && anonymousLimitExceeded) {
-        userMessage =
-          rawMessage ||
-          `You've used your 1 free preview. Create a free account for ${FREE_AUDIT_LIMIT} ATS audits & previews, or purchase a pass from $${ENTRY_PRICE} for full downloads.`;
-        errorType = "anonymous_limit";
-        setLimitAction("auth");
-        setShowAuthModalMode("signup");
-      } else if (isAbort) {
-        userMessage = "Request timed out. Please try again with a shorter resume or job description.";
-        errorType = "timeout";
-      } else if (isNetwork) {
-        userMessage = "Network error. Please check your connection and try again.";
-        errorType = "network";
-      } else if (statusCode === 504) {
-        userMessage = "Request timed out. Please try again.";
-        errorType = "timeout";
-      } else if (statusCode === 429) {
-        userMessage = rawMessage; // Keep server message for rate limit
-        errorType = "rate_limit";
-      }
+      const userMessage = classified.message;
+      const errorType = classified.errorType;
+      setLimitAction(classified.limitAction);
+      if (classified.openUpgradeModal) setShowTierModal(true);
+      if (classified.openAuthModal) setShowAuthModalMode("signup");
 
       setError(userMessage);
       setErrorShakeKey((k) => k + 1);
@@ -888,63 +860,20 @@ export default function SplitScreenTailorView() {
           )}
 
           {error && (
-            <div
+            <LimitNoticeAlert
               key={`action-error-${errorShakeKey}`}
-              className="animate-shake p-4 rounded-xl bg-[#FFE4E6] dark:bg-pink-900/20 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] text-[#9F1239] dark:text-pink-300 font-mono text-xs font-bold text-left max-w-xl mx-auto space-y-3"
-              role="alert"
-            >
-              <div className="flex items-start gap-2.5">
-                <span className="text-base leading-none shrink-0">⚠️</span>
-                <div className="flex-1 min-w-0">
-                  <span className="uppercase tracking-wide font-extrabold block mb-0.5">Notice</span>
-                  <span className="leading-relaxed block">{error}</span>
-                </div>
-              </div>
-              {limitAction === "upgrade" && (
-                <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSfx("click");
-                      setShowTierModal(true);
-                    }}
-                    className="neo-btn px-4 py-2 rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white font-mono font-extrabold text-xs uppercase tracking-wider border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
-                  >
-                    ⚡ Unlock Pass From ${ENTRY_PRICE} →
-                  </button>
-                  <Link
-                    href="/pricing"
-                    className="px-3 py-2 rounded-lg bg-white text-[#1C2028] font-mono font-bold text-xs border border-[#1C2028] hover:bg-[#FAF7F0]"
-                  >
-                    Compare Plans
-                  </Link>
-                </div>
-              )}
-              {limitAction === "auth" && (
-                <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSfx("click");
-                      setShowAuthModalMode("signup");
-                    }}
-                    className="neo-btn px-4 py-2 rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white font-mono font-extrabold text-xs uppercase tracking-wider border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
-                  >
-                    ⚡ Create Free Account →
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSfx("click");
-                      setShowTierModal(true);
-                    }}
-                    className="px-3 py-2 rounded-lg bg-white text-[#1C2028] font-mono font-bold text-xs border border-[#1C2028] hover:bg-[#FAF7F0]"
-                  >
-                    Passes From ${ENTRY_PRICE}
-                  </button>
-                </div>
-              )}
-            </div>
+              message={error}
+              limitAction={limitAction}
+              entryPrice={ENTRY_PRICE}
+              onOpenUpgrade={() => {
+                playSfx("click");
+                setShowTierModal(true);
+              }}
+              onOpenAuth={() => {
+                playSfx("click");
+                setShowAuthModalMode("signup");
+              }}
+            />
           )}
 
           <div className="text-center space-y-3">
