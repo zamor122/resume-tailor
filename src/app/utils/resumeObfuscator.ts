@@ -141,30 +141,56 @@ function findDifferences(original: string, tailored: string): Array<{
   const originalLower = original.toLowerCase();
   const tailoredLower = tailored.toLowerCase();
   
-  // Find new paragraphs/sections
+  // Find new paragraphs/sections (skipping oversized blocks or ranges already covered by sentence diffs)
   const tailoredParagraphs = tailored.split(/\n\n+/);
+  let paraSearchFrom = 0;
   for (const para of tailoredParagraphs) {
-    if (para.trim().length > 50) {
+    const trimmedLen = para.trim().length;
+    if (trimmedLen > 50 && trimmedLen <= 1500) {
       const paraLower = para.toLowerCase();
       // If this paragraph doesn't appear in original, it's new
       if (!originalLower.includes(paraLower.substring(0, Math.min(50, paraLower.length)))) {
-        const start = tailored.indexOf(para);
+        const start = tailored.indexOf(para, paraSearchFrom);
         if (start >= 0) {
-          differences.push({
-            start,
-            end: start + para.length,
-            originalText: '',
-            newText: para
-          });
+          const end = start + para.length;
+          paraSearchFrom = end;
+          const overlapsExisting = differences.some(
+            (d) => Math.max(d.start, start) < Math.min(d.end, end)
+          );
+          if (!overlapsExisting) {
+            differences.push({
+              start,
+              end,
+              originalText: '',
+              newText: para
+            });
+          }
         }
       }
     }
   }
   
-  // Sort by start position
+  // Sort by start position and discard any remaining overlapping ranges so indices never collide
   differences.sort((a, b) => a.start - b.start);
+  const nonOverlapping: typeof differences = [];
+  for (const diff of differences) {
+    const prev = nonOverlapping[nonOverlapping.length - 1];
+    if (!prev || diff.start >= prev.end) {
+      nonOverlapping.push(diff);
+    }
+  }
   
-  return differences;
+  return nonOverlapping;
+}
+
+function isValidFreeRevealText(text: string): boolean {
+  const trimmed = text.trim();
+  return (
+    trimmed.length >= 25 &&
+    trimmed.length <= 1500 &&
+    !trimmed.includes("improvementMetrics") &&
+    !trimmed.includes('"atsKeywordsMatched"')
+  );
 }
 
 /**
@@ -173,17 +199,19 @@ function findDifferences(original: string, tailored: string): Array<{
 function selectFreeReveal(
   contentMap: ContentMapEntry[],
   original: string,
-  tailored: string
+  _tailored: string,
+  matchedOriginals?: Map<ContentMapEntry, string>
 ): ObfuscationResult['freeReveal'] {
-  if (contentMap.length === 0) return null;
+  const candidates = contentMap.filter((entry) => isValidFreeRevealText(entry.realText));
+  if (candidates.length === 0) return null;
   
-  // Score each entry based on:
+  // Score each eligible entry based on:
   // 1. Length of improvement (longer = more impactful)
   // 2. Contains metrics/numbers
   // 3. Contains action verbs
   // 4. Position (earlier sections are more visible)
   
-  const scored = contentMap.map((entry, index) => {
+  const scored = candidates.map((entry, index) => {
     let score = 0;
     
     // Length bonus
@@ -194,14 +222,14 @@ function selectFreeReveal(
     if (hasMetrics) score += 3;
     
     // Action verbs bonus
-    const actionVerbs = ['led', 'managed', 'increased', 'improved', 'developed', 'created', 'achieved', 'delivered'];
+    const actionVerbs = ['led', 'managed', 'increased', 'improved', 'developed', 'created', 'achieved', 'delivered', 'resolved', 'directed', 'mentored'];
     const hasActionVerb = actionVerbs.some(verb => 
       entry.realText.toLowerCase().includes(verb)
     );
     if (hasActionVerb) score += 2;
     
     // Position bonus (earlier = better)
-    score += (contentMap.length - index) / contentMap.length;
+    score += (candidates.length - index) / candidates.length;
     
     return { entry, score };
   });
@@ -210,8 +238,11 @@ function selectFreeReveal(
   scored.sort((a, b) => b.score - a.score);
   const best = scored[0].entry;
   
-  // Extract the original text from the original resume at this position
-  const originalText = original.substring(best.position.start, best.position.end);
+  // Prefer the exact aligned original sentence when available
+  const matchedOrig = matchedOriginals?.get(best);
+  const originalText = matchedOrig && matchedOrig.trim().length > 0
+    ? matchedOrig
+    : original.substring(best.position.start, best.position.end);
   
   return {
     section: best.section,
@@ -234,6 +265,7 @@ export function obfuscateResume(
   // Build obfuscated resume and content map
   let obfuscatedResume = tailoredResume;
   const contentMap: ContentMapEntry[] = [];
+  const matchedOriginals = new Map<ContentMapEntry, string>();
   
   // Process differences in reverse order to maintain positions
   const sortedDiffs = [...differences].sort((a, b) => b.start - a.start);
@@ -253,45 +285,56 @@ export function obfuscateResume(
         obfuscatedResume.substring(diff.end);
       
       // Add to content map
-      contentMap.push({
+      const entry: ContentMapEntry = {
         obfuscatedText,
         realText: diff.newText,
         position: { start: diff.start, end: diff.start + obfuscatedText.length },
         section,
         isFreeReveal: false // Will be set later
-      });
+      };
+      contentMap.push(entry);
+      matchedOriginals.set(entry, diff.originalText);
     }
   }
   
-  // Select best section for free reveal
-  let freeReveal = selectFreeReveal(contentMap, originalResume, tailoredResume);
+  // Shift stored positions right by cumulative length delta caused by prior replacements earlier in string
+  // (ContentMap entries were pushed in reverse start order; convert to ascending start order with accurate offsets)
+  contentMap.sort((a, b) => a.position.start - b.position.start);
+  let cumulativeDelta = 0;
+  for (const entry of contentMap) {
+    const startAdjusted = entry.position.start + cumulativeDelta;
+    const origEntryLen = entry.realText.length;
+    const obfLen = entry.obfuscatedText.length;
+    entry.position = { start: startAdjusted, end: startAdjusted + obfLen };
+    cumulativeDelta += obfLen - origEntryLen;
+  }
 
-  // Sanitize: don't expose corrupted data (e.g. raw JSON) as free reveal
-  if (freeReveal) {
-    const text = freeReveal.improvedText;
-    if (
-      text.length > 2000 ||
-      text.includes("improvementMetrics") ||
-      text.includes('"atsKeywordsMatched"')
-    ) {
-      freeReveal = null;
-    }
-  }
-  
-  // Mark free reveal in content map
+  // Select best section for free reveal
+  const freeReveal = selectFreeReveal(contentMap, originalResume, tailoredResume, matchedOriginals);
+
+  // Mark free reveal in content map and restore realText at its exact adjusted position
   if (freeReveal) {
     const freeRevealEntry = contentMap.find(
       entry => entry.position.start === freeReveal.position.start
     );
     if (freeRevealEntry) {
       freeRevealEntry.isFreeReveal = true;
-      // Replace obfuscated text with real text for free reveal
+      const revealDelta = freeRevealEntry.realText.length - freeRevealEntry.obfuscatedText.length;
       obfuscatedResume = 
         obfuscatedResume.substring(0, freeRevealEntry.position.start) +
         freeRevealEntry.realText +
         obfuscatedResume.substring(freeRevealEntry.position.end);
-      // Update position
-      freeRevealEntry.position.end = freeRevealEntry.position.start + freeRevealEntry.realText.length;
+      const revealedStart = freeRevealEntry.position.start;
+      freeRevealEntry.position.end = revealedStart + freeRevealEntry.realText.length;
+      freeReveal.position = { ...freeRevealEntry.position };
+
+      // Shift all subsequent contentMap entry positions so revealContent stays exact
+      for (const later of contentMap) {
+        if (later !== freeRevealEntry && later.position.start > revealedStart) {
+          later.position.start += revealDelta;
+          later.position.end += revealDelta;
+        }
+      }
     }
   }
   
