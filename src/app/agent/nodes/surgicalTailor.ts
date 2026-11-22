@@ -164,6 +164,11 @@ export async function surgicalTailorNode(
           : extractSpecificBullets(exp.description, bulletIndices);
 
       const inputBulletsList = getBulletsList(bulletsText);
+      if (inputBulletsList.length === 0) {
+        console.log(`[surgicalTailor] Skipping Job ${jobIndex} (${exp.company}): 0 extractable bullets`);
+        return null;
+      }
+
       const auditTier = bulletPlan?.jobAudits?.find((a) => a.jobIndex === jobIndex)?.recencyTier;
       const resolvedRecencyTier = recencyTier ?? auditTier;
       console.log(`[surgicalTailor] Job ${jobIndex} (${exp.company}) dispatched with ${inputBulletsList.length} bullets:`, {
@@ -236,6 +241,7 @@ export async function surgicalTailorNode(
 
   let tailoredSummary: string | undefined = resumeAST?.summary?.trim() || undefined;
   const tailoredBulletsByJob: string[] = experience.map((e) => e.description);
+  const authenticBackupCandidates: Array<{ sug: ResumeSuggestion; jobIndex: number; localIdx: number }> = [];
 
   for (const r of results) {
     const exp = experience[r.index];
@@ -291,6 +297,19 @@ export async function surgicalTailorNode(
             isBetterThanOriginal: judge.isBetterThanOriginal,
             overallImpactScore: judge.overallImpactScore,
           });
+          if (judge.isAuthentic !== false) {
+            authenticBackupCandidates.push({
+              sug: {
+                ...sug,
+                id: `sug-job-${r.index}-bullet-${bulletIdx}`,
+                status: "accepted",
+                reason: planItem.reason || sug.reason,
+                jevJudge: judge,
+              },
+              jobIndex: r.index,
+              localIdx: bulletIdx,
+            });
+          }
           if (origBullets[bulletIdx] !== undefined) {
             sanitizedBullets[bulletIdx] = origBullets[bulletIdx];
           }
@@ -358,6 +377,20 @@ export async function surgicalTailorNode(
             isBetterThanOriginal: judge.isBetterThanOriginal,
             overallImpactScore: judge.overallImpactScore,
           });
+          if (judge.isAuthentic !== false) {
+            authenticBackupCandidates.push({
+              sug: {
+                ...sug,
+                id: `sug-job-${r.index}-bullet-${originalIdx}`,
+                bulletIndex: originalIdx,
+                status: "accepted",
+                reason: planItem.reason || sug.reason,
+                jevJudge: judge,
+              },
+              jobIndex: r.index,
+              localIdx: originalIdx,
+            });
+          }
           if (origBullets[localIdx] !== undefined) {
             sanitizedBullets[localIdx] = origBullets[localIdx];
           }
@@ -457,6 +490,83 @@ export async function surgicalTailorNode(
     }
   }
 
+  // Rescue guarantee: never return 0 suggestions on a resume that has improvable content.
+  // 1) Restore authentic Phase-1 candidates if strict scoring dropped every single suggestion.
+  if (suggestions.length === 0 && authenticBackupCandidates.length > 0) {
+    const backups = authenticBackupCandidates.slice(0, 3);
+    console.log(`[surgicalTailor] 🛟 Rescue pass restoring ${backups.length} authentic suggestion(s) so candidate always receives upgrades`);
+    for (const item of backups) {
+      suggestions.push(item.sug);
+      if (tailoredBulletsByJob[item.jobIndex] !== undefined) {
+        tailoredBulletsByJob[item.jobIndex] = spliceRewrittenBullets(
+          tailoredBulletsByJob[item.jobIndex],
+          item.sug.suggestedText,
+          [item.localIdx]
+        );
+      }
+    }
+  }
+
+  // 2) If planned tailoring produced 0 suggestions (e.g. completely unstructured raw resume),
+  // extract top achievement sentences from rawResume and tailor them cleanly.
+  if (
+    suggestions.length === 0 &&
+    (jobChanges.length > 0 || summaryPlanned) &&
+    rawResume &&
+    rawResume.trim().length > 80
+  ) {
+    const rawLines = rawResume
+      .split(/\r?\n|(?<=[.!?])\s+(?=[A-Z])/)
+      .map((s) => s.replace(/^[•\-*\s]+/, "").trim())
+      .filter((s) => s.length >= 35 && s.length <= 260 && !/@/.test(s) && !/^https?:\/\//i.test(s) && !/^EDUCATION\b/i.test(s));
+    const fallbackSentences = rawLines.slice(0, 3);
+    if (fallbackSentences.length > 0) {
+      try {
+        console.log(`[surgicalTailor] 🛟 Rescue pass tailoring ${fallbackSentences.length} raw sentences from unstructured resume`);
+        const rescueRes = await generateWithFallback(
+          getExperienceBulletsPrompt({
+            jobTitle: state.jobTitle || experience[0]?.title || "Candidate Role",
+            company: experience[0]?.company || "Experience",
+            dates: experience[0]?.dates || null,
+            bulletsText: fallbackSentences.map((s) => `• ${s}`).join("\n"),
+            jobDescription: jdSnippet,
+            preferences,
+            userRequestedKeywords: sortedMissingKeywords.slice(0, 6),
+            seniorityTier: state.seniorityTier,
+            careerArc: state.careerArc,
+            targetCompany,
+            recencyTier: "recent_deep",
+            domainTaxonomy,
+            jobKnowledge: state.jobKnowledge,
+            userSuppliedFacts: state.userSuppliedFacts,
+          }),
+          resolveStepModel("tailor", state.modelKey),
+          { maxTokens: 1200, temperature: 0.2 },
+          state.sessionApiKeys
+        );
+        const cleanRescueText = stripModelThinking(rescueRes.text).trim();
+        const { suggestions: rescueParsed } = parseChunkBulletsResponse({
+          llmText: cleanRescueText,
+          origBullets: fallbackSentences,
+          sectionGroupId: "section-exp-0",
+          sectionGroupTitle: experience[0] ? `${experience[0].company} – ${experience[0].title}` : "Experience Optimization",
+          jobIndex: 0,
+          sortedMissingKeywords,
+        });
+        const rescueSanitized = sanitizePhaseOneSuggestions(rescueParsed, vettedEmployers, targetCompany);
+        for (const sug of rescueSanitized) {
+          suggestions.push({
+            ...sug,
+            status: "accepted",
+            reason: sug.reason || "Aligned achievement wording with target job description keywords",
+          });
+        }
+      } catch (rescueErr) {
+        console.warn("[surgicalTailor] Rescue pass failed:", rescueErr);
+      }
+    }
+  }
+
   // Group suggestions into bottom-to-top section groups
   const sectionGroups = groupSuggestionsBySection(suggestions, resumeAST, rawResume);
 
@@ -513,6 +623,18 @@ function getBulletsList(text: string): string[] {
     .filter(Boolean);
   const bulletLines = lines.filter(isBullet);
   if (bulletLines.length > 0) return bulletLines;
+
+  // Handle un-bulleted paragraph prose pasted into a single job description
+  if (lines.length === 1 && lines[0].length > 160) {
+    const sentences = lines[0]
+      .split(/(?<=[.!?])\s+(?=[A-Z])/)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 20);
+    if (sentences.length >= 2) {
+      return sentences;
+    }
+  }
+
   return lines;
 }
 

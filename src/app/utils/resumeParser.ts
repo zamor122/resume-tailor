@@ -65,11 +65,35 @@ export function normalizeResumeText(raw: string): string {
     "\n## Skills\n"
   );
 
+  // 2b. Separate inline ALL-CAPS section headers glued inside flattened single-line resumes
+  // Case-sensitive so normal lowercase prose words ("experience in...", "summary of...") never split.
+  text = text.replace(
+    /(?:^|\s)(?:PROFESSIONAL SUMMARY|EXECUTIVE SUMMARY|CAREER SUMMARY|PROFILE SUMMARY)\s+/g,
+    "\n\n## Summary\n"
+  );
+  text = text.replace(
+    /(?:^|\s)(?:CORE COMPETENCIES|TECHNICAL SKILLS|AREAS OF EXPERTISE|SKILLS & TECHNOLOGIES|TECHNICAL PROFICIENCIES)\s+/g,
+    "\n\n## Skills\n"
+  );
+  text = text.replace(
+    /(?:^|\s)(?:PROFESSIONAL EXPERIENCE|WORK EXPERIENCE|EMPLOYMENT HISTORY|RELEVANT EXPERIENCE)\s+/g,
+    "\n\n## Experience\n"
+  );
+  text = text.replace(
+    /(?:^|\s)(?:EDUCATION|ACADEMIC BACKGROUND)\s+/g,
+    "\n\n## Education\n"
+  );
+
   // 3. Separate Job Headers with Date Ranges onto their own lines
   const monthPattern = "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
-  const dateRangePattern = new RegExp(
-    `(\\|?\\s*${monthPattern}\\.?\\s+\\d{4}\\s*[-–—]\\s*(?:Present|Current|${monthPattern}\\.?\\s+\\d{4}|\\d{4}))`,
-    "gi"
+  const dateRangeSource = `\\|?\\s*${monthPattern}\\.?\\s+\\d{4}\\s*[-–—]\\s*(?:Present|Current|${monthPattern}\\.?\\s+\\d{4}|\\d{4})`;
+  const dateRangePattern = new RegExp(`(${dateRangeSource})`, "gi");
+
+  // Break any glued job description immediately AFTER each date range onto the next line
+  // so multi-job single-line resumes expose each date header separately.
+  text = text.replace(
+    new RegExp(`(${dateRangeSource})\\s+(?=\\S)`, "gi"),
+    "$1\n"
   );
 
   const rawLines = text.split("\n");
@@ -85,7 +109,7 @@ export function normalizeResumeText(raw: string): string {
       const dateIndex = trimmed.lastIndexOf(dateStr);
       const lineBeforeDate = trimmed.slice(0, dateIndex).trim();
 
-      const splitPoint = lineBeforeDate.search(/(?<=[.!?])\s+(?=[A-Z0-9][A-Za-z0-9\s&|—–-]{2,60})/);
+      const splitPoint = lineBeforeDate.search(/(?<!\b(?:Inc|Corp|Ltd|Co|Jr|Sr|Mr|Ms|Dr|St))(?<=[.!?])\s+(?=[A-Z0-9][^\n!?]{2,110}$)/);
       if (splitPoint !== -1) {
         const precedingBullet = lineBeforeDate.slice(0, splitPoint).trim();
         const jobHeader = lineBeforeDate.slice(splitPoint).trim() + " " + trimmed.slice(dateIndex).trim();
@@ -97,7 +121,51 @@ export function normalizeResumeText(raw: string): string {
     normalizedLines.push(trimmed);
   }
 
-  return normalizedLines.join("\n");
+  // Split un-bulleted long prose blocks that follow a job header line inside Experience
+  const finalLines: string[] = [];
+  let inExpBlock = false;
+  let sawJobHeader = false;
+  for (const line of normalizedLines) {
+    if (/^##\s+Experience/i.test(line)) {
+      inExpBlock = true;
+      sawJobHeader = false;
+      finalLines.push(line);
+      continue;
+    }
+    if (/^##\s+/i.test(line)) {
+      inExpBlock = false;
+      sawJobHeader = false;
+      finalLines.push(line);
+      continue;
+    }
+    if (dateRangePattern.test(line)) {
+      dateRangePattern.lastIndex = 0;
+      sawJobHeader = true;
+      finalLines.push(line);
+      continue;
+    }
+    dateRangePattern.lastIndex = 0;
+
+    if (
+      (inExpBlock || sawJobHeader) &&
+      !/^[•\-*]/.test(line) &&
+      line.length > 160
+    ) {
+      const sentences = line
+        .split(/(?<=[.!?])\s+(?=[A-Z])/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (sentences.length >= 2) {
+        for (const s of sentences) {
+          finalLines.push(`• ${s}`);
+        }
+        continue;
+      }
+    }
+    finalLines.push(line);
+  }
+
+  return finalLines.join("\n");
 }
 
 export function parseResume(resumeText: string): ParsedResume {
@@ -303,7 +371,7 @@ export function parseResume(resumeText: string): ParsedResume {
         title = parts.slice(1).join(" - ");
       } else if (beforeDate.includes(" - ") || beforeDate.includes(" — ") || beforeDate.includes(" – ")) {
         const parts = beforeDate.split(/\s+[-—–]\s+/).map(p => p.trim());
-        const isPart2Title = /(Engineer|Developer|Architect|Manager|Director|Lead|Consultant|Analyst|Designer|Admin|Specialist)\b/i.test(parts[1] || "");
+        const isPart2Title = /(Engineer|Developer|Architect|Manager|Director|Lead|Consultant|Analyst|Designer|Admin|Specialist|Associate|Representative|Assistant|Coordinator|Supervisor|Technician|Nurse|Advisor|Officer|Executive|Administrator)\b/i.test(parts[1] || "");
         if (isPart2Title) {
           company = parts[0];
           title = parts.slice(1).join(" - ");
@@ -360,7 +428,7 @@ export function parseResume(resumeText: string): ParsedResume {
 
       if (dashMatch) {
         if (currentExp) experience.push(currentExp);
-        const isPart2Title = /(Engineer|Developer|Architect|Manager|Director|Lead|Consultant|Analyst|Designer|Admin|Specialist)\b/i.test(dashMatch[2] || "");
+        const isPart2Title = /(Engineer|Developer|Architect|Manager|Director|Lead|Consultant|Analyst|Designer|Admin|Specialist|Associate|Representative|Assistant|Coordinator|Supervisor|Technician|Nurse|Advisor|Officer|Executive|Administrator)\b/i.test(dashMatch[2] || "");
         const comp = isPart2Title ? dashMatch[1].trim() : dashMatch[2].trim();
         const titl = isPart2Title ? dashMatch[2].trim() : dashMatch[1].trim();
 

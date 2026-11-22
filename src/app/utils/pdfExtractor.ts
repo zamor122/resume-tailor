@@ -27,6 +27,74 @@ export interface PDFExtractionResult {
   error?: string;
 }
 
+export interface PDFTextItem {
+  str?: string;
+  hasEOL?: boolean;
+  transform?: number[];
+}
+
+/**
+ * Reconstructs real lines and paragraph breaks from pdfjs-dist TextContent items
+ * using vertical Y-baseline deltas and `hasEOL` flags so bullet points, section
+ * headers, and job dates are preserved instead of flattened into one line.
+ */
+export function reconstructPdfPageLines(items: PDFTextItem[]): string {
+  if (!Array.isArray(items) || items.length === 0) return "";
+
+  let output = "";
+  let lastY: number | null = null;
+  let prevEndedWithEOL = false;
+
+  for (const item of items) {
+    const rawStr = typeof item?.str === "string" ? item.str : "";
+    const hasCoords = Array.isArray(item?.transform) && typeof item.transform[5] === "number";
+    const y = hasCoords ? (item.transform as number[])[5] : null;
+
+    if (!rawStr) {
+      if (item?.hasEOL) {
+        prevEndedWithEOL = true;
+      }
+      continue;
+    }
+
+    if (lastY !== null && y !== null) {
+      const dy = Math.abs(lastY - y);
+      if (dy > 16) {
+        output += "\n\n";
+      } else if (dy > 3.5 || prevEndedWithEOL) {
+        output += "\n";
+      } else if (
+        output.length > 0 &&
+        !/[\s\n]$/.test(output) &&
+        !/^\s/.test(rawStr)
+      ) {
+        output += " ";
+      }
+    } else if (prevEndedWithEOL && output.length > 0 && !output.endsWith("\n")) {
+      output += "\n";
+    } else if (
+      output.length > 0 &&
+      !/[\s\n]$/.test(output) &&
+      !/^\s/.test(rawStr)
+    ) {
+      output += " ";
+    }
+
+    output += rawStr;
+    if (y !== null) {
+      lastY = y;
+    }
+    prevEndedWithEOL = Boolean(item?.hasEOL);
+  }
+
+  return output
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /**
  * Extract text from a PDF file
  * @param file - The PDF file to extract text from
@@ -45,25 +113,21 @@ export async function extractTextFromPDF(file: File): Promise<PDFExtractionResul
     const pdf = await loadingTask.promise;
     
     const pageCount = pdf.numPages;
-    let fullText = '';
+    const pageTexts: string[] = [];
     
-    // Extract text from each page
+    // Extract text from each page while preserving line breaks
     for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
-      
-      // Combine all text items from the page
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-      
-      fullText += pageText + '\n\n';
+      const pageText = reconstructPdfPageLines((textContent?.items || []) as PDFTextItem[]);
+      if (pageText) {
+        pageTexts.push(pageText);
+      }
     }
     
-    // Clean up the text (remove excessive whitespace, normalize line breaks)
-    const cleanedText = fullText
-      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-      .replace(/\n\s*\n/g, '\n\n') // Normalize line breaks
+    const cleanedText = pageTexts
+      .join("\n\n")
+      .replace(/\n{3,}/g, "\n\n")
       .trim();
     
     return {

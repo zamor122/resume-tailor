@@ -122,4 +122,31 @@ Jan 2022 – Present
     expect(parsed.experience.length).toBe(1);
     expect(parsed.experience[0].company).toContain("Acme Corp");
   });
+
+  it("extracts all jobs, clean titles/companies, and achievement bullets from flattened single-line PDF pastes with ALL-CAPS headers", () => {
+    const flattenedPdfResume =
+      "JORDAN M. TAYLOR [City, State, Zip] • [Phone Number] • [Email Address] • [LinkedIn Profile URL] " +
+      "PROFESSIONAL SUMMARY Dedicated Customer Service Professional with over 4 years of experience resolving escalations and coaching associates. " +
+      "CORE COMPETENCIES Software: Zendesk, Salesforce, Intercom " +
+      "PROFESSIONAL EXPERIENCE Senior Customer Support Associate — Apex Retail Solutions June 2023 – Present " +
+      "Handle top 10% of escalated customer inquiries, maintaining a 94% satisfaction retention rate. " +
+      "Collaborate with leadership to update internal knowledge base articles, reducing repeat tickets by 12%. " +
+      "Customer Service Representative — Vantage Consumer Goods August 2021 – May 2023 " +
+      "Managed 65+ inbound tickets daily across chat, email, and phone channels. " +
+      "Client Support Assistant (Part-Time / Contract) — Metro Media Group January 2021 – July 2021 " +
+      "Processed database records and billing updates under strict deadlines. " +
+      "EDUCATION Bachelor of Arts in Communication Studies Graduated May 2020";
+
+    const parsed = parseResume(flattenedPdfResume);
+
+    expect(parsed.summary).toContain("Dedicated Customer Service Professional");
+    expect(parsed.experience).toHaveLength(3);
+    expect(parsed.experience[0].company).toBe("Apex Retail Solutions");
+    expect(parsed.experience[0].title).toBe("Senior Customer Support Associate");
+    expect(parsed.experience[0].description).toContain("94% satisfaction retention rate");
+    expect(parsed.experience[1].company).toBe("Vantage Consumer Goods");
+    expect(parsed.experience[1].title).toBe("Customer Service Representative");
+    expect(parsed.experience[2].company).toBe("Metro Media Group");
+    expect(parsed.experience[2].title).toBe("Client Support Assistant (Part-Time / Contract)");
+  });
 });
