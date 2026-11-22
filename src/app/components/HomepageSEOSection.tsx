@@ -12,7 +12,6 @@ export default function HomepageSEOSection() {
     <section
       id="about-resume-tailoring"
       className="py-12 md:py-16 border-t-2 border-[#1C2028] mt-12 md:mt-16"
-      data-parallax="0.03"
     >
       <div className="max-w-3xl mx-auto px-4 space-y-10 text-gray-800 dark:text-gray-300">
         <div className="p-6 rounded-2xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028]">
