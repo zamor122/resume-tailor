@@ -1,5 +1,5 @@
 import React from "react";
-import { TIME_BASED_TIERS, FREE_RESUME_LIMIT } from "@/app/config/pricing";
+import { TIME_BASED_TIERS, FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from "@/app/config/pricing";
 
 /**
  * Deep, honest comparison content for the /alternatives/* pages.
@@ -559,7 +559,7 @@ export default function AlternativeDeepDive({
         <p className="leading-relaxed">
           {data.pricingFact} By contrast, AI Resume Tailor charges a one-time $
           {entryPrice} for a pass — it never auto-renews, so there is nothing to
-          cancel. Your first {FREE_RESUME_LIMIT} tailored resumes are free.
+          cancel. {FREE_RESUME_LIMIT > 0 ? `Your first ${FREE_RESUME_LIMIT} tailored resumes are free.` : `Your first ${FREE_AUDIT_LIMIT} ATS audits & previews are free.`}
         </p>
       </section>
 

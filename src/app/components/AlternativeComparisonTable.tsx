@@ -1,5 +1,5 @@
 import React from "react";
-import { TIME_BASED_TIERS, FREE_RESUME_LIMIT } from "@/app/config/pricing";
+import { TIME_BASED_TIERS, FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from "@/app/config/pricing";
 import Breadcrumbs from "./Breadcrumbs";
 import AlternativeFaq from "./AlternativeFaq";
 import AlternativeDeepDive from "./AlternativeDeepDive";
@@ -56,7 +56,9 @@ export default function AlternativeComparisonTable({
       ours: "Yes — free, no card",
     },
     {
-      feature: `First ${FREE_RESUME_LIMIT === 1 ? "resume" : `${FREE_RESUME_LIMIT} resumes`} free`,
+      feature: FREE_RESUME_LIMIT > 0
+        ? `First ${FREE_RESUME_LIMIT === 1 ? "resume" : `${FREE_RESUME_LIMIT} resumes`} free`
+        : `${FREE_AUDIT_LIMIT} free ATS audits & diff previews`,
       competitor: "—",
       ours: "Yes",
     },

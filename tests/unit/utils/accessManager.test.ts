@@ -213,36 +213,7 @@ describe('accessManager utilities', () => {
       expect(result).toEqual([]);
     });
 
-    it('should return first N resume IDs by created_at ascending', async () => {
-      (supabaseAdmin.from as any).mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue({
-          data: [
-            { id: 'resume-1' },
-            { id: 'resume-2' },
-            { id: 'resume-3' },
-          ],
-          error: null,
-        }),
-      });
-
-      const result = await getFreeResumeIdsServer('user-id');
-      expect(result).toEqual(['resume-1', 'resume-2', 'resume-3']);
-    });
-
-    it('should return empty array on error', async () => {
-      (supabaseAdmin.from as any).mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'DB error' },
-        }),
-      });
-
+    it('should return empty array when FREE_RESUME_LIMIT is 0', async () => {
       const result = await getFreeResumeIdsServer('user-id');
       expect(result).toEqual([]);
     });
@@ -254,33 +225,8 @@ describe('accessManager utilities', () => {
       expect(await isWithinFreeResumeLimitServer('resume-1', '')).toBe(false);
     });
 
-    it('should return true when resume is in free list', async () => {
-      (supabaseAdmin.from as any).mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue({
-          data: [{ id: 'resume-1' }, { id: 'resume-2' }, { id: 'resume-3' }],
-          error: null,
-        }),
-      });
-
-      const result = await isWithinFreeResumeLimitServer('resume-2', 'user-id');
-      expect(result).toBe(true);
-    });
-
-    it('should return false when resume is not in free list', async () => {
-      (supabaseAdmin.from as any).mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue({
-          data: [{ id: 'resume-1' }, { id: 'resume-2' }, { id: 'resume-3' }],
-          error: null,
-        }),
-      });
-
-      const result = await isWithinFreeResumeLimitServer('resume-99', 'user-id');
+    it('should return false when FREE_RESUME_LIMIT is 0 (no free full downloads)', async () => {
+      const result = await isWithinFreeResumeLimitServer('resume-1', 'user-id');
       expect(result).toBe(false);
     });
   });

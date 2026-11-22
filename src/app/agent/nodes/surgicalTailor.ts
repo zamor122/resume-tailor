@@ -393,6 +393,7 @@ export async function surgicalTailorNode(
       const res = await generateWithFallback(
         getHolisticSummaryPrompt({
           assembledResume,
+          originalSummary,
           jobDescription: jdSnippet,
           jobTitle: state.jobTitle,
           userRequestedKeywords: sortedMissingKeywords.slice(0, 5),

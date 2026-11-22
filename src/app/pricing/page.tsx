@@ -8,6 +8,7 @@ import TailorBot from "@/app/components/neo/TailorBot";
 import { useGamification } from "@/app/contexts/GamificationContext";
 import {
   FREE_RESUME_LIMIT,
+  FREE_AUDIT_LIMIT,
   TIME_BASED_TIERS,
   NON_SUBSCRIPTION_MESSAGE,
 } from "@/app/config/pricing";
@@ -126,7 +127,7 @@ export default function PricingPage() {
                 One-Time Access. <span className="bg-[#10B981] text-white px-2 py-0.5 neo-box-sm inline-block">Zero Traps.</span>
               </h1>
               <p className="text-sm sm:text-base text-gray-700 font-sans max-w-xl leading-relaxed">
-                Most resume builders quietly bill you $39/month until you notice. We never auto-renew. Your first {FREE_RESUME_LIMIT === 1 ? "resume tailor is" : `${FREE_RESUME_LIMIT} audits are`} 100% free forever, and paid passes are strictly one-time.
+                Most resume builders quietly bill you $39/month until you notice. We never auto-renew. Run {FREE_AUDIT_LIMIT} free ATS audits &amp; bullet previews before spending a dime, and paid passes are strictly one-time.
               </p>
             </div>
 
@@ -174,21 +175,25 @@ export default function PricingPage() {
 
                 <div className="mb-6 p-3.5 rounded-lg bg-[#FAF7F0] border-2 border-[#1C2028] space-y-1">
                   <p className="text-[#1C2028] font-mono font-bold text-sm">
-                    {FREE_RESUME_LIMIT} Free AI Tailors
+                    {FREE_RESUME_LIMIT > 0 ? `${FREE_RESUME_LIMIT} Free AI Tailors` : `${FREE_AUDIT_LIMIT} Free ATS Audits`}
                   </p>
                   <p className="text-gray-600 text-xs">
-                    Full keyword audit, Google X-Y-Z rewrites, and PDF exports.
+                    {FREE_RESUME_LIMIT > 0
+                      ? "Full keyword audit, Google X-Y-Z rewrites, and PDF exports."
+                      : "Full ATS match score, missing keyword gap, and sample bullet rewrites."}
                   </p>
                 </div>
 
                 <ul className="space-y-2.5 mb-8 text-xs font-mono text-gray-700">
                   <li className="flex items-center gap-2">
                     <span className="text-[#10B981] font-bold">✓</span>
-                    {FREE_RESUME_LIMIT} tailored resumes included
+                    {FREE_RESUME_LIMIT > 0
+                      ? `${FREE_RESUME_LIMIT} tailored resumes included`
+                      : `${FREE_AUDIT_LIMIT} free ATS audits & diff previews`}
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-[#10B981] font-bold">✓</span>
-                    PDF & Markdown export
+                    {FREE_RESUME_LIMIT > 0 ? "PDF & Markdown export" : "Sample rewritten bullets unlocked"}
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-[#10B981] font-bold">✓</span>
@@ -329,7 +334,11 @@ export default function PricingPage() {
         onClose={() => setShowAuthModal(false)}
         onSuccess={() => setShowAuthModal(false)}
         title="Sign in to get started"
-        description={`Create an account to unlock your ${FREE_RESUME_LIMIT} free resume tailor and purchase access when you need more.`}
+        description={
+          FREE_RESUME_LIMIT > 0
+            ? `Create an account to unlock your ${FREE_RESUME_LIMIT} free resume tailor and purchase access when you need more.`
+            : `Create a free account to run up to ${FREE_AUDIT_LIMIT} ATS audits & previews, then unlock full downloads with any one-time pass.`
+        }
       />
     </div>
   );
