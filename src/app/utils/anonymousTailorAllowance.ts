@@ -21,11 +21,18 @@ export async function checkAnonymousTailorAllowed(
   }
 
   try {
-    const { data: row } = await supabaseAdmin
+    const { data: row, error } = await supabaseAdmin
       .from("anonymous_tailors")
       .select("last_used_at")
       .eq("hashed_ip", hashedIP)
       .single();
+
+    // PGRST116 = 0 rows returned (brand-new IP); any other error must FAIL CLOSED
+    // so database/schema issues never silently grant unlimited anonymous runs.
+    if (error && error.code !== "PGRST116") {
+      console.error("[anonymousTailorAllowance] lookup error, failing closed:", error);
+      return { allowed: false, hashedIP };
+    }
 
     // Lifetime cap: once recorded, an anonymous IP must sign in to continue.
     const allowed = !row?.last_used_at;
@@ -41,12 +48,15 @@ export async function checkAnonymousTailorAllowed(
 export async function recordAnonymousTailorUsage(hashedIP: string): Promise<void> {
   if (!hashedIP || hashedIP === "unknown") return;
   try {
-    await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from("anonymous_tailors")
       .upsert(
         { hashed_ip: hashedIP, last_used_at: new Date().toISOString() },
         { onConflict: "hashed_ip" }
       );
+    if (error) {
+      console.error("[anonymousTailorAllowance] failed to record usage:", error);
+    }
   } catch (e) {
     console.error("[anonymousTailorAllowance] failed to record usage", e);
   }
