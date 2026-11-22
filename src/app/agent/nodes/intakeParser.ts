@@ -24,17 +24,46 @@ function repairPdfLigatures(text: string): string {
     .replace(/([a-z]{2,})\s+(ffi|ffl|fi|fl)\s+([a-z]{2,})/g, "$1$2$3");
 }
 
-function isSuspiciousSingleJobParse(
-  experience: Array<{ company?: string; description?: string }>,
+function shouldFallbackToLLMParser(
+  ast: {
+    summary?: string | null;
+    education?: unknown[];
+    experience: Array<{ company?: string; title?: string; description?: string }>;
+  },
   rawResumeLength: number
-): boolean {
-  if (experience.length !== 1) return false;
-  const only = experience[0];
-  const company = (only.company || "").trim();
-  const lines = (only.description || "").split("\n").filter((l) => l.trim().length > 0).length;
-  if (/^(work\s+)?experience$/i.test(company)) return true;
-  if (rawResumeLength > 1200 && lines >= 14) return true;
-  return false;
+): { fallback: boolean; reason: string } {
+  const experience = ast.experience || [];
+  if (experience.length === 0) {
+    return { fallback: true, reason: "found 0 jobs" };
+  }
+
+  // Collapsed header swallowed resume sections/bullets into company or title
+  if (experience.some((e) => (e.company || "").trim().length > 100 || (e.title || "").trim().length > 120)) {
+    return { fallback: true, reason: "overlong job header indicates collapsed text" };
+  }
+
+  // Experience entries extracted without any bullet/description content
+  const totalDescChars = experience.reduce((sum, e) => sum + (e.description || "").trim().length, 0);
+  if (rawResumeLength > 250 && totalDescChars < 40) {
+    return { fallback: true, reason: "extracted jobs have empty descriptions" };
+  }
+  if (rawResumeLength > 500 && totalDescChars < 120) {
+    return { fallback: true, reason: "insufficient experience description text" };
+  }
+
+  if (experience.length === 1) {
+    const only = experience[0];
+    const company = (only.company || "").trim();
+    const lines = (only.description || "").split("\n").filter((l) => l.trim().length > 0).length;
+    if (/^(work\s+)?experience$/i.test(company)) {
+      return { fallback: true, reason: "section header captured as company" };
+    }
+    if (rawResumeLength > 1200 && lines >= 14) {
+      return { fallback: true, reason: "collapsed multi-job resume" };
+    }
+  }
+
+  return { fallback: false, reason: "" };
 }
 
 export async function intakeParserNode(
@@ -50,9 +79,9 @@ export async function intakeParserNode(
       ? parseResume(cleanedResume)
       : { experience: [], sections: [], contactInfo: {}, education: [], skills: { technical: [], soft: [] }, summary: null };
 
-    const suspiciousCollapse = isSuspiciousSingleJobParse(deterministicAST.experience, cleanedResume.length);
+    const { fallback, reason } = shouldFallbackToLLMParser(deterministicAST, cleanedResume.length);
 
-    if (deterministicAST.experience.length > 0 && !suspiciousCollapse) {
+    if (!fallback) {
       console.log(`[intakeParser] ✔ Fast deterministic parser succeeded: ${deterministicAST.experience.length} jobs, summary: ${deterministicAST.summary ? "present" : "none"}, sections: ${deterministicAST.sections.join(", ")}`);
       return {
         rawResume: cleanedResume,
@@ -73,8 +102,8 @@ export async function intakeParserNode(
       };
     }
 
-    // 2. Gated Fallback: If deterministic parsing found 0 jobs or collapsed a multi-job resume, use bounded LLM parser
-    console.log(`[intakeParser] ⚡ Deterministic parser ${suspiciousCollapse ? "collapsed multi-job resume" : "found 0 jobs"}; gating to LLM resume parser...`);
+    // 2. Gated Fallback: If deterministic parsing found 0 jobs or collapsed/empty descriptions, use bounded LLM parser
+    console.log(`[intakeParser] ⚡ Deterministic parser ${reason}; gating to LLM resume parser...`);
     const resumeAST = await parseResumeWithLLM(
       cleanedResume,
       // Route through the runtime cost guard so the per-step model policy applies

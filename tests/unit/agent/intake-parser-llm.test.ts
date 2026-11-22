@@ -161,4 +161,37 @@ Jan 2021 – Present
     expect(sanitized.experience[0].title).toBe("Team Member");
     expect(sanitized.skills.technical).toEqual(["123", "TypeScript"]);
   });
+
+  it("falls back to LLM parser when deterministic extraction leaves empty experience descriptions on a long resume", async () => {
+    const collapsedUnbulletedResume =
+      "JORDAN TAYLOR Austin, TX " +
+      "Worked across multiple departments handling support queues, mentoring peers, optimizing workflows, resolving billing disputes, managing KPIs, and coordinating vendor escalations without standard bullet formatting. " +
+      "Support Specialist — Retail Co June 2023 – Present";
+
+    vi.mocked(generateWithFallback).mockResolvedValueOnce({
+      text: JSON.stringify({
+        contactInfo: { name: "Jordan Taylor", location: "Austin, TX" },
+        summary: "Support specialist with cross-functional escalation experience.",
+        experience: [
+          {
+            company: "Retail Co",
+            title: "Support Specialist",
+            dates: "June 2023 – Present",
+            description: "- Resolved billing disputes and managed support KPIs.",
+          },
+        ],
+        skills: { technical: ["CRM"], soft: ["Communication"] },
+        education: [],
+      }),
+      modelUsed: "mock-cline",
+    });
+
+    const result = await intakeParserNode({
+      ...baseState,
+      rawResume: collapsedUnbulletedResume,
+    });
+
+    expect(generateWithFallback).toHaveBeenCalledTimes(1);
+    expect(result.resumeAST?.experience[0].description).toContain("Resolved billing disputes");
+  });
 });

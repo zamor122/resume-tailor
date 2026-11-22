@@ -41,14 +41,14 @@ export default function ChangedAndWhy({ suggestions = [], className = "" }: Chan
   if (changes.length === 0) {
     return (
       <section className={`neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[5px_5px_0px_#1C2028] p-6 sm:p-8 rounded-2xl text-center space-y-3 ${className}`}>
-        <span className="neo-tag bg-[#10B981] text-white text-[10px] font-mono font-bold px-2 py-0.5 border border-[#1C2028]">
-          OPTIMIZATION COMPLETE
+        <span className="neo-tag bg-[#FF5722] text-white text-[10px] font-mono font-bold px-2 py-0.5 border border-[#1C2028]">
+          READY FOR RE-TAILOR
         </span>
         <h2 className="text-xl sm:text-2xl font-mono font-bold text-[#1C2028]">
           Here&rsquo;s What We Changed &amp; Why
         </h2>
         <p className="text-xs sm:text-sm font-mono text-gray-700 max-w-md mx-auto leading-relaxed">
-          Nothing needed changing — your wording already reads the way this target job posting does. You can still inspect and review your full resume below.
+          No bullet-level diffs were attached to this snapshot. Click <strong>Re-Tailor This Resume</strong> above or switch to <strong>Match &amp; Keywords</strong> to apply targeted keyword upgrades.
         </p>
       </section>
     );

@@ -172,4 +172,42 @@ describe("surgicalTailorNode with isolated chunk context and 1:1 JSON parser", (
     expect(result.suggestions).toHaveLength(0);
     expect(result.tailoredSummary).toBeUndefined();
   });
+
+  it("splits un-bulleted prose paragraphs into sentences and invokes rescue tailoring when planned jobs had empty descriptions", async () => {
+    vi.mocked(generateWithFallback).mockResolvedValueOnce({
+      text: JSON.stringify([
+        {
+          index: 0,
+          suggestedText: "Engineered distributed Go backend APIs handling 10k req/s with PostgreSQL.",
+          reason: "Added target architecture keywords",
+        },
+        {
+          index: 1,
+          suggestedText: "Scaled Kubernetes-hosted database clusters and automated deployment checks.",
+          reason: "Aligned infrastructure experience with job description",
+        },
+      ]),
+      modelUsed: "mock-model",
+    });
+
+    const proseState: AgentState = {
+      ...baseState,
+      resumeAST: {
+        ...baseState.resumeAST!,
+        experience: [
+          {
+            title: "Senior Engineer",
+            company: "Acme Corp",
+            dates: "2021 - Present",
+            description:
+              "Built backend APIs for core customer services using internal libraries and microservices. Maintained production database servers and handled routine uptime monitoring across deployments.",
+          },
+        ],
+      },
+    };
+
+    const result = await surgicalTailorNode(proseState);
+    expect(result.suggestions).toBeDefined();
+    expect(result.suggestions!.length).toBeGreaterThanOrEqual(1);
+  });
 });
