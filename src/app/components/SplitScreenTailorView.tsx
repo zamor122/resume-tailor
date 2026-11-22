@@ -14,6 +14,7 @@ import JobDescriptionInput from "./JobDescriptionInput";
 import TailorButton from "./TailorButton";
 import AuthGate from "./AuthGate";
 import AuthModal from "./AuthModal";
+import TierSelectionModal from "./TierSelectionModal";
 import ProgressStepper from "./ProgressStepper";
 import ResetConfirmationModal from "./ResetConfirmationModal";
 import FileDropZone from "./FileDropZone";
@@ -119,9 +120,14 @@ async function runHumanizeStream(params: {
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       const msg = body.message || body.error || "Failed to tailor resume";
-      const tailoredError = new Error(msg) as Error & { statusCode?: number; anonymousLimitExceeded?: boolean };
+      const tailoredError = new Error(msg) as Error & {
+        statusCode?: number;
+        anonymousLimitExceeded?: boolean;
+        requireUpgrade?: boolean;
+      };
       tailoredError.statusCode = response.status;
       if (body.anonymousLimitExceeded) tailoredError.anonymousLimitExceeded = true;
+      if (body.requireUpgrade) tailoredError.requireUpgrade = true;
       throw tailoredError;
     }
 
@@ -284,6 +290,8 @@ export default function SplitScreenTailorView() {
   const [promptPresetIds, setPromptPresetIds] = useState<string[]>([]);
   const [tailoringOptionsOpen, setTailoringOptionsOpen] = useState(false);
   const [showAuthModalMode, setShowAuthModalMode] = useState<"signup" | "signin" | null>(null);
+  const [showTierModal, setShowTierModal] = useState(false);
+  const [limitAction, setLimitAction] = useState<"upgrade" | "auth" | null>(null);
   const [preferences, setPreferences] = useState<TailoringPreferences>(DEFAULT_PREFERENCES);
   const [agentMessage, setAgentMessage] = useState<string>("");
   const [agentProgress, setAgentProgress] = useState<number | undefined>(undefined);
@@ -433,6 +441,7 @@ export default function SplitScreenTailorView() {
     // 1. Immediately indicate loading state on the button so 1 click suffices
     setLoading(true);
     setError(null);
+    setLimitAction(null);
     setResults(null);
     setHasStartedTailoring(true);
     setAgentMessage("Checking requirements...");
@@ -579,12 +588,21 @@ export default function SplitScreenTailorView() {
         );
       const statusCode = (err as Error & { statusCode?: number }).statusCode;
       const anonymousLimitExceeded = (err as Error & { anonymousLimitExceeded?: boolean }).anonymousLimitExceeded;
+      const requireUpgrade = (err as Error & { requireUpgrade?: boolean }).requireUpgrade;
 
       let userMessage = rawMessage;
       let errorType = "unknown";
-      if (statusCode === 401 && anonymousLimitExceeded) {
-        userMessage = "You've used your free preview. Create a free account to get 3 full tailors.";
+      if (statusCode === 402 || requireUpgrade) {
+        userMessage = rawMessage;
+        errorType = "upgrade_required";
+        setLimitAction("upgrade");
+        setShowTierModal(true);
+      } else if (statusCode === 401 && anonymousLimitExceeded) {
+        userMessage =
+          rawMessage ||
+          `You've used your 1 free preview. Create a free account for ${FREE_AUDIT_LIMIT} ATS audits & previews, or purchase a pass from $${ENTRY_PRICE} for full downloads.`;
         errorType = "anonymous_limit";
+        setLimitAction("auth");
         setShowAuthModalMode("signup");
       } else if (isAbort) {
         userMessage = "Request timed out. Please try again with a shorter resume or job description.";
@@ -696,7 +714,7 @@ export default function SplitScreenTailorView() {
           />
         )}
         {/* Retrofuturistic Hero Console */}
-        <section className="py-6 md:py-8" data-parallax="0.05">
+        <section className="py-6 md:py-8">
           <div className="neo-box bg-[#F4F1EA] p-6 md:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex-1 text-left">
               <div className="flex items-center gap-2 mb-3">
@@ -848,10 +866,10 @@ export default function SplitScreenTailorView() {
         </div>
 
         {/* Primary Action Button Container */}
-        <div className="input-container p-6 sm:p-8 neo-box bg-[#F4F1EA] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028]">
+        <div className="input-container p-6 sm:p-8 neo-box bg-[#F4F1EA] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] space-y-5">
           {/* Status chips */}
           {(resume.trim() || jobDescription.trim()) && (
-            <div className="flex items-center justify-center gap-3 text-xs sm:text-sm mb-4 font-mono">
+            <div className="flex items-center justify-center gap-3 text-xs sm:text-sm font-mono flex-wrap">
               <span className={`neo-tag px-3 py-1 text-xs font-bold ${
                 resume.trim().length >= 100 
                   ? "bg-[#10B981] text-white" 
@@ -872,14 +890,60 @@ export default function SplitScreenTailorView() {
           {error && (
             <div
               key={`action-error-${errorShakeKey}`}
-              className="animate-shake p-4 rounded-xl bg-[#FFE4E6] dark:bg-pink-900/20 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] text-[#9F1239] dark:text-pink-300 font-mono text-xs font-bold text-left flex items-start gap-2 max-w-xl mx-auto"
+              className="animate-shake p-4 rounded-xl bg-[#FFE4E6] dark:bg-pink-900/20 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] text-[#9F1239] dark:text-pink-300 font-mono text-xs font-bold text-left max-w-xl mx-auto space-y-3"
               role="alert"
             >
-              <span className="text-base leading-none">⚠️</span>
-              <div className="flex-1">
-                <span className="uppercase tracking-wide font-extrabold block mb-0.5">Notice</span>
-                <span>{error}</span>
+              <div className="flex items-start gap-2.5">
+                <span className="text-base leading-none shrink-0">⚠️</span>
+                <div className="flex-1 min-w-0">
+                  <span className="uppercase tracking-wide font-extrabold block mb-0.5">Notice</span>
+                  <span className="leading-relaxed block">{error}</span>
+                </div>
               </div>
+              {limitAction === "upgrade" && (
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSfx("click");
+                      setShowTierModal(true);
+                    }}
+                    className="neo-btn px-4 py-2 rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white font-mono font-extrabold text-xs uppercase tracking-wider border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+                  >
+                    ⚡ Unlock Pass From ${ENTRY_PRICE} →
+                  </button>
+                  <Link
+                    href="/pricing"
+                    className="px-3 py-2 rounded-lg bg-white text-[#1C2028] font-mono font-bold text-xs border border-[#1C2028] hover:bg-[#FAF7F0]"
+                  >
+                    Compare Plans
+                  </Link>
+                </div>
+              )}
+              {limitAction === "auth" && (
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSfx("click");
+                      setShowAuthModalMode("signup");
+                    }}
+                    className="neo-btn px-4 py-2 rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white font-mono font-extrabold text-xs uppercase tracking-wider border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+                  >
+                    ⚡ Create Free Account →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSfx("click");
+                      setShowTierModal(true);
+                    }}
+                    className="px-3 py-2 rounded-lg bg-white text-[#1C2028] font-mono font-bold text-xs border border-[#1C2028] hover:bg-[#FAF7F0]"
+                  >
+                    Passes From ${ENTRY_PRICE}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -957,7 +1021,7 @@ export default function SplitScreenTailorView() {
         </div>
 
         {/* How It Works - below the form */}
-        <section id="howItWorks" className="py-6 md:py-8" data-parallax="0.08">
+        <section id="howItWorks" className="py-6 md:py-8">
           <h2 className="text-xl md:text-2xl font-mono font-bold text-center text-[#1C2028] dark:text-[#FAF7F0] mb-6 md:mb-8 uppercase tracking-wide">
             How to Optimize Your Resume for ATS and Job Descriptions
           </h2>
@@ -979,15 +1043,6 @@ export default function SplitScreenTailorView() {
             </div>
           </div>
         </section>
-
-        {error && (
-          <div
-            key={errorShakeKey}
-            className="animate-shake p-4 rounded-xl bg-[#FFE4E6] dark:bg-pink-900/20 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] text-[#9F1239] dark:text-pink-300 font-mono text-xs font-bold" role="alert"
-          >
-            {error}
-          </div>
-        )}
 
         {(resume || jobDescription || results) && (
           <div className="flex justify-center">
@@ -1019,7 +1074,7 @@ export default function SplitScreenTailorView() {
 
         {/* Anonymous result: show tailored resume inline and CTA to sign up to save */}
         {!user && hasStartedTailoring && results && !results.resumeId && !loading && (
-          <div id="results-section" className="space-y-6 pt-4" data-parallax="0.05">
+          <div id="results-section" className="space-y-6 pt-4">
             <TailoredResumeOutput
               newResume={results.tailoredResume ?? ""}
               originalResume={resume}
@@ -1072,7 +1127,7 @@ export default function SplitScreenTailorView() {
 
         {/* Logged-in: results without resumeId (edge case) — show profile link */}
         {user && hasStartedTailoring && results && !results.resumeId && !loading && (
-          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 p-4 text-center text-emerald-800 dark:text-emerald-200" data-parallax="0.05">
+          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 p-4 text-center text-emerald-800 dark:text-emerald-200">
             <p className="font-medium">Resume saved.</p>
             <p className="text-sm mt-1">
               <Link
@@ -1124,6 +1179,11 @@ export default function SplitScreenTailorView() {
         jobTitle={detectedJobTitle ?? jobTitleFromHook ?? null}
         onComplete={handleElicitationComplete}
         onSkipAll={handleElicitationSkipAll}
+      />
+
+      <TierSelectionModal
+        isOpen={showTierModal}
+        onClose={() => setShowTierModal(false)}
       />
     </>
   );
