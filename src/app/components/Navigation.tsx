@@ -59,6 +59,8 @@ const navLinks = [
   { href: "/profile", label: "Profile" },
 ];
 
+import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from "../config/pricing";
+
 export default function Navigation() {
   const pathname = usePathname();
   const { user } = useAuth();
@@ -100,7 +102,7 @@ export default function Navigation() {
             <span>{sfxEnabled ? "🔊 SFX ON" : "🔇 MUTED"}</span>
           </button>
           <span className="neo-tag bg-[#FF5722] text-white px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold">
-            3 FREE
+            {FREE_RESUME_LIMIT > 0 ? `${FREE_RESUME_LIMIT} FREE` : `${FREE_AUDIT_LIMIT} FREE AUDITS`}
           </span>
         </div>
       </div>

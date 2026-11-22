@@ -11,12 +11,12 @@
 Use real anonymized resumes from `evals/golden-dataset.json` (e.g., Admin Assistant, Warehouse Supervisor, Software Engineer):
 - **Hook (0–3s):** *"Why your resume gets ghosted in 6 seconds (and how to fix it without paying $39/mo)."*
 - **Middle (3–25s):** Paste a messy resume + real job posting into `airesumetailor.com`. Show the before/after diff, missing ATS keywords, and clean PDF export.
-- **CTA (25–35s):** *"First tailor is free, passes start at $9 one-time—no subscription trap. Link in bio."*
+- **CTA (25–35s):** *"Run a free ATS audit & bullet preview first — full tailored PDF passes start at $9 one-time, zero subscription trap. Link in bio."*
 - Post daily to **TikTok, Instagram Reels, and YouTube Shorts**.
 
 ### 2. Daily Helpful Reddit Comments (20 min/day)
 Target: `r/resumes`, `r/jobs`, `r/layoffs`, `r/careerguidance`, `r/recruitinghell`.
-- **Rule:** Never spam links. Give 3 genuine, specific bullet rewrites to someone asking for resume feedback, then add at the bottom: *"I ran this through airesumetailor.com (first one's free, no subscription) to catch the missing keywords from the JD."*
+- **Rule:** Never spam links. Give 3 genuine, specific bullet rewrites to someone asking for resume feedback, then add at the bottom: *"I ran this through airesumetailor.com (free ATS audit & preview, no subscription) to catch the missing keywords from the JD."*
 - Aim for **5 genuinely helpful comments/day** = 150 comments in 30 days.
 
 ---
@@ -49,7 +49,7 @@ You already have `/alternatives/zety`, `/alternatives/jobscan`, `/alternatives/t
 
 - Check Umami analytics + Stripe dashboard: identify which channel drove the most signups and paid passes.
 - Cut the lowest-performing channel and 3x the top-performing one (usually TikTok/Reels or Reddit `r/resumes`).
-- Email every free user who tailored 1 resume with a 1-line check-in: *"How did the application go? Need to tailor for more roles this week? Grab a $9 Sprint Pass—no subscription."*
+- Email every free user who ran a preview/audit with a 1-line check-in: *"How did the application go? Ready to unlock full tailored PDFs for your job search? Grab a $9 Sprint Pass—no subscription."*
 
 ---
 

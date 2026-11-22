@@ -15,6 +15,22 @@ import UmamiVerifier from './components/UmamiVerifier';
 import UtmTracker from './components/UtmTracker';
 import Script from "next/script";
 import { RootStructuredData } from './components/StructuredData';
+import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from './config/pricing';
+
+const META_FREE_DESCRIPTION =
+  FREE_RESUME_LIMIT > 0
+    ? `Free AI-powered resume tailoring tool with real-time relevancy scoring. Sign in for free to get started—your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume is" : "resumes are"} free. Tailor your resume for each job so recruiters see the right match in seconds. No credit card required.`
+    : `AI-powered resume tailoring tool with real-time ATS relevancy scoring. Run ${FREE_AUDIT_LIMIT} free ATS audits & previews—sign in free, no credit card required. Full tailored PDFs from $9 one-time.`;
+
+const OG_FREE_DESCRIPTION =
+  FREE_RESUME_LIMIT > 0
+    ? `Free AI resume tool that tailors your resume for each job with real-time relevancy scoring. Your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume is" : "resumes are"} free. See exactly how your resume matches job descriptions. Get more interviews with perfectly tailored applications.`
+    : `AI resume tool that tailors your resume for each job with real-time ATS relevancy scoring. Includes ${FREE_AUDIT_LIMIT} free ATS audits & previews—no credit card required. One-time passes from $9.`;
+
+const TWITTER_FREE_DESCRIPTION =
+  FREE_RESUME_LIMIT > 0
+    ? `Free AI resume tool that tailors your resume for each job and job description. Your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume is" : "resumes are"} free. Get more interviews with perfectly tailored applications.`
+    : `AI resume tool with real-time ATS match scoring. Run ${FREE_AUDIT_LIMIT} free ATS audits & previews, then unlock full tailored PDFs from $9 one-time.`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,7 +48,7 @@ export const metadata: Metadata = {
     default: "AI Resume Tailor - Free Job Match Optimization with Relevancy Scoring",
     template: "%s | AI Resume Tailor"
   },
-  description: "Free AI-powered resume tailoring tool with real-time relevancy scoring. Sign in for free to get started—your first 3 tailored resumes are free. Tailor your resume for each job so recruiters see the right match in seconds. No credit card required.",
+  description: META_FREE_DESCRIPTION,
   keywords: [
     "resume tailoring",
     "job match optimizer",
@@ -76,7 +92,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "AI Resume Tailor - Free Job Match Optimization with Relevancy Scoring",
-    description: "Free AI resume tool that tailors your resume for each job with real-time relevancy scoring. Your first 3 tailored resumes are free. See exactly how your resume matches job descriptions. Get more interviews with perfectly tailored applications.",
+    description: OG_FREE_DESCRIPTION,
     type: "website",
     locale: "en_US",
     alternateLocale: ["en_GB", "en_CA", "en_AU"],
@@ -95,7 +111,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "AI Resume Tailor - Free Job Match Optimization Tool",
-    description: "Free AI resume tool that tailors your resume for each job and job description. Your first 3 tailored resumes are free. Get more interviews with perfectly tailored applications.",
+    description: TWITTER_FREE_DESCRIPTION,
     site: "@airesumetailor",
     images: ["/opengraph-image"],
   },
