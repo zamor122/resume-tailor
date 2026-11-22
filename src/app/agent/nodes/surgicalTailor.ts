@@ -14,6 +14,7 @@ import {
   isolatePreciseOriginalChange,
 } from "@/app/utils/resumeReassemble";
 import { parseChunkBulletsResponse } from "@/app/utils/chunkBulletParser";
+import { extractAddedMissingKeywords } from "@/app/utils/addedKeywordTracker";
 import { stripModelThinking } from "@/app/utils/stripModelThinking";
 import {
   diagnoseChunkWithJev,
@@ -564,6 +565,20 @@ export async function surgicalTailorNode(
       } catch (rescueErr) {
         console.warn("[surgicalTailor] Rescue pass failed:", rescueErr);
       }
+    }
+  }
+
+  // Annotate every suggestion with missing JD keywords that were NOT present in the user's
+  // original resume so the UI can highlight additions transparently and collect reactions.
+  for (const sug of suggestions) {
+    const added = extractAddedMissingKeywords(
+      rawResume || "",
+      sug.originalText,
+      sug.suggestedText,
+      [...(sug.keywords || []), ...sortedMissingKeywords]
+    );
+    if (added.length > 0) {
+      sug.addedMissingKeywords = added;
     }
   }
 

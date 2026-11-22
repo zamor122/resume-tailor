@@ -4,6 +4,12 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
 import { isSubstantiveChange, isolatePreciseOriginalChange } from "@/app/utils/resumeReassemble";
 import { useGamification } from "@/app/contexts/GamificationContext";
+import {
+  resolveSuggestionAddedKeywords,
+  persistSuggestionReaction,
+  type SuggestionReaction,
+} from "@/app/utils/addedKeywordTracker";
+import AddedKeywordReactionBanner from "./AddedKeywordReactionBanner";
 
 export interface ResumeSuggestionReviewerProps {
   originalResume?: string;
@@ -19,6 +25,9 @@ export interface ResumeSuggestionReviewerProps {
   jobTitle?: string;
   resumeAST?: any;
   resumeId?: string;
+  userId?: string;
+  accessToken?: string;
+  sessionId?: string | null;
   isUnlocked?: boolean;
   onUnlockRequest?: () => void;
   activeSuggestionId?: string | null;
@@ -44,6 +53,9 @@ export default function ResumeSuggestionReviewer({
   jobDescription,
   jobTitle,
   resumeAST,
+  userId,
+  accessToken,
+  sessionId,
   isUnlocked = true,
   onUnlockRequest,
   activeSuggestionId,
@@ -58,6 +70,7 @@ export default function ResumeSuggestionReviewer({
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>("");
+  const [localReactions, setLocalReactions] = useState<Record<string, SuggestionReaction>>({});
 
   // EXP Anti-Farm Guard: Each suggestion can only ever award EXP ONCE per review lifecycle
   const awardedSuggestionIdsRef = useRef<Set<string>>(new Set());
@@ -706,6 +719,37 @@ export default function ResumeSuggestionReviewer({
                 </p>
               </div>
             )}
+
+            {/* Missing JD Keyword Addition Awareness & Reaction */}
+            {(() => {
+              const addedKws = resolveSuggestionAddedKeywords(currentSuggestion, originalResume);
+              const activeReaction = localReactions[currentSuggestion.id] ?? currentSuggestion.reaction;
+              return (
+                <AddedKeywordReactionBanner
+                  addedKeywords={addedKws}
+                  reaction={activeReaction}
+                  onReact={(reaction) => {
+                    setLocalReactions((prev) => ({ ...prev, [currentSuggestion.id]: reaction }));
+                    if (onSuggestionsChange) {
+                      onSuggestionsChange(
+                        suggestions.map((s) =>
+                          s.id === currentSuggestion.id ? { ...s, reaction } : s
+                        )
+                      );
+                    }
+                    void persistSuggestionReaction({
+                      resumeId,
+                      suggestionId: currentSuggestion.id,
+                      reaction,
+                      addedKeywords: addedKws,
+                      userId,
+                      accessToken,
+                      sessionId,
+                    });
+                  }}
+                />
+              );
+            })()}
 
             {/* Action Controls for Active Change */}
             <div className="flex items-center justify-between gap-3 pt-3 border-t-2 border-[#1C2028]/15 flex-wrap">

@@ -1,12 +1,24 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import type { ResumeSuggestion } from "@/app/agent/state";
 import { isSubstantiveChange } from "@/app/utils/resumeReassemble";
 import { plainEnglishReason } from "@/app/utils/changeReason";
+import {
+  resolveSuggestionAddedKeywords,
+  persistSuggestionReaction,
+  type SuggestionReaction,
+} from "@/app/utils/addedKeywordTracker";
+import AddedKeywordReactionBanner from "./AddedKeywordReactionBanner";
 
 export interface ChangedAndWhyProps {
   suggestions?: ResumeSuggestion[];
+  originalResume?: string;
+  resumeId?: string;
+  userId?: string;
+  accessToken?: string;
+  sessionId?: string | null;
+  onSuggestionsChange?: (suggestions: ResumeSuggestion[]) => void;
   className?: string;
 }
 
@@ -16,16 +28,40 @@ interface ShownChange {
   before: string;
   after: string;
   reason: string | null;
+  addedMissingKeywords: string[];
+  reaction?: SuggestionReaction;
 }
 
 /**
  * "Here's what we changed, and why" — the primary result view.
  *
  * A two-column before/after of the user's own bullets with a one-line,
- * plain-English reason under each change. No percentages, no gauge, no jargon
- * (PRODUCT-DIRECTION.md §4.1 Screen 4 / §4.2).
+ * plain-English reason under each change, plus transparent awareness + reactions
+ * whenever missing JD keywords were newly added.
  */
-export default function ChangedAndWhy({ suggestions = [], className = "" }: ChangedAndWhyProps) {
+export default function ChangedAndWhy({
+  suggestions = [],
+  originalResume,
+  resumeId,
+  userId,
+  accessToken,
+  sessionId,
+  onSuggestionsChange,
+  className = "",
+}: ChangedAndWhyProps) {
+  const [localReactions, setLocalReactions] = useState<Record<string, SuggestionReaction>>({});
+
+  // Sync any persisted reactions from incoming suggestions
+  useEffect(() => {
+    const seeded: Record<string, SuggestionReaction> = {};
+    for (const s of suggestions || []) {
+      if (s.reaction) seeded[s.id] = s.reaction;
+    }
+    if (Object.keys(seeded).length > 0) {
+      setLocalReactions((prev) => ({ ...seeded, ...prev }));
+    }
+  }, [suggestions]);
+
   const changes = useMemo<ShownChange[]>(() => {
     return (suggestions || [])
       .filter((s) => isSubstantiveChange(s.originalText, s.suggestedText))
@@ -35,8 +71,28 @@ export default function ChangedAndWhy({ suggestions = [], className = "" }: Chan
         before: (s.originalText || "").trim(),
         after: (s.suggestedText || "").trim(),
         reason: plainEnglishReason(s),
+        addedMissingKeywords: resolveSuggestionAddedKeywords(s, originalResume),
+        reaction: localReactions[s.id] ?? s.reaction,
       }));
-  }, [suggestions]);
+  }, [suggestions, originalResume, localReactions]);
+
+  const handleReact = (change: ShownChange, reaction: SuggestionReaction) => {
+    setLocalReactions((prev) => ({ ...prev, [change.id]: reaction }));
+    if (onSuggestionsChange) {
+      onSuggestionsChange(
+        (suggestions || []).map((s) => (s.id === change.id ? { ...s, reaction } : s))
+      );
+    }
+    void persistSuggestionReaction({
+      resumeId,
+      suggestionId: change.id,
+      reaction,
+      addedKeywords: change.addedMissingKeywords,
+      userId,
+      accessToken,
+      sessionId,
+    });
+  };
 
   if (changes.length === 0) {
     return (
@@ -117,6 +173,11 @@ export default function ChangedAndWhy({ suggestions = [], className = "" }: Chan
                 </span>
               </div>
             )}
+            <AddedKeywordReactionBanner
+              addedKeywords={change.addedMissingKeywords}
+              reaction={change.reaction}
+              onReact={(reaction) => handleReact(change, reaction)}
+            />
           </li>
         ))}
       </ul>

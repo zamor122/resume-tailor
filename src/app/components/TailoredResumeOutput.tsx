@@ -31,6 +31,9 @@ interface TailoredResumeOutputProps {
   downloadJobTitle?: string;
   /** Resume ID for analytics. */
   resumeId?: string;
+  userId?: string;
+  accessToken?: string;
+  sessionId?: string | null;
   isUnlocked?: boolean;
   onUnlockRequest?: () => void;
   beforeScore?: number;
@@ -287,6 +290,9 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
   showDownload = true,
   downloadJobTitle,
   resumeId,
+  userId,
+  accessToken,
+  sessionId,
   isUnlocked = true,
   onUnlockRequest,
   beforeScore = 50,
@@ -742,6 +748,9 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
               onActiveSectionChange={handleActiveSectionChange}
               resumeAST={resumeAST}
               resumeId={resumeId}
+              userId={userId}
+              accessToken={accessToken}
+              sessionId={sessionId}
             />
           </div>
 
