@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import TailorBot from "./neo/TailorBot";
 import { useGamification } from "@/app/contexts/GamificationContext";
+import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from "@/app/config/pricing";
 
 interface BlogCtaBannerProps {
   title?: string;
@@ -15,7 +16,7 @@ interface BlogCtaBannerProps {
 export default function BlogCtaBanner({
   title = "Beat the ATS with TailorBot MK-II",
   subtitle = "Stop sending generic resumes into the void. Align your real experience to the job posting with Google's X-Y-Z formula in 15 seconds.",
-  buttonText = "⚡ TAILOR MY RESUME FREE",
+  buttonText = FREE_RESUME_LIMIT > 0 ? "⚡ TAILOR MY RESUME FREE" : "⚡ RUN FREE ATS AUDIT",
   className = "",
 }: BlogCtaBannerProps) {
   const { playSfx } = useGamification();
@@ -39,7 +40,7 @@ export default function BlogCtaBanner({
             🔥 ATS OPTIMIZER
           </span>
           <span className="neo-tag bg-[#10B981] text-white text-[10px] px-2 py-0.5 font-mono font-bold">
-            3 FREE AUDITS
+            {FREE_RESUME_LIMIT > 0 ? `${FREE_RESUME_LIMIT} FREE TAILORS` : `${FREE_AUDIT_LIMIT} FREE AUDITS`}
           </span>
         </div>
 

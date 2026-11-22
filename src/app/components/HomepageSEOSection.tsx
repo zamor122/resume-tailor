@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from "@/app/config/pricing";
 
 /**
  * Below-the-fold SEO content section for the homepage.
@@ -56,7 +57,11 @@ export default function HomepageSEOSection() {
                 Is this free?
               </h3>
               <p className="font-mono text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                Yes. You can try it right now with no login — paste your resume and the job posting to see your score and the keywords you are missing. Create a free account (Google or email, no credit card) to save it and get your first 3 tailored resumes free. After that, access is a one-time pass, and nothing auto-renews.
+                Yes. You can try it right now with no login — paste your resume and the job posting for 1 free preview to see your score and the keywords you are missing.{" "}
+                {FREE_RESUME_LIMIT > 0
+                  ? `Create a free account (Google or email, no credit card) to save it and get your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume" : "resumes"} free.`
+                  : `Create a free account (Google or email, no credit card) to save your progress and get up to ${FREE_AUDIT_LIMIT} free ATS audits & bullet previews.`}
+                {" "}After that, access is a one-time pass starting at $9, and nothing auto-renews.
               </p>
             </div>
             <div>

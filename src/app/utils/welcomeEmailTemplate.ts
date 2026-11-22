@@ -295,11 +295,11 @@ export function generateWelcomeEmailHtml({
                           <!--[if mso]>
                           <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${appUrl}" style="height:50px;v-text-anchor:middle;width:320px;" arcsize="12%" stroke="f" fillcolor="#FF5722">
                             <w:anchorlock/>
-                            <center style="color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:bold;">TAILOR YOUR FIRST RESUME FREE &rarr;</center>
+                            <center style="color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:bold;">RUN YOUR FREE ATS AUDIT &rarr;</center>
                           </v:roundrect>
                           <![endif]-->
                           <a href="${appUrl}" target="_blank" class="neo-btn" style="display: inline-block; background-color: #FF5722; color: #FFFFFF; font-family: 'Courier New', Courier, monospace; font-size: 14px; font-weight: 800; text-decoration: none; padding: 15px 30px; border: 2px solid #1C2028; border-radius: 8px; box-shadow: 3px 3px 0px #1C2028; text-transform: uppercase; letter-spacing: 0.5px;">
-                            ⚡ TAILOR YOUR FIRST RESUME FREE &rarr;
+                            ⚡ RUN YOUR FREE ATS AUDIT &rarr;
                           </a>
                         </td>
                       </tr>
@@ -389,7 +389,7 @@ HERE IS WHAT'S WAITING IN YOUR ACCOUNT 100% FREE:
 4. Change Studio & Recruiter Rationale:
    Review every change with clear plain-English reasons explaining why the ATS algorithm and hiring manager look for that specific wording.
 
-START TAILORING FOR FREE NOW:
+START YOUR FREE ATS AUDIT NOW:
 ${appUrl}
 
 Have an unusual career change or tricky transition, ${firstName}? Reply directly to this email—I personally read and reply to every message.

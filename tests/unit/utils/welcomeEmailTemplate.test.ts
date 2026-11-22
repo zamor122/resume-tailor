@@ -36,7 +36,7 @@ describe("welcomeEmailTemplate", () => {
     expect(html).toContain("Instant ATS Match Score &amp; Keyword Gap Diagnostic");
     expect(html).toContain("1 Free High-Impact Bullet Optimization");
     expect(html).toContain("Change Studio &amp; Recruiter Rationale");
-    expect(html).toContain("TAILOR YOUR FIRST RESUME FREE");
+    expect(html).toContain("RUN YOUR FREE ATS AUDIT");
     expect(html).toContain("Shayne Zamora");
     expect(html).toContain("Founder • AI Resume Tailor");
     // Verify valid HTML and styling
