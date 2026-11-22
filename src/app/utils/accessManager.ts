@@ -195,7 +195,7 @@ export { getUpgradeOptions } from '@/app/utils/upgradeCalculator';
  * Used for "first 3 free" - these resumes get full access without payment
  */
 export async function getFreeResumeIdsServer(userId: string): Promise<string[]> {
-  if (!userId) return [];
+  if (!userId || FREE_RESUME_LIMIT <= 0) return [];
   try {
     const { data, error } = await supabaseAdmin
       .from('resumes')

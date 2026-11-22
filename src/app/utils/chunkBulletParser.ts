@@ -72,6 +72,56 @@ function diversifyOpeningVerb(bulletText: string, usedVerbs: Set<string>): strin
  * Guarantees that every original bullet has a corresponding 1:1 suggestion/tailored output.
  * Strips model thinking tags and preambles, and enforces opening verb diversity.
  */
+function looksLikeJsonLine(line: string): boolean {
+  const t = line.trim();
+  return /^[\[\{\]\}]/.test(t) || /"(index|originalText|suggestedText|keywords)"\s*:/.test(t);
+}
+
+/** Extracts individual JSON bullet objects when the surrounding array is truncated or has trailing syntax glitches. */
+function salvageJsonBulletObjects(text: string): RawChunkBulletItem[] {
+  const recovered: RawChunkBulletItem[] = [];
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let start = -1;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+
+    if (ch === "{") {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (ch === "}") {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        try {
+          const obj = JSON.parse(text.slice(start, i + 1));
+          if (obj && typeof obj === "object" && ("suggestedText" in obj || "tailored" in obj || "originalText" in obj)) {
+            recovered.push(obj as RawChunkBulletItem);
+          }
+        } catch {
+          // Ignore malformed individual object
+        }
+        start = -1;
+      }
+    }
+  }
+  return recovered;
+}
+
 export function parseChunkBulletsResponse(params: {
   llmText: string;
   origBullets: string[];
@@ -116,7 +166,13 @@ export function parseChunkBulletsResponse(params: {
       console.log(`[chunkBulletParser] Extracted JSON array with ${parsedItems.length} items`);
     }
   } catch (e) {
-    console.log(`[chunkBulletParser] JSON extraction skipped (${e instanceof Error ? e.message : String(e)}), using line-based parsing`);
+    const salvaged = salvageJsonBulletObjects(cleanLlmText);
+    if (salvaged.length > 0) {
+      parsedItems = salvaged;
+      console.log(`[chunkBulletParser] Salvaged ${salvaged.length} JSON bullet object(s) from malformed array`);
+    } else {
+      console.log(`[chunkBulletParser] JSON extraction skipped (${e instanceof Error ? e.message : String(e)}), using line-based parsing`);
+    }
   }
 
   const suggestions: ResumeSuggestion[] = [];
@@ -206,16 +262,16 @@ export function parseChunkBulletsResponse(params: {
     return { suggestions, tailoredBullets };
   }
 
-  // 2. Fallback: Parse raw bullet lines
+  // 2. Fallback: Parse raw bullet lines (never treat raw JSON syntax as resume text)
   let rawNewBullets = getBulletsList(cleanLlmText)
     .map((l) => stripModelThinking(l).trim())
-    .filter((l) => l.length > 0 && !isThinkingOrPreamble(l));
+    .filter((l) => l.length > 0 && !isThinkingOrPreamble(l) && !looksLikeJsonLine(l));
 
   if (rawNewBullets.length === 0) {
     rawNewBullets = cleanLlmText
       .split(/\r?\n/)
       .map((l) => stripModelThinking(l).trim())
-      .filter((l) => l.length > 0 && !isThinkingOrPreamble(l))
+      .filter((l) => l.length > 0 && !isThinkingOrPreamble(l) && !looksLikeJsonLine(l))
       .map((l) => (l.startsWith("- ") ? l : `- ${l}`));
   }
 

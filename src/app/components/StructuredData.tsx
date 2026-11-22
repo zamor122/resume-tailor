@@ -5,6 +5,7 @@
 import {
   TIME_BASED_TIERS,
   FREE_RESUME_LIMIT,
+  FREE_AUDIT_LIMIT,
   NON_SUBSCRIPTION_MESSAGE,
 } from "@/app/config/pricing";
 
@@ -26,7 +27,9 @@ const softwareApplicationSchema = {
   operatingSystem: "Web",
   url: BASE_URL,
   description:
-    `Free AI-powered resume tailoring tool with LangGraph agent intelligence and real-time relevancy scoring. Tailor your resume for each job in under 4 seconds. Your first ${FREE_RESUME_LIMIT} tailored resume is free.`,
+    FREE_RESUME_LIMIT > 0
+      ? `Free AI-powered resume tailoring tool with LangGraph agent intelligence and real-time relevancy scoring. Tailor your resume for each job in under 4 seconds. Your first ${FREE_RESUME_LIMIT} tailored resume is free.`
+      : `AI-powered resume tailoring tool with real-time ATS relevancy scoring. Run ${FREE_AUDIT_LIMIT} free ATS audits & previews, then unlock full downloads starting at $9 one-time.`,
   offers: {
     "@type": "Offer",
     price: "0",
@@ -152,7 +155,10 @@ export function ProductOfferStructuredData() {
     "@context": "https://schema.org",
     "@type": "Product",
     name: "AI Resume Tailor",
-    description: `Web app that tailors an existing resume to a specific job description with ATS-friendly, human-sounding output. Your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume is" : "resumes are"} free. ${NON_SUBSCRIPTION_MESSAGE}`,
+    description:
+      FREE_RESUME_LIMIT > 0
+        ? `Web app that tailors an existing resume to a specific job description with ATS-friendly, human-sounding output. Your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume is" : "resumes are"} free. ${NON_SUBSCRIPTION_MESSAGE}`
+        : `Web app that tailors an existing resume to a specific job description with ATS-friendly, human-sounding output. Includes ${FREE_AUDIT_LIMIT} free ATS audits & previews. ${NON_SUBSCRIPTION_MESSAGE}`,
     url: `${BASE_URL}/pricing`,
     brand: {
       "@type": "Brand",

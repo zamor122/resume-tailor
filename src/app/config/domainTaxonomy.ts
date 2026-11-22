@@ -463,100 +463,111 @@ export const DOMAIN_TAXONOMIES: Record<IndustryCategory, DomainTaxonomyConfig> =
 /**
  * Detects the industry category for a job role using title and optional description context.
  */
-export function detectIndustryCategory(title?: string, description?: string): IndustryCategory {
-  const combined = `${title || ''} ${description || ''}`.toLowerCase();
+function matchCategoryInText(text: string): IndustryCategory {
+  if (!text) return 'general_business';
 
   // 1. Aviation & Aerospace
   if (
     /\b(pilot|first officer|captain|flight attendant|aviator|airframe|avionics|faa\b|cockpit|flight crew|aircraft|boeing|airbus|part 121)\b/.test(
-      combined
+      text
     )
   ) {
     return 'aviation_aerospace';
   }
 
-  // 2. Healthcare & Medicine
+  // 2. Technology & Engineering (checked before JD-wide healthcare/finance terms so software roles aren't hijacked by benefits copy)
   if (
-    /\b(nurse|nursing|physician|doctor|surgeon|hospitalist|clinical|medical assistant|triage|rn\b|bsn\b|patient care|hipaa|telemetry|clinic\b|oncology|pediatric|healthcare|phlebotomist|pharmacist)\b/.test(
-      combined
-    )
-  ) {
-    return 'healthcare';
-  }
-
-  // 3. Hospitality & Food Service
-  if (
-    /\b(waiter|waitress|server|bartender|barista|chef|line cook|restaurant|dining|sommelier|busser|catering|hospitality|food service|culinary|banquet|hostess|host\b)\b/.test(
-      combined
-    )
-  ) {
-    return 'hospitality_service';
-  }
-
-  // 4. Trades, Facilities & Maintenance
-  if (
-    /\b(janitor|custodian|custodial|cleaner|housekeeping|facilities|hvac|maintenance technician|plumber|electrician|carpenter|mechanic|sanitation|groundskeeping|repair technician)\b/.test(
-      combined
-    )
-  ) {
-    return 'trades_facilities';
-  }
-
-  // 5. Education & Athletic Coaching
-  if (
-    /\b(coach|coaching|teacher|teaching|professor|instructor|educator|varsity|curriculum|athletic|athletics|tutor|faculty|head coach|assistant coach|pedagogy|principal|classroom)\b/.test(
-      combined
-    )
-  ) {
-    return 'education_coaching';
-  }
-
-  // 6. Finance & Accounting
-  if (
-    /\b(accountant|accounting|auditor|audit\b|financial analyst|cpa\b|controller|bookkeeper|tax\b|treasury|actuary|underwriter|wealth management|banking|gaap|sox\b)\b/.test(
-      combined
-    )
-  ) {
-    return 'finance_accounting';
-  }
-
-  // 7. Legal & Compliance
-  if (
-    /\b(counsel|attorney|lawyer|paralegal|legal|litigation|compliance officer|contract manager|regulatory affairs|solicitor|juris doctor)\b/.test(
-      combined
-    )
-  ) {
-    return 'legal_compliance';
-  }
-
-  // 8. Sales & Marketing
-  if (
-    /\b(sales\b|account executive|bdr\b|sdr\b|business development|marketing|growth marketing|seo\b|sem\b|brand manager|public relations|quota|pipeline|copywriter)\b/.test(
-      combined
-    )
-  ) {
-    return 'sales_marketing';
-  }
-
-  // 9. Operations & Logistics
-  if (
-    /\b(supply chain|logistics|warehouse|procurement|inventory|fulfillment|shipping|distribution center|dispatcher|fleet|operations manager)\b/.test(
-      combined
-    )
-  ) {
-    return 'operations_logistics';
-  }
-
-  // 10. Technology & Engineering
-  if (
-    /\b(software|developer|devops|sre\b|frontend|backend|full stack|cloud engineer|data engineer|machine learning|firmware|cybersecurity|systems administrator|qa engineer|web developer)\b/.test(
-      combined
+    /\b(software|developer|devops|sre\b|frontend|backend|full[- ]?stack|cloud engineer|data engineer|machine learning|ai engineer|ml engineer|infrastructure engineer|firmware|cybersecurity|systems administrator|qa engineer|web developer)\b/.test(
+      text
     )
   ) {
     return 'technology_engineering';
   }
 
+  // 3. Healthcare & Medicine
+  if (
+    /\b(nurse|nursing|physician|doctor|surgeon|hospitalist|clinical|medical assistant|triage|rn\b|bsn\b|patient care|hipaa|telemetry|clinic\b|oncology|pediatric|healthcare|phlebotomist|pharmacist)\b/.test(
+      text
+    )
+  ) {
+    return 'healthcare';
+  }
+
+  // 4. Hospitality & Food Service
+  if (
+    /\b(waiter|waitress|server|bartender|barista|chef|line cook|restaurant|dining|sommelier|busser|catering|hospitality|food service|culinary|banquet|hostess|host\b)\b/.test(
+      text
+    )
+  ) {
+    return 'hospitality_service';
+  }
+
+  // 5. Trades, Facilities & Maintenance
+  if (
+    /\b(janitor|custodian|custodial|cleaner|housekeeping|facilities|hvac|maintenance technician|plumber|electrician|carpenter|mechanic|sanitation|groundskeeping|repair technician)\b/.test(
+      text
+    )
+  ) {
+    return 'trades_facilities';
+  }
+
+  // 6. Education & Athletic Coaching
+  if (
+    /\b(coach|coaching|teacher|teaching|professor|instructor|educator|varsity|curriculum|athletic|athletics|tutor|faculty|head coach|assistant coach|pedagogy|principal|classroom)\b/.test(
+      text
+    )
+  ) {
+    return 'education_coaching';
+  }
+
+  // 7. Finance & Accounting
+  if (
+    /\b(accountant|accounting|auditor|audit\b|financial analyst|cpa\b|controller|bookkeeper|tax\b|treasury|actuary|underwriter|wealth management|banking|gaap|sox\b)\b/.test(
+      text
+    )
+  ) {
+    return 'finance_accounting';
+  }
+
+  // 8. Legal & Compliance
+  if (
+    /\b(counsel|attorney|lawyer|paralegal|legal|litigation|compliance officer|contract manager|regulatory affairs|solicitor|juris doctor)\b/.test(
+      text
+    )
+  ) {
+    return 'legal_compliance';
+  }
+
+  // 9. Sales & Marketing
+  if (
+    /\b(sales\b|account executive|bdr\b|sdr\b|business development|marketing|growth marketing|seo\b|sem\b|brand manager|public relations|quota|pipeline|copywriter)\b/.test(
+      text
+    )
+  ) {
+    return 'sales_marketing';
+  }
+
+  // 10. Operations & Logistics
+  if (
+    /\b(supply chain|logistics|warehouse|procurement|inventory|fulfillment|shipping|distribution center|dispatcher|fleet|operations manager|manufacturing manager)\b/.test(
+      text
+    )
+  ) {
+    return 'operations_logistics';
+  }
+
   return 'general_business';
+}
+
+export function detectIndustryCategory(title?: string, description?: string): IndustryCategory {
+  const titleLower = (title || '').toLowerCase();
+  const titleMatch = matchCategoryInText(titleLower);
+  if (titleMatch !== 'general_business') {
+    return titleMatch;
+  }
+
+  const combined = `${titleLower} ${(description || '').toLowerCase()}`;
+  return matchCategoryInText(combined);
 }
 
 /**

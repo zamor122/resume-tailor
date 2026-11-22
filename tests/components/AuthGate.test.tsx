@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AuthGate from '@/app/components/AuthGate';
-import { FREE_RESUME_LIMIT } from '@/app/config/pricing';
+import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from '@/app/config/pricing';
 
 vi.mock('@/app/contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -37,11 +37,10 @@ describe('AuthGate', () => {
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText(/sign in to tailor your resume/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        new RegExp(`your first ${FREE_RESUME_LIMIT} resume(?:s)? (?:is|are) free`, 'i')
-      )
-    ).toBeInTheDocument();
+    const expectedCopy = FREE_RESUME_LIMIT > 0
+      ? new RegExp(`your first ${FREE_RESUME_LIMIT} resume(?:s)? (?:is|are) free`, 'i')
+      : new RegExp(`get ${FREE_AUDIT_LIMIT} free ats audits`, 'i');
+    expect(screen.getByText(expectedCopy)).toBeInTheDocument();
   });
 
   it('should show auth modal when unauthenticated user clicks (save action)', async () => {

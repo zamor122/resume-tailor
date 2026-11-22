@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useGamification } from "@/app/contexts/GamificationContext";
-import { FREE_RESUME_LIMIT } from "@/app/config/pricing";
+import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from "@/app/config/pricing";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -154,7 +154,7 @@ export default function AuthModal({
                 AUTHENTICATION
               </span>
               <span className="text-[11px] font-mono text-gray-500">
-                3 FREE AUDITS INCLUDED
+                {FREE_AUDIT_LIMIT} FREE AUDITS INCLUDED
               </span>
             </div>
             <h2 id="auth-modal-title" className="text-xl sm:text-2xl font-mono font-bold text-[#1C2028]">
@@ -170,7 +170,9 @@ export default function AuthModal({
                 (mode === "forgot"
                   ? "Enter your email and we'll dispatch a secure recovery link."
                   : mode === "signup"
-                    ? `Your first ${FREE_RESUME_LIMIT} tailored resume is 100% free. No card needed.`
+                    ? FREE_RESUME_LIMIT > 0
+                      ? `Your first ${FREE_RESUME_LIMIT} tailored resume is 100% free. No card needed.`
+                      : `Run ${FREE_AUDIT_LIMIT} free ATS audits & bullet previews. No card needed.`
                     : "Sign in to access your saved resumes and tailored documents.")}
             </p>
           </div>

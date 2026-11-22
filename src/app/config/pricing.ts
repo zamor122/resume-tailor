@@ -4,8 +4,11 @@
  * This is NOT a subscription - users must purchase again when access expires
  */
 
-/** Number of resumes every authenticated user gets for free (view + download) - first 1 by creation date */
-export const FREE_RESUME_LIMIT = 1;
+/** Number of full unredacted resumes every authenticated user gets for free (0 = audit & diff preview free, full PDF unlocked via pass) */
+export const FREE_RESUME_LIMIT: number = 0;
+
+/** Number of free ATS audits & locked previews an unpaid signed-in user may run before requiring a pass */
+export const FREE_AUDIT_LIMIT: number = 2;
 
 export interface TimeBasedTier {
   tier: '2D' | '7D' | '30D';

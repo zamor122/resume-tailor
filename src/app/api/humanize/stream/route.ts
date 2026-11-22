@@ -18,7 +18,7 @@ import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
 import type { ElicitationFact } from "@/app/types/elicitation";
 import type { AgentState } from "@/app/agent/state";
 import { getAccessInfoServer } from "@/app/utils/accessManager";
-import { FREE_RESUME_LIMIT } from "@/app/config/pricing";
+import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from "@/app/config/pricing";
 import {
   sanitizeSuggestionsForLocked,
   sanitizeSectionGroupsForLocked,
@@ -157,13 +157,35 @@ export async function POST(req: NextRequest) {
     const verifyResult = verifyUserIdMatch(authResult.userId, userId);
     if ("error" in verifyResult) return verifyResult.error;
     authenticatedUserId = authResult.userId;
+
+    // Enforce free audit cap for unpaid accounts before incurring AI costs
+    try {
+      const accessInfo = await getAccessInfoServer(authenticatedUserId);
+      if (!accessInfo?.hasAccess) {
+        const { count } = await supabaseAdmin
+          .from("resumes")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", authenticatedUserId);
+        if ((count ?? 0) >= FREE_AUDIT_LIMIT) {
+          return new Response(
+            JSON.stringify({
+              error: `You've used your ${FREE_AUDIT_LIMIT} free ATS audits. Purchase a one-time pass starting at $9 to tailor unlimited resumes and download PDFs.`,
+              requireUpgrade: true,
+            }),
+            { status: 402, headers: { "Content-Type": "application/json" } }
+          );
+        }
+      }
+    } catch (quotaErr) {
+      console.warn("[Stream API] Pre-flight audit quota check failed:", quotaErr);
+    }
   } else {
     const { allowed, hashedIP: anonHashedIP } = await checkAnonymousTailorAllowed(req);
     anonymousHashedIP = anonHashedIP;
     if (!allowed) {
       return new Response(
         JSON.stringify({
-          error: "You've used your free preview. Create a free account to get 3 full tailors.",
+          error: "You've used your 1 free preview. Create a free account for ATS audits & previews, or purchase a pass from $9 for full downloads.",
           requireAuth: true,
           anonymousLimitExceeded: true,
         }),
@@ -494,8 +516,8 @@ export async function POST(req: NextRequest) {
               .select("id", { count: "exact", head: true })
               .eq("user_id", authenticatedUserId);
 
-            // If user currently has <= FREE_RESUME_LIMIT resumes (including the newly inserted one), it is free!
-            const withinFreeQuota = (count ?? 0) <= FREE_RESUME_LIMIT;
+            // If user currently has <= FREE_RESUME_LIMIT resumes (and FREE_RESUME_LIMIT > 0), it is unlocked free!
+            const withinFreeQuota = FREE_RESUME_LIMIT > 0 && (count ?? 0) <= FREE_RESUME_LIMIT;
             isUnlocked = paidAccess || withinFreeQuota;
           } catch (e) {
             console.warn("[Stream API] Access check error, defaulting to locked for safety:", e);

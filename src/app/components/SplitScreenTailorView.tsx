@@ -36,7 +36,7 @@ import { extractTextFromPDF } from "@/app/utils/pdfExtractor";
 import { analytics } from "@/app/services/analytics";
 import { saveResumeData, loadResumeData, clearResumeData } from "@/app/utils/dataPersistence";
 import { TAILORING_PRESET_LABELS } from "@/app/prompts/tailoringPresets";
-import { FREE_RESUME_LIMIT, TIME_BASED_TIERS } from "@/app/config/pricing";
+import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT, TIME_BASED_TIERS } from "@/app/config/pricing";
 import LaunchOfferBanner from "@/app/components/LaunchOfferBanner";
 import type { HumanizeResponse } from "@/app/types/humanize";
 
@@ -732,7 +732,7 @@ export default function SplitScreenTailorView() {
                   <span className="bg-black/25 text-white text-[10px] px-2 py-0.5 rounded-full">+50 XP</span>
                 </button>
                 <span className="text-xs font-mono text-gray-500">
-                  First {FREE_RESUME_LIMIT} free • No card required
+                  {FREE_RESUME_LIMIT > 0 ? `First ${FREE_RESUME_LIMIT} free` : "Free ATS audit & preview"} • No card required
                 </span>
               </div>
 
@@ -1105,7 +1105,11 @@ export default function SplitScreenTailorView() {
         onSuccess={() => setShowAuthModalMode(null)}
         mode={showAuthModalMode ?? "signup"}
         title={showAuthModalMode === "signin" ? "Sign in to save your resume" : "Create account"}
-        description={`Your first ${FREE_RESUME_LIMIT} resume is free. No credit card required.`}
+        description={
+          FREE_RESUME_LIMIT > 0
+            ? `Your first ${FREE_RESUME_LIMIT} resume is free. No credit card required.`
+            : `Get ${FREE_AUDIT_LIMIT} free ATS audits & diff previews. No credit card required.`
+        }
       />
 
       <ResetConfirmationModal

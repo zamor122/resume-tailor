@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPipeline, type PipelineId } from "@/app/config/pipelines";
 import { trackEventServer } from "@/app/utils/umamiServer";
-import { FREE_RESUME_LIMIT } from "@/app/config/pricing";
+import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from "@/app/config/pricing";
 
 export const runtime = "nodejs";
 export const preferredRegion = "auto";
@@ -141,7 +141,13 @@ export async function POST(req: NextRequest) {
     const hasTailorStep = config.steps.some((s) => s.internalStep === "tailor");
     if (hasTailorStep && !userId) {
       return NextResponse.json(
-        { error: `Sign in to tailor your resume. Your first ${FREE_RESUME_LIMIT} is free.`, requireAuth: true },
+        {
+          error:
+            FREE_RESUME_LIMIT > 0
+              ? `Sign in to tailor your resume. Your first ${FREE_RESUME_LIMIT} is free.`
+              : `Sign in to tailor your resume (${FREE_AUDIT_LIMIT} free ATS audits & previews included).`,
+          requireAuth: true,
+        },
         { status: 401 }
       );
     }

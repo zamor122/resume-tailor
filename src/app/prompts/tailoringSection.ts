@@ -570,8 +570,12 @@ export function getHolisticSummaryPrompt(
     ? tailoredBullets.join("\n")
     : tailoredBullets;
 
-  let resumeContent = assembledResume;
-  if (!resumeContent) {
+  let resumeContent = "";
+  if (originalSummary && assembledResume) {
+    resumeContent = `Original Summary:\n${originalSummary}\n\nAssembled Resume Accomplishments:\n${assembledResume}`;
+  } else if (assembledResume) {
+    resumeContent = assembledResume;
+  } else {
     const parts: string[] = [];
     if (originalSummary) {
       parts.push(`Original Summary:\n${originalSummary}`);
@@ -582,27 +586,26 @@ export function getHolisticSummaryPrompt(
     resumeContent = parts.join("\n\n");
   }
 
-  return `You are an expert resume writer. Write a cohesive, holistic Professional Summary (2–3 sentences) representing the candidate's ENTIRE career arc, tailored for the target role below. Preserve the candidate's TRUE seniority and scope — never inflate them.
+  return `You are an expert resume writer. Write a cohesive, holistic Professional Summary (2–3 sentences) representing the candidate's ENTIRE career arc, tailored for the target role below. Preserve the candidate's TRUE seniority, years of experience, and factual scope — never inflate them.
 ${leverBlock}
 ${targetTitleLine}${keywordsLine}${seniorityBlock}${careerArcSection}${companyPrivacySection}${factsSection}
 CRITICAL INSTRUCTIONS:
 - ZERO THINKING / PREAMBLE LEAK: DO NOT output any thinking trace, <think> tags, chain-of-thought analysis, or introductory remarks (such as "*Analyze User Input:**").
 - This is a HOLISTIC EXECUTIVE SUMMARY of the candidate's career as an organic whole, NOT a changelog of recent edits.
-- Synthesize their complete trajectory: years of experience, core leadership scope, and signature domain proficiencies derived directly from the assembled resume.
-- GUARANTEE ZERO CONTRADICTIONS: Every capability, tool, and achievement claimed must be 100% grounded in the vetted resume below.
-- PRESERVE TRUE SENIORITY: Do NOT upgrade the candidate's level, ownership, or scope. Never invent scale, headcount, budgets, or leadership the resume does not state. An authenticity judge will discard an inflated summary.
-- BANNED BUZZWORDS: Do NOT use fluff or repetitive filler ("passionate", "results-driven", "team player", "leveraging", "spearheaded", "pivotal role"). Use authoritative, factual declarative sentences.
-- Vary sentence syntax and cadence; avoid repetitive sentence structures.
-- Output ONLY the 2–3 sentence summary paragraph. No headers, no intro, no conversational remarks.
+- ANCHOR TO ORIGINAL SUMMARY: Preserve the core factual identity, real years of experience, and concrete domain credentials already present in "Original Summary" (if provided). Upgrade phrasing cleanly and weave in matching target-role terminology proven in the resume.
+- GUARANTEE ZERO CONTRADICTIONS OR FABRICATION: Every capability, tool, metric, and achievement claimed must be 100% grounded in the vetted resume below. Never invent scale, headcount, budgets, or unmentioned tools.
+- PRESERVE TRUE SENIORITY: Do NOT upgrade the candidate's level, ownership, or scope. An authenticity judge will reject any exaggerated or cliché rewrite.
+- NO CORPORATE BUZZWORDS: Strictly avoid cliché hype ("passionate", "results-driven", "visionary", "dynamic", "versatile", "synergy", "leveraging", "spearheaded", "pivotal role", "transformational", "strategic leader" unless literally a director/VP). Use plain, direct, factual declarative sentences.
+- Output ONLY the 2–3 sentence summary paragraph. No headers, no bullets, no intro, no conversational remarks.
 
 STRICT RULES & CONSTRAINTS:
 1. STRICT LENGTH CONSTRAINT: Write exactly 2 to 3 concise, punchy sentences (maximum 60 words total).
-2. COMMANDING EXECUTIVE IDENTITY HOOK: Open sentence 1 directly with the candidate's target professional/executive identity and core domain authority (e.g. "[Target Title / Specialty] with [X]+ years directing [core domain scope]...").
-3. PROVEN PEAK IMPACT: Sentence 2 highlights the candidate's highest-impact achievement or operational contribution directly relevant to the target job description, using ONLY outcomes the resume already states (no invented metrics).
-4. FORWARD-LOOKING CAPABILITY ALIGNMENT: Sentence 3 reinforces their signature strategic capabilities and technical proficiencies positioned to deliver immediate impact in the target role.
-5. Content Focus: Explicitly highlight the candidate's most relevant qualifications, primary domain authority, and proven accomplishments matching the target role.
-6. Prohibit generic fluff, filler adjectives, or cliché openings ("Passionate, results-driven professional..."). Open directly with domain impact.
-7. Strictly ground every claim in the provided tailored accomplishments. Do not invent unmentioned skills or statistics.
+2. COMMANDING EXECUTIVE IDENTITY HOOK: Open sentence 1 directly with the candidate's factual role/specialty, real years of experience (from the resume), and core domain (no cliché hype).
+3. PROVEN PEAK IMPACT: Sentence 2 highlights 1–2 tangible accomplishments or deliverables directly from the tailored resume bullets, without inventing numbers.
+4. RELEVANT CAPABILITIES: Sentence 3 mentions concrete tools, workflows, or domain skills proven in the resume that match the target job description.
+5. Content Focus: Explicitly highlight the candidate's most relevant qualifications, primary domain capabilities, and proven accomplishments matching the target role.
+6. Prohibit generic fluff, filler adjectives, or cliché openings ("Passionate, results-driven professional..."). Open directly with factual domain impact.
+7. Strictly ground every claim in the provided Original Summary and tailored accomplishments. Do not invent unmentioned skills or statistics.
 
 Assembled Resume:
 """
