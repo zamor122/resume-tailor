@@ -1,6 +1,7 @@
 import { type ParsedOriginal, findContactEndIndex } from "./contactBlockSanitizer";
 import type { ResumeSuggestion, ResumeSectionGroup, SectionGroupType, SectionTailorStatus } from "@/app/agent/state";
 import { parseResume, normalizeResumeText } from "./resumeParser";
+import { containsLockedPlaceholder } from "./gatingSanitizer";
 
 /**
  * Verbatim surgical application:
@@ -17,9 +18,12 @@ export function applySuggestionsToOriginal(
   let currentText = originalResume;
 
   for (const sug of suggestions) {
-    // Only apply if explicitly accepted by the user
+    // Only apply unlocked, explicitly accepted changes — never overwrite the
+    // user's original resume content with locked/obfuscated placeholder text.
     if (sug.status !== "accepted") continue;
+    if ((sug as { isLocked?: boolean }).isLocked) continue;
     if (!sug.originalText || !sug.suggestedText) continue;
+    if (containsLockedPlaceholder(sug.suggestedText)) continue;
 
     const target = sug.originalText.trim();
     const replacement = sug.suggestedText.trim();

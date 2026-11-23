@@ -3,6 +3,8 @@ import {
   sanitizeSuggestionsForLocked,
   sanitizeSectionGroupsForLocked,
   sanitizeContentMapForLocked,
+  containsLockedPlaceholder,
+  selectSafePrefillResume,
   LOCKED_SUGGESTION_PLACEHOLDER,
 } from "@/app/utils/gatingSanitizer";
 import type { ResumeSuggestion, ResumeSectionGroup } from "@/app/agent/state";
@@ -153,6 +155,45 @@ describe("gatingSanitizer anti-fraud utility", () => {
     it("handles null or undefined contentMap", () => {
       expect(sanitizeContentMapForLocked(null)).toEqual([]);
       expect(sanitizeContentMapForLocked(undefined)).toEqual([]);
+    });
+  });
+
+  describe("containsLockedPlaceholder & selectSafePrefillResume", () => {
+    it("detects both obfuscation and suggestion lock placeholders", () => {
+      expect(containsLockedPlaceholder("🔒 AI-optimized content locked — unlock to reveal Q0&#123")).toBe(true);
+      expect(containsLockedPlaceholder(LOCKED_SUGGESTION_PLACEHOLDER)).toBe(true);
+      expect(containsLockedPlaceholder("Built event-driven TypeScript services.")).toBe(false);
+      expect(containsLockedPlaceholder(null)).toBe(false);
+    });
+
+    it("never prefills the editor with obfuscated text when re-tailoring a locked version", () => {
+      const safe = selectSafePrefillResume({
+        prefillVersion: "cb4c25ce",
+        isUnlocked: false,
+        originalResume: "Original uploaded resume content",
+        tailoredResume: "Original start 🔒 AI-optimized content locked — unlock to reveal AbCdEf12",
+      });
+      expect(safe).toBe("Original uploaded resume content");
+    });
+
+    it("falls back to originalResume if tailoredResume has lock placeholders even when isUnlocked is true", () => {
+      const safe = selectSafePrefillResume({
+        prefillVersion: "b5a66c59",
+        isUnlocked: true,
+        originalResume: "Clean original uploaded resume content",
+        tailoredResume: "Tailored prefix 🔒 AI-optimized content locked — unlock to reveal AbCdEf12",
+      });
+      expect(safe).toBe("Clean original uploaded resume content");
+    });
+
+    it("uses tailoredResume when prefillVersion is set, unlocked is true, and text is clean", () => {
+      const safe = selectSafePrefillResume({
+        prefillVersion: "v2",
+        isUnlocked: true,
+        originalResume: "Original uploaded resume content",
+        tailoredResume: "Tailored clean resume content",
+      });
+      expect(safe).toBe("Tailored clean resume content");
     });
   });
 });

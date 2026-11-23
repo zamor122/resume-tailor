@@ -9,6 +9,7 @@ import {
   persistSuggestionReaction,
   type SuggestionReaction,
 } from "@/app/utils/addedKeywordTracker";
+import { containsLockedPlaceholder } from "@/app/utils/gatingSanitizer";
 import AddedKeywordReactionBanner from "./AddedKeywordReactionBanner";
 
 export interface ChangedAndWhyProps {
@@ -19,6 +20,7 @@ export interface ChangedAndWhyProps {
   accessToken?: string;
   sessionId?: string | null;
   onSuggestionsChange?: (suggestions: ResumeSuggestion[]) => void;
+  onUnlockRequest?: () => void;
   className?: string;
 }
 
@@ -27,6 +29,7 @@ interface ShownChange {
   section?: string;
   before: string;
   after: string;
+  isLocked: boolean;
   reason: string | null;
   addedMissingKeywords: string[];
   reaction?: SuggestionReaction;
@@ -47,6 +50,7 @@ export default function ChangedAndWhy({
   accessToken,
   sessionId,
   onSuggestionsChange,
+  onUnlockRequest,
   className = "",
 }: ChangedAndWhyProps) {
   const [localReactions, setLocalReactions] = useState<Record<string, SuggestionReaction>>({});
@@ -65,15 +69,22 @@ export default function ChangedAndWhy({
   const changes = useMemo<ShownChange[]>(() => {
     return (suggestions || [])
       .filter((s) => isSubstantiveChange(s.originalText, s.suggestedText))
-      .map((s) => ({
-        id: s.id,
-        section: s.section,
-        before: (s.originalText || "").trim(),
-        after: (s.suggestedText || "").trim(),
-        reason: plainEnglishReason(s),
-        addedMissingKeywords: resolveSuggestionAddedKeywords(s, originalResume),
-        reaction: localReactions[s.id] ?? s.reaction,
-      }));
+      .map((s) => {
+        const after = (s.suggestedText || "").trim();
+        const isLocked = Boolean(
+          (s as { isLocked?: boolean }).isLocked || containsLockedPlaceholder(after)
+        );
+        return {
+          id: s.id,
+          section: s.section,
+          before: (s.originalText || "").trim(),
+          after,
+          isLocked,
+          reason: plainEnglishReason(s),
+          addedMissingKeywords: resolveSuggestionAddedKeywords(s, originalResume),
+          reaction: localReactions[s.id] ?? s.reaction,
+        };
+      });
   }, [suggestions, originalResume, localReactions]);
 
   const handleReact = (change: ShownChange, reaction: SuggestionReaction) => {
@@ -146,22 +157,44 @@ export default function ChangedAndWhy({
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="bg-white border-2 border-[#1C2028] p-3.5 rounded-lg shadow-[2px_2px_0px_#1C2028]">
+              <div className="min-w-0 bg-white border-2 border-[#1C2028] p-3.5 rounded-lg shadow-[2px_2px_0px_#1C2028]">
                 <span className="neo-tag bg-[#E5E0D8] text-[#1C2028] text-[9px] font-mono font-bold px-1.5 py-0.5 mb-2 inline-block border border-[#1C2028]">
                   ORIGINAL
                 </span>
-                <p className="text-xs sm:text-sm font-mono leading-relaxed text-gray-700">
+                <p className="text-xs sm:text-sm font-mono leading-relaxed text-gray-700 break-words [overflow-wrap:anywhere]">
                   {change.before}
                 </p>
               </div>
-              <div className="bg-[#ECFDF5] border-2 border-[#1C2028] p-3.5 rounded-lg shadow-[2px_2px_0px_#1C2028]">
-                <span className="neo-tag bg-[#10B981] text-white text-[9px] font-mono font-bold px-1.5 py-0.5 mb-2 inline-block border border-[#1C2028]">
-                  ✓ TAILORED
-                </span>
-                <p className="text-xs sm:text-sm font-mono leading-relaxed text-[#1C2028] font-bold">
-                  {change.after}
-                </p>
-              </div>
+              {change.isLocked ? (
+                <div className="min-w-0 bg-[#FEF3C7] border-2 border-[#1C2028] p-3.5 rounded-lg shadow-[2px_2px_0px_#1C2028] flex flex-col justify-between gap-2.5">
+                  <div>
+                    <span className="neo-tag bg-[#F59E0B] text-[#1C2028] text-[9px] font-mono font-bold px-1.5 py-0.5 mb-2 inline-block border border-[#1C2028]">
+                      🔒 TAILORED (LOCKED)
+                    </span>
+                    <p className="text-xs sm:text-sm font-mono leading-relaxed text-[#92400E] font-medium break-words [overflow-wrap:anywhere]">
+                      {change.after}
+                    </p>
+                  </div>
+                  {onUnlockRequest && (
+                    <button
+                      type="button"
+                      onClick={onUnlockRequest}
+                      className="neo-btn self-start px-3 py-1.5 text-[11px] font-mono font-bold uppercase tracking-wider bg-[#FF5722] hover:bg-[#F4511E] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+                    >
+                      Unlock Full Changes →
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="min-w-0 bg-[#ECFDF5] border-2 border-[#1C2028] p-3.5 rounded-lg shadow-[2px_2px_0px_#1C2028]">
+                  <span className="neo-tag bg-[#10B981] text-white text-[9px] font-mono font-bold px-1.5 py-0.5 mb-2 inline-block border border-[#1C2028]">
+                    ✓ TAILORED
+                  </span>
+                  <p className="text-xs sm:text-sm font-mono leading-relaxed text-[#1C2028] font-bold break-words [overflow-wrap:anywhere]">
+                    {change.after}
+                  </p>
+                </div>
+              )}
             </div>
             {change.reason && (
               <div className="bg-white border-2 border-[#1C2028] p-2.5 rounded-lg shadow-[2px_2px_0px_#1C2028] flex items-start gap-2">

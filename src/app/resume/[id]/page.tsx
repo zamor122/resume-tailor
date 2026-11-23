@@ -414,6 +414,7 @@ export default function ResumeDetailPage() {
                     mutate({ ...json, success: json.success ?? true, suggestions: updated }, false);
                   }
                 }}
+                onUnlockRequest={() => setShowTierModal(true)}
               />
             )}
             {viewMode === "resume" && (
