@@ -42,11 +42,19 @@ export const TAILORING_STEPS: ProgressStepItem[] = [
   },
 ];
 
+export interface ProgressActivityEntry {
+  tool?: string;
+  message: string;
+  progress?: number;
+}
+
 interface ProgressStepperProps {
   isActive: boolean;
   onComplete?: () => void;
   agentMessage?: string;
   agentProgress?: number;
+  activeTool?: string;
+  activityLog?: ProgressActivityEntry[];
 }
 
 /**
@@ -89,6 +97,8 @@ export default function ProgressStepper({
   onComplete,
   agentMessage,
   agentProgress,
+  activeTool,
+  activityLog = [],
 }: ProgressStepperProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
@@ -186,13 +196,55 @@ export default function ProgressStepper({
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#1C2028] dark:text-[#FAF7F0]">
-              CURRENT OPERATION
-            </p>
-            <p className="text-xs font-mono text-gray-700 dark:text-gray-300 truncate mt-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#1C2028] dark:text-[#FAF7F0]">
+                CURRENT OPERATION
+              </p>
+              {activeTool && (
+                <span className="neo-tag text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-[#1C2028] text-white border border-[#1C2028]">
+                  🔧 {activeTool}
+                </span>
+              )}
+            </div>
+            <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-0.5 leading-relaxed">
               {friendlyMessage}
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Live Tool & Operation Feed */}
+      {activityLog.length > 0 && (
+        <div
+          data-testid="live-tool-feed"
+          className="mb-5 p-3 rounded-xl bg-white/80 dark:bg-[#1A1F2C] border border-[#1C2028]/30 space-y-1.5"
+        >
+          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-500">
+            LIVE TOOLS &amp; STEPS
+          </p>
+          <ul className="space-y-1">
+            {activityLog.slice(-4).map((entry, i, arr) => {
+              const isLatest = i === arr.length - 1 && !isComplete;
+              return (
+                <li
+                  key={`${entry.tool || "step"}-${i}`}
+                  className="flex items-center gap-2 text-[11px] font-mono text-[#1C2028] dark:text-gray-200"
+                >
+                  <span className={`shrink-0 font-bold ${isLatest ? "text-[#FF5722] animate-pulse" : "text-[#10B981]"}`}>
+                    {isLatest ? "▶" : "✓"}
+                  </span>
+                  {entry.tool && (
+                    <span className="shrink-0 font-bold text-[#1C2028] dark:text-white bg-[#FAF7F0] dark:bg-[#21262D] px-1.5 py-0.2 rounded border border-[#1C2028]/30">
+                      {entry.tool}
+                    </span>
+                  )}
+                  <span className="truncate text-gray-700 dark:text-gray-300">
+                    {humanizeAgentMessage(entry.message)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 

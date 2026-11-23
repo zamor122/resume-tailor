@@ -10,6 +10,7 @@ import {
 } from "@/app/utils/seniorityClassifier";
 import { detectIndustryCategory } from "@/app/config/domainTaxonomy";
 import { getOrSynthesizeJobKnowledge, resolveCanonicalTitle } from "@/app/services/jobKnowledge";
+import { emitAgentProgress } from "@/app/utils/agentProgressEmitter";
 
 const PROFILE_PROMPT = (resumeSnippet: string) => `
 You are analyzing a resume to extract candidate profile information.
@@ -32,6 +33,12 @@ export async function candidateProfilerNode(
 ): Promise<Partial<AgentState>> {
   const jd = state.rawJobDescription || state.selectedJobDescription || "";
   try {
+    emitAgentProgress({
+      step: "analyzing",
+      tool: "Career Profiler",
+      message: "Classifying target industry domain and seniority scope...",
+      progress: 34,
+    });
     const snippet = state.rawResume.slice(0, 1500);
     const result = await generateWithFallback(
       PROFILE_PROMPT(snippet),

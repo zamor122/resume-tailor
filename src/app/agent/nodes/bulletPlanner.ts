@@ -1,4 +1,5 @@
 import type { AgentState, BulletPlan, JobAudit, JobBulletChange, RecencyTier } from "../state";
+import { emitAgentProgress } from "@/app/utils/agentProgressEmitter";
 
 export function getRecencyTier(jobIndex: number): RecencyTier {
   if (jobIndex === 0 || jobIndex === 1) {
@@ -33,6 +34,13 @@ export function bulletPlannerNode(state: AgentState): Partial<AgentState> {
     experienceJobsCount: experience.length,
     missingKeywordsCount: sortedMissingKeywords.length,
     sectionsToModify,
+  });
+
+  emitAgentProgress({
+    step: "matching",
+    tool: "Tailoring Planner",
+    message: `Selecting high-impact edits across ${experience.length} role${experience.length === 1 ? "" : "s"} (${sortedMissingKeywords.length} keyword targets)...`,
+    progress: 58,
   });
 
   let bulletPlan: BulletPlan;

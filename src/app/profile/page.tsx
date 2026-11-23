@@ -204,8 +204,11 @@ export default function ProfilePage() {
   if (authLoading || loading) {
     return (
       <div className="container mx-auto px-4 py-16">
-        <div className="flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center gap-3 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1C2028]"></div>
+          <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#1C2028]">
+            {authLoading ? "Verifying your session..." : "Loading your tailored resumes & ATS scores..."}
+          </p>
         </div>
       </div>
     );

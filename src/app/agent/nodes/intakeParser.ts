@@ -2,6 +2,7 @@ import type { AgentState } from "../state";
 import { parseResume } from "@/app/utils/resumeParser";
 import { parseResumeWithLLM } from "@/app/utils/resumeParserLLM";
 import { resolveStepModel } from "@/app/runtime/cost-guard";
+import { emitAgentProgress } from "@/app/utils/agentProgressEmitter";
 
 /**
  * Intake parser node.
@@ -72,6 +73,12 @@ export async function intakeParserNode(
   try {
     const cleanedResume = repairPdfLigatures(state.rawResume || "");
     console.log(`[intakeParser] ▶ Intake parser started (rawResume chars: ${cleanedResume.length})`);
+    emitAgentProgress({
+      step: "analyzing",
+      tool: "Resume Extractor",
+      message: "Reading sections, roles, and accomplishment bullets...",
+      progress: 18,
+    });
 
     // 1. Fast deterministic parse first (<10ms)
     // Runs unless useLLMParser is explicitly requested
@@ -104,6 +111,12 @@ export async function intakeParserNode(
 
     // 2. Gated Fallback: If deterministic parsing found 0 jobs or collapsed/empty descriptions, use bounded LLM parser
     console.log(`[intakeParser] ⚡ Deterministic parser ${reason}; gating to LLM resume parser...`);
+    emitAgentProgress({
+      step: "analyzing",
+      tool: "AI Structure Parser",
+      message: "Unpacking unformatted resume text into structured job history...",
+      progress: 23,
+    });
     const resumeAST = await parseResumeWithLLM(
       cleanedResume,
       // Route through the runtime cost guard so the per-step model policy applies

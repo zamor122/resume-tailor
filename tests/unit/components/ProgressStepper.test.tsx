@@ -46,4 +46,33 @@ describe("ProgressStepper (Human-Readable Progress Tracker)", () => {
     expect(screen.getByText(/Zero Hallucination Guarantee/i)).toBeInTheDocument();
     expect(screen.getByText(/Jev AI Verified/i)).toBeInTheDocument();
   });
+
+  it("displays the active tool badge and live tool activity feed while sanitizing jargon", () => {
+    render(
+      <ProgressStepper
+        isActive={true}
+        agentProgress={58}
+        agentMessage="Tailoring bullets to job qualifications..."
+        activeTool="Bullet Rewriter"
+        activityLog={[
+          { tool: "Resume Extractor", message: "Parsing resume AST structure...", progress: 12 },
+          { tool: "Keyword & Gap Analyzer", message: "Matching missing keywords...", progress: 35 },
+          { tool: "Tailoring Planner", message: "Planning impact upgrades...", progress: 44 },
+          { tool: "Jev Role Diagnostic", message: "Auditing role seniority...", progress: 50 },
+          { tool: "Bullet Rewriter", message: "Tailoring bullets to job qualifications...", progress: 58 },
+        ]}
+      />
+    );
+
+    expect(screen.getAllByText(/Bullet Rewriter/i).length).toBeGreaterThanOrEqual(1);
+    const feed = screen.getByTestId("live-tool-feed");
+    expect(feed).toBeInTheDocument();
+    // Should render the most recent 4 entries, so the 1st entry is trimmed and AST never leaks
+    expect(feed.textContent).not.toContain("Resume Extractor");
+    expect(feed.textContent).not.toMatch(/AST/i);
+    expect(feed.textContent).toContain("Keyword & Gap Analyzer");
+    expect(feed.textContent).toContain("Tailoring Planner");
+    expect(feed.textContent).toContain("Jev Role Diagnostic");
+    expect(feed.textContent).toContain("Bullet Rewriter");
+  });
 });
