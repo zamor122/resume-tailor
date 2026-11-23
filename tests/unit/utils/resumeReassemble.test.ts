@@ -507,6 +507,42 @@ Acme Tech - Lead Engineer
 
       expect(sanitized).toContain("Boston, MA");
     });
+
+    it("never overwrites original uploaded bullets with locked suggestion placeholders even if status is accepted", () => {
+      const original = [
+        "## Experience",
+        "FreightPulse Systems – Senior Software Engineer",
+        "- Architected high-volume webhook ingestion handlers in TypeScript.",
+        "- Reduced checkout API timeout errors by 14% using Redis caching.",
+      ].join("\n");
+
+      const suggestions = [
+        {
+          id: "sug-locked",
+          section: "FreightPulse Systems",
+          originalText: "Architected high-volume webhook ingestion handlers in TypeScript.",
+          suggestedText: "🔒 AI-tailored accomplishment locked. Upgrade to unlock full metrics and bullet improvements.",
+          reason: "Adds throughput context",
+          status: "accepted" as const,
+          isLocked: true,
+        },
+        {
+          id: "sug-free",
+          section: "FreightPulse Systems",
+          originalText: "Reduced checkout API timeout errors by 14% using Redis caching.",
+          suggestedText: "Slashed checkout API timeout errors by 14% via Redis read-through caching.",
+          reason: "Sharpens impact verb",
+          status: "accepted" as const,
+          isLocked: false,
+        },
+      ];
+
+      const result = applySuggestionsToOriginal(original, suggestions as any);
+
+      expect(result).toContain("Architected high-volume webhook ingestion handlers in TypeScript.");
+      expect(result).not.toContain("AI-tailored accomplishment locked");
+      expect(result).toContain("Slashed checkout API timeout errors by 14% via Redis read-through caching.");
+    });
   });
 });
 

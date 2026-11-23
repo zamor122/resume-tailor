@@ -646,11 +646,11 @@ export default function ResumeSuggestionReviewer({
                     <span className="font-mono font-bold text-[#EF4444] select-none shrink-0 text-base leading-snug">
                       -
                     </span>
-                    <div className="text-xs sm:text-sm leading-relaxed flex-1">
+                    <div className="text-xs sm:text-sm leading-relaxed flex-1 min-w-0">
                       <span className="neo-tag text-[9px] font-mono font-bold uppercase tracking-wider bg-[#EF4444] text-white px-1.5 py-0.5 rounded border border-[#1C2028] inline-block mb-1">
                         Original (Before):
                       </span>
-                      <p className="mt-1 text-gray-800">{currentOriginalText.replace(/^[-*•–—]\s*/, "")}</p>
+                      <p className="mt-1 text-gray-800 break-words [overflow-wrap:anywhere]">{currentOriginalText.replace(/^[-*•–—]\s*/, "")}</p>
                     </div>
                   </div>
                 )}
@@ -661,7 +661,7 @@ export default function ResumeSuggestionReviewer({
                     <span className="font-mono font-bold text-[#F59E0B] select-none shrink-0 text-base leading-snug">
                       🔒
                     </span>
-                    <div className="text-xs sm:text-sm leading-relaxed flex-1">
+                    <div className="text-xs sm:text-sm leading-relaxed flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="neo-tag text-[9px] font-mono font-bold uppercase tracking-wider bg-[#F59E0B] text-[#1C2028] px-1.5 py-0.5 rounded border border-[#1C2028]">
                           Tailored Accomplishment (Locked):
@@ -670,7 +670,7 @@ export default function ResumeSuggestionReviewer({
                           Access pass required
                         </span>
                       </div>
-                      <p className="mt-1 text-gray-700 font-medium">
+                      <p className="mt-1 text-gray-700 font-medium break-words [overflow-wrap:anywhere]">
                         {currentSuggestion.suggestedText}
                       </p>
                     </div>
@@ -680,7 +680,7 @@ export default function ResumeSuggestionReviewer({
                     <span className="font-mono font-bold text-[#10B981] select-none shrink-0 text-base leading-snug">
                       +
                     </span>
-                    <div className="text-xs sm:text-sm leading-relaxed flex-1">
+                    <div className="text-xs sm:text-sm leading-relaxed flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="neo-tag text-[9px] font-mono font-bold uppercase tracking-wider bg-[#10B981] text-white px-1.5 py-0.5 rounded border border-[#1C2028]">
                           {isAddition ? "Tailored (Addition):" : "Tailored (Enhanced):"}
@@ -696,7 +696,7 @@ export default function ResumeSuggestionReviewer({
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-[#1C2028] font-bold">
+                      <p className="mt-1 text-[#1C2028] font-bold break-words [overflow-wrap:anywhere]">
                         {renderHighlightedKeywords(
                           currentSuggestion.suggestedText.replace(/^[-*•–—]\s*/, ""),
                           currentSuggestion.keywords

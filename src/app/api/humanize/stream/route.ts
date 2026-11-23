@@ -24,6 +24,7 @@ import {
   sanitizeSuggestionsForLocked,
   sanitizeSectionGroupsForLocked,
   sanitizeContentMapForLocked,
+  containsLockedPlaceholder,
 } from "@/app/utils/gatingSanitizer";
 
 export const runtime = "nodejs";
@@ -144,6 +145,19 @@ export async function POST(req: NextRequest) {
   if (!resume || resume.trim().length < 50) {
     return new Response(
       JSON.stringify({ error: "Missing resume content (minimum 50 characters)" }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  if (containsLockedPlaceholder(resume)) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "Your resume input contains locked preview text from a previous version. Please paste or upload your original resume text.",
+      }),
       {
         status: 400,
         headers: { "Content-Type": "application/json" },

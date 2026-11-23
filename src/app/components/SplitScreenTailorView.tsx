@@ -17,6 +17,7 @@ import AuthModal from "./AuthModal";
 import TierSelectionModal from "./TierSelectionModal";
 import LimitNoticeAlert from "./LimitNoticeAlert";
 import { classifyTailorError, type LimitAction } from "@/app/utils/tailorLimitError";
+import { containsLockedPlaceholder, selectSafePrefillResume } from "@/app/utils/gatingSanitizer";
 import ProgressStepper, { type ProgressActivityEntry } from "./ProgressStepper";
 import ResetConfirmationModal from "./ResetConfirmationModal";
 import FileDropZone from "./FileDropZone";
@@ -347,7 +348,14 @@ export default function SplitScreenTailorView() {
     prefillSyncedForRef.current = prefillId;
     setError(null);
     if (prefillVersion) {
-      setResume(String(prefillData.tailoredResume ?? prefillData.originalResume ?? ""));
+      setResume(
+        selectSafePrefillResume({
+          prefillVersion,
+          isUnlocked: prefillData.isUnlocked,
+          originalResume: prefillData.originalResume,
+          tailoredResume: prefillData.tailoredResume,
+        })
+      );
       setJobDescription(String(prefillData.jobDescription ?? ""));
       setParentResumeId(prefillVersion);
       if (keywordsToWeaveParam) {
@@ -393,7 +401,9 @@ export default function SplitScreenTailorView() {
 
     const stored = loadResumeData();
     if (stored) {
-      setResume(stored.resumeText || "");
+      if (stored.resumeText && !containsLockedPlaceholder(stored.resumeText)) {
+        setResume(stored.resumeText);
+      }
       setJobDescription(stored.jobDescription || "");
       if (stored.results) {
         const r = stored.results as HumanizeResponse;
