@@ -7,7 +7,7 @@ import BlogCtaBanner from "@/app/components/BlogCtaBanner";
 export const metadata: Metadata = {
   title: "Free Alternatives to Popular Resume Tools - AI Resume Tailor",
   description:
-    "Compare AI Resume Tailor with Jobscan, Teal, Rezi, Kickresume, Resume.io and Zety. Tailor your existing resume to any job posting, with your first 3 tailored resumes free.",
+    "Compare AI Resume Tailor with Jobscan, Teal, Rezi, Kickresume, Resume.io and Zety. Free ATS audit & diff preview, plus one-time passes from $9 with zero auto-renewals.",
   alternates: {
     canonical: "https://airesumetailor.com/alternatives",
   },
@@ -43,7 +43,7 @@ export default function AlternativesIndexPage() {
             Free Alternatives to Popular Resume Tools
           </h1>
           <p className="text-sm sm:text-base text-gray-700 font-sans leading-relaxed">
-            Unlike recurring subscription traps that bill you \$29–\$49/month, AI Resume Tailor gives you 3 free tailors upfront and affordable one-time passes from \$9 with zero auto-renewals.
+            Unlike recurring subscription traps that bill you $29–$49/month, AI Resume Tailor lets you run free ATS audits and diff previews upfront, then unlock unlimited exports with one-time passes from $9 and zero auto-renewals.
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export default function AlternativesIndexPage() {
 
         <BlogCtaBanner
           title="Try AI Resume Tailor Free"
-          subtitle="No credit card, no recurring monthly fees. Get 3 free ATS tailors right now."
+          subtitle="No credit card, no recurring monthly fees. Run a free ATS audit & bullet preview right now."
           buttonText="⚡ START FREE TAILOR"
         />
 

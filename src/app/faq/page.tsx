@@ -33,11 +33,11 @@ const FAQ_ITEMS = [
     qa: [
       {
         q: "How do I get started?",
-        a: "Sign in with a free account (Google or email), then paste your resume and the job description. Hit the button and you're done. Your first 3 tailored resumes are free to view and download.",
+        a: "Paste your resume and the job description, then hit the button. You can run 1 free preview without signing in or create a free account (Google or email) for 2 free ATS audits and bullet diff previews.",
       },
       {
         q: "Do I need an account?",
-        a: "Yes. You need to sign in to tailor your resume. That lets us save your tailored resumes and give you access to your first 3 for free.",
+        a: "No account is needed for your first preview. Creating a free account lets us save your runs and gives you 2 free ATS audits and sample bullet previews—no credit card required.",
       },
     ],
   },
@@ -46,11 +46,11 @@ const FAQ_ITEMS = [
     qa: [
       {
         q: "What do I get for free?",
-        a: "Your first 3 tailored resumes are completely free. You get full access to view each one and download it as PDF or Markdown. No credit card required.",
+        a: "You get a free ATS keyword-match score, missing-keyword gap list, and 1 revealed bullet rewrite per audit (2 free signed-in audits, plus 1 no-login preview). Your original uploaded resume stays accessible at all times—no credit card required.",
       },
       {
-        q: "How do the free resumes work?",
-        a: "It's the first 3 resumes you create (by creation date). Each one gets full access—view and download. After that, you can purchase time-based access to unlock more.",
+        q: "How do free previews and passes work?",
+        a: "Free audits let you inspect your ATS match score, missing keywords, and a sample bullet upgrade before paying. To reveal every rewritten bullet and export clean PDF or Markdown resumes, choose a one-time access pass starting at $9.00—with zero subscriptions.",
       },
     ],
   },

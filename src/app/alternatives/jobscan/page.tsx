@@ -5,7 +5,7 @@ import AlternativeComparisonTable from "@/app/components/AlternativeComparisonTa
 export const metadata = {
   title: "Free Alternative to Jobscan - AI Resume Tailor",
   description:
-    "Looking for a free Jobscan alternative? AI Resume Tailor offers free resume optimization with job description matching and ATS-friendly output. Your first 3 tailored resumes are free.",
+    "Looking for a free Jobscan alternative? AI Resume Tailor offers free ATS resume audits, missing-keyword analysis, and sample bullet previews—with one-time passes from $9 and zero subscriptions.",
   keywords: [
     "free alternative to Jobscan",
     "Jobscan free alternative",
@@ -42,7 +42,7 @@ export default function JobscanAlternativePage() {
             Jobscan is a popular resume scanner that compares your resume to job descriptions. AI Resume Tailor does that and more: it doesn&apos;t just score your match—it <em>rewrites</em> your resume to improve the match while keeping your voice. You get an ATS-optimized resume that sounds human, not robotic.
           </p>
           <p className="leading-relaxed">
-            Your first 3 tailored resumes are completely free. No credit card, no trial that expires. After that, you can purchase time-based access for unlimited tailoring. It&apos;s a simpler, more affordable option if you want a <strong>Jobscan free alternative</strong> that actually improves your resume, not just analyzes it.
+            Run a free ATS audit and preview a rewritten bullet first—no credit card, no recurring trial. When you&apos;re ready to unlock every tailored bullet and clean PDF exports, grab a one-time access pass starting at $9. It&apos;s a simpler, more affordable option if you want a <strong>Jobscan free alternative</strong> that actually improves your resume, not just analyzes it.
           </p>
         </section>
 
@@ -54,7 +54,8 @@ export default function JobscanAlternativePage() {
             <li>Job description matcher with relevancy scoring</li>
             <li>ATS-friendly output without keyword stuffing</li>
             <li>Human-sounding AI (no robotic or generic phrasing)</li>
-            <li>First 3 tailored resumes free</li>
+            <li>Free ATS audits, missing-keyword gap list &amp; sample bullet reveal</li>
+            <li>One-time access passes from $9 with zero auto-renewal</li>
             <li>PDF and Markdown download</li>
           </ul>
         </section>
@@ -64,7 +65,7 @@ export default function JobscanAlternativePage() {
             Try It Free
           </h2>
           <p className="leading-relaxed mb-6">
-            Sign in with Google or email to get started. No credit card required. Your first 3 tailored resumes are yours to keep.
+            Paste your resume and job description to preview your ATS score and missing keywords—no credit card or monthly subscription required.
           </p>
           <Link
             href="/"

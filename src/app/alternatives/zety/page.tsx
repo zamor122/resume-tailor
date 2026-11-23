@@ -5,7 +5,7 @@ import AlternativeComparisonTable from "@/app/components/AlternativeComparisonTa
 export const metadata = {
   title: "Free Alternative to Zety - AI Resume Tailor",
   description:
-    "Looking for a free Zety resume builder alternative? AI Resume Tailor offers free resume optimization with job description matching. Your first 3 tailored resumes are free. No subscription required.",
+    "Looking for a free Zety resume builder alternative? AI Resume Tailor offers free ATS audits and sample bullet previews—plus one-time passes from $9 with zero auto-renewing subscriptions.",
   keywords: [
     "free alternative to Zety",
     "Zety resume builder alternative",
@@ -43,7 +43,7 @@ export default function ZetyAlternativePage() {
             Zety offers a full resume builder with templates and cover letters. If you already have a resume and just need to tailor it for each application, AI Resume Tailor is a simpler <strong>Zety resume builder alternative</strong>. You don&apos;t need to rebuild your resume in a new format—paste what you have, add the job posting, and get a tailored version in seconds.
           </p>
           <p className="leading-relaxed">
-            Your first 3 tailored resumes are free. No subscription, no monthly fees. After that, you can purchase time-based access when you need it. It&apos;s ideal if you want a lightweight, <strong>free resume optimizer</strong> without the overhead of a full career platform.
+            Start with free ATS audits and sample bullet previews—no subscription, no monthly fees. Whenever you want unlimited full bullet unlocks and clean PDF exports, grab a one-time pass starting at $9. It&apos;s ideal if you want a lightweight, <strong>free resume optimizer</strong> without the overhead of a full career platform.
           </p>
         </section>
 
@@ -55,8 +55,8 @@ export default function ZetyAlternativePage() {
             <li>Job description matcher with relevancy scoring</li>
             <li>Works with your existing resume (paste or upload PDF)</li>
             <li>Human-sounding output (no robotic AI tone)</li>
-            <li>First 3 tailored resumes free</li>
-            <li>Simple, focused interface—no learning curve</li>
+            <li>Free ATS audits, missing-keyword gap list &amp; sample bullet reveal</li>
+            <li>One-time access passes from $9 with zero auto-renewals</li>
           </ul>
         </section>
 
@@ -65,7 +65,7 @@ export default function ZetyAlternativePage() {
             Try It Free
           </h2>
           <p className="leading-relaxed mb-6">
-            Sign in with Google or email to get started. Your first 3 tailored resumes are free—no credit card required.
+            Paste your resume and job description to preview your ATS score and missing keywords—no credit card or recurring subscription required.
           </p>
           <Link
             href="/"
