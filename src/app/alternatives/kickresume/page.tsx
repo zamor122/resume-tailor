@@ -5,7 +5,7 @@ import AlternativeComparisonTable from "@/app/components/AlternativeComparisonTa
 export const metadata = {
   title: "Free Alternative to Kickresume - AI Resume Tailor",
   description:
-    "Looking for a free Kickresume alternative? AI Resume Tailor offers free resume optimization with job description matching. Your first 3 tailored resumes are free. No templates required.",
+    "Looking for a free Kickresume alternative? AI Resume Tailor offers free ATS audits and sample bullet previews tailored to any job posting—plus one-time passes from $9 and zero templates required.",
   keywords: [
     "free alternative to Kickresume",
     "Kickresume alternative",
@@ -42,7 +42,7 @@ export default function KickresumeAlternativePage() {
             Kickresume offers templates and a resume builder. If you already have a resume and need to tailor it for each application, AI Resume Tailor is a simpler <strong>Kickresume alternative</strong>. You don&apos;t rebuild from scratch—you paste what you have, add the job posting, and get a tailored version in seconds.
           </p>
           <p className="leading-relaxed">
-            Your first 3 tailored resumes are free. No credit card, no subscription. After that, you can purchase time-based access when you need it. It&apos;s ideal if you want a <strong>free resume optimizer</strong> that works with your existing resume.
+            Start with a free ATS audit and sample bullet preview—no credit card, no subscription. Whenever you want unlimited full bullet unlocks and clean PDF exports, grab a one-time pass starting at $9. It&apos;s ideal if you want a <strong>free resume optimizer</strong> that works with your existing resume.
           </p>
         </section>
 
@@ -54,8 +54,8 @@ export default function KickresumeAlternativePage() {
             <li>Job description matcher with relevancy scoring</li>
             <li>Works with your existing resume (paste or upload PDF)</li>
             <li>Human-sounding output (no robotic AI tone)</li>
-            <li>First 3 tailored resumes free</li>
-            <li>PDF and Markdown download</li>
+            <li>Free ATS audits, missing-keyword gap list &amp; sample bullet reveal</li>
+            <li>PDF and Markdown download with one-time passes from $9</li>
           </ul>
         </section>
 
@@ -64,7 +64,7 @@ export default function KickresumeAlternativePage() {
             Try It Free
           </h2>
           <p className="leading-relaxed mb-6">
-            Sign in with Google or email to get started. Your first 3 tailored resumes are free—no credit card required.
+            Paste your resume and job description to preview your ATS score and missing keywords—no credit card or monthly subscription required.
           </p>
           <Link
             href="/"

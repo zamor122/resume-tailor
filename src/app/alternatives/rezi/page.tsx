@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Free Alternative to Rezi AI Resume Builder (2026)",
   description:
-    "Looking for a free alternative to Rezi? AI Resume Tailor offers fast ATS resume optimization with model-agnostic intelligence. Your first 3 tailored resumes are 100% free with no monthly subscription.",
+    "Looking for a free alternative to Rezi? AI Resume Tailor offers fast ATS audits, missing-keyword analysis, and sample bullet previews—plus one-time passes from $9 with zero monthly subscription.",
   keywords: [
     "free alternative to rezi",
     "rezi alternative",
@@ -43,10 +43,10 @@ export default function ReziAlternativePage() {
             Why Choose AI Resume Tailor Over Rezi?
           </h2>
           <p className="leading-relaxed mb-4">
-            While Rezi charges up to $29/month or restricts free users with tight token and export limits, AI Resume Tailor gives you <strong>3 free complete tailors</strong> with zero monthly subscription traps.
+            While Rezi charges up to $29/month or restricts free users with tight token and export limits, AI Resume Tailor gives you <strong>free ATS audits &amp; bullet diff previews</strong> upfront and one-time access passes from $9 with zero monthly subscription traps.
           </p>
           <p className="leading-relaxed">
-            Our LangGraph-powered agent runs in <strong>under 4 seconds</strong>, compares your resume against live job descriptions, weaves in missing ATS keywords, and provides quantifiable metrics customization.
+            Our LangGraph-powered agent compares your resume against live job descriptions, weaves in missing ATS keywords, and provides transparent before/after diffs with authenticity checks.
           </p>
         </section>
 
@@ -66,7 +66,7 @@ export default function ReziAlternativePage() {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                 <tr>
                   <td className="p-3 font-medium">Free Access</td>
-                  <td className="p-3 text-cyan-600 dark:text-cyan-400">3 Complete Tailors Free</td>
+                  <td className="p-3 text-cyan-600 dark:text-cyan-400">ATS Audits &amp; Diff Previews Free</td>
                   <td className="p-3 text-gray-500">Limited / Paywalled</td>
                 </tr>
                 <tr>

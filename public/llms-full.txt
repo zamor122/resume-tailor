@@ -1,15 +1,15 @@
 # AI Resume Tailor
 
-> AI Resume Tailor tailors an existing resume to a specific job posting and reports an ATS keyword-match score. It is free to try with no login required, the first 3 tailored resumes are free, and paid access is a one-time purchase — there is no subscription and nothing auto-renews.
+> AI Resume Tailor tailors an existing resume to a specific job posting and reports an ATS keyword-match score. It is free to try with an anonymous ATS audit preview and 2 free signed-in ATS audits & diff previews, and paid access is a one-time purchase — there is no subscription and nothing auto-renews.
 
-AI Resume Tailor does one job: it rewrites a candidate's existing resume so it matches the wording of one specific job posting, while keeping the resume recognisably theirs. You paste a resume and a job description and get back a tailored version, a keyword-match score, the keywords that are missing, and a plain-English explanation of what changed and why. It is not a resume builder and it does not replace the resume with a template — it works from the document the candidate already has.
+AI Resume Tailor does one job: it rewrites a candidate's existing resume so it matches the wording of one specific job posting, while keeping the resume recognisably theirs. You paste a resume and a job description and get back a keyword-match score, the keywords that are missing, and a plain-English explanation of what changed and why. It is not a resume builder and it does not replace the resume with a template — it works from the document the candidate already has.
 
 The site also provides a free ATS resume checker that reports compatibility, formatting and header problems, missing-keyword signals, and action-verb strength.
 
 ## Pricing and free tier
 
-- **Free to try, no login required.** A first preview needs no account: paste a resume and a job description and get the score and the missing-keyword list.
-- **First 3 tailored resumes free**, including viewing and downloading them as PDF or Markdown, with no credit card required.
+- **Free to try, no login required.** An initial preview needs no account: paste a resume and a job description and get the ATS score, missing-keyword list, and a free sample bullet rewrite.
+- **2 free signed-in ATS audits & diff previews**, with your original uploaded resume always accessible and 1 sample rewrite revealed per audit, with no credit card required.
 - **Paid access is a one-time purchase**, not a subscription: 2 days $9.00, 1 week $19.00, 1 month $29.00 (USD). Nothing auto-renews and there is nothing to cancel.
 
 ## How it works
@@ -28,7 +28,7 @@ A multi-step pipeline profiles the resume, analyses the job posting and its key 
 
 - [Free ATS Resume Checker](https://airesumetailor.com/resume-checker): ATS compatibility score, layout and header checks, missing-keyword detection, and action-verb strength.
 - [Resume Optimizer](https://airesumetailor.com/resume-optimizer): Tailors a resume to a job description with keyword matching and human-sounding output.
-- [Pricing](https://airesumetailor.com/pricing): One-time access tiers (2-day, 1-week, 1-month). The first 3 tailored resumes are free; no subscription.
+- [Pricing](https://airesumetailor.com/pricing): One-time access tiers (2-day $9, 1-week $19, 1-month $29) after free ATS audits & previews; no subscription.
 - [FAQ](https://airesumetailor.com/faq): Resume tailoring, ATS scoring, and pricing questions.
 - [Blog](https://airesumetailor.com/blog): Guides on resume tailoring, ATS compatibility, and role-specific keywords.
 

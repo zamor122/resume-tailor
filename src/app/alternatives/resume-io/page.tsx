@@ -5,7 +5,7 @@ import AlternativeComparisonTable from "@/app/components/AlternativeComparisonTa
 export const metadata = {
   title: "Free Alternative to Resume.io - AI Resume Tailor",
   description:
-    "Looking for a free Resume.io alternative? AI Resume Tailor offers free resume optimization with job description matching. Your first 3 tailored resumes are free. No subscription required.",
+    "Looking for a free Resume.io alternative? AI Resume Tailor offers free ATS audits and sample bullet previews—plus one-time passes from $9 with zero auto-renewing subscriptions.",
   keywords: [
     "free alternative to Resume.io",
     "Resume.io alternative",
@@ -43,7 +43,7 @@ export default function ResumeIoAlternativePage() {
             Resume.io offers templates and a resume builder. If you already have a resume and need to tailor it for each application, AI Resume Tailor is a simpler <strong>Resume.io alternative</strong>. You don&apos;t start from scratch—you paste what you have, add the job posting, and get a tailored version in seconds.
           </p>
           <p className="leading-relaxed">
-            Your first 3 tailored resumes are free. No subscription, no trial that expires. After that, you can purchase time-based access when you need it. It&apos;s ideal if you want a <strong>free resume optimizer</strong> that works with your existing resume.
+            Start with a free ATS audit and sample bullet preview—no subscription, no trial that auto-renews. Whenever you want unlimited full bullet unlocks and clean PDF exports, grab a one-time pass starting at $9. It&apos;s ideal if you want a <strong>free resume optimizer</strong> that works with your existing resume.
           </p>
         </section>
 
@@ -55,8 +55,8 @@ export default function ResumeIoAlternativePage() {
             <li>Job description matcher with relevancy scoring</li>
             <li>ATS-friendly output without keyword stuffing</li>
             <li>Human-sounding AI (no robotic or generic phrasing)</li>
-            <li>First 3 tailored resumes free</li>
-            <li>PDF and Markdown download</li>
+            <li>Free ATS audits, missing-keyword gap list &amp; sample bullet reveal</li>
+            <li>One-time access passes from $9 (zero auto-renewal)</li>
           </ul>
         </section>
 
@@ -65,7 +65,7 @@ export default function ResumeIoAlternativePage() {
             Try It Free
           </h2>
           <p className="leading-relaxed mb-6">
-            Sign in with Google or email to get started. Your first 3 tailored resumes are free—no credit card required.
+            Paste your resume and job description to preview your ATS score and missing keywords—no credit card or recurring subscription required.
           </p>
           <Link
             href="/"

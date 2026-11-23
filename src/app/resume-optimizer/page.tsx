@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata = {
   title: "Free Resume Optimizer & ATS Checker - AI Resume Tailor",
   description:
-    "Free resume optimizer and ATS resume checker. Tailor your resume for any job posting with AI. Get relevancy scoring and human-sounding output. Your first 3 tailored resumes are free.",
+    "Free resume optimizer and ATS resume checker. Tailor your resume for any job posting with AI. Get a free ATS score, missing-keyword audit, and sample bullet preview—no subscription.",
   keywords: [
     "free resume optimizer",
     "ATS resume checker",
@@ -22,7 +22,7 @@ export default function ResumeOptimizerPage() {
       </h1>
 
       <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
-        Use our <strong>free resume optimizer</strong> to tailor your resume for any job posting. It acts as both a <strong>job description matcher</strong> and an <strong>ATS resume checker</strong>—analyzing the posting, identifying key requirements, and rewriting your experience to match. Your first 3 tailored resumes are free.
+        Use our <strong>free resume optimizer</strong> to audit and tailor your resume for any job posting. It acts as both a <strong>job description matcher</strong> and an <strong>ATS resume checker</strong>—analyzing the posting, surfacing missing keywords, and showing before/after bullet improvements. Start with a free preview and sample rewrite before choosing a one-time pass.
       </p>
 
       <div className="space-y-8 text-gray-700 dark:text-gray-300">
@@ -55,7 +55,7 @@ export default function ResumeOptimizerPage() {
             Try the Free Resume Optimizer
           </h2>
           <p className="leading-relaxed mb-6">
-            Sign in with Google or email. Paste your resume and the job description. Get a tailored, ATS-optimized version in seconds. Your first 3 are free—no credit card required.
+            Paste your resume and the job description to get an instant ATS keyword audit and sample bullet preview—no credit card or subscription required. Unlock unlimited full exports whenever you&apos;re ready with one-time passes starting at $9.
           </p>
           <Link
             href="/"
