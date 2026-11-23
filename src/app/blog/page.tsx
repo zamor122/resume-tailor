@@ -9,6 +9,9 @@ export const metadata = {
   title: "Career & ATS Optimization Field Manual - AI Resume Tailor",
   description:
     "Tactical guides on resume tailoring, ATS parsing algorithms, and Google X-Y-Z formula rewriting. Learn how to beat recruiter filters.",
+  alternates: {
+    canonical: "https://airesumetailor.com/blog",
+  },
 };
 
 export default async function BlogIndexPage() {

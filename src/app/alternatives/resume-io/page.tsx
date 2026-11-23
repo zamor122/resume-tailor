@@ -13,6 +13,9 @@ export const metadata = {
     "resume builder alternative",
     "resume optimizer free",
   ],
+  alternates: {
+    canonical: "https://airesumetailor.com/alternatives/resume-io",
+  },
 };
 
 export default function ResumeIoAlternativePage() {

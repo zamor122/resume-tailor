@@ -13,6 +13,9 @@ export const metadata = {
     "resume builder alternative",
     "resume optimizer free",
   ],
+  alternates: {
+    canonical: "https://airesumetailor.com/alternatives/kickresume",
+  },
 };
 
 export default function KickresumeAlternativePage() {

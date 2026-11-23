@@ -12,6 +12,9 @@ export const metadata = {
     "free ATS checker",
     "resume optimization tool",
   ],
+  alternates: {
+    canonical: "https://airesumetailor.com/resume-optimizer",
+  },
 };
 
 export default function ResumeOptimizerPage() {

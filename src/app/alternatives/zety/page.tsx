@@ -13,6 +13,9 @@ export const metadata = {
     "free resume builder",
     "resume optimizer free",
   ],
+  alternates: {
+    canonical: "https://airesumetailor.com/alternatives/zety",
+  },
 };
 
 export default function ZetyAlternativePage() {

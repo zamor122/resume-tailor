@@ -13,6 +13,9 @@ export const metadata = {
     "free resume builder",
     "resume optimizer free",
   ],
+  alternates: {
+    canonical: "https://airesumetailor.com/alternatives/teal",
+  },
 };
 
 export default function TealAlternativePage() {

@@ -12,6 +12,9 @@ const PRICE_OPTIONS = TIME_BASED_TIERS.map(
 export const metadata = {
   title: "Frequently Asked Questions - AI Resume Tailor",
   description: "Answers about human-sounding resume tailoring, what's free, what's paid, and how we avoid robotic AI tone.",
+  alternates: {
+    canonical: "https://airesumetailor.com/faq",
+  },
 };
 
 const FAQ_ITEMS = [
