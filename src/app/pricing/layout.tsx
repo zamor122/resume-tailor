@@ -13,6 +13,9 @@ export const metadata: Metadata = {
     FREE_RESUME_LIMIT > 0
       ? `Your first ${FREE_RESUME_LIMIT} AI resume tailor is free. Unlimited access from $${ENTRY_PRICE}. One-time payment, no subscription. Start tailoring in seconds.`
       : `Get ${FREE_AUDIT_LIMIT} free ATS audits & previews. Unlock full tailored resume downloads from $${ENTRY_PRICE}. One-time payment, no subscription.`,
+  alternates: {
+    canonical: "https://airesumetailor.com/pricing",
+  },
 };
 
 export default function PricingLayout({

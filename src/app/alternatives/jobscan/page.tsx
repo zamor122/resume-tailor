@@ -13,6 +13,9 @@ export const metadata = {
     "free resume scanner",
     "resume job match",
   ],
+  alternates: {
+    canonical: "https://airesumetailor.com/alternatives/jobscan",
+  },
 };
 
 export default function JobscanAlternativePage() {
