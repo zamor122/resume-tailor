@@ -8,6 +8,7 @@ import {
   type JDInterpreterResult,
 } from "@/app/utils/keyword-extraction";
 import { cleanJobDescription } from "@/app/utils/jobDescriptionCleaner";
+import { emitAgentProgress } from "@/app/utils/agentProgressEmitter";
 
 function buildCompactKeywordPrompt(cleanedJD: string, resume: string, titleHint?: string): string {
   return `Extract high-weight ATS skills and keywords from this job description.
@@ -41,6 +42,13 @@ export async function keywordAnalyzerNode(
   const jd = state.selectedJobDescription || state.rawJobDescription || "";
   const cleanedJD = cleanJobDescription(jd, { maxLength: 8000 });
   const resume = state.rawResume;
+
+  emitAgentProgress({
+    step: "matching",
+    tool: "Keyword & Gap Analyzer",
+    message: "Extracting critical role requirements and identifying missing keywords...",
+    progress: 48,
+  });
 
   let keywordResult: JDInterpreterResult;
 

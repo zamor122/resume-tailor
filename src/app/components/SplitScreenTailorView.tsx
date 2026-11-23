@@ -17,7 +17,7 @@ import AuthModal from "./AuthModal";
 import TierSelectionModal from "./TierSelectionModal";
 import LimitNoticeAlert from "./LimitNoticeAlert";
 import { classifyTailorError, type LimitAction } from "@/app/utils/tailorLimitError";
-import ProgressStepper from "./ProgressStepper";
+import ProgressStepper, { type ProgressActivityEntry } from "./ProgressStepper";
 import ResetConfirmationModal from "./ResetConfirmationModal";
 import FileDropZone from "./FileDropZone";
 import HomepageSEOSection from "./HomepageSEOSection";
@@ -58,7 +58,7 @@ async function runHumanizeStream(params: {
   userId: string | null;
   accessToken?: string;
   jobTitle?: string;
-  onProgress?: (progress: number, message: string) => void;
+  onProgress?: (progress: number, message: string, tool?: string) => void;
   parentResumeId?: string;
   customInstructions?: string;
   keywordsToWeave?: string[];
@@ -154,10 +154,10 @@ async function runHumanizeStream(params: {
           try {
             const parsed = JSON.parse(lines[i].slice(6).trim());
             if (parsed.stage || parsed.step || parsed.message) {
-              console.log(`[Tailor Stream] ⚡ Progress: ${parsed.progress}% - ${parsed.message || parsed.step}`);
+              console.log(`[Tailor Stream] ⚡ Progress: ${parsed.progress}% - ${parsed.tool ? `[${parsed.tool}] ` : ""}${parsed.message || parsed.step}`);
             }
             if (parsed.progress !== undefined) {
-              onProgress?.(parsed.progress, parsed.message || "");
+              onProgress?.(parsed.progress, parsed.message || "", parsed.tool);
             }
             if (parsed.tailoredResume) {
               console.log(`[Tailor Stream] ✅ Received complete payload:`, {
@@ -297,6 +297,17 @@ export default function SplitScreenTailorView() {
   const [preferences, setPreferences] = useState<TailoringPreferences>(DEFAULT_PREFERENCES);
   const [agentMessage, setAgentMessage] = useState<string>("");
   const [agentProgress, setAgentProgress] = useState<number | undefined>(undefined);
+  const [agentTool, setAgentTool] = useState<string | undefined>(undefined);
+  const [agentFeed, setAgentFeed] = useState<ProgressActivityEntry[]>([]);
+
+  useEffect(() => {
+    if (loading) {
+      document.getElementById("progress-stepper")?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [loading]);
   const [activeMobileTab, setActiveMobileTab] = useState<"resume" | "job" | "options">("resume");
   const prefillSyncedForRef = useRef<string | null>(null);
 
@@ -440,14 +451,30 @@ export default function SplitScreenTailorView() {
       return;
     }
 
+    const recordAgentStep = (progress: number, message: string, tool?: string) => {
+      setAgentProgress(progress);
+      if (tool) setAgentTool(tool);
+      if (message) setAgentMessage(message);
+      if (!message && !tool) return;
+      setAgentFeed((prev) => {
+        const last = prev[prev.length - 1];
+        const resolvedMessage = message || (tool ? `Running ${tool}...` : "");
+        const resolvedTool = tool || last?.tool;
+        if (last && last.message === resolvedMessage && last.tool === resolvedTool) {
+          return prev;
+        }
+        return [...prev, { tool: resolvedTool, message: resolvedMessage, progress }];
+      });
+    };
+
     // 1. Immediately indicate loading state on the button so 1 click suffices
     setLoading(true);
     setError(null);
     setLimitAction(null);
     setResults(null);
     setHasStartedTailoring(true);
-    setAgentMessage("Checking requirements...");
-    setAgentProgress(5);
+    setAgentFeed([]);
+    recordAgentStep(5, "Checking requirements...", "Requirements Check");
     playSfx("click");
 
     // Guided elicitation: ask 3-5 plain questions ONCE, after the job is known and
@@ -492,6 +519,7 @@ export default function SplitScreenTailorView() {
           } else {
             // Unanswered questions exist — open modal with known answers pre-populated
             setLoading(false);
+            setAgentTool(undefined);
             setElicitationQuestions(questions);
             setShowElicitation(true);
             return; // wait for the user to answer or skip, then resume tailoring
@@ -502,8 +530,7 @@ export default function SplitScreenTailorView() {
       }
     }
 
-    setAgentMessage("Analyzing your resume and target job requirements...");
-    setAgentProgress(10);
+    recordAgentStep(10, "Analyzing your resume and target job requirements...", "Tailoring Pipeline");
 
     const source = prefillResumeId ? "prefill" : (resume.trim().length > 0 ? "return_visit" : "blank");
     analytics.trackEvent(analytics.events.RESUME_TAILOR, {
@@ -528,10 +555,7 @@ export default function SplitScreenTailorView() {
         userId: user?.id ?? null,
         accessToken: session?.access_token ?? undefined,
         jobTitle: jobTitleToUse,
-        onProgress: (progress, message) => {
-          setAgentProgress(progress);
-          if (message) setAgentMessage(message);
-        },
+        onProgress: recordAgentStep,
         parentResumeId,
         customInstructions: customInstructions.trim() || undefined,
         keywordsToWeave: keywordsToWeave.length ? keywordsToWeave : undefined,
@@ -879,6 +903,7 @@ export default function SplitScreenTailorView() {
           <div className="text-center space-y-3">
             <TailorButton
               loading={loading}
+              statusText={agentTool ? `${agentTool}...` : undefined}
               onClick={() => {
                 playSfx("click");
                 analytics.trackEvent(analytics.events.CTA_TAILOR_CLICK, {
@@ -902,6 +927,18 @@ export default function SplitScreenTailorView() {
             </p>
           </div>
         </div>
+
+        {(loading || redirecting) && (
+          <div id="progress-stepper">
+            <ProgressStepper
+              isActive={true}
+              agentMessage={agentMessage}
+              agentProgress={agentProgress}
+              activeTool={agentTool}
+              activityLog={agentFeed}
+            />
+          </div>
+        )}
 
         {/* Sticky Mobile Floating Action Bar */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FAF7F0] border-t-2 border-[#1C2028] p-3 px-4 shadow-[0px_-4px_0px_rgba(28,32,40,0.15)] flex items-center justify-between gap-3">
@@ -941,7 +978,7 @@ export default function SplitScreenTailorView() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span>Tailoring...</span>
+                <span>{agentTool ? `${agentTool}...` : "Tailoring..."}</span>
               </>
             ) : (
               <span>⚡ TAILOR RESUME</span>
@@ -991,14 +1028,6 @@ export default function SplitScreenTailorView() {
               START OVER
             </button>
           </div>
-        )}
-
-        {(loading || redirecting) && (
-          <ProgressStepper
-            isActive={true}
-            agentMessage={agentMessage}
-            agentProgress={agentProgress}
-          />
         )}
 
         {/* Anonymous result: show tailored resume inline and CTA to sign up to save */}

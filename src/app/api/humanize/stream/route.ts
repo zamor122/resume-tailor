@@ -19,6 +19,7 @@ import type { ElicitationFact } from "@/app/types/elicitation";
 import type { AgentState } from "@/app/agent/state";
 import { getAccessInfoServer } from "@/app/utils/accessManager";
 import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from "@/app/config/pricing";
+import { runWithProgressEmitter } from "@/app/utils/agentProgressEmitter";
 import {
   sanitizeSuggestionsForLocked,
   sanitizeSectionGroupsForLocked,
@@ -35,41 +36,48 @@ export const preferredRegion = "auto";
 // (62s), which was already written to detect a 60s server-side timeout.
 export const maxDuration = 60;
 
-const NODE_PROGRESS_MAP: Record<string, { progress: number; message: string; step: string }> = {
+const NODE_PROGRESS_MAP: Record<string, { progress: number; message: string; step: string; tool: string }> = {
   intakeParser: {
-    progress: 25,
-    message: "Analyzing career experience, roles, and skills...",
+    progress: 26,
+    message: "Structured work history and accomplishment bullets.",
     step: "analyzing",
+    tool: "Resume Extractor",
   },
   candidateProfiler: {
     progress: 40,
-    message: "Determining career narrative and seniority level...",
+    message: "Identified target domain and career seniority level.",
     step: "profiling",
+    tool: "Career Profiler",
   },
   jobDiscovery: {
     progress: 48,
-    message: "Discovering target role requirements and qualifications...",
+    message: "Gathered target role benchmarks and qualifications.",
     step: "discovery",
+    tool: "Role Matcher",
   },
   keywordAnalyzer: {
     progress: 55,
-    message: "Aligning competencies and qualifications to target role...",
+    message: "Matched existing skills and isolated missing job keywords.",
     step: "matching",
+    tool: "Keyword & Gap Analyzer",
   },
   bulletPlanner: {
-    progress: 68,
-    message: "Formulating accomplishment enhancement strategy...",
+    progress: 62,
+    message: "Built tailoring roadmap across your experience.",
     step: "planning",
+    tool: "Tailoring Planner",
   },
   surgicalTailor: {
-    progress: 90,
-    message: "Elevating accomplishment bullets & verifying authenticity with Jev AI...",
+    progress: 91,
+    message: "Completed bullet rewrites and Jev authenticity checks.",
     step: "tailoring",
+    tool: "Jev Quality Gate",
   },
   reassembleAndScore: {
     progress: 96,
-    message: "Finalizing tailored resume and measuring score boost...",
+    message: "Finalized tailored resume and measured match score boost.",
     step: "finalizing",
+    tool: "Jev Alignment Scorer",
   },
 };
 
@@ -275,18 +283,23 @@ export async function POST(req: NextRequest) {
 
         streamClosed = !sendSSE(controller, "agent_step", {
           step: "analyzing",
+          tool: "Resume Extractor",
           message: "Reviewing career milestones, skills, and key accomplishments...",
-          progress: 20,
+          progress: 16,
         });
         if (streamClosed) return;
 
-        // Start heartbeat keepalive & progressive tick timer (every 2.5s)
+        let lastRealEventAt = Date.now();
+
+        // Fallback heartbeat keepalive ONLY if >4s passes without a live tool event
         heartbeatTimer = setInterval(() => {
           if (streamClosed) return;
-          if (currentProgress < 94) {
+          const idleMs = Date.now() - lastRealEventAt;
+          if (idleMs >= 4000 && currentProgress < 94) {
             currentProgress += 1;
             sendSSE(controller, "agent_step", {
               step: "processing",
+              tool: "Tailoring Engine",
               message: getHeartbeatStatus(currentProgress),
               progress: currentProgress,
             });
@@ -297,33 +310,8 @@ export async function POST(req: NextRequest) {
           }
         }, 2500);
 
-        // Execute graph with initial state and node-by-node update streaming
+        // Execute graph with live per-tool & node-by-node update streaming
         let agentResult: AgentState = {} as AgentState;
-        const streamIterable = await graph.stream(
-          {
-            rawResume: resume,
-            rawJobDescription: jobDescription,
-            sessionId,
-            userId: authenticatedUserId ?? undefined,
-            parentResumeId,
-            preferences,
-            // Only an EXPLICITLY chosen model may override per-step routing. Passing the
-            // resolved default (`selectedModel`) here used to override it for EVERY node:
-            // `resolveStepModel` returns the caller's key first, so the whole routing table
-            // (fast model for read/structured nodes, capable model for heavy generation) was
-            // dead code. Every node then hit `DEFAULT_MODEL_KEY` — the slowest free model,
-            // capped at 50 requests/day — and once that quota ran out the pipeline silently
-            // fell through to Groq's 120B reasoning model, turning each call into ~18s and
-            // pushing the run past Vercel's 60s function cap. `selectedModel` is still used
-            // for rate-limiting/telemetry above; it just must not masquerade as a user choice.
-            modelKey: modelKey || undefined,
-            sessionApiKeys,
-            jobTitle: clientJobTitle,
-            userSuppliedFacts: userSuppliedFacts.length ? userSuppliedFacts : undefined,
-          },
-          { streamMode: ["updates", "values"] }
-        );
-
         const GRAPH_TIMEOUT_MS = 50_000;
         let graphTimedOut = false;
         const graphTimeoutTimer = setTimeout(() => {
@@ -331,24 +319,57 @@ export async function POST(req: NextRequest) {
           console.warn(`[Stream API] ⚠️ LangGraph execution reached ${GRAPH_TIMEOUT_MS}ms safety limit`);
         }, GRAPH_TIMEOUT_MS);
 
-        for await (const [mode, payload] of streamIterable) {
-          if (streamClosed || graphTimedOut) break;
+        await runWithProgressEmitter(
+          (evt) => {
+            if (streamClosed || graphTimedOut) return;
+            currentProgress = Math.max(currentProgress, evt.progress);
+            lastRealEventAt = Date.now();
+            sendSSE(controller, "agent_step", {
+              step: evt.step,
+              tool: evt.tool,
+              message: evt.message,
+              progress: currentProgress,
+            });
+          },
+          async () => {
+            const streamIterable = await graph.stream(
+              {
+                rawResume: resume,
+                rawJobDescription: jobDescription,
+                sessionId,
+                userId: authenticatedUserId ?? undefined,
+                parentResumeId,
+                preferences,
+                modelKey: modelKey || undefined,
+                sessionApiKeys,
+                jobTitle: clientJobTitle,
+                userSuppliedFacts: userSuppliedFacts.length ? userSuppliedFacts : undefined,
+              },
+              { streamMode: ["updates", "values"] }
+            );
 
-          if (mode === "values") {
-            agentResult = payload as AgentState;
-          } else if (mode === "updates" && payload && typeof payload === "object") {
-            const finishedNode = Object.keys(payload)[0];
-            const meta = NODE_PROGRESS_MAP[finishedNode];
-            if (meta) {
-              currentProgress = Math.max(currentProgress, meta.progress);
-              sendSSE(controller, "agent_step", {
-                step: meta.step,
-                message: meta.message,
-                progress: currentProgress,
-              });
+            for await (const [mode, payload] of streamIterable) {
+              if (streamClosed || graphTimedOut) break;
+
+              if (mode === "values") {
+                agentResult = payload as AgentState;
+              } else if (mode === "updates" && payload && typeof payload === "object") {
+                const finishedNode = Object.keys(payload)[0];
+                const meta = NODE_PROGRESS_MAP[finishedNode];
+                if (meta) {
+                  currentProgress = Math.max(currentProgress, meta.progress);
+                  lastRealEventAt = Date.now();
+                  sendSSE(controller, "agent_step", {
+                    step: meta.step,
+                    tool: meta.tool,
+                    message: meta.message,
+                    progress: currentProgress,
+                  });
+                }
+              }
             }
           }
-        }
+        );
 
         clearTimeout(graphTimeoutTimer);
 

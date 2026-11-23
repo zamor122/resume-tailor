@@ -17,6 +17,7 @@ import {
 } from "@/app/utils/contactBlockSanitizer";
 import { computeKeywordGap } from "../utils/keywordGap";
 import { evaluateResumeAlignmentWithJev } from "@/app/services/jev";
+import { emitAgentProgress } from "@/app/utils/agentProgressEmitter";
 
 export async function reassembleAndScoreNode(
   state: AgentState
@@ -110,6 +111,12 @@ export async function reassembleAndScoreNode(
 
   const jd = state.selectedJobDescription?.trim();
   if (jd && rawResume) {
+    emitAgentProgress({
+      step: "finalizing",
+      tool: "Jev Alignment Scorer",
+      message: "Scoring your before-and-after ATS job match alignment...",
+      progress: 94,
+    });
     try {
       const apiKey = state.sessionApiKeys?.['TYPESAFE_API_KEY'];
       const [beforeEval, afterEval] = await Promise.all([

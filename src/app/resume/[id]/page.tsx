@@ -180,10 +180,18 @@ export default function ResumeDetailPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] p-8 rounded-xl animate-pulse space-y-6">
-          <div className="h-8 bg-[#E5E0D8] border border-[#1C2028] rounded w-1/3" />
-          <div className="h-64 bg-[#E5E0D8] border border-[#1C2028] rounded" />
-          <div className="h-32 bg-[#E5E0D8] border border-[#1C2028] rounded" />
+        <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] p-8 rounded-xl space-y-6">
+          <div className="flex items-center gap-3">
+            <span className="inline-block h-4 w-4 rounded-full border-2 border-[#1C2028] border-t-[#FF5722] animate-spin" />
+            <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#1C2028]">
+              {authLoading ? "Verifying your session..." : "Loading your tailored resume & analysis..."}
+            </p>
+          </div>
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-[#E5E0D8] border border-[#1C2028] rounded w-1/3" />
+            <div className="h-64 bg-[#E5E0D8] border border-[#1C2028] rounded" />
+            <div className="h-32 bg-[#E5E0D8] border border-[#1C2028] rounded" />
+          </div>
         </div>
       </div>
     );

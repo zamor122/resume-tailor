@@ -15,6 +15,7 @@ import {
 } from "@/app/utils/resumeReassemble";
 import { parseChunkBulletsResponse } from "@/app/utils/chunkBulletParser";
 import { extractAddedMissingKeywords } from "@/app/utils/addedKeywordTracker";
+import { emitAgentProgress } from "@/app/utils/agentProgressEmitter";
 import { stripModelThinking } from "@/app/utils/stripModelThinking";
 import {
   diagnoseChunkWithJev,
@@ -181,6 +182,12 @@ export async function surgicalTailorNode(
       const jobKeywords = getJobSpecificKeywords(exp, sortedMissingKeywords, jobIndex);
 
       let diagnosis;
+      emitAgentProgress({
+        step: "tailoring",
+        tool: "Jev Role Diagnostic",
+        message: `Diagnosing impact focus for ${exp.company || `Role ${jobIndex + 1}`}...`,
+        progress: Math.min(72, 62 + jobIndex * 3),
+      });
       try {
         diagnosis = await diagnoseChunkWithJev(
           {
@@ -195,6 +202,13 @@ export async function surgicalTailorNode(
       } catch (diagErr) {
         console.warn(`[surgicalTailor] Jev pre-diagnosis failed for jobIndex ${jobIndex}:`, diagErr);
       }
+
+      emitAgentProgress({
+        step: "tailoring",
+        tool: "Bullet Rewriter",
+        message: `Rewriting ${inputBulletsList.length} bullet${inputBulletsList.length === 1 ? "" : "s"} for ${exp.company || `Role ${jobIndex + 1}`}...`,
+        progress: Math.min(78, 66 + jobIndex * 4),
+      });
 
       try {
         const res = await generateWithFallback(
@@ -268,6 +282,14 @@ export async function surgicalTailorNode(
       );
 
       // Evaluate suggestions with Jev quality gate (concurrency bounded to 3)
+      if (sanitizedSuggestions.length > 0) {
+        emitAgentProgress({
+          step: "verifying",
+          tool: "Jev Quality Gate",
+          message: `Verifying truthfulness and match impact for ${exp.company || `Role ${r.index + 1}`} (${sanitizedSuggestions.length} edits)...`,
+          progress: 83,
+        });
+      }
       const judgedChunkSuggestions = await runWithConcurrencyLimit(
         sanitizedSuggestions,
         3,
@@ -420,6 +442,12 @@ export async function surgicalTailorNode(
   // PHASE 2 — synthesize the holistic summary strictly AFTER all Phase-1 bullets resolved (REQ-EVT-04).
   // The prompt is assembled from the already-tailored bullets so the summary reflects final state.
   if (summaryPlanned) {
+    emitAgentProgress({
+      step: "finalizing",
+      tool: "Executive Summary Writer",
+      message: "Crafting a targeted summary from your refined accomplishments...",
+      progress: 89,
+    });
     const originalSummary = resumeAST?.summary?.trim() || "";
     const assembledResume = buildAssembledResume(experience, tailoredBulletsByJob);
 
