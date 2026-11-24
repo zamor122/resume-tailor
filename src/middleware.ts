@@ -31,11 +31,25 @@ const EXEMPT_PREFIXES = ["/api/stripe/webhook", "/api/cron/", "/api/admin/"];
 const TIGHT_LLM_PREFIXES = [
   "/api/tools/",
   "/api/mcp-tools/",
+  "/api/futureproof/",
   "/api/fetch-job-url",
   "/api/ai-detection",
   "/api/elicitation/",
   "/api/research-company",
   "/api/tailor/job/title",
+];
+
+// Paths that should NOT be rewritten when visiting futureproof.airesumetailor.com
+const SUBDOMAIN_PASSTHROUGH_PREFIXES = [
+  "/api/",
+  "/_next/",
+  "/auth",
+  "/pricing",
+  "/success",
+  "/privacy",
+  "/terms",
+  "/profile",
+  "/futureproof",
 ];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -63,6 +77,25 @@ function tooMany(bucketKey: string, maxPerMinute: number, maxPerDay: number): nu
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Subdomain routing: futureproof.airesumetailor.com (or futureproof.localhost) -> /futureproof
+  const host = (req.headers.get("host") || req.nextUrl.hostname || "").toLowerCase();
+  const isFutureproofSubdomain = host.startsWith("futureproof.");
+  if (
+    isFutureproofSubdomain &&
+    !SUBDOMAIN_PASSTHROUGH_PREFIXES.some((p) => pathname.startsWith(p)) &&
+    !/\.[a-z0-9]+$/i.test(pathname)
+  ) {
+    const rewriteUrl = req.nextUrl.clone();
+    rewriteUrl.pathname = "/futureproof";
+    return NextResponse.rewrite(rewriteUrl);
+  }
+
+  // Only rate-limit API routes
+  if (!pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   if (EXEMPT_PREFIXES.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
@@ -84,5 +117,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: ["/api/:path*", "/((?!_next/static|_next/image|favicon.ico).*)"],
 };

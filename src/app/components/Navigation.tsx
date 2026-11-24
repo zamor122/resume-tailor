@@ -222,6 +222,24 @@ export default function Navigation() {
             </div>
           )}
 
+          {/* Standalone Futureproof Feature Link */}
+          <Link
+            href="/futureproof"
+            aria-current={pathname?.startsWith("/futureproof") ? "page" : undefined}
+            onClick={() => playSfx("click")}
+            className={`p-3 rounded-lg border-2 border-[#1C2028] font-mono transition-colors ${
+              pathname?.startsWith("/futureproof")
+                ? "bg-[#1C2028] text-white"
+                : "bg-[#FFF4EF] hover:bg-[#FFE8DD] text-[#1C2028]"
+            }`}
+          >
+            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+              <span className="text-[#FF5722]">NEW · FUTUREPROOF</span>
+              <span>→</span>
+            </div>
+            <p className="text-xs font-bold mt-0.5">Add AI Skills to Resume</p>
+          </Link>
+
           {/* Mobile Navigation Links */}
           <div className="md:hidden flex flex-col gap-1">
             {navLinks.map(({ href, label }) => {
