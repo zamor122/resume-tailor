@@ -1,7 +1,8 @@
 import React from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
-import { getPostBySlug } from "@/app/utils/blog";
+import { getPostBySlug, getRelatedPosts } from "@/app/utils/blog";
+import { extractFaqItemsFromMarkdown } from "@/app/utils/blogPostParser";
 import { BlogArticleStructuredData } from "@/app/components/StructuredData";
 import BlogCtaBanner from "@/app/components/BlogCtaBanner";
 import ArticleReadTracker from "@/app/components/ArticleReadTracker";
@@ -91,6 +92,23 @@ export default async function BlogPostPage({ params }: PageProps) {
     "en-US",
     { year: "numeric", month: "long", day: "numeric" }
   );
+  const faqItems = extractFaqItemsFromMarkdown(post.body);
+  const relatedPosts = await getRelatedPosts(slug, 3);
+  const faqSchema =
+    faqItems.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqItems.map((item) => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: item.answer,
+            },
+          })),
+        }
+      : null;
 
   return (
     <div className="min-h-screen bg-[#FAF7F0] text-[#1C2028] py-8 sm:py-12">
@@ -102,6 +120,12 @@ export default async function BlogPostPage({ params }: PageProps) {
         publishedAt={post.published_at}
         modifiedAt={post.created_at}
       />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
         {/* Breadcrumb HUD */}
         <nav aria-label="Breadcrumb" className="flex items-center justify-between">
@@ -163,6 +187,58 @@ export default async function BlogPostPage({ params }: PageProps) {
             buttonText="⚡ RUN FREE RESUME AUDIT"
           />
         </article>
+
+        {/* Internal Link Cluster: Related Guides & SEO Hubs */}
+        <aside
+          aria-label="Related Guides and Resume Resources"
+          className="neo-box bg-[#F4F1EA] p-6 sm:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-6"
+        >
+          {relatedPosts.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-[#1C2028]">
+                More Resume Tailoring Guides
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {relatedPosts.map((related) => (
+                  <Link
+                    key={related.slug}
+                    href={`/blog/${related.slug}`}
+                    className="block bg-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] hover:translate-y-[-1px] transition-transform rounded-lg p-3.5 space-y-1.5"
+                  >
+                    <h3 className="text-xs font-mono font-bold text-[#1C2028] line-clamp-2 leading-snug">
+                      {related.title}
+                    </h3>
+                    <p className="text-[11px] font-sans text-gray-600 line-clamp-2">
+                      {related.description}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="pt-4 border-t border-[#1C2028]/15 flex flex-wrap items-center gap-2 text-xs font-mono">
+            <span className="font-bold text-gray-600 uppercase text-[10px]">Explore Hubs:</span>
+            <Link
+              href="/resume-optimizer"
+              className="px-2.5 py-1 bg-white border border-[#1C2028] rounded font-bold text-[#1C2028] hover:bg-[#FF5722] hover:text-white transition-colors"
+            >
+              Free Resume Optimizer
+            </Link>
+            <Link
+              href="/keywords"
+              className="px-2.5 py-1 bg-white border border-[#1C2028] rounded font-bold text-[#1C2028] hover:bg-[#FF5722] hover:text-white transition-colors"
+            >
+              ATS Keyword Hubs
+            </Link>
+            <Link
+              href="/alternatives"
+              className="px-2.5 py-1 bg-white border border-[#1C2028] rounded font-bold text-[#1C2028] hover:bg-[#FF5722] hover:text-white transition-colors"
+            >
+              Compare Tools (Jobscan, Teal, Rezi)
+            </Link>
+          </div>
+        </aside>
       </div>
     </div>
   );

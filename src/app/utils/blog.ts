@@ -65,3 +65,23 @@ export async function getAllSlugs(): Promise<string[]> {
     return [];
   }
 }
+
+export async function getRelatedPosts(currentSlug: string, limit = 3): Promise<Pick<BlogPost, "slug" | "title" | "description" | "published_at">[]> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("blog_posts")
+      .select("slug, title, description, published_at")
+      .neq("slug", currentSlug)
+      .order("published_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("[blog] getRelatedPosts error:", error);
+      return [];
+    }
+    return (data || []) as Pick<BlogPost, "slug" | "title" | "description" | "published_at">[];
+  } catch (err) {
+    console.error("[blog] getRelatedPosts error:", err);
+    return [];
+  }
+}
