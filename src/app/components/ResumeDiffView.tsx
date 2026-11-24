@@ -46,8 +46,10 @@ export default function ResumeDiffView({
   layout = "unified",
 }: ResumeDiffViewProps) {
   const { unifiedHtml, leftHtml, rightHtml } = useMemo(() => {
+    const safeOriginal = typeof originalText === "string" ? originalText : "";
+    const safeTailored = typeof tailoredText === "string" ? tailoredText : "";
     const dmp = new DiffMatchPatch();
-    const diffs = dmp.diff_main(originalText, tailoredText);
+    const diffs = dmp.diff_main(safeOriginal, safeTailored);
     dmp.diff_cleanupSemantic(diffs);
 
     const safeAdded = addedLabel.replace(/"/g, "&quot;");

@@ -67,7 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Link resumes created before/during login to the user (session-only resumes get user_id)
   useEffect(() => {
     if (!user?.id || !session?.access_token || typeof window === "undefined") return;
-    const sessionId = localStorage.getItem("resume-tailor-session-id");
+    let sessionId: string | null = null;
+    try {
+      sessionId = localStorage.getItem("resume-tailor-session-id");
+    } catch {
+      return;
+    }
     if (!sessionId) return;
 
     fetch("/api/resume/link", {

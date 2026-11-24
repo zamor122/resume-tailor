@@ -152,34 +152,36 @@ async function runHumanizeStream(params: {
 
       for (let i = 0; i < lines.length; i++) {
         if (lines[i].startsWith("data: ")) {
+          const payloadStr = lines[i].slice(6).trim();
+          if (!payloadStr) continue;
+          let parsed: any;
           try {
-            const parsed = JSON.parse(lines[i].slice(6).trim());
-            if (parsed.stage || parsed.step || parsed.message) {
-              console.log(`[Tailor Stream] ⚡ Progress: ${parsed.progress}% - ${parsed.tool ? `[${parsed.tool}] ` : ""}${parsed.message || parsed.step}`);
-            }
-            if (parsed.progress !== undefined) {
-              onProgress?.(parsed.progress, parsed.message || "", parsed.tool);
-            }
-            if (parsed.tailoredResume) {
-              console.log(`[Tailor Stream] ✅ Received complete payload:`, {
-                tailoredLength: parsed.tailoredResume.length,
-                beforeScore: parsed.beforeScore,
-                matchScore: parsed.matchScore,
-                improvementMetrics: parsed.improvementMetrics,
-                agentSteps: parsed.agentSteps,
-                resumeId: parsed.resumeId,
-              });
-              completeData = parsed;
-            }
-            if (parsed.error) {
-              console.error(`[Tailor Stream] ❌ Server returned error:`, parsed.error);
+            parsed = JSON.parse(payloadStr);
+          } catch {
+            // Ignore malformed/partial non-JSON SSE data frames rather than crashing the stream
+            continue;
+          }
+          if (parsed.stage || parsed.step || parsed.message) {
+            console.log(`[Tailor Stream] ⚡ Progress: ${parsed.progress}% - ${parsed.tool ? `[${parsed.tool}] ` : ""}${parsed.message || parsed.step}`);
+          }
+          if (parsed.progress !== undefined) {
+            onProgress?.(parsed.progress, parsed.message || "", parsed.tool);
+          }
+          if (parsed.tailoredResume) {
+            console.log(`[Tailor Stream] ✅ Received complete payload:`, {
+              tailoredLength: parsed.tailoredResume.length,
+              beforeScore: parsed.beforeScore,
+              matchScore: parsed.matchScore,
+              improvementMetrics: parsed.improvementMetrics,
+              agentSteps: parsed.agentSteps,
+              resumeId: parsed.resumeId,
+            });
+            completeData = parsed;
+          }
+          if (parsed.error) {
+            console.error(`[Tailor Stream] ❌ Server returned error:`, parsed.error);
+            if (!completeData) {
               throw new Error(parsed.error);
-            }
-          } catch (e) {
-            if (e instanceof Error && e.message !== "Failed to tailor resume") {
-              // JSON parse or error from server
-              if (completeData) break;
-              throw e;
             }
           }
         }
@@ -191,19 +193,19 @@ async function runHumanizeStream(params: {
       const remainingLines = buffer.split("\n");
       for (const line of remainingLines) {
         if (line.startsWith("data: ")) {
+          const payloadStr = line.slice(6).trim();
+          if (!payloadStr) continue;
+          let parsed: any;
           try {
-            const parsed = JSON.parse(line.slice(6).trim());
-            if (parsed.tailoredResume) {
-              completeData = parsed;
-            }
-            if (parsed.error) {
-              throw new Error(parsed.error);
-            }
-          } catch (e) {
-            if (e instanceof Error && e.message !== "Failed to tailor resume") {
-              if (completeData) break;
-              throw e;
-            }
+            parsed = JSON.parse(payloadStr);
+          } catch {
+            continue;
+          }
+          if (parsed.tailoredResume) {
+            completeData = parsed;
+          }
+          if (parsed.error && !completeData) {
+            throw new Error(parsed.error);
           }
         }
       }
@@ -387,14 +389,27 @@ export default function SplitScreenTailorView() {
   }, [prefillId, prefillVersion, prefillResumeId, prefillData, keywordsToWeaveParam]);
 
   useEffect(() => {
-    let sid = typeof window !== "undefined" ? localStorage.getItem("resume-tailor-session-id") : null;
+    let sid: string | null = null;
+    try {
+      sid = typeof window !== "undefined" ? localStorage.getItem("resume-tailor-session-id") : null;
+    } catch {
+      sid = null;
+    }
     if (!sid) {
       // This id acts as a bearer token for anonymous resume access, so it must be
       // unguessable. The previous value embedded Date.now() (fully predictable)
       // and Math.random() (not a CSPRNG); randomUUID() gives 122 bits.
-      sid = `session-${crypto.randomUUID()}`;
-      if (typeof window !== "undefined") {
-        localStorage.setItem("resume-tailor-session-id", sid);
+      const uuid =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      sid = `session-${uuid}`;
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("resume-tailor-session-id", sid);
+        }
+      } catch {
+        // Ignore storage errors in private browsing / blocked storage
       }
     }
     setSessionId(sid);
@@ -641,7 +656,7 @@ export default function SplitScreenTailorView() {
     } finally {
       if (!didRedirect) setLoading(false);
     }
-  }, [resume, jobDescription, sessionId, user, session, router, prefillResumeId, detectedJobTitle, jobTitleFromHook, parentResumeId, customInstructions, keywordsToWeave, promptPresetIds]);
+  }, [resume, jobDescription, sessionId, user, session, router, prefillResumeId, detectedJobTitle, jobTitleFromHook, parentResumeId, customInstructions, keywordsToWeave, promptPresetIds, preferences]);
 
   // Resume tailoring after the elicitation screen: carry the user's own words into
   // the pipeline as user-supplied facts (empty when skipped -> behaves as today).

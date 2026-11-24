@@ -80,9 +80,6 @@ export async function POST(req: NextRequest) {
     if (userId) {
       insertData.user_id = userId;
     }
-    if (customerEmail) {
-      insertData.customer_email = customerEmail;
-    }
 
     // Check if resume already exists for this session (idempotent)
     let resumeId: string | null = null;

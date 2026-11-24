@@ -328,12 +328,17 @@ export async function POST(req: NextRequest) {
         let agentResult: AgentState = {} as AgentState;
         const GRAPH_TIMEOUT_MS = 50_000;
         let graphTimedOut = false;
-        const graphTimeoutTimer = setTimeout(() => {
-          graphTimedOut = true;
-          console.warn(`[Stream API] ⚠️ LangGraph execution reached ${GRAPH_TIMEOUT_MS}ms safety limit`);
-        }, GRAPH_TIMEOUT_MS);
+        let graphTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
-        await runWithProgressEmitter(
+        const graphTimeoutPromise = new Promise<void>((resolve) => {
+          graphTimeoutTimer = setTimeout(() => {
+            graphTimedOut = true;
+            console.warn(`[Stream API] ⚠️ LangGraph execution reached ${GRAPH_TIMEOUT_MS}ms safety limit`);
+            resolve();
+          }, GRAPH_TIMEOUT_MS);
+        });
+
+        const graphWorkPromise = runWithProgressEmitter(
           (evt) => {
             if (streamClosed || graphTimedOut) return;
             currentProgress = Math.max(currentProgress, evt.progress);
@@ -385,7 +390,18 @@ export async function POST(req: NextRequest) {
           }
         );
 
-        clearTimeout(graphTimeoutTimer);
+        await Promise.race([graphWorkPromise, graphTimeoutPromise]);
+
+        if (graphTimeoutTimer) {
+          clearTimeout(graphTimeoutTimer);
+          graphTimeoutTimer = null;
+        }
+        // Prevent unhandled rejection if the timed-out background promise rejects later
+        if (graphTimedOut) {
+          graphWorkPromise.catch((err) => {
+            console.warn("[Stream API] Background graph error after timeout:", err?.message || err);
+          });
+        }
 
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer);
@@ -607,7 +623,10 @@ export async function POST(req: NextRequest) {
         });
 
         if (streamClosed) return;
-        controller.close();
+        streamClosed = true;
+        try {
+          controller.close();
+        } catch {}
       } catch (error: any) {
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer);
@@ -620,11 +639,14 @@ export async function POST(req: NextRequest) {
           stack: error?.stack,
         });
         if (!streamClosed) {
+          streamClosed = true;
           sendSSE(controller, "error", {
-            error: error.message || "An error occurred during agent execution",
+            error: error?.message || "An error occurred during agent execution",
             canRetry: error?.status === 429,
           });
-          controller.close();
+          try {
+            controller.close();
+          } catch {}
         }
         await trackEventServer("resume_tailor_error", {
           endpoint: "humanize/stream/agent",

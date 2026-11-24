@@ -28,6 +28,14 @@ export interface ResumeRetrieveResponse {
   feedbackComment?: string | null;
 }
 
+async function safeJson(res: Response): Promise<any> {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 /** POST /api/resume/retrieve. Call only when resumeId and auth (userId + accessToken) are available. */
 export async function fetchResumeById(
   resumeId: string,
@@ -43,15 +51,15 @@ export async function fetchResumeById(
       accessToken: accessToken ?? undefined,
     }),
   });
-  const json = await res.json();
+  const json = await safeJson(res);
   if (!res.ok) {
     const err = new Error(
-      typeof json?.error === "string" ? json.error : json?.message ?? "Failed to load resume"
+      typeof json?.error === "string" ? json.error : json?.message ?? `Failed to load resume (HTTP ${res.status})`
     ) as Error & { status?: number };
     err.status = res.status;
     throw err;
   }
-  if (!json.success) {
+  if (!json?.success) {
     throw new Error("Failed to load resume");
   }
   return json;
@@ -92,15 +100,15 @@ export async function fetchResumeVersions(
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  const json = await res.json();
+  const json = await safeJson(res);
   if (!res.ok) {
     const err = new Error(
-      typeof json?.error === "string" ? json.error : json?.message ?? "Failed to load versions"
+      typeof json?.error === "string" ? json.error : json?.message ?? `Failed to load versions (HTTP ${res.status})`
     ) as Error & { status?: number };
     err.status = res.status;
     throw err;
   }
-  return json;
+  return json ?? { rootResumeId: resumeId, versions: [] };
 }
 
 export interface ResumeListResponse {
@@ -121,19 +129,19 @@ export async function fetchResumeList(
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  const json = await res.json();
+  const json = await safeJson(res);
   if (!res.ok) {
     const err = new Error(
-      typeof json?.error === "string" ? json.error : json?.message ?? "Failed to load list"
+      typeof json?.error === "string" ? json.error : json?.message ?? `Failed to load list (HTTP ${res.status})`
     ) as Error & { status?: number };
     err.status = res.status;
     throw err;
   }
   return {
-    resumes: json.resumes ?? [],
-    totalCount: json.totalCount ?? 0,
-    page: json.page,
-    limit: json.limit,
+    resumes: json?.resumes ?? [],
+    totalCount: json?.totalCount ?? 0,
+    page: json?.page,
+    limit: json?.limit,
   };
 }
 
@@ -149,15 +157,15 @@ export async function fetchJobTitle(jobDescription: string): Promise<JobTitleRes
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jobDescription: jobDescription.trim() }),
   });
-  const json = await res.json();
+  const json = await safeJson(res);
   if (!res.ok) {
     const err = new Error(
-      typeof json?.error === "string" ? json.error : json?.message ?? "Job title extraction failed"
+      typeof json?.error === "string" ? json.error : json?.message ?? `Job title extraction failed (HTTP ${res.status})`
     ) as Error & { status?: number };
     err.status = res.status;
     throw err;
   }
-  return json;
+  return json ?? {};
 }
 
 /** Build a stable key for job title cache. Uses trimmed string; for very long JDs consider hashing (see plan §10.6). */

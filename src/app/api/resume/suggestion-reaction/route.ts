@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     const { data: resume, error: fetchError } = await supabaseAdmin
       .from("resumes")
-      .select("id, user_id, session_id, improvement_metrics, format_spec")
+      .select("id, user_id, session_id, improvement_metrics")
       .eq("id", resumeId)
       .single();
 
@@ -117,21 +117,10 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    const existingFormatSpec = resume.format_spec as Record<string, unknown> | null;
-    const updatedFormatSuggestions = existingFormatSpec
-      ? applyReactionToSuggestions(existingFormatSpec.suggestions, suggestionId, reaction, nextStatus)
-      : undefined;
-
     const updatePayload: Record<string, unknown> = {
       improvement_metrics: nextMetrics,
       updated_at: new Date().toISOString(),
     };
-    if (existingFormatSpec && updatedFormatSuggestions) {
-      updatePayload.format_spec = {
-        ...existingFormatSpec,
-        suggestions: updatedFormatSuggestions,
-      };
-    }
 
     const { error: updateError } = await supabaseAdmin
       .from("resumes")
