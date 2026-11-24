@@ -329,24 +329,46 @@
     opacity: 1;
   }
   
-  /* Scrollbar styling */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  /* Scrollbar styling — Soft Neo-Brutalist palette (WCAG >= 3:1 contrast) */
+  :root {
+    --scrollbar-thumb: #1C2028;
+    --scrollbar-thumb-hover: #FF5722;
+    --scrollbar-track: #EDE8DE;
   }
-  
-  ::-webkit-scrollbar-track {
-    background: var(--foreground-light);
-    border-radius: 4px;
+
+  html,
+  body,
+  * {
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    scrollbar-width: thin;
   }
-  
-  ::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    border-radius: 4px;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, var(--primary-light), var(--secondary-light));
+
+  @supports not (scrollbar-color: auto) {
+    html,
+    body,
+    * {
+      scrollbar-width: auto;
+    }
+
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+      border-left: 1px solid rgba(28, 32, 40, 0.15);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border: 2px solid var(--scrollbar-track);
+      border-radius: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--scrollbar-thumb-hover);
+    }
   }
   
   /* Pulse animation for loading states */
