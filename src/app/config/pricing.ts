@@ -119,7 +119,8 @@ export const NON_SUBSCRIPTION_MESSAGE = 'This is not a subscription. You purchas
  */
 export const TIME_BASED_VALUE_BULLETS = [
   '✓ Unlimited resume tailoring during access period',
-  '✓ Download all resumes',
+  '✓ Futureproof AI Experience Builder + 30-second interview scripts',
+  '✓ Download all resumes (PDF & text)',
   '✓ Full access to all improvements',
   '✓ No subscription - one-time payment',
 ];
