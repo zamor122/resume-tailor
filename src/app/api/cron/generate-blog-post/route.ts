@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { generateContentWithFallback } from "@/app/services/ai-provider";
-import { parseJSONFromText } from "@/app/utils/json-extractor";
+import { parseBlogPostResponse, type BlogPostPayload } from "@/app/utils/blogPostParser";
 
 export const maxDuration = 60;
 
@@ -32,29 +32,6 @@ Output valid JSON only:
   "body": "Markdown content. Relate to AI Resume Tailor. Include internal links to https://airesumetailor.com and /resume-optimizer."
 }`;
 
-interface BlogPostPayload {
-  title?: string;
-  slug?: string;
-  description?: string;
-  summary?: string;
-  body?: string;
-}
-
-function isValidPayload(p: BlogPostPayload): p is Required<BlogPostPayload> {
-  return (
-    typeof p?.title === "string" &&
-    p.title.length > 0 &&
-    typeof p?.slug === "string" &&
-    p.slug.length > 0 &&
-    typeof p?.description === "string" &&
-    p.description.length > 0 &&
-    typeof p?.summary === "string" &&
-    p.summary.length > 0 &&
-    typeof p?.body === "string" &&
-    p.body.length > 0
-  );
-}
-
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const expectedAuth = process.env.CRON_SECRET
@@ -73,7 +50,7 @@ export async function GET(req: NextRequest) {
       .from("blog_posts")
       .select("id")
       .gte("published_at", `${today}T00:00:00Z`)
-      .lt("published_at", `${today}T23:59:59Z`)
+      .lte("published_at", `${today}T23:59:59.999Z`)
       .limit(1)
       .maybeSingle();
 
@@ -90,7 +67,7 @@ export async function GET(req: NextRequest) {
       .from("blog_posts")
       .select("summary")
       .order("published_at", { ascending: false })
-      .limit(50);
+      .limit(30);
 
     const existingSummaries = (summaries || []).map((r) => r.summary).filter(Boolean);
     const dateStr = new Date().toLocaleDateString("en-US", {
@@ -101,9 +78,12 @@ export async function GET(req: NextRequest) {
 
     const runGeneration = async (isRetry: boolean) => {
       const prompt = BLOG_PROMPT(existingSummaries, dateStr, isRetry);
-      const result = await generateContentWithFallback(prompt);
-      const parsed = parseJSONFromText<BlogPostPayload>(result.text);
-      if (!parsed || !isValidPayload(parsed)) {
+      const result = await generateContentWithFallback(prompt, undefined, {
+        maxTokens: 2500,
+        temperature: 0.7,
+      });
+      const parsed = parseBlogPostResponse(result.text);
+      if (!parsed) {
         throw new Error("Invalid or incomplete LLM response");
       }
       return parsed;
