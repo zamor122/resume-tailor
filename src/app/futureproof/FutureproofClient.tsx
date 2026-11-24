@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import Link from "next/link";
 import { useAuth } from "@/app/contexts/AuthContext";
+import TierSelectionModal from "@/app/components/TierSelectionModal";
 import { extractTextFromPDF, isPDFFile } from "@/app/utils/pdfExtractor";
 import type { ComfortLevel } from "@/app/config/aiToolRegistry";
 import type {
@@ -76,6 +76,7 @@ export default function FutureproofClient() {
   const [expandedOriginals, setExpandedOriginals] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openTalkingPointId, setOpenTalkingPointId] = useState<string | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -227,25 +228,25 @@ export default function FutureproofClient() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FAF7F0] text-[#1C2028] py-8 sm:py-10 px-4">
+    <div className="min-h-screen bg-[#FAF7F0] text-[#1C2028] py-8 sm:py-10 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Compact, Clear Header */}
-        <section className="neo-box bg-[#F4F1EA] p-5 sm:p-7 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-3">
-          <span className="inline-block neo-tag bg-[#FF5722] text-white text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5">
+        <section className="neo-box bg-[#F4F1EA] p-6 sm:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-4">
+          <span className="inline-block neo-tag bg-[#FF5722] text-white text-xs font-mono font-bold uppercase tracking-wider px-2.5 py-0.5">
             FUTUREPROOF · ADD AI TO YOUR RESUME
           </span>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-mono tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-4xl font-extrabold font-mono tracking-tight leading-tight">
             Add Real AI Experience to Your Resume — Without Sounding Fake
           </h1>
 
-          <p className="text-sm text-gray-700 font-sans leading-relaxed">
+          <p className="text-base text-[#374151] font-sans leading-relaxed">
             No AI background? We match real tools used in your exact field and weave them
             naturally into your existing work history.
           </p>
 
           {/* Simple 3-Step Progress Bar */}
-          <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
+          <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-xs">
             {[
               { num: 1 as Step, label: "1. Your Resume" },
               { num: 2 as Step, label: "2. Pick Tools" },
@@ -253,12 +254,12 @@ export default function FutureproofClient() {
             ].map((s) => (
               <div
                 key={s.num}
-                className={`px-2.5 py-1.5 rounded-lg border-2 border-[#1C2028] font-bold text-center ${
+                className={`px-3 py-2 rounded-lg border-2 border-[#1C2028] font-bold text-center ${
                   step === s.num
                     ? "bg-[#1C2028] text-white"
                     : step > s.num
                       ? "bg-[#ECFDF5] text-[#065F46]"
-                      : "bg-white text-gray-500"
+                      : "bg-white text-[#4B5563]"
                 }`}
               >
                 {step > s.num ? `✓ ${s.label.slice(3)}` : s.label}
@@ -271,7 +272,7 @@ export default function FutureproofClient() {
         {error && (
           <div
             role="alert"
-            className="p-3.5 rounded-xl bg-[#FEF2F2] border-2 border-[#DC2626] text-[#991B1B] font-mono text-xs font-bold flex items-center justify-between gap-3"
+            className="p-4 rounded-xl bg-[#FEF2F2] border-2 border-[#DC2626] text-[#991B1B] font-sans text-sm font-semibold flex items-center justify-between gap-3"
           >
             <span>{error}</span>
             <button type="button" onClick={() => setError(null)} className="underline shrink-0">
@@ -282,11 +283,14 @@ export default function FutureproofClient() {
 
         {/* STEP 1: Upload / Paste Resume */}
         {step === 1 && (
-          <section className="neo-box bg-white p-5 sm:p-7 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-5">
+          <section className="neo-box bg-white p-6 sm:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-base sm:text-lg font-mono font-extrabold">
+              <label
+                htmlFor="futureproof-resume-input"
+                className="text-lg font-mono font-extrabold text-[#1C2028]"
+              >
                 Paste or upload your current resume
-              </h2>
+              </label>
               <div>
                 <input
                   ref={fileInputRef}
@@ -294,11 +298,12 @@ export default function FutureproofClient() {
                   accept=".pdf,.txt,.md"
                   onChange={handleFileUpload}
                   className="hidden"
+                  aria-label="Upload resume file"
                 />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="neo-btn bg-[#F4F1EA] hover:bg-[#EDE8DE] text-[#1C2028] border-2 border-[#1C2028] px-3.5 py-1.5 text-xs font-mono font-bold"
+                  className="neo-btn bg-[#F4F1EA] hover:bg-[#EDE8DE] text-[#1C2028] border-2 border-[#1C2028] px-4 py-2 text-sm font-mono font-bold"
                 >
                   {uploadedFileName ? `✓ ${uploadedFileName}` : "Upload PDF / TXT"}
                 </button>
@@ -306,35 +311,37 @@ export default function FutureproofClient() {
             </div>
 
             <textarea
+              id="futureproof-resume-input"
               value={resumeText}
               onChange={(e) => setResumeText(e.target.value)}
               rows={9}
               placeholder="Paste your resume here..."
-              className="w-full rounded-xl border-2 border-[#1C2028] bg-[#FAF7F0] p-4 font-mono text-xs sm:text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#FF5722]"
+              className="w-full rounded-xl border-2 border-[#1C2028] bg-[#FAF7F0] p-4 font-sans text-sm sm:text-base leading-relaxed focus:outline-none"
             />
 
             {/* Simple 2-Choice Tone Toggle */}
-            <div className="space-y-2">
-              <p className="text-xs font-mono font-bold text-gray-600">
+            <div className="space-y-2.5">
+              <p className="text-sm font-sans font-semibold text-[#374151]">
                 Choose your comfort level:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setComfortLevel("everyday")}
-                  className={`p-3.5 rounded-xl border-2 border-[#1C2028] text-left transition-all ${
+                  aria-pressed={comfortLevel === "everyday"}
+                  className={`p-4 rounded-xl border-2 border-[#1C2028] text-left transition-all ${
                     comfortLevel === "everyday"
                       ? "bg-[#FFF4EF] shadow-[3px_3px_0px_#FF5722]"
                       : "bg-white hover:bg-[#FAF7F0]"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="font-mono font-bold text-sm">Everyday User</span>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#1C2028] text-white">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-mono font-bold text-base">Everyday User</span>
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[#1C2028] text-white">
                       BEST FOR MOST
                     </span>
                   </div>
-                  <p className="text-xs text-gray-600 font-sans">
+                  <p className="text-sm text-[#374151] font-sans leading-relaxed">
                     Simple daily help: notes, emails, summaries, and research.
                   </p>
                 </button>
@@ -342,27 +349,28 @@ export default function FutureproofClient() {
                 <button
                   type="button"
                   onClick={() => setComfortLevel("automator")}
-                  className={`p-3.5 rounded-xl border-2 border-[#1C2028] text-left transition-all ${
+                  aria-pressed={comfortLevel === "automator"}
+                  className={`p-4 rounded-xl border-2 border-[#1C2028] text-left transition-all ${
                     comfortLevel === "automator"
                       ? "bg-[#FFF4EF] shadow-[3px_3px_0px_#FF5722]"
                       : "bg-white hover:bg-[#FAF7F0]"
                   }`}
                 >
-                  <div className="font-mono font-bold text-sm mb-0.5">Workflow Automator</div>
-                  <p className="text-xs text-gray-600 font-sans">
+                  <div className="font-mono font-bold text-base mb-1">Workflow Automator</div>
+                  <p className="text-sm text-[#374151] font-sans leading-relaxed">
                     Stronger impact: automating schedules, trackers, and team workflows.
                   </p>
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-xs font-mono text-gray-500">Free preview · Takes 15 sec</span>
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <span className="text-sm font-sans text-[#4B5563]">Free preview · Takes 15 sec</span>
               <button
                 type="button"
                 onClick={handleAnalyze}
                 disabled={isAnalyzing}
-                className="neo-btn bg-[#FF5722] hover:bg-[#E64A19] disabled:opacity-60 text-white border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] px-6 py-2.5 text-xs sm:text-sm font-mono font-bold uppercase tracking-wider"
+                className="neo-btn bg-[#FF5722] hover:bg-[#E64A19] disabled:opacity-60 text-white border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] px-6 py-3 text-sm font-mono font-bold uppercase tracking-wider"
               >
                 {isAnalyzing ? "Matching Real Tools..." : "Find My AI Tools →"}
               </button>
@@ -795,28 +803,34 @@ export default function FutureproofClient() {
               </section>
             )}
 
-            {/* Compact Upgrade Banner for Free Users */}
+            {/* Compact Upgrade Banner for Free Users — opens inline paywall modal */}
             {!result.isUnlocked && (
-              <section className="neo-box bg-[#1C2028] text-white p-5 sm:p-6 border-2 border-[#1C2028] shadow-[4px_4px_0px_#FF5722] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <h3 className="text-base sm:text-lg font-mono font-extrabold">
+              <section className="neo-box bg-[#1C2028] text-white p-6 border-2 border-[#1C2028] shadow-[4px_4px_0px_#FF5722] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <h3 className="text-lg font-mono font-extrabold">
                     Unlock all {result.totalUpgrades} upgrades + interview scripts
                   </h3>
-                  <p className="text-xs text-gray-300 font-sans">
+                  <p className="text-sm text-gray-200 font-sans leading-relaxed">
                     One-time pass (no subscription). Also unlocks unlimited ATS resume tailoring.
                   </p>
                 </div>
-                <Link
-                  href="/pricing"
-                  className="shrink-0 neo-btn bg-[#FF5722] hover:bg-[#E64A19] text-white border-2 border-white px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider"
+                <button
+                  type="button"
+                  onClick={() => setShowPaywall(true)}
+                  className="shrink-0 neo-btn bg-[#FF5722] hover:bg-[#E64A19] text-white border-2 border-white px-5 py-3 font-mono text-sm font-bold uppercase tracking-wider"
                 >
                   Unlock Everything →
-                </Link>
+                </button>
               </section>
             )}
           </div>
         )}
       </div>
-    </main>
+
+      <TierSelectionModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+      />
+    </div>
   );
 }

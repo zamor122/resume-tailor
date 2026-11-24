@@ -184,9 +184,12 @@ export default function RootLayout({
                 <ExitSurveyProvider>
                   <UmamiVerifier />
                   <UtmTracker />
+                  <a href="#main-content" className="skip-link">
+                    Skip to main content
+                  </a>
                   <div className="glass-background" />
                   <Navigation />
-                  <main className="flex-grow pt-2 relative" role="main">
+                  <main id="main-content" tabIndex={-1} className="flex-grow pt-2 relative outline-none">
                     {children}
                   </main>
                   {/* Server-rendered internal link map — guarantees crawlers see a link

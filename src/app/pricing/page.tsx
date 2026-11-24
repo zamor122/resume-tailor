@@ -184,24 +184,28 @@ export default function PricingPage() {
                   </p>
                 </div>
 
-                <ul className="space-y-2.5 mb-8 text-xs font-mono text-gray-700">
-                  <li className="flex items-center gap-2">
-                    <span className="text-[#10B981] font-bold">✓</span>
-                    {FREE_RESUME_LIMIT > 0
-                      ? `${FREE_RESUME_LIMIT} tailored resumes included`
-                      : `${FREE_AUDIT_LIMIT} free ATS audits & diff previews`}
+                <ul className="space-y-3 mb-8 text-sm font-sans text-[#1C2028]">
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#10B981] font-bold" aria-hidden="true">✓</span>
+                    <span>
+                      {FREE_RESUME_LIMIT > 0
+                        ? `${FREE_RESUME_LIMIT} tailored resumes included`
+                        : `${FREE_AUDIT_LIMIT} free ATS audits & diff previews`}
+                    </span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-[#10B981] font-bold">✓</span>
-                    {FREE_RESUME_LIMIT > 0 ? "PDF & Markdown export" : "Sample rewritten bullets unlocked"}
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#10B981] font-bold" aria-hidden="true">✓</span>
+                    <span>
+                      {FREE_RESUME_LIMIT > 0 ? "PDF & Markdown export" : "Sample rewritten bullets unlocked"}
+                    </span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-[#10B981] font-bold">✓</span>
-                    Live ATS relevancy scoring
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#10B981] font-bold" aria-hidden="true">✓</span>
+                    <span>Free Futureproof AI Experience preview</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-[#10B981] font-bold">✓</span>
-                    Granular diff acceptance
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#10B981] font-bold" aria-hidden="true">✓</span>
+                    <span>Live ATS match scoring</span>
                   </li>
                 </ul>
               </div>
@@ -209,7 +213,7 @@ export default function PricingPage() {
               <Link
                 href="/#tailorResume"
                 onClick={() => playSfx("click")}
-                className="neo-btn block w-full py-3 px-4 text-center font-mono font-bold text-xs uppercase tracking-wider bg-white hover:bg-[#FAF7F0] text-[#1C2028] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] active:translate-x-[2px] active:translate-y-[2px]"
+                className="neo-btn block w-full py-3.5 px-4 text-center font-mono font-bold text-sm uppercase tracking-wider bg-white hover:bg-[#FAF7F0] text-[#1C2028] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] active:translate-x-[2px] active:translate-y-[2px]"
               >
                 Start Free Tailor
               </Link>
@@ -228,41 +232,43 @@ export default function PricingPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     {tier.popular ? (
-                      <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 font-mono font-bold uppercase tracking-wider">
+                      <span className="neo-tag bg-[#FF5722] text-white text-xs px-2.5 py-0.5 font-mono font-bold uppercase tracking-wider">
                         ★ MOST POPULAR
                       </span>
                     ) : (
-                      <span className="neo-tag bg-[#FAF7F0] text-gray-600 text-[10px] px-2 py-0.5 font-mono font-bold uppercase">
+                      <span className="neo-tag bg-[#FAF7F0] text-[#374151] text-xs px-2.5 py-0.5 font-mono font-bold uppercase">
                         PASS
                       </span>
                     )}
                   </div>
 
                   <h2 className="text-xl font-mono font-bold text-[#1C2028] mb-1">{tier.label}</h2>
-                  <div className="flex items-baseline gap-1 mb-1">
+                  <div className="flex items-baseline gap-1.5 mb-1.5">
                     <span className="text-4xl font-mono font-extrabold text-[#1C2028]">
                       ${tier.price.toFixed(2)}
                     </span>
-                    <span className="text-xs font-mono text-gray-500 uppercase">one-time</span>
+                    <span className="text-xs font-mono text-[#4B5563] uppercase">one-time</span>
                   </div>
-                  <p className="text-gray-600 font-sans text-xs mb-6">{tier.description}</p>
+                  <p className="text-[#374151] font-sans text-sm mb-6 leading-relaxed">{tier.description}</p>
 
-                  <ul className="space-y-2.5 mb-8 text-xs font-mono text-gray-700">
-                    <li className="flex items-center gap-2">
-                      <span className="text-[#FF5722] font-bold">✓</span>
-                      Unlimited AI resume tailors
+                  <ul className="space-y-3 mb-8 text-sm font-sans text-[#1C2028]">
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#FF5722] font-bold" aria-hidden="true">✓</span>
+                      <span>Unlimited AI resume tailors &amp; PDF exports</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-[#FF5722] font-bold">✓</span>
-                      Download unlimited PDF & Docs
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#FF5722] font-bold" aria-hidden="true">✓</span>
+                      <span>
+                        <strong>Futureproof AI Experience Builder</strong> + 30-sec interview scripts
+                      </span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-[#FF5722] font-bold">✓</span>
-                      All ATS algorithms unlocked
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#FF5722] font-bold" aria-hidden="true">✓</span>
+                      <span>All ATS keyword &amp; scoring tools unlocked</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-[#10B981] font-bold">✓</span>
-                      One-time payment • Never recurs
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#10B981] font-bold" aria-hidden="true">✓</span>
+                      <span>One-time payment · Never recurs</span>
                     </li>
                   </ul>
                 </div>
@@ -270,21 +276,21 @@ export default function PricingPage() {
                 <button
                   onClick={() => handleSelectTier(tier.tier)}
                   disabled={!!loading}
-                  className={`neo-btn w-full py-3.5 px-4 font-mono font-bold text-xs uppercase tracking-wider border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] active:translate-x-[2px] active:translate-y-[2px] ${
+                  className={`neo-btn w-full py-3.5 px-4 font-mono font-bold text-sm uppercase tracking-wider border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] active:translate-x-[2px] active:translate-y-[2px] ${
                     tier.popular
                       ? "bg-[#FF5722] text-white hover:bg-[#E64A19]"
                       : "bg-[#1C2028] text-white hover:bg-black"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {loading === tier.tier ? "CONNECTING TO STRIPE..." : `⚡ UNLOCK ${tier.label.toUpperCase()}`}
+                  {loading === tier.tier ? "CONNECTING TO STRIPE..." : `UNLOCK ${tier.label.toUpperCase()}`}
                 </button>
               </div>
             ))}
           </div>
 
           {/* Non-subscription note */}
-          <div className="neo-box bg-[#F4F1EA] p-4 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl text-center max-w-xl mx-auto mt-10">
-            <p className="text-xs font-mono font-bold text-gray-700">
+          <div className="neo-box bg-[#F4F1EA] p-5 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl text-center max-w-2xl mx-auto mt-10">
+            <p className="text-sm font-sans font-medium text-[#1C2028] leading-relaxed">
               🛡️ {NON_SUBSCRIPTION_MESSAGE}
             </p>
           </div>
