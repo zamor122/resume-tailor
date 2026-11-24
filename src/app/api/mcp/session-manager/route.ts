@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
+import { requireAuth } from "@/app/utils/auth";
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
@@ -41,14 +42,30 @@ interface Session {
   };
 }
 
+function forbiddenResponse() {
+  return NextResponse.json(
+    {
+      error: "Forbidden",
+      message: "Access denied. You do not have permission to access this session.",
+    },
+    { status: 403 }
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { action, sessionId, data } = await req.json();
-    
+    const body = await req.json();
+    const { action, sessionId, data, accessToken } = body;
+
+    // Security: All session operations require verified authentication and strict user ownership
+    const authResult = await requireAuth(req, { accessToken });
+    if ("error" in authResult) return authResult.error;
+    const authenticatedUserId = authResult.userId;
+
     if (action === "create") {
-      const newSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const newSessionId = `session-${crypto.randomUUID()}`;
       const now = new Date().toISOString();
-      
+
       const session: Session = {
         sessionId: newSessionId,
         createdAt: now,
@@ -65,13 +82,12 @@ export async function POST(req: NextRequest) {
         }
       };
 
-      // Store in Supabase
       const { error: insertError } = await supabaseAdmin
         .from('sessions')
         .insert({
           id: newSessionId,
           data: session as any,
-          user_id: data?.userId || null,
+          user_id: authenticatedUserId,
         });
 
       if (insertError) {
@@ -99,7 +115,7 @@ export async function POST(req: NextRequest) {
 
       const { data: sessionRow, error: fetchError } = await supabaseAdmin
         .from('sessions')
-        .select('data')
+        .select('data, user_id')
         .eq('id', sessionId)
         .single();
 
@@ -108,6 +124,10 @@ export async function POST(req: NextRequest) {
           error: "Not Found",
           message: "Session not found"
         }, { status: 404 });
+      }
+
+      if (sessionRow.user_id !== authenticatedUserId) {
+        return forbiddenResponse();
       }
 
       const session = sessionRow.data as Session;
@@ -126,16 +146,14 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // Get existing session or create new one
       const { data: sessionRow } = await supabaseAdmin
         .from('sessions')
-        .select('data')
+        .select('data, user_id')
         .eq('id', sessionId)
         .single();
 
       let session: Session;
       if (!sessionRow) {
-        // Auto-create session if it doesn't exist (for dev mode resilience)
         const now = new Date().toISOString();
         session = {
           sessionId,
@@ -152,15 +170,18 @@ export async function POST(req: NextRequest) {
             successRate: 100
           }
         };
-        
+
         await supabaseAdmin
           .from('sessions')
           .insert({
             id: sessionId,
             data: session as any,
-            user_id: data?.userId || null,
+            user_id: authenticatedUserId,
           });
       } else {
+        if (sessionRow.user_id !== authenticatedUserId) {
+          return forbiddenResponse();
+        }
         session = sessionRow.data as Session;
       }
 
@@ -182,14 +203,14 @@ export async function POST(req: NextRequest) {
         updatedSession.preferences = { ...updatedSession.preferences, ...data.preferences };
       }
 
-      // Update in Supabase
       const { error: updateError } = await supabaseAdmin
         .from('sessions')
         .update({
           data: updatedSession as any,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', sessionId);
+        .eq('id', sessionId)
+        .eq('user_id', authenticatedUserId);
 
       if (updateError) {
         console.error('Error updating session:', updateError);
@@ -220,16 +241,14 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // Get existing session or create new one
       const { data: sessionRow } = await supabaseAdmin
         .from('sessions')
-        .select('data')
+        .select('data, user_id')
         .eq('id', sessionId)
         .single();
 
       let session: Session;
       if (!sessionRow) {
-        // Auto-create session if it doesn't exist (for dev mode resilience)
         const now = new Date().toISOString();
         session = {
           sessionId,
@@ -246,15 +265,18 @@ export async function POST(req: NextRequest) {
             successRate: 100
           }
         };
-        
+
         await supabaseAdmin
           .from('sessions')
           .insert({
             id: sessionId,
             data: session as any,
-            user_id: data?.userId || null,
+            user_id: authenticatedUserId,
           });
       } else {
+        if (sessionRow.user_id !== authenticatedUserId) {
+          return forbiddenResponse();
+        }
         session = sessionRow.data as Session;
       }
 
@@ -271,14 +293,14 @@ export async function POST(req: NextRequest) {
         ]
       };
 
-      // Update in Supabase
       const { error: updateError } = await supabaseAdmin
         .from('sessions')
         .update({
           data: updatedSession as any,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', sessionId);
+        .eq('id', sessionId)
+        .eq('user_id', authenticatedUserId);
 
       if (updateError) {
         console.error('Error updating session:', updateError);
@@ -309,16 +331,14 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // Get existing session or create new one
       const { data: sessionRow } = await supabaseAdmin
         .from('sessions')
-        .select('data')
+        .select('data, user_id')
         .eq('id', sessionId)
         .single();
 
       let session: Session;
       if (!sessionRow) {
-        // Auto-create session if it doesn't exist (for dev mode resilience)
         const now = new Date().toISOString();
         session = {
           sessionId,
@@ -335,15 +355,18 @@ export async function POST(req: NextRequest) {
             successRate: 100
           }
         };
-        
+
         await supabaseAdmin
           .from('sessions')
           .insert({
             id: sessionId,
             data: session as any,
-            user_id: data?.userId || null,
+            user_id: authenticatedUserId,
           });
       } else {
+        if (sessionRow.user_id !== authenticatedUserId) {
+          return forbiddenResponse();
+        }
         session = sessionRow.data as Session;
       }
 
@@ -361,7 +384,6 @@ export async function POST(req: NextRequest) {
         toolExecutions: [...session.toolExecutions, toolExecution]
       };
 
-      // Update metrics
       const totalTools = updatedSession.toolExecutions.length;
       const successfulTools = updatedSession.toolExecutions.filter(e => !e.error).length;
       const totalTime = updatedSession.toolExecutions
@@ -375,14 +397,14 @@ export async function POST(req: NextRequest) {
         successRate: (successfulTools / totalTools) * 100 || 100
       };
 
-      // Update in Supabase
       const { error: updateError } = await supabaseAdmin
         .from('sessions')
         .update({
           data: updatedSession as any,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', sessionId);
+        .eq('id', sessionId)
+        .eq('user_id', authenticatedUserId);
 
       if (updateError) {
         console.error('Error updating session:', updateError);
@@ -408,7 +430,7 @@ export async function POST(req: NextRequest) {
 
       const { data: sessionRow, error: fetchError } = await supabaseAdmin
         .from('sessions')
-        .select('data, created_at')
+        .select('data, user_id, created_at')
         .eq('id', sessionId)
         .single();
 
@@ -417,6 +439,10 @@ export async function POST(req: NextRequest) {
           error: "Not Found",
           message: "Session not found"
         }, { status: 404 });
+      }
+
+      if (sessionRow.user_id !== authenticatedUserId) {
+        return forbiddenResponse();
       }
 
       const session = sessionRow.data as Session;
@@ -446,6 +472,7 @@ export async function POST(req: NextRequest) {
       const { data: sessions, error: fetchError } = await supabaseAdmin
         .from('sessions')
         .select('id, data, created_at, updated_at')
+        .eq('user_id', authenticatedUserId)
         .order('updated_at', { ascending: false });
 
       if (fetchError) {
@@ -484,8 +511,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       error: "Server Error",
       message: "Failed to manage session",
-      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
-

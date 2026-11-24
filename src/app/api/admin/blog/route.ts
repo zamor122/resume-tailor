@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
+import { timingSafeEqualString } from "@/app/utils/timingSafe";
 
 export const maxDuration = 30;
 
@@ -9,7 +10,7 @@ function requireAdminAuth(req: NextRequest): NextResponse | null {
     process.env.BLOG_ADMIN_SECRET || process.env.CRON_SECRET;
   const expectedAuth = secret ? `Bearer ${secret}` : null;
 
-  if (!expectedAuth || authHeader !== expectedAuth) {
+  if (!expectedAuth || !timingSafeEqualString(authHeader, expectedAuth)) {
     return NextResponse.json(
       { error: "Unauthorized. Set BLOG_ADMIN_SECRET or CRON_SECRET." },
       { status: 401 }

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { generateContentWithFallback } from "@/app/services/ai-provider";
 import { parseBlogPostResponse, type BlogPostPayload } from "@/app/utils/blogPostParser";
 import { pickNextSeoTopic, type BlogSeoTopic } from "@/app/config/blogSeoTopics";
+import { timingSafeEqualString } from "@/app/utils/timingSafe";
 
 export const maxDuration = 60;
 
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
     ? `Bearer ${process.env.CRON_SECRET}`
     : null;
 
-  if (!expectedAuth || authHeader !== expectedAuth) {
+  if (!expectedAuth || !timingSafeEqualString(authHeader, expectedAuth)) {
     console.error("[blog-cron] Unauthorized: missing or invalid CRON_SECRET");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

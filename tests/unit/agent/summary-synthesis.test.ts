@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getHolisticSummaryPrompt } from "@/app/prompts/tailoringSection";
 import { POST } from "@/app/api/agent/synthesize-summary/route";
 import { generateWithFallback } from "@/app/services/model-fallback";
+import { requireAuth } from "@/app/utils/auth";
+import { getAccessInfoServer } from "@/app/utils/accessManager";
 
 vi.mock("@/app/services/model-fallback", () => ({
   generateWithFallback: vi.fn().mockResolvedValue({
@@ -10,9 +12,19 @@ vi.mock("@/app/services/model-fallback", () => ({
   }),
 }));
 
+vi.mock("@/app/utils/auth", () => ({
+  requireAuth: vi.fn().mockResolvedValue({ userId: "user-123" }),
+}));
+
+vi.mock("@/app/utils/accessManager", () => ({
+  getAccessInfoServer: vi.fn().mockResolvedValue({ hasAccess: true }),
+}));
+
 describe("Holistic Summary Synthesis", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(requireAuth).mockResolvedValue({ userId: "user-123" });
+    vi.mocked(getAccessInfoServer).mockResolvedValue({ hasAccess: true } as any);
   });
 
   describe("getHolisticSummaryPrompt", () => {

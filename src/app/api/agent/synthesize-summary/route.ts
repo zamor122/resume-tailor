@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback } from "@/app/services/model-fallback";
 import { getHolisticSummaryPrompt } from "@/app/prompts/tailoringSection";
+import { requireAuth } from "@/app/utils/auth";
+import { getAccessInfoServer } from "@/app/utils/accessManager";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 
 export const runtime = "nodejs";
@@ -13,11 +15,26 @@ export interface SynthesizeSummaryPayload {
   preferences?: TailoringPreferences;
   modelKey?: string;
   sessionApiKeys?: Record<string, string>;
+  accessToken?: string;
 }
 
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as SynthesizeSummaryPayload;
+
+    const authResult = await requireAuth(req as NextRequest, {
+      accessToken: body?.accessToken,
+    });
+    if ("error" in authResult) return authResult.error;
+
+    const accessInfo = await getAccessInfoServer(authResult.userId);
+    if (!accessInfo?.hasAccess) {
+      return NextResponse.json(
+        { error: "Active access pass required to synthesize resume summary." },
+        { status: 403 }
+      );
+    }
+
     const {
       assembledResume,
       jobDescription = "",

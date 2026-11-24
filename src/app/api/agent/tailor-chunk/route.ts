@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback } from "@/app/services/model-fallback";
 import { getExperienceBulletsPrompt } from "@/app/prompts/tailoringSection";
+import { requireAuth } from "@/app/utils/auth";
+import { getAccessInfoServer } from "@/app/utils/accessManager";
 import type { ResumeSectionGroup, ResumeSuggestion } from "@/app/agent/state";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 
@@ -15,6 +17,7 @@ export interface TailorChunkPayload {
   preferences?: TailoringPreferences;
   modelKey?: string;
   sessionApiKeys?: Record<string, string>;
+  accessToken?: string;
 }
 
 import {
@@ -28,6 +31,20 @@ export { parseChunkBulletsResponse, type RawChunkBulletItem };
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as TailorChunkPayload;
+
+    const authResult = await requireAuth(req as NextRequest, {
+      accessToken: body?.accessToken,
+    });
+    if ("error" in authResult) return authResult.error;
+
+    const accessInfo = await getAccessInfoServer(authResult.userId);
+    if (!accessInfo?.hasAccess) {
+      return NextResponse.json(
+        { error: "Active access pass required to tailor resume sections." },
+        { status: 403 }
+      );
+    }
+
     const {
       sectionGroup,
       resumeContext = "",
