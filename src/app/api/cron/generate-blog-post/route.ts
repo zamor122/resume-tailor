@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase/server";
 import { generateContentWithFallback } from "@/app/services/ai-provider";
 import { parseBlogPostResponse, type BlogPostPayload } from "@/app/utils/blogPostParser";
+import { pickNextSeoTopic, type BlogSeoTopic } from "@/app/config/blogSeoTopics";
 
 export const maxDuration = 60;
+
+// Explicitly use Google Gemini Free Tier ($0 spend, high throughput, strong SEO prose)
+const BLOG_MODEL_KEY = "gemini:gemini-2.5-flash";
+const BLOG_FALLBACK_MODELS = ["gemini:gemini-2.5-flash-lite"];
 
 function sanitizeSlug(s: string): string {
   const sanitized = s
@@ -13,23 +18,46 @@ function sanitizeSlug(s: string): string {
   return sanitized || "blog-post";
 }
 
-const BLOG_PROMPT = (existingSummaries: string[], date: string, isRetry: boolean) => `You are a professional resume and career writer. Write an SEO-optimized blog post (500-800 words) for airesumetailor.com. Today's date: ${date}.
-${isRetry ? "Try again with a different topic. " : ""}
+const BLOG_PROMPT = (
+  existingSummaries: string[],
+  date: string,
+  isRetry: boolean,
+  topic: BlogSeoTopic | null
+) => `You are a senior SEO content strategist and career writer. Write a high-ranking, deeply actionable SEO blog post (900-1,300 words) for airesumetailor.com. Today's date: ${date}.
+${isRetry ? "Try again with a sharper angle and strictly valid JSON output. " : ""}
 
-EXISTING ARTICLES (do NOT repeat these topics, structures, or angles):
+${
+  topic
+    ? `ASSIGNED HIGH-INTENT SEO TARGET (follow strictly):
+- Primary Keyword: "${topic.primaryKeyword}"
+- Secondary Keywords to weave naturally: ${topic.secondaryKeywords.map((k) => `"${k}"`).join(", ")}
+- Preferred URL Slug: "${topic.slugHint}"
+- Searcher Intent: ${topic.searchIntent}
+- Required Internal Links to include naturally in Markdown: https://airesumetailor.com, ${topic.targetInternalLinks.join(", ")}`
+    : `Choose a specific, high-search-intent long-tail query about ATS resume tailoring, role-specific resume keywords, or beating ATS scanners that job seekers actively Google and is NOT covered below.
+- Required Internal Links to include naturally in Markdown: https://airesumetailor.com, /resume-optimizer, /keywords, /alternatives, /pricing`
+}
+
+EXISTING ARTICLES (do NOT repeat these topics or titles):
 ${existingSummaries.length ? existingSummaries.map((s, i) => `${i + 1}. ${s}`).join("\n") : "None yet - this is the first article."}
 
-Choose a specific, unique angle about resume tailoring, ATS optimization, job search, or career advice that would rank well and is NOT covered above.
+SEO & CONTENT REQUIREMENTS:
+1. Put the exact Primary Keyword in the SEO title (under 62 chars), slug, meta description (140-155 chars), opening 2 sentences, and at least 2 H2 headings.
+2. Skip generic fluff ("In today's competitive job market..."). Start with a sharp, concrete hook addressing the searcher's exact pain point.
+3. Include at least TWO concrete **Before / After** resume bullet transformations (weak generic bullet vs. keyword-rich, quantified ATS-ready bullet).
+4. Include scannable bullet lists, clear H2/H3 structure, and practical steps readers can apply immediately.
+5. Include a "## Frequently Asked Questions" section near the end with exactly 3 "People Also Ask" style questions formatted as:
+   ### Question here?
+   Concise 2-3 sentence direct answer.
+6. Naturally weave in how AI Resume Tailor (free first resume tailor, no credit card, no recurring monthly subscription traps) solves this workflow in under 60 seconds, with a closing CTA.
 
-CRITICAL: The article MUST relate back to AI Resume Tailor. Weave in how our free tool helps with resume optimization, job description matching, or ATS-friendly tailoring. Include at least one natural mention and a closing CTA. The body will be rendered with a "Get Started" button at the bottom, but the prose should still lead readers toward trying our tool.
-
-Output valid JSON only:
+Output valid JSON ONLY (escape all newlines inside "body" as \\n):
 {
-  "title": "Catchy SEO title",
-  "slug": "url-safe-lowercase-slug",
-  "description": "1-2 sentence meta description",
-  "summary": "One sentence summarizing what this article covers (for our records).",
-  "body": "Markdown content. Relate to AI Resume Tailor. Include internal links to https://airesumetailor.com and /resume-optimizer."
+  "title": "SEO-optimized title containing primary keyword",
+  "slug": "${topic ? topic.slugHint : "url-safe-lowercase-slug"}",
+  "description": "140-155 char meta description with primary keyword and clear benefit",
+  "summary": "One sentence summarizing the primary keyword and angle covered.",
+  "body": "Full Markdown article (900-1,300 words) including Before/After examples, internal links, and ## Frequently Asked Questions with 3 ### Q&As."
 }`;
 
 export async function GET(req: NextRequest) {
@@ -63,13 +91,19 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const { data: summaries } = await supabaseAdmin
+    const { data: recentPosts } = await supabaseAdmin
       .from("blog_posts")
-      .select("summary")
+      .select("slug, summary")
       .order("published_at", { ascending: false })
-      .limit(30);
+      .limit(60);
 
-    const existingSummaries = (summaries || []).map((r) => r.summary).filter(Boolean);
+    const existingSlugs = (recentPosts || []).map((r) => r.slug).filter(Boolean);
+    const existingSummaries = (recentPosts || [])
+      .slice(0, 30)
+      .map((r) => r.summary)
+      .filter(Boolean);
+    const selectedTopic = pickNextSeoTopic(existingSlugs, existingSummaries);
+
     const dateStr = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -77,11 +111,17 @@ export async function GET(req: NextRequest) {
     });
 
     const runGeneration = async (isRetry: boolean) => {
-      const prompt = BLOG_PROMPT(existingSummaries, dateStr, isRetry);
-      const result = await generateContentWithFallback(prompt, undefined, {
-        maxTokens: 2500,
-        temperature: 0.7,
-      });
+      const prompt = BLOG_PROMPT(existingSummaries, dateStr, isRetry, selectedTopic);
+      const result = await generateContentWithFallback(
+        prompt,
+        BLOG_MODEL_KEY,
+        {
+          maxTokens: 3200,
+          temperature: 0.65,
+        },
+        undefined,
+        BLOG_FALLBACK_MODELS
+      );
       const parsed = parseBlogPostResponse(result.text);
       if (!parsed) {
         throw new Error("Invalid or incomplete LLM response");

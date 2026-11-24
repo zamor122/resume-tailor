@@ -106,3 +106,47 @@ export function parseBlogPostResponse(text: string): Required<BlogPostPayload> |
 
   return null;
 }
+
+export interface BlogFaqItem {
+  question: string;
+  answer: string;
+}
+
+/**
+ * Extracts FAQ question/answer pairs from a Markdown blog body so the article page
+ * can emit Google `FAQPage` JSON-LD rich snippet structured data automatically.
+ */
+export function extractFaqItemsFromMarkdown(markdown: string): BlogFaqItem[] {
+  if (!markdown || !markdown.trim()) return [];
+
+  // Locate the FAQ section (## Frequently Asked Questions / ## FAQ)
+  const faqHeadingMatch = markdown.match(
+    /^##\s+(?:frequently asked questions|faq|common questions)\b[^\n]*$/im
+  );
+  if (!faqHeadingMatch || faqHeadingMatch.index === undefined) return [];
+
+  const afterHeading = markdown.slice(faqHeadingMatch.index + faqHeadingMatch[0].length);
+  // Stop at the next H2 heading if another section follows
+  const nextH2Match = afterHeading.match(/\n##\s+/);
+  const faqSection = nextH2Match && nextH2Match.index !== undefined
+    ? afterHeading.slice(0, nextH2Match.index)
+    : afterHeading;
+
+  const items: BlogFaqItem[] = [];
+  // Match `### Question?` followed by answer paragraphs until the next `###` or end
+  const qRegex = /^###\s+([^\n]+)\n+([\s\S]*?)(?=\n###\s+|$)/gm;
+  let match: RegExpExecArray | null;
+  while ((match = qRegex.exec(faqSection)) !== null) {
+    const question = match[1].replace(/\*\*/g, "").trim();
+    const answer = match[2]
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/\*\*/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (question.length >= 10 && answer.length >= 20) {
+      items.push({ question, answer });
+    }
+  }
+
+  return items.slice(0, 6);
+}
