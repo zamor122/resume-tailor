@@ -121,6 +121,7 @@ export async function POST(req: NextRequest) {
         contentMap: safeContentMap, // Strip realText from non-free reveal
         jobDescription: resume.job_description,
         jobTitle: resume.job_title ?? null,
+        beforeScore: typeof ms?.before === "number" ? ms.before : null,
         matchScore: ms?.after ?? ms?.before ?? 0,
         metrics: ms?.afterMetrics ?? undefined,
         keywordGap: ms?.keywordGap ?? undefined,
@@ -161,6 +162,7 @@ export async function POST(req: NextRequest) {
       contentMap: resume.content_map,
       jobDescription: resume.job_description,
       jobTitle: resume.job_title ?? null,
+      beforeScore: typeof ms?.before === "number" ? ms.before : null,
       matchScore: ms?.after ?? ms?.before ?? 0,
       metrics: ms?.afterMetrics ?? undefined,
       keywordGap: ms?.keywordGap ?? undefined,

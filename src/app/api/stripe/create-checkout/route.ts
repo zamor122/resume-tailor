@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTierConfig } from "@/app/config/pricing";
 import { requireAuth, verifyUserIdMatch } from "@/app/utils/auth";
+import { getAccessInfoServer } from "@/app/utils/accessManager";
 import { getURL } from "@/app/utils/siteUrl";
 import { stripe } from "@/app/lib/stripe";
 
@@ -10,7 +11,7 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { tier, resumeId, userId, email, accessToken, returnUrl, utm } = body;
+    const { tier, resumeId, userId, email, accessToken, returnUrl, utm, allowExtend } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -24,6 +25,23 @@ export async function POST(req: NextRequest) {
 
     const verifyResult = verifyUserIdMatch(authResult.userId, userId);
     if ("error" in verifyResult) return verifyResult.error;
+
+    // Prevent double-charging: check if the authenticated user already has an active pass
+    if (!allowExtend) {
+      const accessInfo = await getAccessInfoServer(authResult.userId);
+      if (accessInfo?.hasAccess && !accessInfo.isExpired) {
+        return NextResponse.json(
+          {
+            alreadyHasAccess: true,
+            tier: accessInfo.tier,
+            tierLabel: accessInfo.tierLabel,
+            expiresAt: accessInfo.expiresAt?.toISOString() ?? null,
+            error: "You already have an active access pass. No purchase needed.",
+          },
+          { status: 409 }
+        );
+      }
+    }
 
     if (!tier) {
       return NextResponse.json(

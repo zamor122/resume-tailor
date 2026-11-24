@@ -436,6 +436,7 @@ CRITICAL INSTRUCTIONS:
      * Efficiency & Process Improvement: Process or tooling instituted → Cross-functional adoption → Time, cost, or quality impact.
    - BANNED REPETITIVE AI FILLER: Strictly ban repetitive clichés: "leveraging", "spearheaded", "pivotal", "fostered", "testament to", "streamlined", "driving operational excellence", "seamlessly"${domainBanned}.
    - CONTEXTUAL KEYWORD WEAVING: Weave at most 1–2 target keywords per bullet where they naturally and authentically fit. DO NOT cram the same keywords into every bullet.
+   - STRICT BULLET LENGTH PARITY (MAX 2 LINES): Keep EVERY rewritten bullet tightly matched to the length of its original input bullet (within ±15% of the original word/character count) and NEVER exceed 2 printed lines (~165–180 characters max). If the original bullet is a crisp 1-line bullet (~10–16 words), keep the rewrite ~1 line. Never expand a concise bullet into a 3-line paragraph — tighter, punchier wording beats bloated text so the candidate's resume layout never breaks.
    - Omit articles (a, an, the). Use crisp, executive resume phrasing.
 3. OUTPUT FORMAT: Output ONLY a valid JSON array of ${bulletCount} objects:
 [

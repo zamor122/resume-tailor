@@ -557,6 +557,24 @@ export default function ResumeSuggestionReviewer({
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#FF5722]">
                   Active Suggestion
                 </span>
+                {(() => {
+                  const origLen = (currentSuggestion.originalText || "").trim().length;
+                  const newLen = (currentSuggestion.suggestedText || "").trim().length;
+                  if (!origLen || !newLen) return null;
+                  const estLines = Math.max(1, Math.ceil(newLen / 85));
+                  const withinParity = newLen <= Math.max(origLen * 1.2, 175);
+                  return (
+                    <span
+                      className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold border ${
+                        withinParity
+                          ? "bg-[#ECFDF5] text-[#065F46] border-[#10B981]"
+                          : "bg-[#FFFBEB] text-[#92400E] border-[#D97706]"
+                      }`}
+                    >
+                      {withinParity ? `~${estLines} line${estLines === 1 ? "" : "s"} · Fits layout ✓` : `~${estLines} lines (longer)`}
+                    </span>
+                  );
+                })()}
               </div>
               {currentSuggestion.jevJudge && (
                 <div className="flex flex-wrap items-center gap-2 mt-1 mb-1 font-mono">

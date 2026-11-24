@@ -36,6 +36,7 @@ interface ResumeData {
   contentMap?: Record<string, string> | null;
   jobDescription?: string;
   jobTitle?: string | null;
+  beforeScore?: number | null;
   matchScore?: number;
   metrics?: ResumeMetricsSnapshot;
   suggestions?: ResumeSuggestion[];
@@ -118,6 +119,7 @@ export default function ResumeDetailPage() {
       contentMap: json.contentMap,
       jobDescription: json.jobDescription,
       jobTitle: json.jobTitle ?? null,
+      beforeScore: typeof json.beforeScore === "number" ? json.beforeScore : null,
       matchScore: typeof json.matchScore === "number" ? json.matchScore : 0,
       metrics: json.metrics as ResumeData["metrics"],
       improvementMetrics: (json.improvementMetrics as ResumeData["improvementMetrics"]) ?? {},
@@ -443,6 +445,7 @@ export default function ResumeDetailPage() {
                 sessionId={sessionId}
                 isUnlocked={data.isUnlocked}
                 onUnlockRequest={() => setShowTierModal(true)}
+                beforeScore={data.beforeScore ?? undefined}
                 matchScore={matchScore}
               />
             )}
