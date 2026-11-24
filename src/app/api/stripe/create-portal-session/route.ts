@@ -9,35 +9,34 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { customerId, email, returnUrl, accessToken } = body;
+    const { returnUrl, accessToken } = body;
 
     const authResult = await requireAuthWithEmail(req, { accessToken });
     if ("error" in authResult) return authResult.error;
 
-    const emailToUse = email && email === authResult.email ? email : authResult.email;
-    if (!customerId && !emailToUse) {
+    // Security: NEVER trust a client-supplied customerId or email.
+    // Always resolve the Stripe customer strictly from the authenticated user's verified email.
+    const emailToUse = authResult.email;
+    if (!emailToUse) {
       return NextResponse.json(
-        { error: "Unable to resolve customer. Email is required." },
+        { error: "Unable to resolve customer. Authenticated email is required." },
         { status: 400 }
       );
     }
 
-    let resolvedCustomerId = customerId;
+    let resolvedCustomerId: string | null = null;
+    const existing = await stripe.customers.list({
+      email: emailToUse,
+      limit: 1,
+    });
 
-    if (!resolvedCustomerId && emailToUse) {
-      const existing = await stripe.customers.list({
+    if (existing.data.length > 0) {
+      resolvedCustomerId = existing.data[0].id;
+    } else {
+      const created = await stripe.customers.create({
         email: emailToUse,
-        limit: 1,
       });
-
-      if (existing.data.length > 0) {
-        resolvedCustomerId = existing.data[0].id;
-      } else {
-        const created = await stripe.customers.create({
-          email: emailToUse,
-        });
-        resolvedCustomerId = created.id;
-      }
+      resolvedCustomerId = created.id;
     }
 
     if (!resolvedCustomerId) {

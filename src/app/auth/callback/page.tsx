@@ -8,7 +8,7 @@ import { supabase } from "@/app/lib/supabase/client";
 function AuthCallbackPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,12 +23,15 @@ function AuthCallbackPageInner() {
         return;
       }
 
-      const triggerWelcomeEmail = (email?: string, name?: string) => {
-        if (!email) return;
+      const triggerWelcomeEmail = (accessToken?: string, name?: string) => {
+        if (!accessToken) return;
         fetch("/api/email/welcome", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ to: email, name }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ name, accessToken }),
         }).catch((e) => console.warn("[AuthCallback] Welcome email trigger non-blocking error:", e));
       };
 
@@ -41,9 +44,9 @@ function AuthCallbackPageInner() {
           setTimeout(() => router.push("/?auth_error=true"), 2000);
           return;
         }
-        if (data?.user?.email) {
-          const name = data.user.user_metadata?.full_name || data.user.user_metadata?.name;
-          triggerWelcomeEmail(data.user.email, name);
+        if (data?.session?.access_token) {
+          const name = data.user?.user_metadata?.full_name || data.user?.user_metadata?.name;
+          triggerWelcomeEmail(data.session.access_token, name);
         }
         setTimeout(() => router.push("/"), 500);
         return;
@@ -52,9 +55,9 @@ function AuthCallbackPageInner() {
       // Email confirmation: Supabase redirects with hash (#access_token=...&type=signup)
       // Client auto-processes hash; wait for session to be established
       if (hasHash && user) {
-        if (user.email) {
+        if (session?.access_token) {
           const name = user.user_metadata?.full_name || user.user_metadata?.name;
-          triggerWelcomeEmail(user.email, name);
+          triggerWelcomeEmail(session.access_token, name);
         }
         router.push("/");
         return;

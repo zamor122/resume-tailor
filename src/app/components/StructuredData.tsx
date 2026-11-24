@@ -8,6 +8,7 @@ import {
   FREE_AUDIT_LIMIT,
   NON_SUBSCRIPTION_MESSAGE,
 } from "@/app/config/pricing";
+import { safeJsonLd } from "@/app/utils/safeJsonLd";
 
 const BASE_URL = "https://airesumetailor.com";
 
@@ -51,13 +52,13 @@ export function RootStructuredData() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(organizationSchema),
+          __html: safeJsonLd(organizationSchema),
         }}
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(softwareApplicationSchema),
+          __html: safeJsonLd(softwareApplicationSchema),
         }}
       />
     </>
@@ -113,7 +114,7 @@ export function BlogArticleStructuredData({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(articleSchema) }}
     />
   );
 }
@@ -136,7 +137,7 @@ export function FAQStructuredData({ items }: { items: FAQItem[] }) {
     <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{
-        __html: JSON.stringify(faqSchema),
+        __html: safeJsonLd(faqSchema),
       }}
     />
   );
@@ -178,7 +179,7 @@ export function ProductOfferStructuredData() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(productSchema) }}
     />
   );
 }
@@ -211,7 +212,7 @@ export function BreadcrumbListStructuredData({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbSchema) }}
     />
   );
 }
@@ -242,7 +243,7 @@ export function HowToStructuredData({
     <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{
-        __html: JSON.stringify(howToSchema),
+        __html: safeJsonLd(howToSchema),
       }}
     />
   );

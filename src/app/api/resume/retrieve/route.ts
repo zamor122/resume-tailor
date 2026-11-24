@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // If not found by ID, try by email + sessionId
+    // If not found by ID, try by email + sessionId (never by email alone)
     if (!resume && email && sessionId) {
       const { data: resumeByEmail, error: emailError } = await supabaseAdmin
         .from('resumes')
@@ -63,21 +63,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // If still not found, try by email alone (get most recent)
-    if (!resume && email) {
-      const { data: resumeByEmailOnly, error: emailOnlyError } = await supabaseAdmin
-        .from('resumes')
-        .select('*')
-        .eq('customer_email', email)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (!emailOnlyError && resumeByEmailOnly) {
-        resume = resumeByEmailOnly;
-      }
-    }
-
     if (!resume) {
       return NextResponse.json(
         { error: "Resume not found" },
@@ -85,7 +70,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Anti-fraud: Verify ownership if resume is associated with a registered user
+    // Anti-IDOR: Verify ownership for both registered-user and anonymous session resumes
     if (resume.user_id) {
       if (!userId || userId !== resume.user_id) {
         return NextResponse.json(
@@ -93,6 +78,18 @@ export async function POST(req: NextRequest) {
           { status: 403 }
         );
       }
+    } else if (resume.session_id) {
+      if (!sessionId || sessionId !== resume.session_id) {
+        return NextResponse.json(
+          { error: "Access denied. Valid session required to view this resume." },
+          { status: 403 }
+        );
+      }
+    } else if (!userId) {
+      return NextResponse.json(
+        { error: "Access denied. Authentication required to view this resume." },
+        { status: 403 }
+      );
     }
 
     // Verify access: paid access OR within first 3 free resumes (by created_at)

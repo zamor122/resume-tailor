@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { getPostBySlug, getRelatedPosts } from "@/app/utils/blog";
 import { extractFaqItemsFromMarkdown } from "@/app/utils/blogPostParser";
 import { BlogArticleStructuredData } from "@/app/components/StructuredData";
+import { safeJsonLd } from "@/app/utils/safeJsonLd";
 import BlogCtaBanner from "@/app/components/BlogCtaBanner";
 import ArticleReadTracker from "@/app/components/ArticleReadTracker";
 import type { Metadata } from "next";
@@ -123,7 +124,7 @@ export default async function BlogPostPage({ params }: PageProps) {
       {faqSchema && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(faqSchema) }}
         />
       )}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-8">

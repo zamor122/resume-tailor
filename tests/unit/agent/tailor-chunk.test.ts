@@ -2,14 +2,50 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/app/api/agent/tailor-chunk/route";
 import type { ResumeSectionGroup } from "@/app/agent/state";
 import { generateWithFallback } from "@/app/services/model-fallback";
+import { requireAuth } from "@/app/utils/auth";
+import { getAccessInfoServer } from "@/app/utils/accessManager";
 
 vi.mock("@/app/services/model-fallback", () => ({
   generateWithFallback: vi.fn(),
 }));
 
+vi.mock("@/app/utils/auth", () => ({
+  requireAuth: vi.fn().mockResolvedValue({ userId: "user-123" }),
+}));
+
+vi.mock("@/app/utils/accessManager", () => ({
+  getAccessInfoServer: vi.fn().mockResolvedValue({ hasAccess: true }),
+}));
+
 describe("POST /api/agent/tailor-chunk", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(requireAuth).mockResolvedValue({ userId: "user-123" });
+    vi.mocked(getAccessInfoServer).mockResolvedValue({ hasAccess: true } as any);
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    vi.mocked(requireAuth).mockResolvedValueOnce({
+      error: Response.json({ error: "Authentication required." }, { status: 401 }),
+    });
+    const req = new Request("http://localhost:3000/api/agent/tailor-chunk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 when user has no active access pass", async () => {
+    vi.mocked(getAccessInfoServer).mockResolvedValueOnce({ hasAccess: false } as any);
+    const req = new Request("http://localhost:3000/api/agent/tailor-chunk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(403);
   });
 
   const mockGroup: ResumeSectionGroup = {

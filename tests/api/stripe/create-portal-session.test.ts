@@ -120,19 +120,39 @@ describe('POST /api/stripe/create-portal-session', () => {
     });
   });
 
+  it('should ignore client-supplied customerId and email to prevent IDOR', async () => {
+    const req = new NextRequest('http://localhost:3000/api/stripe/create-portal-session', {
+      method: 'POST',
+      body: JSON.stringify({
+        customerId: 'cus_victim_999',
+        email: 'victim@example.com',
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(mockListCustomers).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      limit: 1,
+    });
+    expect(mockCreatePortalSession).toHaveBeenCalledWith({
+      customer: 'cus_existing_123',
+      return_url: 'https://app.resumetailor.ai/profile',
+    });
+  });
+
   it('should sanitize returnUrl to prevent open redirects', async () => {
     // Malicious external URL
     const reqMalicious = new NextRequest('http://localhost:3000/api/stripe/create-portal-session', {
       method: 'POST',
       body: JSON.stringify({
-        customerId: 'cus_direct_123',
         returnUrl: 'https://phishing.com/account',
       }),
     });
 
     await POST(reqMalicious);
     expect(mockCreatePortalSession).toHaveBeenLastCalledWith({
-      customer: 'cus_direct_123',
+      customer: 'cus_existing_123',
       return_url: 'https://app.resumetailor.ai/profile',
     });
 
@@ -140,14 +160,13 @@ describe('POST /api/stripe/create-portal-session', () => {
     const reqValid = new NextRequest('http://localhost:3000/api/stripe/create-portal-session', {
       method: 'POST',
       body: JSON.stringify({
-        customerId: 'cus_direct_123',
         returnUrl: 'https://app.resumetailor.ai/settings',
       }),
     });
 
     await POST(reqValid);
     expect(mockCreatePortalSession).toHaveBeenLastCalledWith({
-      customer: 'cus_direct_123',
+      customer: 'cus_existing_123',
       return_url: 'https://app.resumetailor.ai/settings',
     });
   });
