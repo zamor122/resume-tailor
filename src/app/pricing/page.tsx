@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/app/contexts/AuthContext";
 import AuthModal from "@/app/components/AuthModal";
@@ -12,6 +12,7 @@ import {
   TIME_BASED_TIERS,
   NON_SUBSCRIPTION_MESSAGE,
 } from "@/app/config/pricing";
+import { getAccessInfo, formatRemainingTime } from "@/app/utils/accessManager";
 import { getStoredUtmParams } from "@/app/utils/utm";
 
 const VALUE_PROPS = [
@@ -57,6 +58,33 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [activePass, setActivePass] = useState<{
+    tierLabel: string | null;
+    expiresAt: Date | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setActivePass(null);
+      return;
+    }
+    let cancelled = false;
+    getAccessInfo(user.id)
+      .then((info) => {
+        if (cancelled) return;
+        if (info?.hasAccess && !info.isExpired) {
+          setActivePass({ tierLabel: info.tierLabel, expiresAt: info.expiresAt });
+        } else {
+          setActivePass(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setActivePass(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const handleSelectTier = async (tier: "2D" | "7D" | "30D") => {
     playSfx("click");
@@ -73,6 +101,17 @@ export default function PricingPage() {
     setError(null);
 
     try {
+      // Check active pass before sending user to Stripe Checkout
+      const existingAccess = await getAccessInfo(user.id);
+      if (existingAccess?.hasAccess && !existingAccess.isExpired) {
+        setActivePass({
+          tierLabel: existingAccess.tierLabel,
+          expiresAt: existingAccess.expiresAt,
+        });
+        setLoading(null);
+        return;
+      }
+
       const res = await fetch("/api/stripe/create-checkout", {
         method: "POST",
         headers: {
@@ -91,6 +130,15 @@ export default function PricingPage() {
       });
 
       const data = await res.json();
+
+      if (res.status === 409 && data?.alreadyHasAccess) {
+        setActivePass({
+          tierLabel: data.tierLabel || "Active Pass",
+          expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+        });
+        setLoading(null);
+        return;
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to create checkout");
@@ -160,6 +208,38 @@ export default function PricingPage() {
       {/* Pricing Cards Hardware Rack */}
       <section className="py-6 pb-20">
         <div className="container mx-auto px-4 max-w-6xl">
+          {activePass && (
+            <div className="mb-8 neo-box bg-[#ECFDF5] border-2 border-[#10B981] shadow-[4px_4px_0px_#1C2028] rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#065F46]">
+                  ✓ ACTIVE PASS DETECTED — NO PURCHASE NEEDED
+                </p>
+                <p className="text-base font-sans font-semibold text-[#1C2028]">
+                  You already have an active{" "}
+                  <strong>{activePass.tierLabel || "Access Pass"}</strong>
+                  {activePass.expiresAt
+                    ? ` (${formatRemainingTime(activePass.expiresAt)})`
+                    : ""}
+                  . Both ATS Tailoring and Futureproof are unlocked!
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <Link
+                  href="/#tailorResume"
+                  className="neo-btn bg-[#10B981] hover:bg-[#059669] text-white border-2 border-[#1C2028] px-4 py-2.5 font-mono text-xs font-bold uppercase"
+                >
+                  Open Tailor Console →
+                </Link>
+                <Link
+                  href="/futureproof"
+                  className="neo-btn bg-white hover:bg-[#FAF7F0] text-[#1C2028] border-2 border-[#1C2028] px-4 py-2.5 font-mono text-xs font-bold uppercase"
+                >
+                  Open Futureproof →
+                </Link>
+              </div>
+            </div>
+          )}
+
           <div className="grid lg:grid-cols-4 gap-6">
             {/* Free Plan - Chassis */}
             <div className="lg:col-span-1 neo-box bg-white p-6 sm:p-8 border-2 border-[#10B981] shadow-[4px_4px_0px_#1C2028] rounded-xl relative flex flex-col justify-between">

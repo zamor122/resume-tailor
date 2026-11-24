@@ -830,6 +830,10 @@ export default function FutureproofClient() {
       <TierSelectionModal
         isOpen={showPaywall}
         onClose={() => setShowPaywall(false)}
+        onAlreadyHasAccess={() => {
+          setShowPaywall(false);
+          handleGenerate(usedAutoStandard);
+        }}
       />
     </div>
   );

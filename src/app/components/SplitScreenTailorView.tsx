@@ -1079,10 +1079,18 @@ export default function SplitScreenTailorView() {
               downloadJobTitle={detectedJobTitle ?? undefined}
             />
             {results.matchScore != null && (
-              <p className="text-xs sm:text-sm font-mono text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <p className="text-sm font-mono text-[#1C2028] flex flex-wrap items-center gap-2">
                 <span>MATCH SCORE:</span>
+                {results.beforeScore != null && (
+                  <>
+                    <span className="px-2.5 py-0.5 rounded font-mono font-bold bg-[#F4F1EA] text-[#374151] border border-[#1C2028]">
+                      Before: {results.beforeScore}%
+                    </span>
+                    <span className="text-[#FF5722] font-bold" aria-hidden="true">→</span>
+                  </>
+                )}
                 <span className="neo-tag px-2.5 py-0.5 rounded font-mono font-bold bg-[#10B981] text-white border border-[#1C2028]">
-                  {results.matchScore}%
+                  Potential: {results.matchScore}%
                 </span>
               </p>
             )}

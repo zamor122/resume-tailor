@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
 import AuthModal from "./AuthModal";
 import { TIME_BASED_TIERS, NON_SUBSCRIPTION_MESSAGE } from "@/app/config/pricing";
+import { getAccessInfo, formatRemainingTime } from "@/app/utils/accessManager";
 import { getStoredUtmParams } from "@/app/utils/utm";
 import { useGamification } from "@/app/contexts/GamificationContext";
 
@@ -18,6 +19,7 @@ interface TierSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectTier?: (tier: "2D" | "7D" | "30D") => void;
+  onAlreadyHasAccess?: () => void;
   resumeId?: string;
 }
 
@@ -25,6 +27,7 @@ export default function TierSelectionModal({
   isOpen,
   onClose,
   onSelectTier,
+  onAlreadyHasAccess,
   resumeId,
 }: TierSelectionModalProps) {
   const { user, session } = useAuth();
@@ -32,6 +35,43 @@ export default function TierSelectionModal({
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(false);
+  const [activePass, setActivePass] = useState<{
+    tierLabel: string | null;
+    expiresAt: Date | null;
+  } | null>(null);
+
+  // Immediately check whether the signed-in user already has an active pass
+  // (including right after they sign in via AuthModal inside this paywall).
+  useEffect(() => {
+    if (!isOpen || !user?.id) {
+      setActivePass(null);
+      return;
+    }
+    let cancelled = false;
+    setCheckingAccess(true);
+    getAccessInfo(user.id)
+      .then((info) => {
+        if (cancelled) return;
+        if (info?.hasAccess && !info.isExpired) {
+          setActivePass({
+            tierLabel: info.tierLabel,
+            expiresAt: info.expiresAt,
+          });
+        } else {
+          setActivePass(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setActivePass(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingAccess(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, user?.id]);
 
   const handleSelectTier = async (tier: "2D" | "7D" | "30D") => {
     playSfx("click");
@@ -48,6 +88,17 @@ export default function TierSelectionModal({
     setError(null);
 
     try {
+      // Double-check active pass right before creating a Stripe checkout link
+      const existingAccess = await getAccessInfo(user.id);
+      if (existingAccess?.hasAccess && !existingAccess.isExpired) {
+        setActivePass({
+          tierLabel: existingAccess.tierLabel,
+          expiresAt: existingAccess.expiresAt,
+        });
+        setLoading(null);
+        return;
+      }
+
       const res = await fetch("/api/stripe/create-checkout", {
         method: "POST",
         headers: {
@@ -66,6 +117,15 @@ export default function TierSelectionModal({
       });
 
       const data = await res.json();
+
+      if (res.status === 409 && data?.alreadyHasAccess) {
+        setActivePass({
+          tierLabel: data.tierLabel || "Active Pass",
+          expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+        });
+        setLoading(null);
+        return;
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to create checkout");
@@ -154,6 +214,38 @@ export default function TierSelectionModal({
           </div>
         )}
 
+        {checkingAccess ? (
+          <div className="mb-5 p-4 rounded-lg bg-[#F4F1EA] border-2 border-[#1C2028] text-sm font-sans text-[#1C2028] text-center">
+            Checking your account for an active pass...
+          </div>
+        ) : activePass ? (
+          <div className="mb-5 p-4 rounded-xl bg-[#ECFDF5] border-2 border-[#10B981] space-y-3 text-[#065F46]">
+            <div className="space-y-1">
+              <p className="font-mono text-xs font-bold uppercase tracking-wider">
+                ✓ ACTIVE PASS FOUND — NO PAYMENT NEEDED
+              </p>
+              <p className="text-sm font-sans font-semibold text-[#1C2028]">
+                Your account already has an active{" "}
+                <strong>{activePass.tierLabel || "Access Pass"}</strong>
+                {activePass.expiresAt
+                  ? ` (${formatRemainingTime(activePass.expiresAt)})`
+                  : ""}
+                .
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                playSfx("click");
+                onAlreadyHasAccess?.();
+                onClose();
+              }}
+              className="neo-btn w-full py-3 px-4 font-mono font-bold text-sm uppercase bg-[#10B981] hover:bg-[#059669] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+            >
+              Continue With Your Active Pass →
+            </button>
+          </div>
+        ) : (
         <div className="space-y-3 mb-5">
           {TIME_BASED_TIERS.map((tier) => (
             <button
@@ -186,6 +278,7 @@ export default function TierSelectionModal({
             </button>
           ))}
         </div>
+        )}
 
         {error && (
           <p className="text-xs font-mono font-bold text-[#FF5722] mb-3 text-center">

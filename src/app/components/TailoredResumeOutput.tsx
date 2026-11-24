@@ -727,6 +727,73 @@ const TailoredResumeOutput: React.FC<TailoredResumeOutputProps> = ({
         </div>
       </div>
 
+      {/* LIVE BEFORE → POST-CHANGES MATCH SCORE BAR (updates in real time per accepted change) */}
+      {(() => {
+        const substantive = effectiveSuggestions.filter(
+          (s) =>
+            s.originalText &&
+            s.suggestedText &&
+            s.originalText.trim().toLowerCase() !== s.suggestedText.trim().toLowerCase()
+        );
+        const totalSubstantive = substantive.length;
+        const acceptedSubstantive = substantive.filter((s) => s.status === "accepted").length;
+        const totalDelta = Math.max(0, matchScore - beforeScore);
+        const liveBoost =
+          totalSubstantive > 0
+            ? Math.round((acceptedSubstantive / totalSubstantive) * totalDelta)
+            : totalDelta;
+        const livePostScore = Math.min(100, Math.round(beforeScore + liveBoost));
+
+        return (
+          <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-5">
+              <div>
+                <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[#4B5563]">
+                  Previous Match Score
+                </span>
+                <span className="font-mono text-lg sm:text-xl font-extrabold text-[#374151]">
+                  {beforeScore}%
+                </span>
+              </div>
+
+              <span className="font-mono text-lg font-extrabold text-[#FF5722]" aria-hidden="true">
+                →
+              </span>
+
+              <div>
+                <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[#065F46]">
+                  Post-Changes Score (Live)
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-lg sm:text-xl font-extrabold text-[#059669]">
+                    {livePostScore}%
+                  </span>
+                  {liveBoost > 0 && (
+                    <span className="px-2 py-0.5 rounded bg-[#10B981] text-white font-mono text-xs font-bold border border-[#1C2028]">
+                      +{liveBoost}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {totalSubstantive > 0 && (
+              <div className="text-xs font-sans text-[#374151]">
+                <strong className="font-mono text-[#1C2028]">
+                  {acceptedSubstantive}/{totalSubstantive}
+                </strong>{" "}
+                changes accepted
+                {livePostScore < matchScore && (
+                  <span className="ml-1.5 font-mono text-[11px] text-[#4B5563]">
+                    (up to <strong>{matchScore}%</strong> if all applied)
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* VIEW MODE 1: SIDE-BY-SIDE REVIEW COCKPIT */}
       {viewLayout === "cockpit" && hasSuggestions ? (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">

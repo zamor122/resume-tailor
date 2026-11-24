@@ -6,6 +6,7 @@ const mockCreateSession = vi.fn();
 const mockRequireAuth = vi.fn();
 const mockVerifyUserIdMatch = vi.fn();
 const mockGetTierConfig = vi.fn();
+const mockGetAccessInfoServer = vi.fn();
 
 vi.mock('@/app/lib/stripe', () => ({
   stripe: {
@@ -22,6 +23,10 @@ vi.mock('@/app/utils/auth', () => ({
   verifyUserIdMatch: (...args: unknown[]) => mockVerifyUserIdMatch(...args),
 }));
 
+vi.mock('@/app/utils/accessManager', () => ({
+  getAccessInfoServer: (...args: unknown[]) => mockGetAccessInfoServer(...args),
+}));
+
 vi.mock('@/app/config/pricing', () => ({
   getTierConfig: (...args: unknown[]) => mockGetTierConfig(...args),
 }));
@@ -35,6 +40,7 @@ describe('POST /api/stripe/create-checkout', () => {
     vi.clearAllMocks();
     mockRequireAuth.mockResolvedValue({ userId: 'user-123' });
     mockVerifyUserIdMatch.mockReturnValue({ ok: true });
+    mockGetAccessInfoServer.mockResolvedValue({ hasAccess: false, isExpired: true });
     mockGetTierConfig.mockImplementation((tier: string) => {
       if (tier === '7D') return { tier: '7D', priceId: 'price_7d_test', durationDays: 7 };
       if (tier === '2D') return { tier: '2D', priceId: 'price_2d_test', durationDays: 2 };
@@ -45,6 +51,28 @@ describe('POST /api/stripe/create-checkout', () => {
       id: 'cs_test_session_123',
       url: 'https://checkout.stripe.com/pay/cs_test_session_123',
     });
+  });
+
+  it('should return 409 alreadyHasAccess without creating a Stripe session when user already has an active pass', async () => {
+    mockGetAccessInfoServer.mockResolvedValueOnce({
+      hasAccess: true,
+      isExpired: false,
+      tier: '7D',
+      tierLabel: 'Pro Week',
+      expiresAt: new Date(Date.now() + 86400000),
+    });
+
+    const req = new NextRequest('http://localhost:3000/api/stripe/create-checkout', {
+      method: 'POST',
+      body: JSON.stringify({ tier: '7D', userId: 'user-123', email: 'paid@example.com' }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(409);
+    const data = await res.json();
+    expect(data.alreadyHasAccess).toBe(true);
+    expect(data.tierLabel).toBe('Pro Week');
+    expect(mockCreateSession).not.toHaveBeenCalled();
   });
 
   it('should return 401 when userId is missing from request body', async () => {

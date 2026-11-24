@@ -13,6 +13,7 @@ export interface ResumeRetrieveResponse {
   contentMap?: Record<string, string> | null;
   jobDescription?: string;
   jobTitle?: string | null;
+  beforeScore?: number | null;
   matchScore?: number;
   metrics?: unknown;
   keywordGap?: KeywordGapSnapshot;
