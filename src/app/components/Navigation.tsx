@@ -1,54 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useGamification } from "@/app/contexts/GamificationContext";
 import { getAccessInfo, formatRemainingTime } from "@/app/utils/accessManager";
 import TailorBot from "./neo/TailorBot";
-
-function AccessBadge() {
-  const { user } = useAuth();
-  const [accessInfo, setAccessInfo] = useState<{
-    hasAccess: boolean;
-    expiresAt: Date | null;
-    tierLabel: string | null;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!user?.id) {
-      setAccessInfo(null);
-      return;
-    }
-    getAccessInfo(user.id).then((info) => {
-      if (info) {
-        setAccessInfo({
-          hasAccess: info.hasAccess && !info.isExpired,
-          expiresAt: info.expiresAt,
-          tierLabel: info.tierLabel,
-        });
-      } else {
-        setAccessInfo(null);
-      }
-    });
-  }, [user?.id]);
-
-  if (!accessInfo?.hasAccess || !accessInfo.expiresAt) return null;
-
-  return (
-    <div
-      className="neo-box-sm bg-[#ECFDF5] text-[#065F46] px-2.5 py-1 text-[11px] font-mono font-bold flex items-center gap-1.5 shrink-0"
-      title={`${accessInfo.tierLabel || "Access"} - ${formatRemainingTime(
-        accessInfo.expiresAt
-      )}`}
-    >
-      <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0" aria-hidden="true" />
-      <span className="hidden md:inline">{formatRemainingTime(accessInfo.expiresAt)}</span>
-      <span className="md:hidden uppercase tracking-wider">PRO</span>
-    </div>
-  );
-}
 
 const navLinks = [
   { href: "/", label: "Tailor" },
@@ -60,9 +18,15 @@ const navLinks = [
 export default function Navigation() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { sfxEnabled, toggleSfx, playSfx } = useGamification();
+  const { streak, xp, level, sfxEnabled, toggleSfx, playSfx } = useGamification();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accessInfo, setAccessInfo] = useState<{
+    hasAccess: boolean;
+    expiresAt: Date | null;
+    tierLabel: string | null;
+  } | null>(null);
+  const menuContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -73,29 +37,73 @@ export default function Navigation() {
   }, [pathname]);
 
   useEffect(() => {
+    if (!user?.id) {
+      setAccessInfo(null);
+      return;
+    }
+    let cancelled = false;
+    getAccessInfo(user.id)
+      .then((info) => {
+        if (cancelled) return;
+        if (info) {
+          setAccessInfo({
+            hasAccess: info.hasAccess && !info.isExpired,
+            expiresAt: info.expiresAt,
+            tierLabel: info.tierLabel,
+          });
+        } else {
+          setAccessInfo(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAccessInfo(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
     if (!menuOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setMenuOpen(false);
     };
+    const onPointerDown = (e: MouseEvent) => {
+      if (
+        menuContainerRef.current &&
+        !menuContainerRef.current.contains(e.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onPointerDown);
+    };
   }, [menuOpen]);
 
   if (!mounted) {
     return <header className="h-16 bg-[#FAF7F0] border-b-2 border-[#1C2028]" />;
   }
 
+  const hasActivePass = Boolean(accessInfo?.hasAccess && accessInfo.expiresAt);
+
   return (
-    <header className="sticky top-0 z-50 bg-[#FAF7F0] border-b-2 border-[#1C2028] shadow-[0px_3px_0px_rgba(28,32,40,0.06)] w-full">
+    <header
+      ref={menuContainerRef}
+      className="sticky top-0 z-50 bg-[#FAF7F0] border-b-2 border-[#1C2028] shadow-[0px_3px_0px_rgba(28,32,40,0.06)] w-full"
+    >
       <nav
         aria-label="Main Navigation"
         className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4"
       >
-        {/* Left: Compact Brand */}
+        {/* Left: Brand — never truncated */}
         <Link
           href="/"
           onClick={() => playSfx("boop")}
-          className="flex items-center gap-2.5 group min-w-0 shrink-0"
+          className="flex items-center gap-2.5 shrink-0"
           title="AI Resume Tailor"
         >
           <div className="w-9 h-9 neo-box-sm bg-[#FF5722] flex items-center justify-center shrink-0">
@@ -106,7 +114,7 @@ export default function Navigation() {
           </span>
         </Link>
 
-        {/* Center: Primary Links (Desktop) */}
+        {/* Center: Clean Primary Links (Desktop) */}
         <div className="hidden md:flex items-center gap-1">
           {navLinks.map(({ href, label }) => {
             const isActive =
@@ -129,22 +137,26 @@ export default function Navigation() {
           })}
         </div>
 
-        {/* Right: Account / CTA + Mobile Toggle */}
+        {/* Right: Primary Action + Compact Hamburger Menu */}
         <div className="flex items-center gap-2 shrink-0">
-          <AccessBadge />
-
           {user ? (
             <Link
               href="/profile"
               aria-current={pathname?.startsWith("/profile") ? "page" : undefined}
               onClick={() => playSfx("click")}
-              className={`hidden md:inline-flex items-center px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wide border-2 border-[#1C2028] transition-colors ${
+              className={`hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wide border-2 border-[#1C2028] transition-colors ${
                 pathname?.startsWith("/profile")
                   ? "bg-[#1C2028] text-white"
                   : "bg-white hover:bg-[#F4F1EA] text-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
               }`}
             >
-              Profile
+              {hasActivePass && (
+                <span
+                  className="w-2 h-2 rounded-full bg-[#10B981] shrink-0"
+                  aria-hidden="true"
+                />
+              )}
+              <span>Profile</span>
             </Link>
           ) : (
             <div className="hidden md:flex items-center gap-2">
@@ -165,17 +177,18 @@ export default function Navigation() {
             </div>
           )}
 
-          {/* Mobile Menu Button */}
+          {/* Condensed Menu Button (holds pass time limit, streak/XP, SFX, & mobile links) */}
           <button
             type="button"
             onClick={() => {
               playSfx("click");
               setMenuOpen((o) => !o);
             }}
-            className="md:hidden neo-box-sm bg-white p-2 text-[#1C2028] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1C2028]"
+            className="neo-box-sm bg-white hover:bg-[#F4F1EA] p-2 text-[#1C2028] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1C2028]"
             aria-expanded={menuOpen}
-            aria-controls="mobile-nav-menu"
+            aria-controls="site-nav-menu"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
+            title="Menu & Account Status"
           >
             {menuOpen ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -190,61 +203,92 @@ export default function Navigation() {
         </div>
       </nav>
 
-      {/* Mobile Dropdown Menu */}
+      {/* Condensed Dropdown Panel (Desktop right-aligned popover, Mobile full-width) */}
       {menuOpen && (
         <div
-          id="mobile-nav-menu"
-          className="md:hidden px-4 pb-4 pt-2 border-t-2 border-[#1C2028] bg-[#FAF7F0] flex flex-col gap-1.5"
+          id="site-nav-menu"
+          className="md:absolute md:right-4 md:top-[calc(100%+6px)] md:w-72 md:rounded-xl md:border-2 md:border-[#1C2028] md:shadow-[4px_4px_0px_#1C2028] px-4 py-4 border-t-2 border-[#1C2028] bg-[#FAF7F0] flex flex-col gap-3"
         >
-          {navLinks.map(({ href, label }) => {
-            const isActive =
-              href === "/" ? pathname === "/" : pathname?.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={isActive ? "page" : undefined}
-                onClick={() => playSfx("click")}
-                className={`px-3 py-2 rounded-lg text-xs font-mono font-bold uppercase tracking-wide ${
-                  isActive
-                    ? "bg-[#1C2028] text-white"
-                    : "text-[#1C2028] hover:bg-black/5"
-                }`}
-              >
-                {label}
-              </Link>
-            );
-          })}
-
-          <Link
-            href="/profile"
-            aria-current={pathname?.startsWith("/profile") ? "page" : undefined}
-            onClick={() => playSfx("click")}
-            className={`px-3 py-2 rounded-lg text-xs font-mono font-bold uppercase tracking-wide ${
-              pathname?.startsWith("/profile")
-                ? "bg-[#1C2028] text-white"
-                : "text-[#1C2028] hover:bg-black/5"
-            }`}
-          >
-            {user ? "Profile" : "Sign In"}
-          </Link>
-
-          {!user && (
-            <Link
-              href="/#tailorResume"
-              onClick={() => playSfx("click")}
-              className="mt-1 neo-btn bg-[#FF5722] text-white text-center px-4 py-2 rounded-lg text-xs font-mono font-bold uppercase tracking-wide border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
-            >
-              Start Free
-            </Link>
+          {/* Active Pass Time Limit (moved out of top bar) */}
+          {hasActivePass && accessInfo?.expiresAt && (
+            <div className="p-3 rounded-lg bg-[#ECFDF5] border-2 border-[#1C2028] text-[#065F46] font-mono space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-[#10B981]" aria-hidden="true" />
+                <span>{accessInfo.tierLabel || "Active Pass"}</span>
+              </div>
+              <p className="text-xs font-bold">
+                {formatRemainingTime(accessInfo.expiresAt)}
+              </p>
+            </div>
           )}
 
-          <div className="pt-2 mt-1 border-t border-[#1C2028]/15 flex items-center justify-between">
-            <span className="text-[11px] font-mono text-gray-600">Sound Effects</span>
+          {/* Mobile Navigation Links */}
+          <div className="md:hidden flex flex-col gap-1">
+            {navLinks.map(({ href, label }) => {
+              const isActive =
+                href === "/" ? pathname === "/" : pathname?.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={isActive ? "page" : undefined}
+                  onClick={() => playSfx("click")}
+                  className={`px-3 py-2 rounded-lg text-xs font-mono font-bold uppercase tracking-wide ${
+                    isActive
+                      ? "bg-[#1C2028] text-white"
+                      : "text-[#1C2028] hover:bg-black/5"
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+            <Link
+              href="/profile"
+              aria-current={pathname?.startsWith("/profile") ? "page" : undefined}
+              onClick={() => playSfx("click")}
+              className={`px-3 py-2 rounded-lg text-xs font-mono font-bold uppercase tracking-wide ${
+                pathname?.startsWith("/profile")
+                  ? "bg-[#1C2028] text-white"
+                  : "text-[#1C2028] hover:bg-black/5"
+              }`}
+            >
+              {user ? "Profile & Resumes" : "Sign In"}
+            </Link>
+            {!user && (
+              <Link
+                href="/#tailorResume"
+                onClick={() => playSfx("click")}
+                className="mt-1 neo-btn bg-[#FF5722] text-white text-center px-4 py-2 rounded-lg text-xs font-mono font-bold uppercase tracking-wide border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
+              >
+                Start Free
+              </Link>
+            )}
+          </div>
+
+          {/* Gamification Progress (condensed inside menu) */}
+          <div className="p-3 rounded-lg bg-white border border-[#1C2028]/30 flex items-center justify-between font-mono text-xs">
+            <div className="flex items-center gap-1.5 font-bold text-[#1C2028]">
+              <span aria-hidden="true">🔥</span>
+              <span>{streak}D Streak</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-bold">
+              <span className="text-[#D97706]">⚡ {xp} XP</span>
+              <span className="bg-[#1C2028] text-white px-1.5 py-0.5 rounded text-[10px]">
+                L{level}
+              </span>
+            </div>
+          </div>
+
+          {/* Sound Effects Toggle */}
+          <div className="pt-2 border-t border-[#1C2028]/15 flex items-center justify-between">
+            <span className="text-[11px] font-mono font-bold text-gray-600 uppercase">
+              Sound Effects
+            </span>
             <button
               type="button"
               onClick={() => toggleSfx()}
-              className="text-[11px] font-mono font-bold uppercase text-[#1C2028] px-2.5 py-1 rounded border border-[#1C2028] bg-white"
+              className="text-[11px] font-mono font-bold uppercase text-[#1C2028] px-2.5 py-1 rounded border border-[#1C2028] bg-white hover:bg-[#F4F1EA]"
             >
               {sfxEnabled ? "SFX On" : "Muted"}
             </button>
