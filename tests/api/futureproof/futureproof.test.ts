@@ -68,6 +68,7 @@ const SAMPLE_LLM_GENERATE_JSON = JSON.stringify({
       originalBullet: "Respond to 35+ daily patient portal inquiries regarding labs and prescriptions",
       upgradedBullet:
         "SECRET_LOCKED_UPGRADE_BULLET_3 using Epic In-Basket AI for 35+ daily portal inquiries.",
+      addedHighlight: "SECRET_LOCKED_HIGHLIGHT_3",
       rationale: "SECRET_LOCKED_RATIONALE_3",
     },
   ],
@@ -169,6 +170,7 @@ describe("Futureproof API Routes", () => {
 
       // Zero leakage of locked strings anywhere in the HTTP payload
       expect(rawBody).not.toContain("SECRET_LOCKED_UPGRADE_BULLET_3");
+      expect(rawBody).not.toContain("SECRET_LOCKED_HIGHLIGHT_3");
       expect(rawBody).not.toContain("SECRET_FULL_MERGED_RESUME_TEXT");
     });
 

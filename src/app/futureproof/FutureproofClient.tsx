@@ -11,6 +11,47 @@ import type {
 } from "@/app/utils/futureproofSanitizer";
 
 type Step = 1 | 2 | 3;
+type ResultTab = "changes" | "interview" | "export";
+
+/**
+ * Highlights the exact newly added AI phrase inside an upgraded bullet so a non-technical
+ * reader can see what changed in under 1 second without mentally comparing two paragraphs.
+ */
+function HighlightedBullet({
+  text,
+  highlight,
+  fallbackToolName,
+}: {
+  text: string;
+  highlight?: string;
+  fallbackToolName: string;
+}) {
+  const phrase =
+    highlight && text.toLowerCase().includes(highlight.toLowerCase())
+      ? highlight
+      : text.toLowerCase().includes(fallbackToolName.toLowerCase())
+        ? fallbackToolName
+        : null;
+
+  if (!phrase) {
+    return <span>{text}</span>;
+  }
+
+  const idx = text.toLowerCase().indexOf(phrase.toLowerCase());
+  const before = text.slice(0, idx);
+  const match = text.slice(idx, idx + phrase.length);
+  const after = text.slice(idx + phrase.length);
+
+  return (
+    <span>
+      {before}
+      <mark className="bg-[#D1FAE5] text-[#065F46] font-semibold px-1 py-0.5 rounded border border-[#10B981]/50">
+        {match}
+      </mark>
+      {after}
+    </span>
+  );
+}
 
 export default function FutureproofClient() {
   const { session } = useAuth();
@@ -27,9 +68,12 @@ export default function FutureproofClient() {
 
   const [analysis, setAnalysis] = useState<FutureproofAnalyzeResponse | null>(null);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
+  const [expandedToolDetails, setExpandedToolDetails] = useState<Record<string, boolean>>({});
   const [usedAutoStandard, setUsedAutoStandard] = useState(false);
 
   const [result, setResult] = useState<FutureproofGenerateResponse | null>(null);
+  const [activeTab, setActiveTab] = useState<ResultTab>("changes");
+  const [expandedOriginals, setExpandedOriginals] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openTalkingPointId, setOpenTalkingPointId] = useState<string | null>(null);
 
@@ -42,7 +86,10 @@ export default function FutureproofClient() {
       if (isPDFFile(file)) {
         const extracted = await extractTextFromPDF(file);
         if (!extracted.success || !extracted.text.trim()) {
-          setError(extracted.error || "Could not extract text from PDF. Please paste your resume text instead.");
+          setError(
+            extracted.error ||
+              "Could not read that PDF. Please paste your resume text instead."
+          );
           return;
         }
         setResumeText(extracted.text);
@@ -50,20 +97,20 @@ export default function FutureproofClient() {
       } else {
         const text = await file.text();
         if (!text.trim()) {
-          setError("Uploaded file appears empty. Please paste your resume text.");
+          setError("That file looks empty. Please paste your resume text.");
           return;
         }
         setResumeText(text);
         setUploadedFileName(file.name);
       }
     } catch {
-      setError("Failed to read file. Try uploading a PDF/TXT file or pasting your resume directly.");
+      setError("Could not read that file. Try uploading a PDF/TXT or pasting your text.");
     }
   };
 
   const handleAnalyze = async () => {
     if (resumeText.trim().length < 80) {
-      setError("Please paste or upload your resume (at least 80 characters) to continue.");
+      setError("Please paste or upload your resume first (at least a few lines).");
       return;
     }
 
@@ -95,6 +142,7 @@ export default function FutureproofClient() {
           : typed.recommendedTools.slice(0, 2).map((t) => t.id)
       );
       setUsedAutoStandard(false);
+      setExpandedToolDetails({});
       setStep(2);
     } catch {
       setError("Network error while analyzing your resume. Please try again.");
@@ -112,20 +160,6 @@ export default function FutureproofClient() {
           ? [...prev, toolId]
           : prev
     );
-  };
-
-  const handleSelectIndustryStandards = () => {
-    if (!analysis) return;
-    const standardIds = analysis.recommendedTools
-      .filter((t) => t.isIndustryStandard)
-      .slice(0, 3)
-      .map((t) => t.id);
-    setSelectedToolIds(
-      standardIds.length > 0
-        ? standardIds
-        : analysis.recommendedTools.slice(0, 2).map((t) => t.id)
-    );
-    setUsedAutoStandard(true);
   };
 
   const handleGenerate = async (forceIndustryStandards = false) => {
@@ -146,19 +180,22 @@ export default function FutureproofClient() {
           resumeText: resumeText.trim(),
           industry: analysis.industry,
           selectedToolIds: forceIndustryStandards ? [] : selectedToolIds,
-          useIndustryStandards: forceIndustryStandards || usedAutoStandard || selectedToolIds.length === 0,
+          useIndustryStandards:
+            forceIndustryStandards || usedAutoStandard || selectedToolIds.length === 0,
           comfortLevel,
           accessToken: session?.access_token,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data?.error || "Unable to generate AI experience upgrades right now.");
+        setError(data?.error || "Unable to generate AI upgrades right now.");
         return;
       }
 
       const typed = data as FutureproofGenerateResponse;
       setResult(typed);
+      setActiveTab("changes");
+      setExpandedOriginals({});
       setOpenTalkingPointId(typed.interviewTalkingPoints[0]?.toolId ?? null);
       setStep(3);
     } catch {
@@ -190,41 +227,33 @@ export default function FutureproofClient() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FAF7F0] text-[#1C2028] py-8 sm:py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Hero Banner */}
-        <section className="neo-box bg-[#F4F1EA] p-6 sm:p-8 border-2 border-[#1C2028] shadow-[5px_5px_0px_#1C2028] rounded-xl space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="neo-tag bg-[#FF5722] text-white text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5">
-              FUTUREPROOF
-            </span>
-            <span className="neo-tag bg-white text-[#1C2028] border border-[#1C2028] text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5">
-              INDUSTRY-STANDARD AI EXPERIENCE
-            </span>
-          </div>
+    <main className="min-h-screen bg-[#FAF7F0] text-[#1C2028] py-8 sm:py-10 px-4">
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Compact, Clear Header */}
+        <section className="neo-box bg-[#F4F1EA] p-5 sm:p-7 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-3">
+          <span className="inline-block neo-tag bg-[#FF5722] text-white text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5">
+            FUTUREPROOF · ADD AI TO YOUR RESUME
+          </span>
 
-          <h1 className="text-2xl sm:text-4xl font-extrabold font-mono tracking-tight leading-tight">
-            Add Real, Coherent AI Experience to Your Resume
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-mono tracking-tight leading-tight">
+            Add Real AI Experience to Your Resume — Without Sounding Fake
           </h1>
 
-          <p className="text-sm sm:text-base text-gray-700 font-sans max-w-2xl leading-relaxed">
-            Haven&apos;t formally used AI at work yet? Futureproof matches{" "}
-            <strong className="text-[#1C2028]">real, industry-standard AI tools</strong>{" "}
-            (like HIPAA-compliant ambient clinical scribes for doctors or Claude Enterprise &amp;
-            Copilot for admins) directly to your actual job history—plus plain-English interview
-            talking points.
+          <p className="text-sm text-gray-700 font-sans leading-relaxed">
+            No AI background? We match real tools used in your exact field and weave them
+            naturally into your existing work history.
           </p>
 
-          {/* 3-Step Indicator */}
-          <div className="grid grid-cols-3 gap-2 pt-2 font-mono text-[11px]">
+          {/* Simple 3-Step Progress Bar */}
+          <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
             {[
-              { num: 1 as Step, label: "1. Upload Resume" },
-              { num: 2 as Step, label: "2. Pick AI Tools" },
-              { num: 3 as Step, label: "3. Review & Export" },
+              { num: 1 as Step, label: "1. Your Resume" },
+              { num: 2 as Step, label: "2. Pick Tools" },
+              { num: 3 as Step, label: "3. See Changes" },
             ].map((s) => (
               <div
                 key={s.num}
-                className={`px-3 py-2 rounded-lg border-2 border-[#1C2028] font-bold text-center transition-colors ${
+                className={`px-2.5 py-1.5 rounded-lg border-2 border-[#1C2028] font-bold text-center ${
                   step === s.num
                     ? "bg-[#1C2028] text-white"
                     : step > s.num
@@ -232,7 +261,7 @@ export default function FutureproofClient() {
                       : "bg-white text-gray-500"
                 }`}
               >
-                {s.label}
+                {step > s.num ? `✓ ${s.label.slice(3)}` : s.label}
               </div>
             ))}
           </div>
@@ -242,14 +271,10 @@ export default function FutureproofClient() {
         {error && (
           <div
             role="alert"
-            className="p-4 rounded-xl bg-[#FEF2F2] border-2 border-[#DC2626] text-[#991B1B] font-mono text-xs font-bold flex items-center justify-between gap-3"
+            className="p-3.5 rounded-xl bg-[#FEF2F2] border-2 border-[#DC2626] text-[#991B1B] font-mono text-xs font-bold flex items-center justify-between gap-3"
           >
             <span>{error}</span>
-            <button
-              type="button"
-              onClick={() => setError(null)}
-              className="underline shrink-0"
-            >
+            <button type="button" onClick={() => setError(null)} className="underline shrink-0">
               Dismiss
             </button>
           </div>
@@ -257,17 +282,11 @@ export default function FutureproofClient() {
 
         {/* STEP 1: Upload / Paste Resume */}
         {step === 1 && (
-          <section className="neo-box bg-white p-6 sm:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-mono font-extrabold">
-                  Step 1: Share Your Current Resume
-                </h2>
-                <p className="text-xs text-gray-600 font-sans">
-                  We analyze your profession, responsibilities, and dates so every AI tool makes
-                  100% sense for your background.
-                </p>
-              </div>
+          <section className="neo-box bg-white p-5 sm:p-7 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base sm:text-lg font-mono font-extrabold">
+                Paste or upload your current resume
+              </h2>
               <div>
                 <input
                   ref={fileInputRef}
@@ -279,7 +298,7 @@ export default function FutureproofClient() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="neo-btn bg-[#F4F1EA] hover:bg-[#EDE8DE] text-[#1C2028] border-2 border-[#1C2028] px-3.5 py-2 text-xs font-mono font-bold uppercase tracking-wide"
+                  className="neo-btn bg-[#F4F1EA] hover:bg-[#EDE8DE] text-[#1C2028] border-2 border-[#1C2028] px-3.5 py-1.5 text-xs font-mono font-bold"
                 >
                   {uploadedFileName ? `✓ ${uploadedFileName}` : "Upload PDF / TXT"}
                 </button>
@@ -289,453 +308,511 @@ export default function FutureproofClient() {
             <textarea
               value={resumeText}
               onChange={(e) => setResumeText(e.target.value)}
-              rows={10}
-              placeholder="Paste your full resume text here (job titles, employers, dates, and bullet points)..."
+              rows={9}
+              placeholder="Paste your resume here..."
               className="w-full rounded-xl border-2 border-[#1C2028] bg-[#FAF7F0] p-4 font-mono text-xs sm:text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#FF5722]"
             />
 
-            {/* Comfort Level Selector */}
+            {/* Simple 2-Choice Tone Toggle */}
             <div className="space-y-2">
-              <p className="text-xs font-mono font-bold uppercase tracking-wider text-gray-600">
-                How deeply should AI appear on your resume?
+              <p className="text-xs font-mono font-bold text-gray-600">
+                Choose your comfort level:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setComfortLevel("everyday")}
-                  className={`p-4 rounded-xl border-2 border-[#1C2028] text-left transition-all ${
+                  className={`p-3.5 rounded-xl border-2 border-[#1C2028] text-left transition-all ${
                     comfortLevel === "everyday"
                       ? "bg-[#FFF4EF] shadow-[3px_3px_0px_#FF5722]"
                       : "bg-white hover:bg-[#FAF7F0]"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono font-bold text-sm">Everyday AI Adopter</span>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="font-mono font-bold text-sm">Everyday User</span>
                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#1C2028] text-white">
-                      RECOMMENDED
+                      BEST FOR MOST
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 font-sans">
-                    Natural daily usage—drafting, ambient notes, meeting summaries, and research
-                    assistance. Easiest to speak to in interviews.
+                    Simple daily help: notes, emails, summaries, and research.
                   </p>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setComfortLevel("automator")}
-                  className={`p-4 rounded-xl border-2 border-[#1C2028] text-left transition-all ${
+                  className={`p-3.5 rounded-xl border-2 border-[#1C2028] text-left transition-all ${
                     comfortLevel === "automator"
                       ? "bg-[#FFF4EF] shadow-[3px_3px_0px_#FF5722]"
                       : "bg-white hover:bg-[#FAF7F0]"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono font-bold text-sm">Workflow Automator</span>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#F4F1EA] border border-[#1C2028]">
-                      POWER USER
-                    </span>
-                  </div>
+                  <div className="font-mono font-bold text-sm mb-0.5">Workflow Automator</div>
                   <p className="text-xs text-gray-600 font-sans">
-                    Highlights no-code workflow automation, SOP standardization, and cross-tool
-                    efficiency improvements for your team.
+                    Stronger impact: automating schedules, trackers, and team workflows.
                   </p>
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs font-mono text-gray-500">
-                Free instant analysis · No credit card required
-              </span>
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-xs font-mono text-gray-500">Free preview · Takes 15 sec</span>
               <button
                 type="button"
                 onClick={handleAnalyze}
                 disabled={isAnalyzing}
-                className="neo-btn bg-[#FF5722] hover:bg-[#E64A19] disabled:opacity-60 text-white border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] px-6 py-3 text-xs sm:text-sm font-mono font-bold uppercase tracking-wider"
+                className="neo-btn bg-[#FF5722] hover:bg-[#E64A19] disabled:opacity-60 text-white border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] px-6 py-2.5 text-xs sm:text-sm font-mono font-bold uppercase tracking-wider"
               >
-                {isAnalyzing ? "Analyzing Your Industry..." : "Analyze My Resume →"}
+                {isAnalyzing ? "Matching Real Tools..." : "Find My AI Tools →"}
               </button>
             </div>
           </section>
         )}
 
-        {/* STEP 2: Pick Curated Industry-Standard AI Tools */}
+        {/* STEP 2: Scannable 2-Second Tool Picker */}
         {step === 2 && analysis && (
-          <section className="neo-box bg-white p-6 sm:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b-2 border-[#1C2028]/15 pb-4">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded bg-[#1C2028] text-white font-mono text-[10px] font-bold uppercase">
-                    DETECTED: {analysis.industryDisplayName}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded bg-[#F4F1EA] border border-[#1C2028] font-mono text-[10px] font-bold">
-                    {analysis.subRoleLabel}
-                  </span>
-                </div>
-                <h2 className="text-lg font-mono font-extrabold pt-1">
-                  Step 2: Choose the AI Tools to Weave Into Your Resume
-                </h2>
-                <p className="text-xs text-gray-600 font-sans">
-                  We pre-selected the top industry standards for your role. Toggle any tools you
-                  like—or let us pick the safest defaults.
+          <section className="neo-box bg-white p-5 sm:p-7 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-5">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded bg-[#1C2028] text-white font-mono text-[10px] font-bold uppercase">
+                  {analysis.subRoleLabel}
+                </span>
+                <span className="text-xs font-mono text-gray-500">
+                  {analysis.industryDisplayName}
+                </span>
+              </div>
+              <h2 className="text-lg font-mono font-extrabold">
+                Which real AI tools should we add?
+              </h2>
+            </div>
+
+            {/* Zero-Thinking Fast Path right at the top */}
+            <div className="p-4 rounded-xl bg-[#FFF4EF] border-2 border-[#1C2028] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <p className="font-mono font-bold text-xs sm:text-sm text-[#1C2028]">
+                  Not sure which tools to pick?
+                </p>
+                <p className="text-xs text-gray-700 font-sans">
+                  Let us automatically add the safest industry-standard tools for your role.
                 </p>
               </div>
-
               <button
                 type="button"
-                onClick={handleSelectIndustryStandards}
-                className={`shrink-0 px-3.5 py-2 rounded-lg border-2 border-[#1C2028] font-mono text-xs font-bold transition-colors ${
-                  usedAutoStandard
-                    ? "bg-[#ECFDF5] text-[#065F46]"
-                    : "bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#92400E]"
-                }`}
+                onClick={() => handleGenerate(true)}
+                disabled={isGenerating}
+                className="shrink-0 neo-btn bg-[#FF5722] hover:bg-[#E64A19] disabled:opacity-60 text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-wide"
               >
-                {usedAutoStandard
-                  ? "✓ Industry Standards Selected"
-                  : "Unsure? Pick Industry Standards"}
+                {isGenerating ? "Upgrading Resume..." : "Pick Best Tools For Me →"}
               </button>
             </div>
 
             {!analysis.hasRecentRoles && (
-              <div className="p-3.5 rounded-lg bg-[#FFFBEB] border-2 border-[#D97706] text-xs font-sans text-[#92400E]">
-                <strong>Timeline Protection Active:</strong> Your listed roles ended before 2023.
-                To keep your resume 100% credible, we&apos;ll place your AI experience into a clean{" "}
-                <strong>Modern Workflows &amp; AI Proficiency</strong> section rather than
-                retroactively inserting modern tools into older roles.
+              <div className="p-3 rounded-lg bg-[#FFFBEB] border border-[#D97706] text-xs font-sans text-[#92400E]">
+                <strong>Date check:</strong> Your listed roles ended before 2023, so we&apos;ll
+                add a clean <strong>Modern AI Workflows</strong> section instead of editing older
+                jobs.
               </div>
             )}
 
-            {/* Selectable Tool Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {analysis.recommendedTools.map((tool) => {
-                const isSelected = selectedToolIds.includes(tool.id);
-                return (
-                  <button
-                    key={tool.id}
-                    type="button"
-                    onClick={() => toggleTool(tool.id)}
-                    aria-pressed={isSelected}
-                    className={`p-4 rounded-xl border-2 border-[#1C2028] text-left transition-all flex flex-col justify-between gap-3 ${
-                      isSelected
-                        ? "bg-[#FFF4EF] shadow-[3px_3px_0px_#FF5722]"
-                        : "bg-[#FAF7F0] hover:bg-white opacity-85"
-                    }`}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="font-mono font-extrabold text-sm text-[#1C2028]">
-                            {tool.name}
-                          </div>
-                          <div className="text-[11px] font-mono text-gray-500">
-                            {tool.vendor}
-                          </div>
-                        </div>
-                        <span
-                          className={`w-5 h-5 rounded border-2 border-[#1C2028] flex items-center justify-center text-xs font-bold shrink-0 ${
-                            isSelected ? "bg-[#FF5722] text-white" : "bg-white"
-                          }`}
-                        >
-                          {isSelected ? "✓" : ""}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5">
-                        {tool.isIndustryStandard && (
-                          <span className="px-2 py-0.5 rounded bg-[#1C2028] text-white font-mono text-[10px] font-bold">
-                            INDUSTRY STANDARD
-                          </span>
-                        )}
-                        {tool.complianceBadges.map((badge) => (
-                          <span
-                            key={badge}
-                            className="px-2 py-0.5 rounded bg-white border border-[#1C2028]/40 font-mono text-[10px] font-semibold text-gray-700"
-                          >
-                            {badge}
-                          </span>
-                        ))}
-                      </div>
-
-                      <p className="text-xs text-gray-700 font-sans leading-relaxed">
-                        {tool.shortDescription}
-                      </p>
-                    </div>
-
-                    <div className="pt-2 border-t border-[#1C2028]/15 text-[11px] font-sans text-[#1C2028]">
-                      <span className="font-mono font-bold text-[#FF5722]">Why it fits: </span>
-                      {tool.fitReason}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="px-4 py-2.5 rounded-lg border-2 border-[#1C2028] bg-white hover:bg-[#F4F1EA] font-mono text-xs font-bold"
-              >
-                ← Back to Resume
-              </button>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleGenerate(true)}
-                  disabled={isGenerating}
-                  className="px-4 py-2.5 rounded-lg border-2 border-[#1C2028] bg-[#F4F1EA] hover:bg-[#EDE8DE] font-mono text-xs font-bold disabled:opacity-60"
-                >
-                  Unsure? Use Standards &amp; Generate
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleGenerate(false)}
-                  disabled={isGenerating || selectedToolIds.length === 0}
-                  className="neo-btn bg-[#FF5722] hover:bg-[#E64A19] disabled:opacity-60 text-white border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] px-6 py-2.5 text-xs sm:text-sm font-mono font-bold uppercase tracking-wider"
-                >
-                  {isGenerating
-                    ? "Weaving Into Your Resume..."
-                    : `Weave ${selectedToolIds.length} Tool${selectedToolIds.length === 1 ? "" : "s"} Into Resume →`}
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* STEP 3: Before/After Results, Interview Prep & Export */}
-        {step === 3 && result && (
-          <div className="space-y-6">
-            {/* Summary Bar */}
-            <section className="neo-box bg-white p-5 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl flex flex-wrap items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded bg-[#10B981] text-white font-mono text-[10px] font-bold uppercase">
-                    {result.isUnlocked
-                      ? "FULL ACCESS UNLOCKED"
-                      : `FREE PREVIEW (${result.unlockedCount} OF ${result.totalUpgrades} SHOWN)`}
-                  </span>
-                  <span className="font-mono text-xs font-bold text-gray-600">
-                    {result.industryDisplayName}
-                  </span>
-                </div>
-                <p className="text-xs font-sans text-gray-700">
-                  Integrated tools:{" "}
-                  <strong>{result.selectedTools.map((t) => t.name).join(", ")}</strong>
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="px-3.5 py-2 rounded-lg border-2 border-[#1C2028] bg-[#F4F1EA] hover:bg-[#EDE8DE] font-mono text-xs font-bold"
-                >
-                  ← Change Tools
-                </button>
-                {result.isUnlocked && result.mergedResume && (
-                  <button
-                    type="button"
-                    onClick={downloadMergedResume}
-                    className="px-4 py-2 rounded-lg border-2 border-[#1C2028] bg-[#1C2028] text-white font-mono text-xs font-bold"
-                  >
-                    Download Updated Resume (.txt)
-                  </button>
-                )}
-              </div>
-            </section>
-
-            {/* Bullet Upgrades */}
-            <section className="space-y-4">
-              <h2 className="text-lg font-mono font-extrabold">
-                Coherent Resume Bullet Upgrades
-              </h2>
-
-              {result.bulletUpgrades.map((item) => (
-                <article
-                  key={item.id}
-                  className="neo-box bg-white p-5 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl space-y-3"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="font-mono text-xs font-bold text-[#1C2028]">
-                      {item.roleTitle}
-                      {item.company ? ` · ${item.company}` : ""}
-                      {item.dateRange ? ` (${item.dateRange})` : ""}
-                    </div>
-                    <span className="px-2.5 py-0.5 rounded bg-[#FFF4EF] border border-[#FF5722] text-[#FF5722] font-mono text-[10px] font-bold">
-                      {item.toolName}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                    <div className="p-3 rounded-lg bg-[#FAF7F0] border border-[#1C2028]/20">
-                      <div className="font-mono text-[10px] font-bold uppercase text-gray-500 mb-1">
-                        Original Responsibility
-                      </div>
-                      <p className="font-sans text-gray-700 leading-relaxed">
-                        {item.originalBullet}
-                      </p>
-                    </div>
-
-                    <div
-                      className={`p-3 rounded-lg border-2 ${
-                        item.isLocked
-                          ? "bg-[#F4F1EA] border-dashed border-[#1C2028]/40"
-                          : "bg-[#ECFDF5] border-[#10B981]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-mono text-[10px] font-bold uppercase text-[#065F46]">
-                          Futureproof Upgrade
-                        </span>
-                        {!item.isLocked && (
-                          <button
-                            type="button"
-                            onClick={() => copyToClipboard(item.upgradedBullet, item.id)}
-                            className="font-mono text-[10px] font-bold underline text-[#1C2028]"
-                          >
-                            {copiedId === item.id ? "Copied ✓" : "Copy"}
-                          </button>
-                        )}
-                      </div>
-                      <p
-                        className={`font-sans leading-relaxed ${
-                          item.isLocked ? "text-gray-500 italic" : "text-[#1C2028] font-medium"
-                        }`}
-                      >
-                        {item.upgradedBullet}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] font-sans text-gray-600">
-                    <span className="font-mono font-bold text-[#1C2028]">Coherence Note: </span>
-                    {item.rationale}
-                  </p>
-                </article>
-              ))}
-            </section>
-
-            {/* Skills Block */}
-            <section className="neo-box bg-white p-5 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-mono font-extrabold">
-                  AI Tools &amp; Workflows Skills Block
-                </h2>
-                <button
-                  type="button"
-                  onClick={() =>
-                    copyToClipboard(result.skillsBlock.join(" • "), "skills-block")
-                  }
-                  className="font-mono text-xs font-bold underline"
-                >
-                  {copiedId === "skills-block" ? "Copied ✓" : "Copy Skills"}
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {result.skillsBlock.map((skill) => (
-                  <span
-                    key={skill}
-                    className="px-3 py-1 rounded-lg bg-[#FAF7F0] border border-[#1C2028] font-mono text-xs font-bold"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </section>
-
-            {/* Interview Talking Points */}
-            <section className="neo-box bg-white p-5 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl space-y-3">
-              <h2 className="text-base font-mono font-extrabold">
-                How to Speak to These Tools in Interviews
-              </h2>
-              <p className="text-xs font-sans text-gray-600">
-                Plain-English 30-second answers so you sound natural, accurate, and confident when
-                recruiters ask about your AI workflow experience.
+            {/* Compact, Scannable Tool List */}
+            <div className="space-y-2.5">
+              <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-gray-500">
+                Or customize your selection ({selectedToolIds.length} selected):
               </p>
 
-              <div className="space-y-2">
-                {result.interviewTalkingPoints.map((tp) => {
-                  const isOpen = openTalkingPointId === tp.toolId;
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {analysis.recommendedTools.map((tool) => {
+                  const isSelected = selectedToolIds.includes(tool.id);
+                  const showDetails = Boolean(expandedToolDetails[tool.id]);
                   return (
                     <div
-                      key={tp.toolId}
-                      className="rounded-xl border-2 border-[#1C2028] overflow-hidden"
+                      key={tool.id}
+                      className={`p-3.5 rounded-xl border-2 border-[#1C2028] transition-all flex flex-col justify-between gap-2 ${
+                        isSelected
+                          ? "bg-[#ECFDF5] shadow-[2px_2px_0px_#1C2028]"
+                          : "bg-[#FAF7F0] opacity-85 hover:opacity-100"
+                      }`}
                     >
                       <button
                         type="button"
-                        onClick={() =>
-                          setOpenTalkingPointId(isOpen ? null : tp.toolId)
-                        }
-                        className="w-full px-4 py-3 bg-[#F4F1EA] flex items-center justify-between text-left font-mono text-xs font-bold"
+                        onClick={() => toggleTool(tool.id)}
+                        aria-pressed={isSelected}
+                        className="text-left space-y-1.5 w-full"
                       >
-                        <span>
-                          {tp.toolName}{" "}
-                          {tp.isLocked ? "🔒" : ""}
-                        </span>
-                        <span>{isOpen ? "−" : "+"}</span>
-                      </button>
-                      {isOpen && (
-                        <div className="p-4 bg-white space-y-2 text-xs font-sans">
-                          <p className="text-gray-600">{tp.plainEnglishSummary}</p>
-                          <div className="p-3 rounded-lg bg-[#FAF7F0] border border-[#1C2028]/20 text-[#1C2028]">
-                            <span className="font-mono text-[10px] font-bold uppercase block mb-1 text-[#FF5722]">
-                              30-Second Interview Script
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-mono font-extrabold text-sm text-[#1C2028]">
+                              {tool.name}
                             </span>
-                            {tp.thirtySecondAnswer}
+                            {tool.isIndustryStandard && (
+                              <span className="px-1.5 py-0.5 rounded bg-[#1C2028] text-white font-mono text-[9px] font-bold">
+                                STANDARD
+                              </span>
+                            )}
                           </div>
+                          <span
+                            className={`w-5 h-5 rounded border-2 border-[#1C2028] flex items-center justify-center text-xs font-bold shrink-0 ${
+                              isSelected ? "bg-[#10B981] text-white" : "bg-white"
+                            }`}
+                          >
+                            {isSelected ? "✓" : ""}
+                          </span>
                         </div>
+
+                        <p className="text-xs text-gray-800 font-sans leading-snug">
+                          {tool.fitReason}
+                        </p>
+                      </button>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[10px] font-mono text-gray-500">
+                          {tool.complianceBadges[0] || tool.vendor}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedToolDetails((prev) => ({
+                              ...prev,
+                              [tool.id]: !prev[tool.id],
+                            }))
+                          }
+                          className="text-[11px] font-mono font-bold underline text-gray-600 hover:text-[#1C2028]"
+                        >
+                          {showDetails ? "Hide" : "What is this?"}
+                        </button>
+                      </div>
+
+                      {showDetails && (
+                        <p className="text-[11px] text-gray-600 font-sans pt-1.5 border-t border-[#1C2028]/15">
+                          {tool.shortDescription}
+                        </p>
                       )}
                     </div>
                   );
                 })}
               </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="px-4 py-2 rounded-lg border-2 border-[#1C2028] bg-white hover:bg-[#F4F1EA] font-mono text-xs font-bold"
+              >
+                ← Back
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGenerate(false)}
+                disabled={isGenerating || selectedToolIds.length === 0}
+                className="neo-btn bg-[#1C2028] hover:bg-black disabled:opacity-60 text-white border-2 border-[#1C2028] px-5 py-2.5 text-xs font-mono font-bold uppercase tracking-wider"
+              >
+                {isGenerating
+                  ? "Upgrading Resume..."
+                  : `Use Selected (${selectedToolIds.length}) →`}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* STEP 3: Visual Diff + 3 Clean Tabs */}
+        {step === 3 && result && (
+          <div className="space-y-5">
+            {/* At-a-Glance Impact Strip (Zero Reading Required) */}
+            <section className="grid grid-cols-3 gap-3">
+              <div className="neo-box bg-white p-3.5 border-2 border-[#1C2028] rounded-xl text-center">
+                <div className="text-xl font-mono font-extrabold text-[#FF5722]">
+                  {result.selectedTools.length}
+                </div>
+                <div className="text-[11px] font-mono font-bold text-gray-600">
+                  Real AI Tools Added
+                </div>
+              </div>
+              <div className="neo-box bg-white p-3.5 border-2 border-[#1C2028] rounded-xl text-center">
+                <div className="text-xl font-mono font-extrabold text-[#10B981]">
+                  {result.totalUpgrades}
+                </div>
+                <div className="text-[11px] font-mono font-bold text-gray-600">
+                  Bullets Upgraded
+                </div>
+              </div>
+              <div className="neo-box bg-white p-3.5 border-2 border-[#1C2028] rounded-xl text-center">
+                <div className="text-xl font-mono font-extrabold text-[#1C2028]">✓</div>
+                <div className="text-[11px] font-mono font-bold text-gray-600">
+                  {result.placementMode === "inline_roles"
+                    ? "Recent Roles Only"
+                    : "Modern AI Section"}
+                </div>
+              </div>
             </section>
 
-            {/* Freemium Paywall CTA OR Full Merged Resume */}
-            {!result.isUnlocked ? (
-              <section className="neo-box bg-[#1C2028] text-white p-6 sm:p-8 border-2 border-[#1C2028] shadow-[5px_5px_0px_#FF5722] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1.5">
-                  <span className="inline-block px-2.5 py-0.5 rounded bg-[#FF5722] text-white font-mono text-[10px] font-bold uppercase">
-                    ONE-TIME PASS · NO SUBSCRIPTION
-                  </span>
-                  <h3 className="text-lg sm:text-xl font-mono font-extrabold">
-                    Unlock All {result.totalUpgrades} Upgrades, Full Merged Resume &amp; Interview
-                    Scripts
+            {/* 3 Clean Tabs */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#1C2028] pb-2">
+              <div className="flex flex-wrap gap-2" role="tablist">
+                {[
+                  { id: "changes" as ResultTab, label: `What Changed (${result.totalUpgrades})` },
+                  { id: "interview" as ResultTab, label: "How to Explain It" },
+                  { id: "export" as ResultTab, label: "Copy Full Resume" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-3.5 py-2 rounded-lg border-2 border-[#1C2028] font-mono text-xs font-bold transition-colors ${
+                      activeTab === tab.id
+                        ? "bg-[#1C2028] text-white"
+                        : "bg-white hover:bg-[#F4F1EA] text-[#1C2028]"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="font-mono text-xs font-bold underline text-gray-600 hover:text-[#1C2028]"
+              >
+                Change Tools
+              </button>
+            </div>
+
+            {/* TAB 1: What Changed (Highlighted Inline Diff) */}
+            {activeTab === "changes" && (
+              <section className="space-y-3.5">
+                <p className="text-xs font-sans text-gray-600">
+                  <span className="inline-block bg-[#D1FAE5] text-[#065F46] font-semibold px-1.5 py-0.5 rounded border border-[#10B981]/50 mr-1">
+                    Highlighted text
+                  </span>{" "}
+                  shows the exact AI skill added to your real experience.
+                </p>
+
+                {result.bulletUpgrades.map((item) => {
+                  const showOriginal = Boolean(expandedOriginals[item.id]);
+                  return (
+                    <article
+                      key={item.id}
+                      className={`neo-box p-4 sm:p-5 border-2 border-[#1C2028] rounded-xl space-y-2.5 ${
+                        item.isLocked
+                          ? "bg-[#F4F1EA] opacity-90"
+                          : "bg-white shadow-[3px_3px_0px_#1C2028]"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-mono text-xs font-bold text-gray-600">
+                          {item.roleTitle}
+                          {item.company ? ` · ${item.company}` : ""}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded bg-[#FFF4EF] border border-[#FF5722] text-[#FF5722] font-mono text-[10px] font-bold">
+                            + {item.toolName}
+                          </span>
+                          {!item.isLocked && (
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(item.upgradedBullet, item.id)}
+                              className="font-mono text-[11px] font-bold underline text-[#1C2028]"
+                            >
+                              {copiedId === item.id ? "Copied ✓" : "Copy"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Main Upgraded Bullet with Instant Green Highlight */}
+                      <p
+                        className={`text-sm font-sans leading-relaxed ${
+                          item.isLocked ? "text-gray-500 italic" : "text-[#1C2028]"
+                        }`}
+                      >
+                        {item.isLocked ? (
+                          item.upgradedBullet
+                        ) : (
+                          <HighlightedBullet
+                            text={item.upgradedBullet}
+                            highlight={item.addedHighlight}
+                            fallbackToolName={item.toolName}
+                          />
+                        )}
+                      </p>
+
+                      {/* 1-Line Plain-English Impact + Optional Original Toggle */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-[#1C2028]/10 text-xs">
+                        <span className="font-sans text-gray-700">
+                          <strong className="font-mono text-[11px] text-[#065F46]">
+                            Why it helps:{" "}
+                          </strong>
+                          {item.rationale}
+                        </span>
+
+                        {!item.isLocked && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedOriginals((prev) => ({
+                                ...prev,
+                                [item.id]: !prev[item.id],
+                              }))
+                            }
+                            className="font-mono text-[11px] font-bold underline text-gray-500 hover:text-[#1C2028] shrink-0"
+                          >
+                            {showOriginal ? "Hide original" : "Compare original"}
+                          </button>
+                        )}
+                      </div>
+
+                      {showOriginal && !item.isLocked && (
+                        <div className="p-2.5 rounded-lg bg-[#FAF7F0] border border-[#1C2028]/15 text-xs text-gray-600 font-sans">
+                          <span className="font-mono text-[10px] font-bold uppercase mr-1.5">
+                            Before:
+                          </span>
+                          {item.originalBullet}
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </section>
+            )}
+
+            {/* TAB 2: Plain-English Interview Cheat Sheet */}
+            {activeTab === "interview" && (
+              <section className="neo-box bg-white p-5 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl space-y-3">
+                <p className="text-xs font-sans text-gray-600">
+                  If an interviewer asks about a tool on your resume, here&apos;s a simple,
+                  honest 30-second way to explain it.
+                </p>
+
+                <div className="space-y-2">
+                  {result.interviewTalkingPoints.map((tp) => {
+                    const isOpen = openTalkingPointId === tp.toolId;
+                    return (
+                      <div
+                        key={tp.toolId}
+                        className="rounded-xl border-2 border-[#1C2028] overflow-hidden"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setOpenTalkingPointId(isOpen ? null : tp.toolId)}
+                          className="w-full px-4 py-3 bg-[#F4F1EA] flex items-center justify-between text-left font-mono text-xs font-bold"
+                        >
+                          <span>
+                            {tp.toolName} {tp.isLocked ? "🔒" : ""}
+                          </span>
+                          <span>{isOpen ? "−" : "+"}</span>
+                        </button>
+                        {isOpen && (
+                          <div className="p-4 bg-white space-y-2.5 text-xs font-sans">
+                            <p className="text-gray-600">{tp.plainEnglishSummary}</p>
+                            <div className="p-3 rounded-lg bg-[#FAF7F0] border border-[#1C2028]/20 text-[#1C2028] leading-relaxed">
+                              <span className="font-mono text-[10px] font-bold uppercase block mb-1 text-[#FF5722]">
+                                What to say in an interview:
+                              </span>
+                              {tp.thirtySecondAnswer}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* TAB 3: Skills Block & Full Merged Resume */}
+            {activeTab === "export" && (
+              <section className="space-y-4">
+                <div className="neo-box bg-white p-5 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-mono font-extrabold">
+                      Ready-to-Paste AI Skills
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyToClipboard(result.skillsBlock.join(" • "), "skills-block")
+                      }
+                      className="font-mono text-xs font-bold underline"
+                    >
+                      {copiedId === "skills-block" ? "Copied ✓" : "Copy Skills"}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {result.skillsBlock.map((skill) => (
+                      <span
+                        key={skill}
+                        className="px-2.5 py-1 rounded-lg bg-[#FAF7F0] border border-[#1C2028] font-mono text-xs font-bold"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {result.isUnlocked && result.mergedResume ? (
+                  <div className="neo-box bg-white p-5 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h2 className="text-sm font-mono font-extrabold">
+                        Complete Updated Resume
+                      </h2>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(result.mergedResume!, "merged-resume")}
+                          className="font-mono text-xs font-bold underline"
+                        >
+                          {copiedId === "merged-resume" ? "Copied ✓" : "Copy All"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={downloadMergedResume}
+                          className="px-3 py-1.5 rounded-lg bg-[#1C2028] text-white font-mono text-xs font-bold"
+                        >
+                          Download .txt
+                        </button>
+                      </div>
+                    </div>
+                    <pre className="whitespace-pre-wrap rounded-xl bg-[#FAF7F0] border border-[#1C2028]/20 p-4 font-mono text-xs leading-relaxed max-h-[420px] overflow-y-auto">
+                      {result.mergedResume}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="neo-box bg-[#F4F1EA] p-5 border-2 border-dashed border-[#1C2028] rounded-xl text-center space-y-2">
+                    <p className="font-mono text-sm font-bold">
+                      🔒 Full Merged Resume Export
+                    </p>
+                    <p className="text-xs font-sans text-gray-600">
+                      Unlock with a one-time pass to copy or download your complete updated
+                      resume with all changes merged in place.
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Compact Upgrade Banner for Free Users */}
+            {!result.isUnlocked && (
+              <section className="neo-box bg-[#1C2028] text-white p-5 sm:p-6 border-2 border-[#1C2028] shadow-[4px_4px_0px_#FF5722] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="text-base sm:text-lg font-mono font-extrabold">
+                    Unlock all {result.totalUpgrades} upgrades + interview scripts
                   </h3>
-                  <p className="text-xs sm:text-sm text-gray-300 font-sans">
-                    Your existing AI Resume Tailor pass unlocks both Futureproof and unlimited ATS
-                    job-specific tailoring.
+                  <p className="text-xs text-gray-300 font-sans">
+                    One-time pass (no subscription). Also unlocks unlimited ATS resume tailoring.
                   </p>
                 </div>
                 <Link
                   href="/pricing"
-                  className="shrink-0 neo-btn bg-[#FF5722] hover:bg-[#E64A19] text-white border-2 border-white px-5 py-3 font-mono text-xs sm:text-sm font-bold uppercase tracking-wider"
+                  className="shrink-0 neo-btn bg-[#FF5722] hover:bg-[#E64A19] text-white border-2 border-white px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider"
                 >
-                  Unlock Full Access →
+                  Unlock Everything →
                 </Link>
               </section>
-            ) : (
-              result.mergedResume && (
-                <section className="neo-box bg-white p-5 border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] rounded-xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-base font-mono font-extrabold">
-                      Complete Updated Resume
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(result.mergedResume!, "merged-resume")}
-                      className="font-mono text-xs font-bold underline"
-                    >
-                      {copiedId === "merged-resume" ? "Copied ✓" : "Copy Full Resume"}
-                    </button>
-                  </div>
-                  <pre className="whitespace-pre-wrap rounded-xl bg-[#FAF7F0] border border-[#1C2028]/20 p-4 font-mono text-xs leading-relaxed max-h-[420px] overflow-y-auto">
-                    {result.mergedResume}
-                  </pre>
-                </section>
-              )
             )}
           </div>
         )}
