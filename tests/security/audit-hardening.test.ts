@@ -286,5 +286,26 @@ describe("Security Audit Hardening Regressions", () => {
         expect(res.status).toBe(200);
       }
     });
+
+    it("rewrites futureproof.airesumetailor.com/ to /futureproof", () => {
+      const req = new NextRequest("https://futureproof.airesumetailor.com/", {
+        headers: { host: "futureproof.airesumetailor.com" },
+      });
+      const res = middleware(req);
+      expect(res.headers.get("x-middleware-rewrite")).toContain("/futureproof");
+    });
+
+    it("enforces tighter 30 req/min limit on /api/futureproof/* routes", () => {
+      const testIp = "198.51.100.123";
+      let status = 200;
+      for (let i = 0; i < 31; i++) {
+        const req = new NextRequest("http://localhost:3000/api/futureproof/analyze", {
+          headers: { "x-forwarded-for": testIp },
+        });
+        const res = middleware(req);
+        status = res.status;
+      }
+      expect(status).toBe(429);
+    });
   });
 });
