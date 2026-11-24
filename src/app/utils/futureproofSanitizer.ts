@@ -40,6 +40,8 @@ export interface BulletUpgrade {
   toolName: string;
   originalBullet: string;
   upgradedBullet: string;
+  /** Exact short AI phrase newly added inside upgradedBullet so the UI can highlight it at a glance */
+  addedHighlight?: string;
   rationale: string;
   isLocked?: boolean;
 }
@@ -100,7 +102,8 @@ export function sanitizeFutureproofForLocked(
       return {
         ...item,
         upgradedBullet: LOCKED_BULLET_PLACEHOLDER,
-        rationale: "Unlock your pass to view this tailored AI workflow upgrade.",
+        addedHighlight: undefined,
+        rationale: "Unlock your pass to view this tailored AI upgrade.",
         isLocked: true,
       };
     }

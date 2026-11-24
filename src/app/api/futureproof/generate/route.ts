@@ -32,6 +32,7 @@ interface LlmGeneratePayload {
     toolName?: string;
     originalBullet?: string;
     upgradedBullet?: string;
+    addedHighlight?: string;
     rationale?: string;
   }>;
   skillsBlock?: string[];
@@ -131,7 +132,8 @@ Return ONLY valid JSON with this exact shape:
       "toolName": "exact name from VERIFIED AI TOOLS",
       "originalBullet": "Original bullet or responsibility from resume (or 'New AI workflow bullet')",
       "upgradedBullet": "Rewritten coherent bullet integrating the real AI tool naturally",
-      "rationale": "1 short sentence explaining why this fits their role and industry standard"
+      "addedHighlight": "Exact short substring (3-10 words) copied verbatim from upgradedBullet showing the newly added AI tool/action so the UI can highlight it",
+      "rationale": "Plain-English 8-12 word reason a recruiter likes this (zero jargon, e.g. 'Shows HIPAA-safe AI charting while keeping your real patient volume')"
     }
   ],
   "skillsBlock": ["Nuance DAX Copilot (HIPAA Ambient Documentation)", "..."],
@@ -173,9 +175,13 @@ Return ONLY valid JSON with this exact shape:
           toolName: matchedTool.name,
           originalBullet: (b.originalBullet || "Existing role responsibility").trim(),
           upgradedBullet: b.upgradedBullet!.trim(),
+          addedHighlight:
+            typeof b.addedHighlight === "string" && b.addedHighlight.trim().length > 2
+              ? b.addedHighlight.trim()
+              : matchedTool.name,
           rationale: (
             b.rationale ||
-            `Demonstrates practical, industry-standard ${matchedTool.name} adoption.`
+            `Shows real, everyday ${matchedTool.name} experience.`
           ).trim(),
         };
       });

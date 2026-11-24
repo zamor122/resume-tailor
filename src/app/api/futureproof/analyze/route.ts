@@ -97,14 +97,14 @@ Return strictly valid JSON with this exact shape:
     { "title": "Job Title", "company": "Employer", "dateRange": "e.g. 2022 - Present" }
   ],
   "fitReasons": {
-    "<tool_id>": "1 concise, concrete sentence explaining how this real AI tool fits a specific responsibility in THIS candidate's resume."
+    "<tool_id>": "Plain-English 8-12 word line explaining what this does in THIS person's daily job (zero tech jargon)."
   }
 }
 
 Rules:
 - Extract up to 5 most recent work experience roles from the resume.
-- Every fitReason must reference actual duties or context from the resume (never generic filler).
-- Keep each fitReason under 160 characters.`;
+- Write fitReasons for a busy non-technical human (e.g. 'Drafts HIPAA-safe Epic notes during your 20+ daily visits' or 'Summarizes weekly exec meetings and tracks follow-ups').
+- Keep every fitReason under 90 characters.`;
 
     let llmParsed: LlmAnalyzePayload | null = null;
     try {
