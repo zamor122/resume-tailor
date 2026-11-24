@@ -5,16 +5,31 @@
 
 export type SfxType = "click" | "boop" | "success" | "alert";
 
+// Reuse a single AudioContext per tab so repeated clicks never leak hardware audio threads
+// or hit the browser's ~6 AudioContext limit (which causes instability on Safari/Chrome).
+let sharedAudioCtx: AudioContext | null = null;
+
+function getSharedAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  const AudioCtx =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!sharedAudioCtx || sharedAudioCtx.state === "closed") {
+    sharedAudioCtx = new AudioCtx();
+  }
+  if (sharedAudioCtx.state === "suspended" && typeof sharedAudioCtx.resume === "function") {
+    sharedAudioCtx.resume().catch(() => {});
+  }
+  return sharedAudioCtx;
+}
+
 export function playAudioSfx(type: SfxType, enabled: boolean = true): void {
   if (!enabled || typeof window === "undefined") return;
 
   try {
-    const AudioCtx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-
-    const ctx = new AudioCtx();
+    const ctx = getSharedAudioContext();
+    if (!ctx) return;
 
     if (type === "click") {
       // Crisp mechanical relay click
