@@ -21,6 +21,7 @@ export default function Navigation() {
   const { streak, xp, level, sfxEnabled, toggleSfx, playSfx } = useGamification();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isFunnelMode, setIsFunnelMode] = useState(false);
   const [accessInfo, setAccessInfo] = useState<{
     hasAccess: boolean;
     expiresAt: Date | null;
@@ -31,6 +32,17 @@ export default function Navigation() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const host = window.location.hostname.toLowerCase();
+    const params = new URLSearchParams(window.location.search);
+    const onFutureproofSubdomain = host.startsWith("futureproof.");
+    const onFutureproofCampaign =
+      Boolean(pathname?.startsWith("/futureproof")) &&
+      (params.has("utm_source") || params.get("funnel") === "1" || params.has("role"));
+    setIsFunnelMode(onFutureproofSubdomain || onFutureproofCampaign);
+  }, [pathname]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -89,6 +101,42 @@ export default function Navigation() {
   }
 
   const hasActivePass = Boolean(accessInfo?.hasAccess && accessInfo.expiresAt);
+
+  // Distraction-free funnel header for futureproof.airesumetailor.com & ad traffic
+  if (isFunnelMode) {
+    return (
+      <header className="sticky top-0 z-50 bg-[#FAF7F0] border-b-2 border-[#1C2028] w-full">
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 neo-box-sm bg-[#FF5722] flex items-center justify-center shrink-0">
+              <TailorBot size={22} state="idle" />
+            </div>
+            <span className="font-mono font-extrabold text-sm sm:text-base tracking-tight text-[#1C2028]">
+              FUTUREPROOF{" "}
+              <span className="font-normal text-xs text-[#4B5563] hidden sm:inline">
+                by AI Resume Tailor
+              </span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {hasActivePass ? (
+              <span className="px-2.5 py-1 rounded-lg bg-[#ECFDF5] border border-[#10B981] text-[#065F46] font-mono text-xs font-bold">
+                ✓ Pass Active
+              </span>
+            ) : (
+              <Link
+                href="/profile"
+                className="font-mono text-xs font-bold text-[#1C2028] hover:underline"
+              >
+                {user ? "My Account" : "Sign In"}
+              </Link>
+            )}
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header

@@ -1,9 +1,15 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { supabase } from "@/app/lib/supabase/client";
 import TierSelectionModal from "@/app/components/TierSelectionModal";
 import { extractTextFromPDF, isPDFFile } from "@/app/utils/pdfExtractor";
+import {
+  DEFAULT_FUTUREPROOF_VARIANT,
+  getFutureproofVariant,
+  type FutureproofHeroVariant,
+} from "@/app/config/futureproofVariants";
 import type { ComfortLevel } from "@/app/config/aiToolRegistry";
 import type {
   FutureproofAnalyzeResponse,
@@ -54,9 +60,12 @@ function HighlightedBullet({
 }
 
 export default function FutureproofClient() {
-  const { session } = useAuth();
+  const { user, session } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [heroVariant, setHeroVariant] = useState<FutureproofHeroVariant>(
+    DEFAULT_FUTUREPROOF_VARIANT
+  );
   const [step, setStep] = useState<Step>(1);
   const [resumeText, setResumeText] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -77,6 +86,41 @@ export default function FutureproofClient() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openTalkingPointId, setOpenTalkingPointId] = useState<string | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
+
+  // Lightweight email lead capture (registers lead in Supabase Auth -> feeds daily drip cron)
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadStatus, setLeadStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get("role") || params.get("v");
+    setHeroVariant(getFutureproofVariant(roleParam));
+  }, []);
+
+  const handleLeadCapture = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleaned = leadEmail.trim();
+    if (!cleaned || !cleaned.includes("@")) return;
+    setLeadStatus("sending");
+    try {
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/callback?next=/futureproof`
+          : undefined;
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: cleaned,
+        options: { emailRedirectTo: redirectTo },
+      });
+      if (otpError) {
+        setLeadStatus("error");
+      } else {
+        setLeadStatus("sent");
+      }
+    } catch {
+      setLeadStatus("error");
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -230,19 +274,23 @@ export default function FutureproofClient() {
   return (
     <div className="min-h-screen bg-[#FAF7F0] text-[#1C2028] py-8 sm:py-10 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
-        {/* Compact, Clear Header */}
+        {/* Compact, Clear Header (dynamically adapts to ?role=doctor, ?role=admin, etc.) */}
         <section className="neo-box bg-[#F4F1EA] p-6 sm:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-4">
-          <span className="inline-block neo-tag bg-[#FF5722] text-white text-xs font-mono font-bold uppercase tracking-wider px-2.5 py-0.5">
-            FUTUREPROOF · ADD AI TO YOUR RESUME
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-block neo-tag bg-[#FF5722] text-white text-xs font-mono font-bold uppercase tracking-wider px-2.5 py-0.5">
+              {heroVariant.badge}
+            </span>
+            <span className="text-xs font-mono font-semibold text-[#4B5563]">
+              {heroVariant.proofPill}
+            </span>
+          </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold font-mono tracking-tight leading-tight">
-            Add Real AI Experience to Your Resume — Without Sounding Fake
+            {heroVariant.headline}
           </h1>
 
           <p className="text-base text-[#374151] font-sans leading-relaxed">
-            No AI background? We match real tools used in your exact field and weave them
-            naturally into your existing work history.
+            {heroVariant.subheadline}
           </p>
 
           {/* Simple 3-Step Progress Bar */}
@@ -799,6 +847,59 @@ export default function FutureproofClient() {
                       resume with all changes merged in place.
                     </p>
                   </div>
+                )}
+              </section>
+            )}
+
+            {/* Optional Email Lead Capture for Unauthenticated Visitors (feeds daily drip sequence) */}
+            {!user && !result.isUnlocked && (
+              <section className="neo-box bg-[#FFF4EF] p-5 border-2 border-[#1C2028] rounded-xl space-y-2.5">
+                <div className="space-y-0.5">
+                  <h3 className="text-base font-mono font-extrabold text-[#1C2028]">
+                    Not ready to unlock yet? Save your free preview by email
+                  </h3>
+                  <p className="text-sm font-sans text-[#374151]">
+                    We&apos;ll send you a 1-click sign-in link so you can come back to your
+                    Futureproof upgrades anytime (no spam).
+                  </p>
+                </div>
+                {leadStatus === "sent" ? (
+                  <p className="text-sm font-sans font-semibold text-[#065F46]">
+                    ✓ Check your inbox — we sent your 1-click sign-in link to{" "}
+                    <strong>{leadEmail}</strong>.
+                  </p>
+                ) : (
+                  <form
+                    onSubmit={handleLeadCapture}
+                    className="flex flex-col sm:flex-row gap-2.5 pt-1"
+                  >
+                    <label htmlFor="futureproof-lead-email" className="visually-hidden">
+                      Email address
+                    </label>
+                    <input
+                      id="futureproof-lead-email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={leadEmail}
+                      onChange={(e) => setLeadEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="flex-1 rounded-lg border-2 border-[#1C2028] bg-white px-3.5 py-2.5 text-sm font-sans"
+                    />
+                    <button
+                      type="submit"
+                      disabled={leadStatus === "sending"}
+                      className="neo-btn bg-[#1C2028] hover:bg-black disabled:opacity-60 text-white border-2 border-[#1C2028] px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider shrink-0"
+                    >
+                      {leadStatus === "sending" ? "Sending..." : "Email My Link →"}
+                    </button>
+                  </form>
+                )}
+                {leadStatus === "error" && (
+                  <p className="text-xs font-sans text-[#991B1B]">
+                    Could not send link right now — please double-check your email or try signing
+                    in below.
+                  </p>
                 )}
               </section>
             )}
