@@ -19,9 +19,21 @@ const GROUPS: Array<{ title: string; links: Array<[string, string]> }> = [
   {
     title: 'Free tools',
     links: [
+      ['Futureproof: Add AI Skills', '/futureproof'],
       ['ATS Resume Checker', '/resume-checker'],
       ['Resume Optimizer', '/resume-optimizer'],
-      ['Pricing', '/pricing'],
+      ['Pricing (No Subscription)', '/pricing'],
+    ],
+  },
+  {
+    title: 'AI Skills by Profession',
+    links: [
+      ['Physicians & Clinicians AI', '/futureproof/doctor'],
+      ['Nurses & Care Teams AI', '/futureproof/nurse'],
+      ['Admin & Executive Assistants AI', '/futureproof/admin'],
+      ['Finance & Accounting AI', '/futureproof/finance'],
+      ['Attorneys & Paralegals AI', '/futureproof/legal'],
+      ['Teachers & Educators AI', '/futureproof/teacher'],
     ],
   },
   {
@@ -52,7 +64,7 @@ export default function SiteLinks() {
       className="w-full border-t-2 border-[#1C2028] bg-[#FAF7F0] text-[#1C2028]"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {GROUPS.map((group) => (
             <div key={group.title}>
               <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1C2028] mb-3 flex items-center gap-1.5">

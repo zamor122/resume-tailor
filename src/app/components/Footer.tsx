@@ -26,6 +26,9 @@ export default function Footer() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs font-mono font-bold text-gray-700 uppercase">
+            <Link href="/futureproof" className="text-[#FF5722] hover:underline transition-colors">
+              Futureproof AI
+            </Link>
             <Link href="/pricing" className="hover:text-[#FF5722] transition-colors">
               Pricing
             </Link>

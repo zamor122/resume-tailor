@@ -59,12 +59,16 @@ function HighlightedBullet({
   );
 }
 
-export default function FutureproofClient() {
+export default function FutureproofClient({
+  initialRole,
+}: {
+  initialRole?: string;
+} = {}) {
   const { user, session } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [heroVariant, setHeroVariant] = useState<FutureproofHeroVariant>(
-    DEFAULT_FUTUREPROOF_VARIANT
+  const [heroVariant, setHeroVariant] = useState<FutureproofHeroVariant>(() =>
+    getFutureproofVariant(initialRole)
   );
   const [step, setStep] = useState<Step>(1);
   const [resumeText, setResumeText] = useState("");
@@ -95,7 +99,9 @@ export default function FutureproofClient() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const roleParam = params.get("role") || params.get("v");
-    setHeroVariant(getFutureproofVariant(roleParam));
+    if (roleParam) {
+      setHeroVariant(getFutureproofVariant(roleParam));
+    }
   }, []);
 
   const handleLeadCapture = async (e: React.FormEvent) => {

@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
 import { getAllSlugs } from '@/app/utils/blog';
 import { ROLE_PAGES } from '@/app/keywords/data/roles';
+import { FUTUREPROOF_VARIANTS } from '@/app/config/futureproofVariants';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://airesumetailor.com';
@@ -25,6 +26,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: now,
     changeFrequency: 'weekly' as const,
     priority: 0.8,
+  }));
+
+  const futureproofRoleEntries = Object.keys(FUTUREPROOF_VARIANTS).map((role) => ({
+    url: `${baseUrl}/futureproof/${role}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.85,
   }));
 
   return [
@@ -118,6 +126,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.85,
     },
+    ...futureproofRoleEntries,
     ...roleEntries,
     ...blogEntries,
     {
