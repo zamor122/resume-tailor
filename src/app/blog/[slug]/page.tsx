@@ -221,6 +221,12 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div className="pt-4 border-t border-[#1C2028]/15 flex flex-wrap items-center gap-2 text-xs font-mono">
             <span className="font-bold text-gray-600 uppercase text-[10px]">Explore Hubs:</span>
             <Link
+              href="/futureproof"
+              className="px-2.5 py-1 bg-[#FFF4EF] border border-[#FF5722] rounded font-bold text-[#1C2028] hover:bg-[#FF5722] hover:text-white transition-colors"
+            >
+              Futureproof: Add AI Skills
+            </Link>
+            <Link
               href="/resume-optimizer"
               className="px-2.5 py-1 bg-white border border-[#1C2028] rounded font-bold text-[#1C2028] hover:bg-[#FF5722] hover:text-white transition-colors"
             >

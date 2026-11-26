@@ -2,7 +2,7 @@ export interface BlogSeoTopic {
   slugHint: string;
   primaryKeyword: string;
   secondaryKeywords: string[];
-  pillar: "role-tailoring" | "ats-systems" | "tactical-playbooks" | "comparison-intent";
+  pillar: "ai-fluency" | "role-tailoring" | "ats-systems" | "tactical-playbooks" | "comparison-intent";
   searchIntent: string;
   targetInternalLinks: string[];
 }
@@ -13,6 +13,88 @@ export interface BlogSeoTopic {
  * paired with internal hub links to build topical authority and drive organic traffic.
  */
 export const BLOG_SEO_TOPICS: BlogSeoTopic[] = [
+  // Pillar 0: Futureproof — Adding Real, Industry-Standard AI Experience
+  {
+    slugHint: "how-to-add-ai-skills-to-resume-no-experience",
+    primaryKeyword: "how to add AI skills to a resume with no experience",
+    secondaryKeywords: ["add AI experience to resume", "AI skills for non-technical resume", "futureproof resume AI"],
+    pillar: "ai-fluency",
+    searchIntent: "Non-technical job seekers who haven't formally used AI at work and want coherent, believable, industry-standard AI bullets on their resume",
+    targetInternalLinks: ["/futureproof", "/resume-optimizer", "/pricing"],
+  },
+  {
+    slugHint: "how-doctors-add-ai-experience-medical-resume",
+    primaryKeyword: "how to add AI experience to a physician resume",
+    secondaryKeywords: ["Nuance DAX Copilot resume", "Abridge AI clinical documentation resume", "HIPAA ambient AI scribe resume"],
+    pillar: "ai-fluency",
+    searchIntent: "Physicians, NPs, and PAs wanting to showcase HIPAA-compliant ambient clinical documentation and EHR AI workflows credibly",
+    targetInternalLinks: ["/futureproof", "/keywords/registered-nurse", "/pricing"],
+  },
+  {
+    slugHint: "administrative-assistant-ai-skills-resume-examples",
+    primaryKeyword: "administrative assistant AI skills for resume",
+    secondaryKeywords: ["executive assistant AI resume bullets", "Claude Enterprise resume", "Microsoft 365 Copilot admin resume"],
+    pillar: "ai-fluency",
+    searchIntent: "Administrative and executive assistants adding Claude Enterprise, Microsoft 365 Copilot, and Zapier AI scheduling/workflow automation to their resume",
+    targetInternalLinks: ["/futureproof", "/resume-optimizer", "/pricing"],
+  },
+  {
+    slugHint: "how-to-show-ai-fluency-on-resume-2026",
+    primaryKeyword: "how to show AI fluency on a resume",
+    secondaryKeywords: ["AI fluency resume examples", "put AI on resume without sounding fake", "AI tools for resume 2026"],
+    pillar: "ai-fluency",
+    searchIntent: "Mid-career professionals adapting traditional resumes for AI-first recruiters without using generic 'ChatGPT' clichés",
+    targetInternalLinks: ["/futureproof", "/resume-checker", "/pricing"],
+  },
+  {
+    slugHint: "nurse-clinical-ai-tools-resume-examples",
+    primaryKeyword: "healthcare AI tools on nursing resume",
+    secondaryKeywords: ["Epic In-Basket AI resume", "RN AI skills resume", "clinical workflow AI resume bullets"],
+    pillar: "ai-fluency",
+    searchIntent: "Nurses and care coordinators highlighting EHR-native AI chart summarization and HIPAA-safe patient communication tools",
+    targetInternalLinks: ["/futureproof", "/keywords/registered-nurse", "/resume-optimizer"],
+  },
+  {
+    slugHint: "accountant-finance-ai-skills-resume-guide",
+    primaryKeyword: "AI skills for finance and accounting resume",
+    secondaryKeywords: ["Copilot for Finance resume", "AlphaSense resume bullets", "AI accounting automation resume"],
+    pillar: "ai-fluency",
+    searchIntent: "Accountants, FP&A analysts, and controllers showcasing Copilot for Finance, AlphaSense, and automated AP/reconciliation tools",
+    targetInternalLinks: ["/futureproof", "/resume-optimizer", "/pricing"],
+  },
+  {
+    slugHint: "paralegal-attorney-legal-ai-resume-examples",
+    primaryKeyword: "legal AI tools for paralegal and attorney resume",
+    secondaryKeywords: ["Harvey AI resume", "Thomson Reuters CoCounsel resume", "Spellbook contract review AI resume"],
+    pillar: "ai-fluency",
+    searchIntent: "Attorneys, paralegals, and compliance professionals highlighting real legal AI research and contract-redlining tools",
+    targetInternalLinks: ["/futureproof", "/resume-optimizer", "/pricing"],
+  },
+  {
+    slugHint: "teacher-educator-ai-tools-resume-examples",
+    primaryKeyword: "AI skills for teacher resume",
+    secondaryKeywords: ["MagicSchool AI resume", "Google Gemini for Education resume", "FERPA AI tools educator resume"],
+    pillar: "ai-fluency",
+    searchIntent: "Teachers and instructional specialists showcasing FERPA-aligned lesson differentiation and rubric AI tools on their resumes",
+    targetInternalLinks: ["/futureproof", "/resume-optimizer", "/faq"],
+  },
+  {
+    slugHint: "sales-marketing-ai-tools-resume-bullets",
+    primaryKeyword: "AI tools to put on a sales and marketing resume",
+    secondaryKeywords: ["Gong AI resume bullets", "Clay enrichment resume", "HubSpot Breeze AI resume"],
+    pillar: "ai-fluency",
+    searchIntent: "Account executives, SDRs, and marketers showcasing revenue intelligence and CRM-native AI workflows",
+    targetInternalLinks: ["/futureproof", "/keywords/account-executive", "/pricing"],
+  },
+  {
+    slugHint: "how-to-talk-about-ai-in-job-interviews-non-tech",
+    primaryKeyword: "how to talk about AI in a job interview",
+    secondaryKeywords: ["AI interview answers non-technical", "explain AI tools in interview", "AI fluency interview prep"],
+    pillar: "ai-fluency",
+    searchIntent: "Non-technical candidates preparing credible 30-second answers about industry-standard AI tools listed on their resume",
+    targetInternalLinks: ["/futureproof", "/resume-optimizer", "/pricing"],
+  },
+
   // Pillar 1: Role-Specific Tailoring
   {
     slugHint: "how-to-tailor-software-engineer-resume-ats",
