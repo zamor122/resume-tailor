@@ -268,6 +268,29 @@ function SuccessPageInner() {
           </div>
         )}
 
+        {/* Also Unlocked: Futureproof Discovery Card */}
+        <div className="mt-4 p-4 rounded-xl bg-[#FFF4EF] border-2 border-[#1C2028] text-left space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5722]">
+              ★ ALSO INCLUDED IN YOUR PASS
+            </span>
+          </div>
+          <p className="text-sm font-sans font-semibold text-[#1C2028]">
+            Futureproof AI Experience Builder + 30-Sec Interview Scripts
+          </p>
+          <p className="text-xs font-sans text-[#374151] leading-relaxed">
+            Want to add real, industry-standard AI tools directly into your work history? Your pass
+            already unlocks Futureproof in full.
+          </p>
+          <Link
+            href="/futureproof"
+            onClick={() => playSfx("click")}
+            className="inline-block font-mono text-xs font-bold text-[#FF5722] hover:underline pt-0.5"
+          >
+            Open Futureproof AI Builder →
+          </Link>
+        </div>
+
         {/* Action Buttons */}
         <div className="mt-6 space-y-3">
           {resumeId ? (

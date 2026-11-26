@@ -5,6 +5,7 @@ import {
   isRoleRecentForAi,
   resolveVerifiedTools,
 } from "@/app/config/aiToolRegistry";
+import { getFutureproofVariant } from "@/app/config/futureproofVariants";
 import { DOMAIN_TAXONOMIES, type IndustryCategory } from "@/app/config/domainTaxonomy";
 
 describe("Futureproof AI Tool Registry", () => {
@@ -80,5 +81,14 @@ describe("Futureproof AI Tool Registry", () => {
       true
     );
     expect(unknownFallback.tools.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("resolves dynamic ad-matched hero variants for ?role=doctor, ?role=admin, and unknown fallback", () => {
+    const doctor = getFutureproofVariant("doctor");
+    expect(doctor.headline).toContain("HIPAA-Compliant");
+    const admin = getFutureproofVariant("ADMIN");
+    expect(admin.headline).toContain("Claude Enterprise");
+    const fallback = getFutureproofVariant("unknown-role");
+    expect(fallback.key).toBe("default");
   });
 });
