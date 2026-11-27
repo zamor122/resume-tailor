@@ -27,6 +27,7 @@ const softwareApplicationSchema = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   url: BASE_URL,
+  image: `${BASE_URL}/opengraph-image`,
   description:
     FREE_RESUME_LIMIT > 0
       ? `Free AI-powered resume tailoring tool with LangGraph agent intelligence and real-time relevancy scoring. Tailor your resume for each job in under 4 seconds. Your first ${FREE_RESUME_LIMIT} tailored resume is free.`
@@ -144,31 +145,38 @@ export function FAQStructuredData({ items }: { items: FAQItem[] }) {
 }
 
 /**
- * Product + Offer structured data for the pricing page.
+ * SoftwareApplication + Offer structured data for the pricing page.
+ *
+ * Uses `SoftwareApplication` (not `Product`) so Google Search Console does not
+ * classify this SaaS web app as a physical Merchant Listing requiring
+ * `shippingDetails`, `hasMerchantReturnPolicy`, or fabricated `review`/`aggregateRating`.
  *
  * Prices are DERIVED from TIME_BASED_TIERS (the same object that carries the
  * Stripe price id) so the machine-readable offer can never drift from what we
- * actually charge. No AggregateRating / Review is emitted — we have no reviews,
- * and inventing them is both dishonest and a search manual-action risk.
+ * actually charge.
  */
 export function ProductOfferStructuredData() {
-  const productSchema = {
+  const softwarePricingSchema = {
     "@context": "https://schema.org",
-    "@type": "Product",
+    "@type": "SoftwareApplication",
     name: "AI Resume Tailor",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    image: `${BASE_URL}/opengraph-image`,
     description:
       FREE_RESUME_LIMIT > 0
         ? `Web app that tailors an existing resume to a specific job description with ATS-friendly, human-sounding output. Your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume is" : "resumes are"} free. ${NON_SUBSCRIPTION_MESSAGE}`
         : `Web app that tailors an existing resume to a specific job description with ATS-friendly, human-sounding output. Includes ${FREE_AUDIT_LIMIT} free ATS audits & previews. ${NON_SUBSCRIPTION_MESSAGE}`,
     url: `${BASE_URL}/pricing`,
-    brand: {
-      "@type": "Brand",
+    publisher: {
+      "@type": "Organization",
       name: "AI Resume Tailor",
+      url: BASE_URL,
     },
     offers: TIME_BASED_TIERS.map((tier) => ({
       "@type": "Offer",
       name: tier.label,
-      description: `${tier.description}. ${tier.durationLabel} of unlimited resume tailoring access. One-time payment, no subscription.`,
+      description: `${tier.description}. ${tier.durationLabel} of unlimited resume tailoring & Futureproof AI Experience Builder access. One-time payment, no subscription.`,
       url: `${BASE_URL}/pricing`,
       price: tier.price.toFixed(2),
       priceCurrency: "USD",
@@ -179,7 +187,7 @@ export function ProductOfferStructuredData() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: safeJsonLd(productSchema) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(softwarePricingSchema) }}
     />
   );
 }
