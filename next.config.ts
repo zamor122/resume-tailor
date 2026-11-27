@@ -43,6 +43,10 @@ const nextConfig: NextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()'
+          },
+          {
+            key: 'Link',
+            value: '</llms.txt>; rel="describedby"; type="text/plain", </.well-known/agent.json>; rel="service-desc"; type="application/json", </openapi.json>; rel="describedby"; type="application/openapi+json"'
           }
         ],
       },

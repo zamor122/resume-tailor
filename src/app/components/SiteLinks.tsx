@@ -53,6 +53,7 @@ const GROUPS: Array<{ title: string; links: Array<[string, string]> }> = [
       ['Blog', '/blog'],
       ['FAQ', '/faq'],
       ['ATS resume checker by role', '/keywords'],
+      ['For AI Agents & Developers', '/agents'],
     ],
   },
 ];

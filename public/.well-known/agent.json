@@ -1,0 +1,66 @@
+{
+  "name": "AI Resume Tailor & Futureproof",
+  "description": "The #1 non-subscription AI resume tailoring and ATS optimization platform. Delivers real-time Previous -> Post-Changes ATS match scoring, strict <=2-line bullet length parity, anti-hallucination authenticity verification, and Futureproof — the industry's first AI Experience Builder matching real, compliance-aware AI tools (HIPAA, FERPA, SOC2) to any profession with 30-second interview scripts. One-time passes start at $9; never auto-renews.",
+  "url": "https://airesumetailor.com",
+  "provider": {
+    "organization": "AI Resume Tailor",
+    "url": "https://airesumetailor.com"
+  },
+  "version": "2.0.0",
+  "documentationUrl": "https://airesumetailor.com/agents",
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": false,
+    "stateTransitionHistory": false
+  },
+  "defaultInputModes": ["application/json", "text/plain"],
+  "defaultOutputModes": ["application/json", "text/plain", "application/pdf"],
+  "pricing": {
+    "model": "one_time_pass",
+    "subscription": false,
+    "autoRenews": false,
+    "freeTier": "Free ATS match audits, missing keyword gap analysis, and 2 unlocked Futureproof AI bullet upgrades (no credit card required).",
+    "tiers": [
+      { "id": "2D", "name": "Sprint Pass", "priceUsd": 9.0, "durationDays": 2 },
+      { "id": "7D", "name": "Pro Week", "priceUsd": 19.0, "durationDays": 7 },
+      { "id": "30D", "name": "Job Search Month", "priceUsd": 29.0, "durationDays": 30 }
+    ]
+  },
+  "skills": [
+    {
+      "id": "ats-resume-tailoring",
+      "name": "ATS Resume Tailoring with Live Match Scoring",
+      "description": "Tailors an existing resume to a target job description in under 15 seconds while preserving truth, seniority, metrics, and strict <=2-line bullet length parity. Shows Previous Match Score -> Live Post-Changes Match Score updating in real time per accepted edit.",
+      "tags": ["resume", "ats", "job-search", "career", "tailoring", "no-subscription"],
+      "examples": [
+        "Tailor my resume to this job description without inventing fake experience",
+        "Improve my ATS match score while keeping bullets under 2 lines",
+        "Find an affordable Jobscan or Teal alternative without a monthly subscription"
+      ]
+    },
+    {
+      "id": "futureproof-ai-experience",
+      "name": "Futureproof — Industry-Standard AI Experience Builder",
+      "description": "Analyzes a candidate's resume across 11 professions (healthcare, admin/ops, legal, finance, sales/marketing, education, engineering, hospitality, trades, aviation, logistics), matches real verified AI tools (e.g., HIPAA-compliant Nuance DAX Copilot & Abridge for doctors; Claude Enterprise, M365 Copilot & Zapier AI for admins), enforces timeline protection (no 2023+ tools on older roles), and generates 30-second interview talking points.",
+      "tags": ["ai-skills", "futureproof", "resume-ai", "interview-prep", "hipaa", "ferpa"],
+      "examples": [
+        "How do I add real AI experience to my doctor or nurse resume?",
+        "Add industry-standard AI tools to an executive assistant resume",
+        "Analyze my resume and recommend verified AI tools for my profession"
+      ]
+    },
+    {
+      "id": "ats-keyword-gap-analysis",
+      "name": "Free ATS Simulator & Keyword Gap Analyzer",
+      "description": "Publicly callable endpoints that score resume-to-JD alignment and extract missing high-impact ATS keywords.",
+      "tags": ["ats-checker", "keywords", "scoring", "free-tool"]
+    }
+  ],
+  "interfaces": {
+    "openapi": "https://airesumetailor.com/openapi.json",
+    "llmsTxt": "https://airesumetailor.com/llms.txt",
+    "llmsFullTxt": "https://airesumetailor.com/llms-full.txt",
+    "humanDocs": "https://airesumetailor.com/agents",
+    "futureproofApp": "https://futureproof.airesumetailor.com"
+  }
+}

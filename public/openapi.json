@@ -1,0 +1,132 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AI Resume Tailor & Futureproof Public Agent API",
+    "version": "2.0.0",
+    "description": "Machine-readable API specification for AI Resume Tailor (https://airesumetailor.com) and Futureproof (https://futureproof.airesumetailor.com). Enables AI assistants and career agents to analyze resumes for verified industry-standard AI tools, generate coherent AI experience bullet upgrades, and run ATS keyword simulations.",
+    "contact": {
+      "name": "AI Resume Tailor",
+      "url": "https://airesumetailor.com/agents"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://airesumetailor.com",
+      "description": "Production API"
+    }
+  ],
+  "paths": {
+    "/api/futureproof/analyze": {
+      "post": {
+        "operationId": "analyzeResumeForAiExperience",
+        "summary": "Detect profession, timeline eligibility, and verified industry-standard AI tools for a resume",
+        "description": "Free public endpoint (rate-limited at 30 req/min per IP). Classifies the candidate's industry and sub-role, flags pre-2023 roles for timeline safety, and returns 4-6 real, compliance-aware AI tools matched to their work history.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["resumeText"],
+                "properties": {
+                  "resumeText": {
+                    "type": "string",
+                    "minLength": 80,
+                    "description": "Plain text of the candidate's current resume"
+                  },
+                  "comfortLevel": {
+                    "type": "string",
+                    "enum": ["everyday", "automator"],
+                    "default": "everyday",
+                    "description": "Depth of AI adoption framing"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Detected industry, roles, and curated real AI tool recommendations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "industry": { "type": "string" },
+                    "industryDisplayName": { "type": "string" },
+                    "subRoleLabel": { "type": "string" },
+                    "hasRecentRoles": { "type": "boolean" },
+                    "detectedRoles": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "title": { "type": "string" },
+                          "company": { "type": "string" },
+                          "dateRange": { "type": "string" },
+                          "isRecentForAi": { "type": "boolean" }
+                        }
+                      }
+                    },
+                    "recommendedTools": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "name": { "type": "string" },
+                          "vendor": { "type": "string" },
+                          "complianceBadges": { "type": "array", "items": { "type": "string" } },
+                          "isIndustryStandard": { "type": "boolean" },
+                          "preselected": { "type": "boolean" },
+                          "shortDescription": { "type": "string" },
+                          "fitReason": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Resume text missing or under 80 characters" },
+          "429": { "description": "Rate limit exceeded" }
+        }
+      }
+    },
+    "/api/futureproof/generate": {
+      "post": {
+        "operationId": "generateFutureproofUpgrades",
+        "summary": "Generate coherent, role-matched AI bullet upgrades and interview talking points",
+        "description": "Returns 2 full before/after bullet upgrades + skills block for free previews. Supplying a Bearer token for a user with an active one-time pass unlocks all bullet upgrades, full mergedResume, and 30-second interview talking points.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["resumeText"],
+                "properties": {
+                  "resumeText": { "type": "string", "minLength": 80 },
+                  "industry": { "type": "string" },
+                  "selectedToolIds": { "type": "array", "items": { "type": "string" } },
+                  "useIndustryStandards": { "type": "boolean", "default": true },
+                  "comfortLevel": { "type": "string", "enum": ["everyday", "automator"], "default": "everyday" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated AI bullet upgrades, skills block, and interview talking points"
+          },
+          "400": { "description": "Invalid input" },
+          "429": { "description": "Rate limit exceeded" }
+        }
+      }
+    }
+  }
+}

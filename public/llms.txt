@@ -24,6 +24,12 @@
 - Sales & Marketing (Gong AI, HubSpot Breeze, Salesforce Einstein, Clay): https://airesumetailor.com/futureproof/sales
 - Trades & Field Operations (ServiceTitan AI, Procore Copilot, SafetyCulture AI): https://airesumetailor.com/futureproof/trades
 
+## Agent & Developer Machine-Readable Specs
+- Agent & LLM Discovery Hub: https://airesumetailor.com/agents
+- Full LLM Dossier: https://airesumetailor.com/llms-full.txt
+- A2A Agent Card: https://airesumetailor.com/.well-known/agent.json
+- OpenAPI 3.1 Schema: https://airesumetailor.com/openapi.json
+
 ## Comparison & Resource Hubs
 - Free ATS Resume Checker: https://airesumetailor.com/resume-checker
 - Free Resume Optimizer: https://airesumetailor.com/resume-optimizer
