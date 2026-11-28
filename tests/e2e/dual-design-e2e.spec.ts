@@ -89,9 +89,17 @@ test.describe("Full-Site Dual-Design E2E & Visual Verification (Modern & Classic
       fullPage: false,
     });
 
-    // Click the Futureproof button in the menu -> must navigate to /futureproof & close menu
-    await menu.getByRole("link", { name: /Futureproof/i }).click();
+    // Click the Futureproof service button in the menu -> navigates to /futureproof & closes menu
+    await expect(menu.getByRole("link", { name: /Tailor.*Match any job/i })).toBeVisible();
+    await menu.getByRole("link", { name: /Futureproof.*Add AI skills/i }).click();
     await page.waitForURL(/\/futureproof/);
+    await expect(menu).toBeHidden();
+
+    // Re-open menu on /futureproof and click Tailor service button -> navigates back to /
+    await page.getByRole("button", { name: /Open menu/i }).click();
+    await expect(menu).toBeVisible();
+    await menu.getByRole("link", { name: /Tailor.*Match any job/i }).click();
+    await page.waitForURL(/\/$/);
     await expect(menu).toBeHidden();
 
     // 2. Switch to Classic (risograph) via Top Nav Switcher

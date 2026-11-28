@@ -232,7 +232,7 @@ export default function Navigation() {
           </span>
         </Link>
 
-        {/* Center: Primary Navigation Links (Desktop) */}
+        {/* Center: Primary Services (Tailor & Futureproof) + Secondary Links (Desktop) */}
         <div
           className={`hidden md:flex items-center gap-1 ${
             isPom
@@ -240,77 +240,92 @@ export default function Navigation() {
               : ""
           }`}
         >
-          {navLinks.map(({ href, label }) => {
-            const isActive =
-              href === "/" ? pathname === "/" : pathname?.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={isActive ? "page" : undefined}
-                onClick={() => playSfx("click")}
-                className={
-                  isPom
-                    ? `relative px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-colors ${
-                        isActive
-                          ? "bg-[#F6F1E4] text-[#3A0C22]"
-                          : "text-[#7D4D61] hover:text-[#3A0C22] hover:bg-[#FFFDF5]"
-                      }`
-                    : `relative px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                        isActive
-                          ? "bg-[#FFFDF8] text-[#241F1A] border border-[#241F1A]/12"
-                          : "text-[#6C6358] hover:text-[#241F1A]"
-                      }`
-                }
-              >
-                {label}
-                {isActive && isPom && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[#EA375D] border-[1.75px] border-[#3A0C22]"
-                  />
-                )}
-                {isActive && !isPom && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute bottom-0.5 left-3.5 right-3.5 h-[2px] rounded-full bg-[#2B6B5A]"
-                  />
-                )}
-              </Link>
-            );
-          })}
-          <Link
-            href="/futureproof"
-            aria-current={pathname?.startsWith("/futureproof") ? "page" : undefined}
-            onClick={() => playSfx("click")}
-            className={
-              isPom
-                ? `relative px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-colors ${
-                    pathname?.startsWith("/futureproof")
-                      ? "bg-[#F6F1E4] text-[#3A0C22]"
-                      : "text-[#EA375D] hover:bg-[#FFFDF5]"
-                  }`
-                : `relative px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                    pathname?.startsWith("/futureproof")
-                      ? "bg-[#FFFDF8] text-[#2B6B5A] border border-[#241F1A]/12"
-                      : "text-[#D65A38] hover:text-[#241F1A]"
-                  }`
-            }
-          >
-            Add AI
-            {pathname?.startsWith("/futureproof") && isPom && (
-              <span
-                aria-hidden="true"
-                className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[#EA375D] border-[1.75px] border-[#3A0C22]"
-              />
-            )}
-            {pathname?.startsWith("/futureproof") && !isPom && (
-              <span
-                aria-hidden="true"
-                className="absolute bottom-0.5 left-3.5 right-3.5 h-[2px] rounded-full bg-[#D65A38]"
-              />
-            )}
-          </Link>
+          {/* Core Services Pair */}
+          {[
+            { href: "/", label: "Tailor", active: pathname === "/" },
+            {
+              href: "/futureproof",
+              label: "Futureproof",
+              active: Boolean(pathname?.startsWith("/futureproof")),
+            },
+          ].map(({ href, label, active }) => (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              onClick={() => playSfx("click")}
+              className={
+                isPom
+                  ? `relative px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-colors ${
+                      active
+                        ? "bg-[#EA375D] text-white"
+                        : "text-[#3A0C22] hover:bg-[#F6F1E4]"
+                    }`
+                  : `relative px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                      active
+                        ? "bg-[#2B6B5A] text-[#FFFDF8]"
+                        : "text-[#241F1A] hover:bg-[#EFE8DA]"
+                    }`
+              }
+            >
+              {label}
+              {active && isPom && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[#F7B93E] border-[1.75px] border-[#3A0C22]"
+                />
+              )}
+            </Link>
+          ))}
+
+          <span
+            aria-hidden="true"
+            className={`h-4 w-px mx-1 ${
+              isPom ? "bg-[#3A0C22]/20" : "bg-[#241F1A]/15"
+            }`}
+          />
+
+          {/* Secondary Info Links */}
+          {navLinks
+            .filter((l) => l.href !== "/")
+            .map(({ href, label }) => {
+              const isActive = Boolean(pathname?.startsWith(href));
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={isActive ? "page" : undefined}
+                  onClick={() => playSfx("click")}
+                  className={
+                    isPom
+                      ? `relative px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                          isActive
+                            ? "bg-[#F6F1E4] text-[#3A0C22]"
+                            : "text-[#6B3F52] hover:text-[#3A0C22] hover:bg-[#FFFDF5]"
+                        }`
+                      : `relative px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-[#FFFDF8] text-[#241F1A] border border-[#241F1A]/12"
+                            : "text-[#5A5248] hover:text-[#241F1A]"
+                        }`
+                  }
+                >
+                  {label}
+                  {isActive && isPom && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[#EA375D] border-[1.75px] border-[#3A0C22]"
+                    />
+                  )}
+                  {isActive && !isPom && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute bottom-0.5 left-3 right-3 h-[2px] rounded-full bg-[#2B6B5A]"
+                    />
+                  )}
+                </Link>
+              );
+            })}
         </div>
 
         {/* Right: Single Desktop Design Switcher + Primary CTA + Menu Button */}
@@ -394,7 +409,7 @@ export default function Navigation() {
         </div>
       </nav>
 
-      {/* Condensed Dropdown Panel */}
+      {/* Condensed Dropdown Panel — Services First, Preferences Secondary */}
       {menuOpen && (
         <div
           id="site-nav-menu"
@@ -404,9 +419,6 @@ export default function Navigation() {
               : "bg-[#FFFDF8] text-[#241F1A] border-t md:border border-[#241F1A]/15 md:shadow-[6px_6px_0_rgba(43,107,90,0.16)]"
           }`}
         >
-          {/* Mobile-Only Central Design Theme Switcher (Modern | Classic) */}
-          <DesignSwitcher variant="menu" className="md:hidden" />
-
           {/* Active Pass Time Limit */}
           {hasActivePass && accessInfo?.expiresAt && (
             <div className="p-3 rounded-2xl bg-[var(--design-success-tint)] border border-[var(--design-success)]/30 text-[var(--design-success)] space-y-0.5">
@@ -420,61 +432,113 @@ export default function Navigation() {
             </div>
           )}
 
-          {/* Futureproof Primary Action Button inside Menu */}
-          <Link
-            href="/futureproof"
-            aria-current={pathname?.startsWith("/futureproof") ? "page" : undefined}
-            onClick={() => {
-              playSfx("click");
-              setMenuOpen(false);
-            }}
-            className={`neo-btn w-full px-4 py-3 flex items-center justify-between gap-2 text-left transition-transform active:translate-y-0.5 ${
-              isPom
-                ? "bg-[#EA375D] hover:bg-[#C9224A] text-white"
-                : "bg-[#2B6B5A] hover:bg-[#225648] text-[#FFFDF8]"
-            }`}
-          >
-            <span className="flex flex-col">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider opacity-90">
-                <span className="px-1.5 py-0.5 rounded-full bg-white/20">NEW</span>
-                <span>Futureproof AI</span>
-              </span>
-              <span className="text-sm font-bold leading-snug mt-0.5">
-                Add AI Skills to Resume
-              </span>
+          {/* Core Services Switcher (Most Prominent in Menu) */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--design-ink-muted)] px-0.5 block">
+              Services
             </span>
-            <span
-              className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm font-extrabold shrink-0"
-              aria-hidden="true"
-            >
-              →
-            </span>
-          </Link>
-
-          {/* Mobile Navigation Links */}
-          <div className="md:hidden flex flex-col gap-1">
-            {navLinks.map(({ href, label }) => {
-              const isActive =
-                href === "/" ? pathname === "/" : pathname?.startsWith(href);
-              return (
+            <div className="flex flex-col gap-2">
+              {[
+                {
+                  href: "/",
+                  name: "Tailor",
+                  tagline: "Match any job",
+                  badge: null as string | null,
+                  active: pathname === "/",
+                },
+                {
+                  href: "/futureproof",
+                  name: "Futureproof",
+                  tagline: "Add AI skills",
+                  badge: "NEW" as string | null,
+                  active: Boolean(pathname?.startsWith("/futureproof")),
+                },
+              ].map((service) => (
                 <Link
-                  key={href}
-                  href={href}
-                  aria-current={isActive ? "page" : undefined}
+                  key={service.href}
+                  href={service.href}
+                  aria-current={service.active ? "page" : undefined}
                   onClick={() => {
                     playSfx("click");
                     setMenuOpen(false);
                   }}
-                  className={`px-3.5 py-2 rounded-full text-xs font-bold ${
-                    isActive
-                      ? "bg-[var(--design-accent)] text-[var(--design-accent-ink)]"
-                      : "text-[var(--design-ink)] hover:bg-[var(--design-surface-tint)]"
+                  className={`neo-btn w-full rounded-2xl px-4 py-3 flex items-center justify-between gap-3 text-left transition-transform active:translate-y-0.5 ${
+                    service.active
+                      ? isPom
+                        ? "bg-[#EA375D] hover:bg-[#C9224A] text-white"
+                        : "bg-[#2B6B5A] hover:bg-[#225648] text-[#FFFDF8]"
+                      : isPom
+                      ? "bg-white hover:bg-[#F6F1E4] text-[#3A0C22]"
+                      : "bg-[#F6F0E4] hover:bg-[#EFE8DA] text-[#241F1A]"
                   }`}
                 >
-                  {label}
+                  <span className="flex flex-col">
+                    <span className="inline-flex items-center gap-2 text-sm font-extrabold leading-tight">
+                      <span>{service.name}</span>
+                      {service.badge && (
+                        <span
+                          className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                            service.active
+                              ? "bg-white/25 text-white"
+                              : isPom
+                              ? "bg-[#F7B93E] text-[#3A0C22]"
+                              : "bg-[#FAEAE4] text-[#B94726]"
+                          }`}
+                        >
+                          {service.badge}
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={`text-xs font-medium mt-0.5 ${
+                        service.active
+                          ? "text-white/90"
+                          : "text-[var(--design-ink-muted)]"
+                      }`}
+                    >
+                      {service.tagline}
+                    </span>
+                  </span>
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-xs font-extrabold shrink-0 ${
+                      service.active
+                        ? "bg-white/20 text-white"
+                        : "bg-[var(--design-surface-tint)] text-[var(--design-ink)]"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {service.active ? "Active ✓" : "→"}
+                  </span>
                 </Link>
-              );
-            })}
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile Secondary Links (Pricing, Blog, FAQ, Profile) */}
+          <div className="md:hidden flex flex-col gap-1 pt-1 border-t border-[var(--design-border-soft)]">
+            {navLinks
+              .filter((l) => l.href !== "/")
+              .map(({ href, label }) => {
+                const isActive = Boolean(pathname?.startsWith(href));
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={() => {
+                      playSfx("click");
+                      setMenuOpen(false);
+                    }}
+                    className={`px-3.5 py-2 rounded-full text-sm font-semibold ${
+                      isActive
+                        ? "bg-[var(--design-surface-tint)] text-[var(--design-ink)] font-bold"
+                        : "text-[var(--design-ink-muted)] hover:text-[var(--design-ink)] hover:bg-[var(--design-surface-tint)]/60"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
             <Link
               href="/profile"
               aria-current={pathname?.startsWith("/profile") ? "page" : undefined}
@@ -482,23 +546,14 @@ export default function Navigation() {
                 playSfx("click");
                 setMenuOpen(false);
               }}
-              className={`px-3.5 py-2 rounded-full text-xs font-bold ${
+              className={`px-3.5 py-2 rounded-full text-sm font-semibold ${
                 pathname?.startsWith("/profile")
-                  ? "bg-[var(--design-accent)] text-[var(--design-accent-ink)]"
-                  : "text-[var(--design-ink)] hover:bg-[var(--design-surface-tint)]"
+                  ? "bg-[var(--design-surface-tint)] text-[var(--design-ink)] font-bold"
+                  : "text-[var(--design-ink-muted)] hover:text-[var(--design-ink)] hover:bg-[var(--design-surface-tint)]/60"
               }`}
             >
               {user ? "Profile & Resumes" : "Sign In"}
             </Link>
-            {!user && (
-              <Link
-                href="/#tailorResume"
-                onClick={() => playSfx("click")}
-                className="mt-1 neo-btn bg-[var(--design-accent)] text-[var(--design-accent-ink)] text-center px-4 py-2.5 text-xs font-extrabold"
-              >
-                Start Free
-              </Link>
-            )}
           </div>
 
           {/* Gamification Progress (condensed inside menu) */}
@@ -515,18 +570,27 @@ export default function Navigation() {
             </div>
           </div>
 
-          {/* Sound Effects Toggle */}
-          <div className="pt-2 border-t border-[var(--design-border-soft)] flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[var(--design-ink-muted)] uppercase">
-              Sound Effects
-            </span>
-            <button
-              type="button"
-              onClick={() => toggleSfx()}
-              className="text-[11px] font-bold uppercase text-[var(--design-ink)] px-3 py-1 rounded-full border border-[var(--design-border-soft)] bg-[var(--design-surface)] hover:bg-[var(--design-surface-tint)]"
-            >
-              {sfxEnabled ? "SFX On" : "Muted"}
-            </button>
+          {/* Secondary Preferences: Mobile-only Theme Switcher + Sound Effects */}
+          <div className="pt-2.5 border-t border-[var(--design-border-soft)] space-y-2.5">
+            <div className="md:hidden flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-[var(--design-ink-muted)]">
+                Theme
+              </span>
+              <DesignSwitcher variant="compact" />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[var(--design-ink-muted)]">
+                Sound Effects
+              </span>
+              <button
+                type="button"
+                onClick={() => toggleSfx()}
+                className="text-xs font-bold text-[var(--design-ink)] px-3 py-1 rounded-full border border-[var(--design-border-soft)] bg-[var(--design-surface)] hover:bg-[var(--design-surface-tint)]"
+              >
+                {sfxEnabled ? "On" : "Muted"}
+              </button>
+            </div>
           </div>
         </div>
       )}
