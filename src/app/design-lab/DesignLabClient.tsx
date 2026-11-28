@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useTheme } from "@/app/components/ThemeProvider";
 import { DesignTheme, PersonaKey, ViewportMode } from "./prototypeData";
 import { usePrototypeAppState } from "./PrototypeShared";
 import PomegranateSite from "./PomegranateSite";
@@ -16,6 +17,8 @@ export default function DesignLabClient({
   initialTheme?: DesignTheme;
   initialView?: StudioView;
 }) {
+  const router = useRouter();
+  const { setDesign } = useTheme();
   const [theme, setTheme] = useState<DesignTheme>(initialTheme);
   const [personaKey, setPersonaKey] = useState<PersonaKey>("doctor");
   const [studioView, setStudioView] = useState<StudioView>(
@@ -44,7 +47,10 @@ export default function DesignLabClient({
     isSmallDevice || studioView === "mobile" ? "mobile" : "desktop";
 
   return (
-    <div className="fixed inset-0 z-[60] h-[100dvh] w-[100dvw] flex flex-col bg-[#14161D] overflow-hidden">
+    <div
+      data-design-isolated="true"
+      className="fixed inset-0 z-[60] h-[100dvh] w-[100dvw] flex flex-col bg-[#14161D] overflow-hidden"
+    >
       {/* ================================================================ */}
       {/* COMPACT APPROVAL STUDIO CONTROL BAR                              */}
       {/* ================================================================ */}
@@ -168,17 +174,17 @@ export default function DesignLabClient({
                 ))}
               </div>
 
-              {/* Standalone Direct Link + Hide Chrome Toggle */}
-              <Link
-                href={
-                  theme === "pomegranate"
-                    ? "/design-lab/pomegranate"
-                    : "/design-lab/risograph"
-                }
-                className="hidden xl:inline-flex px-2.5 py-1.5 rounded-full text-[11px] font-mono text-gray-300 hover:text-white border border-white/15 shrink-0"
+              {/* Apply chosen design directly to the live site */}
+              <button
+                type="button"
+                onClick={() => {
+                  setDesign(theme);
+                  router.push(`/?design=${theme}`);
+                }}
+                className="px-3 py-1.5 rounded-full text-[11px] font-bold bg-[#EA375D] hover:bg-[#C9224A] text-white shrink-0"
               >
-                Direct URL ↗
-              </Link>
+                Use Live on Site →
+              </button>
 
               <button
                 type="button"

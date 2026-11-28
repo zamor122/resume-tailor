@@ -2,6 +2,7 @@
 
 import React from "react";
 import NeoBadge from "./NeoBadge";
+import { useTheme } from "@/app/components/ThemeProvider";
 
 export interface NeoGaugeProps {
   score: number;
@@ -14,35 +15,113 @@ export default function NeoGauge({
   label,
   className = "",
 }: NeoGaugeProps) {
-  const isHigh = score >= 80;
+  const { design } = useTheme();
+  const isPom = design === "pomegranate";
+  const clamped = Math.min(100, Math.max(0, Math.round(score)));
+  const isHigh = clamped >= 80;
   const statusLabel =
-    label || (isHigh ? "RECRUITER READY 🚀" : "BELOW THRESHOLD");
+    label || (isHigh ? "Ready to Apply" : "Room to Boost");
   const badgeVariant = isHigh ? "green" : "orange";
-  const barColor = isHigh ? "bg-[#10B981]" : "bg-[#FF5722]";
+
+  const cx = 120;
+  const cy = 112;
+  const rings = [
+    {
+      r: 92,
+      pct: Math.max(0.15, clamped / 100),
+      color: isPom ? "#F7B93E" : "#D65A38",
+    },
+    {
+      r: 72,
+      pct: Math.max(0.18, Math.min(0.96, (clamped + 4) / 100)),
+      color: isPom ? "#7BC6FA" : "#2B6B5A",
+    },
+    {
+      r: 52,
+      pct: Math.max(0.2, Math.min(0.98, (clamped + 8) / 100)),
+      color: isPom ? "#74D4A0" : "#D69B24",
+    },
+  ];
+  const track = isPom ? "#F3EDE0" : "#EAE2D2";
+  const ink = isPom ? "#3A0C22" : "#241F1A";
 
   return (
-    <div className={`neo-box bg-white p-6 ${className}`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-bold text-xs uppercase tracking-wider text-gray-600 font-mono">
-          ATS Relevancy Console
+    <div
+      className={`neo-box bg-[var(--design-surface)] p-6 space-y-3 ${className}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-bold text-xs uppercase tracking-wider text-[var(--design-ink-muted)]">
+          ATS Match Score
         </span>
         <NeoBadge variant={badgeVariant}>{statusLabel}</NeoBadge>
       </div>
 
-      {/* Digital Score Display */}
-      <div className="flex items-baseline justify-center gap-1 my-3 bg-[#FAF8F5] p-3 neo-box-sm border border-gray-300">
-        <span className="font-black text-6xl tracking-tight text-[#1C2028] font-mono">
-          {score}
-        </span>
-        <span className="font-bold text-2xl text-gray-500 font-mono">%</span>
-      </div>
+      {/* Concentric Arc Gauge + Clear Score Readout */}
+      <div className="flex flex-col items-center pt-1">
+        <svg
+          viewBox="0 0 240 124"
+          className="w-full max-w-[230px] overflow-visible"
+          role="img"
+          aria-label={`ATS Match Score ${clamped} percent`}
+        >
+          {rings.map((ring, idx) => {
+            const len = Math.PI * ring.r;
+            const dash = len * ring.pct;
+            const angle = Math.PI * (1 - ring.pct);
+            const ex = cx + ring.r * Math.cos(angle);
+            const ey = cy - ring.r * Math.sin(angle);
+            return (
+              <g key={idx}>
+                <path
+                  d={`M ${cx - ring.r} ${cy} A ${ring.r} ${ring.r} 0 0 1 ${cx + ring.r} ${cy}`}
+                  fill="none"
+                  stroke={track}
+                  strokeWidth={isPom ? 13 : 11.5}
+                  strokeLinecap="round"
+                />
+                {isPom && (
+                  <path
+                    d={`M ${cx - ring.r} ${cy} A ${ring.r} ${ring.r} 0 0 1 ${cx + ring.r} ${cy}`}
+                    fill="none"
+                    stroke={ink}
+                    strokeWidth={16}
+                    strokeLinecap="round"
+                    strokeDasharray={`${dash} ${len}`}
+                  />
+                )}
+                <path
+                  d={`M ${cx - ring.r} ${cy} A ${ring.r} ${ring.r} 0 0 1 ${cx + ring.r} ${cy}`}
+                  fill="none"
+                  stroke={ring.color}
+                  strokeWidth={isPom ? 12.5 : 11}
+                  strokeLinecap="round"
+                  strokeDasharray={`${dash} ${len}`}
+                />
+                <circle
+                  cx={ex}
+                  cy={ey}
+                  r={isPom ? 5.5 : 4.5}
+                  fill={isPom ? ink : "#FFFDF8"}
+                  stroke={isPom ? "#FFFDF5" : ring.color}
+                  strokeWidth={isPom ? 1.8 : 2.5}
+                />
+              </g>
+            );
+          })}
+        </svg>
 
-      {/* Vintage Meter Bar */}
-      <div className="w-full bg-gray-200 neo-box-sm h-6 overflow-hidden p-0.5 relative">
-        <div
-          className={`h-full rounded-md transition-all duration-700 ease-out ${barColor}`}
-          style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
-        />
+        <div className="-mt-8 flex items-baseline justify-center gap-0.5">
+          <span
+            className={`font-extrabold text-5xl tracking-tight text-[var(--design-ink)] ${
+              isPom ? "font-pom-display" : "font-riso-serif"
+            }`}
+          >
+            {clamped}
+          </span>
+          <span className="font-bold text-xl text-[var(--design-ink-muted)]">
+            %
+          </span>
+        </div>
       </div>
     </div>
   );

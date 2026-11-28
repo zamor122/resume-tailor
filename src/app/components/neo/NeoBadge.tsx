@@ -14,11 +14,11 @@ export default function NeoBadge({
   ...props
 }: NeoBadgeProps) {
   const variantStyles = {
-    green: "bg-[#10B981] text-white",
-    orange: "bg-[#FF5722] text-white",
-    yellow: "bg-[#F59E0B] text-[#1C2028]",
-    dark: "bg-[#1C2028] text-white",
-    white: "bg-white text-[#1C2028]",
+    green: "bg-[var(--design-success-tint)] text-[var(--design-success)]",
+    orange: "bg-[var(--design-accent)] text-[var(--design-accent-ink)]",
+    yellow: "bg-[#F7B93E] text-[#3A0C22]",
+    dark: "bg-[var(--design-ink)] text-white",
+    white: "bg-[var(--design-surface)] text-[var(--design-ink)]",
     red: "bg-red-100 text-red-900 border-red-300",
   };
 

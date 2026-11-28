@@ -1,73 +1,134 @@
-'use client'
+"use client";
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { analytics } from '../services/analytics'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { analytics } from "../services/analytics";
 
-type Theme = 'light' | 'dark'
+export type Theme = "light" | "dark";
+export type DesignOption = "pomegranate" | "risograph";
 
-const ThemeContext = createContext({
-  theme: 'light' as Theme,
-  toggleTheme: () => {}
-})
+export const DESIGN_STORAGE_KEY = "airesumetailor_design";
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Initialize with undefined to prevent hydration mismatch
-  const [theme, setTheme] = useState<Theme | undefined>(undefined)
+const VALID_DESIGNS: readonly DesignOption[] = ["pomegranate", "risograph"];
 
-  const applyTheme = (nextTheme: Theme) => {
-    const root = document.documentElement
-    const body = document.body
-
-    // Set classes on both html and body for consistent styling
-    if (nextTheme === 'dark') {
-      root.classList.add('dark')
-      root.classList.remove('light')
-      body.classList.add('dark')
-      body.classList.remove('light')
-    } else {
-      root.classList.add('light')
-      root.classList.remove('dark')
-      body.classList.add('light')
-      body.classList.remove('dark')
-    }
-
-    // Set data-theme for components/CSS that read it
-    root.setAttribute('data-theme', nextTheme)
-    body.setAttribute('data-theme', nextTheme)
-
-    // Optional: let the browser know which color scheme to prefer
-    root.style.colorScheme = nextTheme === 'dark' ? 'dark' : 'light'
-    body.style.colorScheme = nextTheme === 'dark' ? 'dark' : 'light'
-  }
-
-  useEffect(() => {
-    // Default to light theme
-    const initialTheme: Theme = 'light'
-    setTheme(initialTheme)
-    applyTheme(initialTheme)
-  }, [])
-
-  const toggleTheme = () => {
-    // Reserved for future theme toggle
-    analytics.trackEvent(analytics.events.TOGGLE_THEME, {
-      ...analytics.getTrackingContext({ element: "theme_toggle" }),
-      theme: theme || "light",
-    });
-  }
-
-  // NOTE: previously this returned `null` until a client-side `mounted` flag flipped
-  // true in useEffect. That gated the ENTIRE app subtree out of the server render, so
-  // every crawler received an empty Suspense boundary (`<!--$--><!--/$-->`) with all
-  // content living only in the client-rendered RSC payload — PageSpeed/Googlebot saw
-  // zero headings and zero internal links. The theme is applied imperatively via
-  // `applyTheme` (document.documentElement/body classList) inside useEffect, so it does
-  // NOT affect server markup and there is no hydration mismatch from rendering children.
-  // Always render children; server and first client render both use theme === 'light'.
-  return (
-    <ThemeContext.Provider value={{ theme: theme || 'light', toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  )
+function isValidDesign(val: string | null | undefined): val is DesignOption {
+  return val === "pomegranate" || val === "risograph";
 }
 
-export const useTheme = () => useContext(ThemeContext) 
+interface ThemeContextValue {
+  theme: Theme;
+  toggleTheme: () => void;
+  design: DesignOption;
+  setDesign: (nextDesign: DesignOption) => void;
+  toggleDesign: () => void;
+}
+
+const ThemeContext = createContext<ThemeContextValue>({
+  theme: "light",
+  toggleTheme: () => {},
+  design: "pomegranate",
+  setDesign: () => {},
+  toggleDesign: () => {},
+});
+
+function applyDesignToDom(nextDesign: DesignOption) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  const body = document.body;
+
+  root.setAttribute("data-design", nextDesign);
+  root.style.setProperty("--design-mode", nextDesign);
+  if (body) {
+    body.setAttribute("data-design", nextDesign);
+    body.style.setProperty("--design-mode", nextDesign);
+  }
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme] = useState<Theme>("light");
+  const [design, setDesignState] = useState<DesignOption>("pomegranate");
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const body = document.body;
+
+    // Preserve light color scheme classes
+    root.classList.add("light");
+    root.classList.remove("dark");
+    body?.classList.add("light");
+    body?.classList.remove("dark");
+    root.setAttribute("data-theme", "light");
+    body?.setAttribute("data-theme", "light");
+    root.style.colorScheme = "light";
+    if (body) body.style.colorScheme = "light";
+
+    // Resolve persisted or URL-requested design option (?design=pomegranate|risograph)
+    let resolved: DesignOption = "pomegranate";
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const queryDesign = params.get("design")?.toLowerCase();
+      const attrDesign = root.getAttribute("data-design");
+      const storedDesign = window.localStorage.getItem(DESIGN_STORAGE_KEY);
+
+      if (isValidDesign(queryDesign)) {
+        resolved = queryDesign;
+        window.localStorage.setItem(DESIGN_STORAGE_KEY, queryDesign);
+      } else if (isValidDesign(storedDesign)) {
+        resolved = storedDesign;
+      } else if (isValidDesign(attrDesign)) {
+        resolved = attrDesign;
+      }
+    } catch {
+      // Ignore storage access failures in private/sandboxed contexts
+    }
+
+    applyDesignToDom(resolved);
+    // Sync React state after paint if different from SSR default
+    if (resolved !== "pomegranate") {
+      const raf = window.requestAnimationFrame(() => {
+        setDesignState(resolved);
+      });
+      return () => window.cancelAnimationFrame(raf);
+    }
+  }, []);
+
+  const setDesign = useCallback((nextDesign: DesignOption) => {
+    if (!VALID_DESIGNS.includes(nextDesign)) return;
+    setDesignState(nextDesign);
+    applyDesignToDom(nextDesign);
+    try {
+      window.localStorage.setItem(DESIGN_STORAGE_KEY, nextDesign);
+    } catch {
+      // ignore storage errors
+    }
+    analytics.trackEvent(analytics.events.TOGGLE_THEME, {
+      ...analytics.getTrackingContext({ element: "design_switcher" }),
+      design: nextDesign,
+    });
+  }, []);
+
+  const toggleDesign = useCallback(() => {
+    setDesign(design === "pomegranate" ? "risograph" : "pomegranate");
+  }, [design, setDesign]);
+
+  const toggleTheme = useCallback(() => {
+    toggleDesign();
+  }, [toggleDesign]);
+
+  // Always render children immediately for full SSR HTML & crawler visibility.
+  return (
+    <ThemeContext.Provider
+      value={{ theme, toggleTheme, design, setDesign, toggleDesign }}
+    >
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export const useTheme = () => useContext(ThemeContext);

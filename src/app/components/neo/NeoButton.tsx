@@ -22,11 +22,11 @@ export default function NeoButton({
   ...props
 }: NeoButtonProps) {
   const variantStyles = {
-    orange: "bg-[#FF5722] text-white hover:bg-[#E64A19]",
-    green: "bg-[#10B981] text-white hover:bg-[#059669]",
-    yellow: "bg-[#F59E0B] text-[#1C2028] hover:bg-[#D97706]",
-    dark: "bg-[#1C2028] text-white hover:bg-[#2D333F]",
-    white: "bg-white text-[#1C2028] hover:bg-[#FAF8F5]",
+    orange: "bg-[var(--design-accent)] text-[var(--design-accent-ink)] hover:bg-[var(--design-accent-hover)]",
+    green: "bg-[var(--design-success)] text-white hover:opacity-95",
+    yellow: "bg-[#F7B93E] text-[#3A0C22] hover:bg-[#e5a832]",
+    dark: "bg-[var(--design-ink)] text-white hover:opacity-90",
+    white: "bg-[var(--design-surface)] text-[var(--design-ink)] hover:bg-[var(--design-surface-tint)]",
   };
 
   const sizeStyles = {
