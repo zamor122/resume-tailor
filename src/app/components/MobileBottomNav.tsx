@@ -20,8 +20,8 @@ const MOBILE_TABS = [
   },
   {
     href: "/futureproof",
-    label: "Add AI",
-    short: "ADD AI",
+    label: "Futureproof",
+    short: "FUTUREPROOF",
     match: (p: string) => p.startsWith("/futureproof"),
     icon: (color: string) => (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
