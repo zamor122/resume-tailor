@@ -166,18 +166,18 @@ export default function PricingPage() {
             <div className="flex-1 text-center md:text-left space-y-3">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                 <span className="neo-tag bg-[var(--design-accent)] text-[var(--design-accent-ink)] text-xs px-3 py-1 font-bold">
-                  Honest Pricing
+                  All-Access Passes
                 </span>
                 <span className="text-xs font-semibold text-[var(--design-ink-muted)]">
-                  No hidden recurring fees
+                  One pass unlocks every service · Zero subscriptions
                 </span>
               </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[var(--design-ink)]">
-                One-Time Access.{" "}
-                <span className="text-[var(--design-success)]">Zero Traps.</span>
+                One-Time All-Access.{" "}
+                <span className="text-[var(--design-success)]">Every Service Included.</span>
               </h1>
               <p className="text-sm sm:text-base text-[var(--design-ink-muted)] max-w-xl leading-relaxed">
-                Start with {FREE_AUDIT_LIMIT} free ATS audits &amp; bullet previews. Paid passes never auto-renew.
+                Start with {FREE_AUDIT_LIMIT} free ATS audits &amp; previews. Upgrade to an All-Access Pass to unlock unlimited <strong>Resume Tailor</strong>, <strong>Futureproof AI</strong>, interview scripts, and every tool we offer for your entire chosen period — never auto-renews.
               </p>
 
               {/* Compact Trust Strip + Optional Details Disclosure */}
@@ -337,11 +337,11 @@ export default function PricingPage() {
                   <div className="flex items-center justify-between mb-2">
                     {tier.popular ? (
                       <span className="neo-tag bg-[#FF5722] text-white text-xs px-2.5 py-0.5 font-mono font-bold uppercase tracking-wider">
-                        ★ MOST POPULAR
+                        ★ MOST POPULAR · ALL-ACCESS
                       </span>
                     ) : (
                       <span className="neo-tag bg-[#FAF7F0] text-[#374151] text-xs px-2.5 py-0.5 font-mono font-bold uppercase">
-                        PASS
+                        ALL-ACCESS PASS
                       </span>
                     )}
                   </div>
@@ -351,28 +351,32 @@ export default function PricingPage() {
                     <span className="text-4xl font-mono font-extrabold text-[#1C2028]">
                       ${tier.price.toFixed(2)}
                     </span>
-                    <span className="text-xs font-mono text-[#4B5563] uppercase">one-time</span>
+                    <span className="text-xs font-mono text-[#4B5563] uppercase">
+                      one-time · {tier.durationLabel}
+                    </span>
                   </div>
                   <p className="text-[#374151] font-sans text-sm mb-6 leading-relaxed">{tier.description}</p>
 
                   <ul className="space-y-3 mb-8 text-sm font-sans text-[#1C2028]">
                     <li className="flex items-start gap-2">
                       <span className="text-[#FF5722] font-bold" aria-hidden="true">✓</span>
-                      <span>Unlimited AI resume tailors &amp; PDF exports</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-[#FF5722] font-bold" aria-hidden="true">✓</span>
                       <span>
-                        <strong>Futureproof AI Experience Builder</strong> + 30-sec interview scripts
+                        <strong>All-Access:</strong> Every service unlocked for {tier.durationLabel}
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-[#FF5722] font-bold" aria-hidden="true">✓</span>
-                      <span>All ATS keyword &amp; scoring tools unlocked</span>
+                      <span>Unlimited AI Resume Tailor &amp; PDF/Markdown exports</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#FF5722] font-bold" aria-hidden="true">✓</span>
+                      <span>
+                        <strong>Futureproof AI Builder</strong> + 30-sec interview scripts
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-[#10B981] font-bold" aria-hidden="true">✓</span>
-                      <span>One-time payment · Never recurs</span>
+                      <span>One-time payment · Never auto-renews</span>
                     </li>
                   </ul>
                 </div>
@@ -386,7 +390,7 @@ export default function PricingPage() {
                       : "bg-[#1C2028] text-white hover:bg-black"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {loading === tier.tier ? "CONNECTING TO STRIPE..." : `UNLOCK ${tier.label.toUpperCase()}`}
+                  {loading === tier.tier ? "Connecting to Stripe..." : `Unlock ${tier.durationLabel} All-Access`}
                 </button>
               </div>
             ))}

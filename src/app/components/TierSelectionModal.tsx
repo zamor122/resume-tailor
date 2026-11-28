@@ -167,11 +167,11 @@ export default function TierSelectionModal({
         {/* Header */}
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
-            <span className="neo-tag bg-[#FF5722] text-white text-xs px-2 py-0.5 font-mono font-bold uppercase">
-              ONE-TIME PASS
+            <span className="neo-tag bg-[#FF5722] text-white text-xs px-2.5 py-0.5 font-mono font-bold uppercase">
+              ALL-ACCESS PASS
             </span>
             <h2 id="tier-modal-title" className="text-lg font-mono font-bold text-[#1C2028]">
-              Choose Access Plan
+              Choose All-Access Period
             </h2>
           </div>
           <button
@@ -192,8 +192,9 @@ export default function TierSelectionModal({
         </p>
 
         <div className="mb-4 p-3 rounded-lg bg-[#ECFDF5] border border-[#10B981] text-sm font-sans text-[#065F46]">
-          <strong>Includes everything:</strong> Unlimited ATS resume tailoring, full PDF downloads,
-          and <strong>Futureproof AI Experience Builder</strong> + interview scripts.
+          <strong>One All-Access Pass unlocks every service we offer:</strong> Unlimited{" "}
+          <strong>Resume Tailor</strong>, full PDF/Markdown exports, and{" "}
+          <strong>Futureproof AI Experience Builder</strong> + 30-sec interview scripts for your entire chosen period.
         </div>
 
         {!user && (

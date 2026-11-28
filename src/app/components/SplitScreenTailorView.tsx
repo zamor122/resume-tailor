@@ -810,7 +810,7 @@ export default function SplitScreenTailorView() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="text-[var(--design-success)] font-bold">✓</span>
-                    One-time from ${ENTRY_PRICE}
+                    All-Access Pass from ${ENTRY_PRICE}
                   </span>
                 </div>
               </div>

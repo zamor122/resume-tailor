@@ -130,10 +130,12 @@ test.describe("Full-Site Dual-Design E2E & Visual Verification (Modern & Classic
       fullPage: false,
     });
 
-    // 3. Pricing page: verify pricing tiers + progressive disclosure toggle
+    // 3. Pricing page: verify All-Access Passes + progressive disclosure toggle
     await page.goto("/pricing", { waitUntil: "networkidle" });
-    await expect(page.getByText(/One-Time Access/i)).toBeVisible();
-    await expect(page.getByText(/Starter/i).first()).toBeVisible();
+    await expect(page.getByText(/One-Time All-Access/i)).toBeVisible();
+    await expect(page.getByText(/2-Day All-Access Pass/i)).toBeVisible();
+    await expect(page.getByText(/7-Day All-Access Pass/i)).toBeVisible();
+    await expect(page.getByText(/30-Day All-Access Pass/i)).toBeVisible();
     const whyToggle = page.getByRole("button", {
       name: /Why job seekers switch/i,
     });

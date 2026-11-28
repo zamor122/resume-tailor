@@ -219,10 +219,10 @@ function SuccessPageInner() {
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-mono font-bold text-[#1C2028] uppercase tracking-tight mt-3">
-          Access Pass Activated
+          All-Access Pass Activated
         </h1>
         <p className="mt-2 text-xs font-mono text-gray-600 leading-relaxed">
-          Your payment was processed successfully. All recruiter-grade exports &amp; tailored sections are now unlocked.
+          Your payment was processed successfully. Every service we offer — unlimited Resume Tailor, Futureproof AI Experience Builder, interview scripts, and PDF exports — is now unlocked for your full access period.
         </p>
 
         {/* Real-time Access Status */}

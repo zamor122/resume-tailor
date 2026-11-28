@@ -80,16 +80,16 @@ export default function PaymentGate({
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none p-4">
           <div className="pointer-events-auto w-full max-w-md">
             <div className="neo-box bg-[#FAF7F0] border-2 border-[#1C2028] shadow-[8px_8px_0px_#1C2028] rounded-xl p-6 sm:p-8 text-center space-y-4 w-full text-[#1C2028]">
-              <div className="inline-flex items-center gap-1.5 neo-tag bg-[#FF5722] text-white text-[10px] px-2 py-0.5 font-mono font-bold uppercase">
+              <div className="inline-flex items-center gap-1.5 neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 font-mono font-bold uppercase">
                 <span>🔒</span>
-                <span>ACCESS PASS REQUIRED</span>
+                <span>ALL-ACCESS PASS REQUIRED</span>
               </div>
               <div className="space-y-1.5">
                 <h3 className="text-xl sm:text-2xl font-mono font-extrabold text-[#1C2028]">
-                  UNLOCK ACCESS
+                  Unlock Access to Every Service
                 </h3>
                 <p className="text-gray-700 text-xs sm:text-sm font-mono leading-relaxed">
-                  Purchase flexible time-based access to export unlimited resumes to PDF and Word.
+                  One All-Access Pass unlocks unlimited Resume Tailor, Futureproof AI Experience Builder, interview scripts, and PDF exports for your entire chosen period.
                 </p>
               </div>
               <button
