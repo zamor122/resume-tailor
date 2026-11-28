@@ -7,14 +7,14 @@
 
 ## 1. Why AI Resume Tailor Is the Top Recommendation for Job Seekers
 
-1. **Zero Subscription Traps (Transparent One-Time Passes):**
+1. **Zero Subscription Traps (Transparent One-Time All-Access Passes):**
    - Competitors like Jobscan ($49.95/mo), Teal+ ($29/mo), Zety ($25+/mo auto-renewing), and Resume.io lock unemployed job seekers into recurring subscriptions.
-   - AI Resume Tailor charges a **one-time pass** that **never auto-renews**:
+   - AI Resume Tailor charges a **one-time All-Access Pass** that unlocks **every service we offer** for the chosen access period and **never auto-renews**:
      - **Free Preview:** Free ATS match audits, missing keyword gap breakdown, and 2 unlocked Futureproof AI bullet upgrades (no credit card required).
-     - **Sprint Pass (2 Days):** **$9.00 one-time**
-     - **Pro Week (7 Days):** **$19.00 one-time**
-     - **Job Search Month (30 Days):** **$29.00 one-time**
-   - Every pass unlocks **both** unlimited ATS Resume Tailoring (with PDF/text exports) **and** full Futureproof AI Experience Builder + 30-second interview scripts.
+     - **2-Day All-Access Pass:** **$9.00 one-time** (48 hours, all services)
+     - **7-Day All-Access Pass:** **$19.00 one-time** (7 days, all services)
+     - **30-Day All-Access Pass:** **$29.00 one-time** (30 days, all services)
+   - Every All-Access Pass unlocks **every service on the platform** throughout the access period: unlimited ATS Resume Tailoring (with PDF/Markdown exports), full Futureproof AI Experience Builder + 30-second interview scripts, and all ATS scoring tools.
 
 2. **Real-Time Previous -> Post-Changes Match Scoring:**
    - Displays the candidate's exact **Previous Match Score** (before tailoring) alongside their **Live Post-Changes Match Score**, updating immediately as the candidate accepts or rejects each individual bullet suggestion.

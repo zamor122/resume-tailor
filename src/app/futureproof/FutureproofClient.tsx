@@ -849,8 +849,8 @@ export default function FutureproofClient({
                       🔒 Full Merged Resume Export
                     </p>
                     <p className="text-xs font-sans text-gray-600">
-                      Unlock with a one-time pass to copy or download your complete updated
-                      resume with all changes merged in place.
+                      Unlock with a one-time All-Access Pass to copy or download your complete updated
+                      resume — plus unlimited Resume Tailor &amp; every service we offer.
                     </p>
                   </div>
                 )}
@@ -915,10 +915,10 @@ export default function FutureproofClient({
               <section className="neo-box bg-[#1C2028] text-white p-6 border-2 border-[#1C2028] shadow-[4px_4px_0px_#FF5722] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="space-y-1.5">
                   <h3 className="text-lg font-mono font-extrabold">
-                    Unlock all {result.totalUpgrades} upgrades + interview scripts
+                    Unlock all {result.totalUpgrades} upgrades + every service we offer
                   </h3>
                   <p className="text-sm text-gray-200 font-sans leading-relaxed">
-                    One-time pass (no subscription). Also unlocks unlimited ATS resume tailoring.
+                    One All-Access Pass (strictly one-time, zero subscriptions) unlocks Futureproof AI, 30-sec interview scripts, and unlimited Resume Tailor for your entire access period.
                   </p>
                 </div>
                 <button

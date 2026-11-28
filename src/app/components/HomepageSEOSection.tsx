@@ -25,8 +25,8 @@ export default function HomepageSEOSection() {
       q: "Is it free to try?",
       a:
         FREE_RESUME_LIMIT > 0
-          ? `Yes — start with no credit card for a free preview, then create a free account to get your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume" : "resumes"} free. After that, passes are strictly one-time starting at $9.`
-          : `Yes — try a free ATS match audit and bullet preview with no credit card, and unlock up to ${FREE_AUDIT_LIMIT} free audits with a free account. Paid passes start at $9 one-time and never auto-renew.`,
+          ? `Yes — start with no credit card for a free preview, then create a free account to get your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume" : "resumes"} free. After that, one-time All-Access Passes starting at $9 unlock every service we offer (Tailor + Futureproof AI).`
+          : `Yes — try a free ATS match audit and bullet preview with no credit card, and unlock up to ${FREE_AUDIT_LIMIT} free audits with a free account. One-time All-Access Passes start at $9, unlock every service we offer (Tailor + Futureproof AI), and never auto-renew.`,
     },
     {
       q: "Will my resume sound robotic or like AI?",

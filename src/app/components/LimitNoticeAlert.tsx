@@ -39,7 +39,7 @@ export default function LimitNoticeAlert({
             onClick={onOpenUpgrade}
             className="neo-btn px-4 py-2 rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white font-mono font-extrabold text-xs uppercase tracking-wider border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]"
           >
-            ⚡ Unlock Pass From ${entryPrice} →
+            ⚡ All-Access: Unlock Pass From ${entryPrice} →
           </button>
           <Link
             href="/pricing"

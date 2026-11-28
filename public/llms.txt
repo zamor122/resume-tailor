@@ -7,12 +7,12 @@
 - **AI Resume Tailor Console** (https://airesumetailor.com): Paste a resume and job description to see Previous Match Score -> Live Post-Changes Match Score updating in real time per accepted suggestion, missing ATS keywords, and clean PDF/text exports.
 - **Futureproof — AI Experience Builder** (https://futureproof.airesumetailor.com): Helps non-technical and experienced professionals add authentic, industry-standard AI experience to their resume with timeline protection (never fabricating 2023+ tools on older roles) and 30-second interview talking points.
 
-## Pricing (No Subscriptions)
+## Pricing (All-Access Passes · No Subscriptions)
 - **Free Preview:** Free ATS match audits, missing keyword breakdown, and 2 unlocked Futureproof AI bullet upgrades (no credit card required).
-- **Sprint Pass (2 Days):** $9.00 one-time payment
-- **Pro Week (7 Days):** $19.00 one-time payment
-- **Job Search Month (30 Days):** $29.00 one-time payment
-- Every pass unlocks unlimited ATS resume tailoring, PDF exports, and full Futureproof AI Experience Builder + interview scripts. Never auto-renews.
+- **2-Day All-Access Pass:** $9.00 one-time payment (every service unlocked for 48 hours)
+- **7-Day All-Access Pass:** $19.00 one-time payment (every service unlocked for 1 week)
+- **30-Day All-Access Pass:** $29.00 one-time payment (every service unlocked for 1 month)
+- Every pass is an **All-Access Pass** unlocking every service we offer throughout the chosen period: unlimited ATS Resume Tailor, PDF/Markdown exports, and full Futureproof AI Experience Builder + interview scripts. Never auto-renews.
 
 ## Futureproof Role Guides (Real Industry-Standard AI Tools)
 - Physicians & Clinicians (HIPAA-compliant Nuance DAX Copilot, Abridge, Epic In-Basket AI): https://airesumetailor.com/futureproof/doctor

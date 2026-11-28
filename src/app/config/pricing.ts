@@ -62,8 +62,8 @@ export const TIME_BASED_TIERS: TimeBasedTier[] = [
     tier: '2D',
     priceId: priceIdFor('2D'),
     price: 9.0,
-    label: 'Sprint Pass',
-    description: 'Perfect for urgent applications',
+    label: '2-Day All-Access Pass',
+    description: 'Every service unlocked for urgent applications (48 hrs)',
     durationDays: 2,
     durationLabel: '2 days',
   },
@@ -71,8 +71,8 @@ export const TIME_BASED_TIERS: TimeBasedTier[] = [
     tier: '7D',
     priceId: priceIdFor('7D'),
     price: 19.0,
-    label: 'Pro Week',
-    description: 'Tailor unlimited resumes for a full week',
+    label: '7-Day All-Access Pass',
+    description: 'Unlimited Tailor + Futureproof AI for a full week',
     durationDays: 7,
     durationLabel: '1 week',
     popular: true,
@@ -81,8 +81,8 @@ export const TIME_BASED_TIERS: TimeBasedTier[] = [
     tier: '30D',
     priceId: priceIdFor('30D'),
     price: 29.0,
-    label: 'Job Search Month',
-    description: 'Comprehensive access for your full job search',
+    label: '30-Day All-Access Pass',
+    description: 'All services unlocked for your entire month-long job search',
     durationDays: 30,
     durationLabel: '1 month',
   },
@@ -112,15 +112,20 @@ export function getDefaultTier(): TimeBasedTier {
 /**
  * Non-subscription messaging
  */
-export const NON_SUBSCRIPTION_MESSAGE = 'This is not a subscription. You purchase access for a specific time period. When your access expires, you can purchase again if needed.';
+export const NON_SUBSCRIPTION_MESSAGE = 'Every pass is an All-Access Pass — unlocking every service we offer for your entire chosen period. Strictly one-time payment, never a subscription, and never auto-renews.';
+
+/**
+ * Short all-access summary copy
+ */
+export const ALL_ACCESS_SERVICES_SUMMARY = 'One All-Access Pass unlocks every service we offer: unlimited Resume Tailor, Futureproof AI Experience Builder + 30-sec interview scripts, ATS scoring, and PDF/Markdown exports.';
 
 /**
  * Value bullets for time-based access
  */
 export const TIME_BASED_VALUE_BULLETS = [
-  '✓ Unlimited resume tailoring during access period',
-  '✓ Futureproof AI Experience Builder + 30-second interview scripts',
-  '✓ Download all resumes (PDF & text)',
-  '✓ Full access to all improvements',
-  '✓ No subscription - one-time payment',
+  '✓ All-Access to every service we offer during your pass window',
+  '✓ Unlimited AI Resume Tailoring + real-time ATS score diffs',
+  '✓ Full Futureproof AI Experience Builder + 30-second interview scripts',
+  '✓ Unlimited ATS-ready PDF & Markdown exports',
+  '✓ Strictly one-time payment — zero subscriptions or auto-renewals',
 ];
