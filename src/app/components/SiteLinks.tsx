@@ -1,59 +1,49 @@
-import Link from 'next/link';
+import Link from "next/link";
 
 /**
  * Server-rendered site-wide internal link map.
- *
- * WHY THIS EXISTS: an audit of the live site found every page shipped **zero** anchor
- * tags to a crawler — /, /blog, /pricing and /alternatives/* all had no nav, no footer
- * links and no internal links in the server-rendered HTML. The interactive nav and
- * footer are client components that do not reach the initial HTML, so search engines saw
- * pages with no crawl path and no link graph. Google sent this site 2 visitors in 20
- * months while Bing sent 14.
- *
- * This is a plain server component: its markup is always present in the HTML, so it
- * guarantees every page exposes real internal links to crawlers. It is also genuinely
- * useful to visitors, which is why it is visible rather than hidden (hidden link blocks
- * are treated as cloaking).
+ * Always present in initial SSR HTML so crawlers discover every route, while
+ * styling reacts fluidly to the active design tokens (Pomegranate / Risograph).
  */
 const GROUPS: Array<{ title: string; links: Array<[string, string]> }> = [
   {
-    title: 'Free tools',
+    title: "Free tools",
     links: [
-      ['Futureproof: Add AI Skills', '/futureproof'],
-      ['ATS Resume Checker', '/resume-checker'],
-      ['Resume Optimizer', '/resume-optimizer'],
-      ['Pricing (No Subscription)', '/pricing'],
+      ["Futureproof: Add AI Skills", "/futureproof"],
+      ["ATS Resume Checker", "/resume-checker"],
+      ["Resume Optimizer", "/resume-optimizer"],
+      ["Pricing (No Subscription)", "/pricing"],
     ],
   },
   {
-    title: 'AI Skills by Profession',
+    title: "AI Skills by Profession",
     links: [
-      ['Physicians & Clinicians AI', '/futureproof/doctor'],
-      ['Nurses & Care Teams AI', '/futureproof/nurse'],
-      ['Admin & Executive Assistants AI', '/futureproof/admin'],
-      ['Finance & Accounting AI', '/futureproof/finance'],
-      ['Attorneys & Paralegals AI', '/futureproof/legal'],
-      ['Teachers & Educators AI', '/futureproof/teacher'],
+      ["Physicians & Clinicians AI", "/futureproof/doctor"],
+      ["Nurses & Care Teams AI", "/futureproof/nurse"],
+      ["Admin & Executive Assistants AI", "/futureproof/admin"],
+      ["Finance & Accounting AI", "/futureproof/finance"],
+      ["Attorneys & Paralegals AI", "/futureproof/legal"],
+      ["Teachers & Educators AI", "/futureproof/teacher"],
     ],
   },
   {
-    title: 'Compare alternatives',
+    title: "Compare alternatives",
     links: [
-      ['Jobscan alternative', '/alternatives/jobscan'],
-      ['Teal alternative', '/alternatives/teal'],
-      ['Rezi alternative', '/alternatives/rezi'],
-      ['Kickresume alternative', '/alternatives/kickresume'],
-      ['Resume.io alternative', '/alternatives/resume-io'],
-      ['Zety alternative', '/alternatives/zety'],
+      ["Jobscan alternative", "/alternatives/jobscan"],
+      ["Teal alternative", "/alternatives/teal"],
+      ["Rezi alternative", "/alternatives/rezi"],
+      ["Kickresume alternative", "/alternatives/kickresume"],
+      ["Resume.io alternative", "/alternatives/resume-io"],
+      ["Zety alternative", "/alternatives/zety"],
     ],
   },
   {
-    title: 'Learn',
+    title: "Learn",
     links: [
-      ['Blog', '/blog'],
-      ['FAQ', '/faq'],
-      ['ATS resume checker by role', '/keywords'],
-      ['For AI Agents & Developers', '/agents'],
+      ["Blog", "/blog"],
+      ["FAQ", "/faq"],
+      ["ATS resume checker by role", "/keywords"],
+      ["For AI Agents & Developers", "/agents"],
     ],
   },
 ];
@@ -62,14 +52,17 @@ export default function SiteLinks() {
   return (
     <nav
       aria-label="Site map"
-      className="w-full border-t-2 border-[#1C2028] bg-[#FAF7F0] text-[#1C2028]"
+      className="w-full border-t border-[var(--design-border-soft)] bg-[var(--design-surface-tint)]/65 text-[var(--design-ink)] transition-colors"
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-9">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {GROUPS.map((group) => (
             <div key={group.title}>
-              <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1C2028] mb-3 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FF5722]"></span>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--design-ink)] mb-3 flex items-center gap-2">
+                <span
+                  className="w-2 h-2 rounded-full bg-[var(--design-accent)] shrink-0"
+                  aria-hidden="true"
+                />
                 {group.title}
               </h2>
               <ul className="space-y-2">
@@ -77,7 +70,7 @@ export default function SiteLinks() {
                   <li key={href}>
                     <Link
                       href={href}
-                      className="text-xs font-mono text-gray-700 hover:text-[#FF5722] transition-colors duration-150 block"
+                      className="text-xs font-medium text-[var(--design-ink-muted)] hover:text-[var(--design-accent)] transition-colors duration-150 block"
                     >
                       {label}
                     </Link>

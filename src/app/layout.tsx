@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Fredoka,
+  Plus_Jakarta_Sans,
+  Fraunces,
+} from "next/font/google";
 import "./globals.css";
 import {Analytics} from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Footer from './components/Footer';
 import SiteLinks from './components/SiteLinks';
 import Navigation from "./components/Navigation";
+import MobileBottomNav from "./components/MobileBottomNav";
 import { ThemeProvider } from './components/ThemeProvider'
 import { AuthProvider } from './contexts/AuthContext';
 import { GamificationProvider } from './contexts/GamificationContext';
@@ -41,6 +48,30 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-pomegranate-display",
+  display: "swap",
+});
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-prototype-sans",
+  display: "swap",
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-riso-serif",
+  display: "swap",
+});
+
+const DESIGN_INIT_SCRIPT = `(function(){try{var p=new URLSearchParams(window.location.search).get('design');var s=window.localStorage.getItem('airesumetailor_design');var d=(p==='risograph'||p==='pomegranate')?p:((s==='risograph'||s==='pomegranate')?s:'pomegranate');document.documentElement.setAttribute('data-design',d);document.documentElement.style.setProperty('--design-mode',d);}catch(e){}})();`;
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://airesumetailor.com'),
@@ -160,9 +191,12 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-design="pomegranate" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: DESIGN_INIT_SCRIPT }} />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} ${fredoka.variable} ${plusJakarta.variable} ${fraunces.variable} antialiased min-h-screen flex flex-col pb-20 md:pb-0`}
       >
         <RootStructuredData />
         <Script 
@@ -196,6 +230,7 @@ export default function RootLayout({
                       graph on every page. See SiteLinks.tsx for why this exists. */}
                   <SiteLinks />
                   <Footer />
+                  <MobileBottomNav />
                   <Analytics />
                   <SpeedInsights />
                 </ExitSurveyProvider>

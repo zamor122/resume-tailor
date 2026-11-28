@@ -73,18 +73,91 @@
     overflow-x: hidden;
   }
 
+  /* Dual-Design Token System: Pomegranate Tactile (default) & Warm Paper Risograph */
+  :root,
+  :where([data-design="pomegranate"]) {
+    --design-mode: pomegranate;
+    --design-canvas: #FFFDF5;
+    --design-surface: #FFFFFF;
+    --design-surface-tint: #F6F1E4;
+    --design-ink: #3A0C22;
+    --design-ink-muted: #7D4D61;
+    --design-accent: #EA375D;
+    --design-accent-hover: #C9224A;
+    --design-accent-ink: #FFFFFF;
+    --design-accent-alt: #F7B93E;
+    --design-success: #128C66;
+    --design-success-tint: #E6F7EF;
+    --design-border: #3A0C22;
+    --design-border-soft: rgba(58, 12, 34, 0.16);
+    --design-border-width: 2px;
+    --design-radius-card: 24px;
+    --design-radius-sm: 16px;
+    --design-radius-btn: 9999px;
+    --design-shadow-card: 0px 4px 0px #3A0C22;
+    --design-shadow-sm: 0px 2px 0px #3A0C22;
+    --design-shadow-btn: 0px 3px 0px #3A0C22;
+    --design-shadow-btn-hover: 0px 4px 0px #3A0C22;
+    --design-font-display: var(--font-pomegranate-display), var(--font-prototype-sans), system-ui, sans-serif;
+    --design-font-body: var(--font-prototype-sans), var(--font-geist-sans), system-ui, sans-serif;
+  }
+
+  :where([data-design="risograph"]) {
+    --design-mode: risograph;
+    --design-canvas: #F6F0E4;
+    --design-surface: #FFFDF8;
+    --design-surface-tint: #EFE8DA;
+    --design-ink: #241F1A;
+    --design-ink-muted: #6C6358;
+    --design-accent: #2B6B5A;
+    --design-accent-hover: #215446;
+    --design-accent-ink: #FFFDF8;
+    --design-accent-alt: #D65A38;
+    --design-success: #2B6B5A;
+    --design-success-tint: #E5EFEA;
+    --design-border: rgba(36, 31, 26, 0.16);
+    --design-border-soft: rgba(36, 31, 26, 0.10);
+    --design-border-width: 1px;
+    --design-radius-card: 26px;
+    --design-radius-sm: 18px;
+    --design-radius-btn: 9999px;
+    --design-shadow-card: 4px 4px 0px rgba(43, 107, 90, 0.12);
+    --design-shadow-sm: 2px 2px 0px rgba(36, 31, 26, 0.08);
+    --design-shadow-btn: 3px 3px 0px rgba(214, 90, 56, 0.24);
+    --design-shadow-btn-hover: 4px 4px 0px rgba(214, 90, 56, 0.30);
+    --design-font-display: var(--font-riso-serif), Georgia, serif;
+    --design-font-body: var(--font-prototype-sans), var(--font-geist-sans), system-ui, sans-serif;
+  }
+
   /* Industry-standard readable base typography & WCAG AA accessibility */
   body {
-    font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--design-font-body);
+    background-color: var(--design-canvas);
+    color: var(--design-ink);
     font-size: 1rem;
     line-height: 1.6;
     text-align: start;
     overflow-wrap: break-word;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  :where([data-design="risograph"]) body,
+  body[data-design="risograph"] {
+    background-image:
+      radial-gradient(rgba(36, 31, 26, 0.032) 1px, transparent 0),
+      radial-gradient(rgba(43, 107, 90, 0.025) 1px, transparent 0);
+    background-size: 22px 22px, 34px 34px;
+    background-position: 0 0, 11px 11px;
   }
 
   h1, h2, h3 {
     text-wrap: balance;
     line-height: 1.25;
+  }
+
+  :where(html[data-design]) h1,
+  :where(html[data-design]) h2 {
+    font-family: var(--design-font-display);
   }
 
   p {
@@ -98,7 +171,7 @@
 
   /* High-contrast keyboard focus ring (WCAG 2.4.7 & 1.4.11) */
   :where(a:any-link, button, input, textarea, select, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
-    outline: 3px solid #FF5722;
+    outline: 3px solid var(--design-accent);
     outline-offset: 3px;
   }
 
@@ -122,14 +195,14 @@
     left: 0.75rem;
     z-index: 100;
     padding: 0.75rem 1.125rem;
-    border-radius: 0.5rem;
-    border: 2px solid #1C2028;
-    background-color: #1C2028;
+    border-radius: 9999px;
+    border: 2px solid var(--design-border);
+    background-color: var(--design-ink);
     color: #FFFFFF;
     font-weight: 700;
     font-size: 0.9375rem;
     text-decoration: none;
-    box-shadow: 3px 3px 0px #FF5722;
+    box-shadow: 0px 3px 0px var(--design-accent);
   }
 
   .skip-link:not(:focus-visible):not(:active) {
@@ -205,45 +278,52 @@
     background: rgba(248, 81, 73, 0.35);
   }
 
-  /* Warm Retrofuturistic & Soft Neo-Brutalism Design Utilities */
+  /* Dual-Theme Tactile Surface & Action Utilities (Pomegranate + Warm Paper Risograph) */
   .neo-box {
-    border: 2.5px solid #1C2028;
-    box-shadow: 4px 4px 0px #1C2028;
-    border-radius: 16px;
-    transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+    border: var(--design-border-width) solid var(--design-border);
+    box-shadow: var(--design-shadow-card);
+    border-radius: var(--design-radius-card);
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
   }
 
   .neo-box-sm {
-    border: 2px solid #1C2028;
-    box-shadow: 3px 3px 0px #1C2028;
-    border-radius: 12px;
+    border: var(--design-border-width) solid var(--design-border);
+    box-shadow: var(--design-shadow-sm);
+    border-radius: var(--design-radius-sm);
   }
 
   .neo-btn {
-    border: 2.5px solid #1C2028;
-    box-shadow: 4px 4px 0px #1C2028;
-    border-radius: 14px;
+    border: var(--design-border-width) solid var(--design-border);
+    box-shadow: var(--design-shadow-btn);
+    border-radius: var(--design-radius-btn);
     font-weight: 700;
-    transition: all 0.1s ease;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease;
     cursor: pointer;
     user-select: none;
   }
 
   .neo-btn:hover {
-    transform: translate(-1px, -1px);
-    box-shadow: 5px 5px 0px #1C2028;
+    transform: translateY(-1px);
+    box-shadow: var(--design-shadow-btn-hover);
   }
 
   .neo-btn:active {
-    transform: translate(3px, 3px);
-    box-shadow: 1px 1px 0px #1C2028;
+    transform: translateY(1.5px);
+    box-shadow: 0px 1px 0px var(--design-border);
   }
 
   .neo-tag {
-    border: 2px solid #1C2028;
-    box-shadow: 2px 2px 0px #1C2028;
+    border: var(--design-border-width) solid var(--design-border-soft);
+    box-shadow: var(--design-shadow-sm);
     border-radius: 9999px;
     font-weight: 700;
+  }
+
+  /* Container style query progressive enhancement for higher-order design token reactivity */
+  @container style(--design-mode: risograph) {
+    .neo-tag {
+      box-shadow: none;
+    }
   }
 
   /* Glass morphism effect */
@@ -749,46 +829,44 @@
     animation: float-slow 12s ease-in-out infinite;
   }
 
-  /* Form input container - soft neo-brutalist console panel */
+  /* Form input container - calm dual-theme panel */
   .input-container {
-    @apply rounded-xl p-5 md:p-6 transition-all duration-200;
-    background: #F4F1EA;
-    border: 2px solid #1C2028;
-    box-shadow: 4px 4px 0px #1C2028;
+    @apply p-5 md:p-6 transition-all duration-200;
+    border-radius: var(--design-radius-card);
+    background: var(--design-surface);
+    border: var(--design-border-width) solid var(--design-border);
+    box-shadow: var(--design-shadow-card);
   }
 
   .input-container:focus-within {
-    box-shadow: 5px 5px 0px #1C2028;
-    border-color: #1C2028;
+    border-color: var(--design-accent);
   }
 
-  html.light .input-container:focus-within {
-    box-shadow: 5px 5px 0px #1C2028;
-    border-color: #1C2028;
-  }
-
-  /* Form textarea - retro typewriter feel with clean typography */
+  /* Form textarea - readable, warm, low-cognitive-load input */
   .form-textarea {
-    @apply w-full min-h-[200px] md:min-h-[280px] rounded-xl p-4 text-xs sm:text-sm md:text-base
-           text-[#1C2028] placeholder-gray-500 font-mono leading-relaxed
-           resize-y transition-all duration-200 outline-none;
-    background: #FFFFFF;
-    border: 2px solid #1C2028;
-    box-shadow: 3px 3px 0px #1C2028;
+    @apply w-full min-h-[200px] md:min-h-[280px] p-4 text-sm md:text-[15px]
+           leading-relaxed resize-y transition-all duration-200 outline-none;
+    font-family: var(--design-font-body);
+    color: var(--design-ink);
+    background: var(--design-canvas);
+    border-radius: var(--design-radius-sm);
+    border: var(--design-border-width) solid var(--design-border-soft);
   }
 
   .form-textarea:focus {
     outline: none;
-    border-color: #1C2028;
-    box-shadow: 4px 4px 0px #FF5722;
+    border-color: var(--design-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--design-accent) 18%, transparent);
   }
 
   .form-textarea::placeholder {
+    color: var(--design-ink-muted);
+    opacity: 0.75;
     @apply transition-opacity duration-200;
   }
 
   .form-textarea:focus::placeholder {
-    opacity: 0.6;
+    opacity: 0.5;
   }
 
   /* Form label with gradient */
@@ -849,4 +927,89 @@
   .transform-3d {
     transform-style: preserve-3d;
   }
+
+  .font-pom-display {
+    font-family: var(--font-pomegranate-display), var(--font-prototype-sans), sans-serif;
+  }
+
+  .font-riso-serif {
+    font-family: var(--font-riso-serif), Georgia, serif;
+  }
+
+  .font-design-display {
+    font-family: var(--design-font-display);
+  }
 }
+
+/* ============================================================================
+ * GLOBAL DUAL-DESIGN BRIDGE (Transforms every route across the entire site
+ * into Pomegranate Tactile or Warm Paper Risograph seamlessly; skips isolated
+ * side-by-side preview canvases marked with [data-design-isolated="true"]).
+ * ========================================================================== */
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).bg-\[\#FAF7F0\] {
+  background-color: var(--design-canvas);
+}
+
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).bg-\[\#F4F1EA\],
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).bg-\[\#FAF8F5\] {
+  background-color: var(--design-surface-tint);
+}
+
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).bg-\[\#FF5722\] {
+  background-color: var(--design-accent);
+  color: var(--design-accent-ink);
+}
+
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).hover\:bg-\[\#E64A19\]:hover {
+  background-color: var(--design-accent-hover);
+}
+
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).text-\[\#FF5722\] {
+  color: var(--design-accent);
+}
+
+:where(html[data-design="risograph"]) :not([data-design-isolated="true"] *).text-\[\#FF5722\] {
+  color: #D65A38;
+}
+
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).text-\[\#1C2028\] {
+  color: var(--design-ink);
+}
+
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).bg-\[\#1C2028\] {
+  background-color: var(--design-ink);
+}
+
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).border-\[\#1C2028\] {
+  border-color: var(--design-border);
+}
+
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).shadow-\[4px_4px_0px_\#1C2028\],
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).shadow-\[5px_5px_0px_\#1C2028\],
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).shadow-\[6px_6px_0px_\#1C2028\] {
+  box-shadow: var(--design-shadow-card);
+}
+
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).shadow-\[3px_3px_0px_\#1C2028\],
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :not([data-design-isolated="true"] *).shadow-\[2px_2px_0px_\#1C2028\] {
+  box-shadow: var(--design-shadow-sm);
+}
+
+/* Risograph uses hairline borders instead of heavy 2px neo borders */
+:where(html[data-design="risograph"]) :not([data-design-isolated="true"] *).border-2 {
+  border-width: 1px;
+}
+
+/* Keep scrollbars warm and cohesive in both themes */
+:where(html[data-design="pomegranate"]) {
+  --scrollbar-track: #F6F1E4;
+  --scrollbar-thumb: rgba(58, 12, 34, 0.25);
+  --scrollbar-thumb-hover: #EA375D;
+}
+
+:where(html[data-design="risograph"]) {
+  --scrollbar-track: #EFE8DA;
+  --scrollbar-thumb: rgba(36, 31, 26, 0.22);
+  --scrollbar-thumb-hover: #2B6B5A;
+}
+

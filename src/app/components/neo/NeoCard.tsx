@@ -16,11 +16,11 @@ export default function NeoCard({
   ...props
 }: NeoCardProps) {
   const variantStyles = {
-    white: "bg-white text-[#1C2028]",
-    ivory: "bg-[#FAF8F5] text-[#1C2028]",
-    dark: "bg-[#1C2028] text-white",
-    orange: "bg-[#FF5722] text-white",
-    yellow: "bg-[#F59E0B] text-[#1C2028]",
+    white: "bg-[var(--design-surface)] text-[var(--design-ink)]",
+    ivory: "bg-[var(--design-surface-tint)] text-[var(--design-ink)]",
+    dark: "bg-[var(--design-ink)] text-white",
+    orange: "bg-[var(--design-accent)] text-[var(--design-accent-ink)]",
+    yellow: "bg-[#F7B93E] text-[#3A0C22]",
   };
 
   const boxClass = compact ? "neo-box-sm p-4" : "neo-box p-6";

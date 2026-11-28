@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTheme } from "@/app/components/ThemeProvider";
 
 export interface TailorBotProps {
   state?: "idle" | "scanning" | "celebrating";
@@ -17,8 +18,32 @@ export default function TailorBot({
   className = "",
   showPokeTag = false,
 }: TailorBotProps) {
+  const { design } = useTheme();
+  const isPom = design === "pomegranate";
   const isHyped = state === "celebrating";
   const isScanning = state === "scanning";
+
+  const ink = isPom ? "#3A0C22" : "#241F1A";
+  const chassis = isPom ? "#FFFDF5" : "#FFFDF8";
+  const screenBg = isPom ? "#2A0A19" : "#1C352D";
+  const eyeColor = isScanning
+    ? isPom
+      ? "#F7B93E"
+      : "#E6AD30"
+    : isPom
+    ? "#74D4A0"
+    : "#7DD3A8";
+  const beaconColor = isHyped
+    ? isPom
+      ? "#F7B93E"
+      : "#2B6B5A"
+    : isScanning
+    ? isPom
+      ? "#7BC6FA"
+      : "#D69B24"
+    : isPom
+    ? "#EA375D"
+    : "#D65A38";
 
   return (
     <div
@@ -41,120 +66,148 @@ export default function TailorBot({
     >
       <svg
         viewBox="0 0 160 160"
-        className="w-full h-full drop-shadow-[4px_4px_0px_#1C2028]"
+        className="w-full h-full overflow-visible"
         aria-hidden="true"
       >
-        {/* Antenna Rod & Glowing Warm Beacon */}
+        {/* Risograph soft terracotta ink offset print halo */}
+        {!isPom && (
+          <rect
+            x="31"
+            y="47"
+            width="108"
+            height="92"
+            rx="28"
+            fill="#D65A38"
+            opacity="0.18"
+          />
+        )}
+
+        {/* Antenna Rod & Glowing Beacon */}
         <line
           x1="80"
-          y1="14"
+          y1="16"
           x2="80"
           y2="42"
-          stroke="#FAF8F5"
-          strokeWidth="6"
+          stroke={ink}
+          strokeWidth={isPom ? "5.5" : "4.5"}
           strokeLinecap="round"
         />
         <circle
           cx="80"
-          cy="12"
+          cy="14"
           r="10"
-          fill={isHyped ? "#10B981" : isScanning ? "#FFE600" : "#FF5722"}
-          stroke="#1C2028"
-          strokeWidth="3.5"
+          fill={beaconColor}
+          stroke={ink}
+          strokeWidth={isPom ? "4.5" : "3.5"}
         />
 
-        {/* CRT Monitor Chassis (Warm Ivory) */}
+        {/* Rounded CRT Monitor Chassis */}
         <rect
           x="26"
           y="42"
           width="108"
-          height="94"
-          rx="26"
-          fill="#FAF7F0"
-          stroke="#1C2028"
-          strokeWidth="6"
+          height="92"
+          rx="28"
+          fill={chassis}
+          stroke={ink}
+          strokeWidth={isPom ? "6" : "4.5"}
         />
 
-        {/* Bezel Screws */}
-        <circle cx="36" cy="52" r="2.5" fill="#1C2028" />
-        <circle cx="124" cy="52" r="2.5" fill="#1C2028" />
-        <circle cx="36" cy="126" r="2.5" fill="#1C2028" />
-        <circle cx="124" cy="126" r="2.5" fill="#1C2028" />
-
-        {/* CRT Inner Screen (Phosphor Dark Green) */}
+        {/* CRT Inner Screen */}
         <rect
           x="40"
-          y="56"
+          y="55"
           width="80"
-          height="48"
-          rx="14"
-          fill="#0D1F17"
-          stroke="#1C2028"
-          strokeWidth="3"
+          height="46"
+          rx="15"
+          fill={screenBg}
+          stroke={ink}
+          strokeWidth={isPom ? "3.5" : "2.5"}
         />
 
-        {/* Scanlines / Cathode Ray Glow */}
+        {/* Subtle Scanlines */}
         <line
-          x1="44"
+          x1="46"
           y1="70"
-          x2="116"
+          x2="114"
           y2="70"
-          stroke="#10B981"
+          stroke={eyeColor}
           strokeWidth="1"
-          opacity="0.15"
+          opacity="0.14"
         />
         <line
-          x1="44"
-          y1="82"
-          x2="116"
-          y2="82"
-          stroke="#10B981"
+          x1="46"
+          y1="84"
+          x2="114"
+          y2="84"
+          stroke={eyeColor}
           strokeWidth="1"
-          opacity="0.15"
+          opacity="0.14"
         />
 
-        {/* Eyes (Phosphor Green Glowing Discs) */}
-        <circle
-          cx="62"
-          cy="80"
-          r={isHyped ? 9 : 7}
-          fill="#10B981"
-        />
-        <circle
-          cx="98"
-          cy="80"
-          r={isHyped ? 9 : 7}
-          fill="#10B981"
-        />
+        {/* Expressive Eyes */}
+        {isHyped ? (
+          <>
+            <path
+              d="M 54 80 Q 63 69 72 80"
+              fill="none"
+              stroke={eyeColor}
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+            <path
+              d="M 88 80 Q 97 69 106 80"
+              fill="none"
+              stroke={eyeColor}
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+          </>
+        ) : isScanning ? (
+          <>
+            <rect x="55" y="74" width="16" height="8" rx="4" fill={eyeColor} />
+            <rect x="89" y="74" width="16" height="8" rx="4" fill={eyeColor} />
+          </>
+        ) : (
+          <>
+            <circle cx="63" cy="78" r="7.5" fill={eyeColor} />
+            <circle cx="97" cy="78" r="7.5" fill={eyeColor} />
+          </>
+        )}
 
-        {/* Analog Tuning Dial Knob on Lower Right */}
-        <circle cx="112" cy="118" r="8" fill="#1C2028" />
-        <line
-          x1="112"
-          y1="112"
-          x2="112"
-          y2="118"
-          stroke="#FFFFFF"
-          strokeWidth="2"
-        />
+        {/* Theme Signature Cheek / Dial Detail */}
+        {isPom ? (
+          <>
+            <circle cx="48" cy="115" r="5" fill="#F284B6" opacity="0.7" />
+            <circle cx="112" cy="115" r="5" fill="#F284B6" opacity="0.7" />
+          </>
+        ) : (
+          <circle cx="112" cy="116" r="6" fill="#2B6B5A" opacity="0.85" />
+        )}
 
         {/* Friendly Smile */}
         <path
           d={
             isHyped
-              ? "M 62 118 Q 80 134 98 118"
-              : "M 66 120 Q 80 128 94 120"
+              ? "M 64 114 Q 80 128 96 114"
+              : "M 67 116 Q 80 124 93 116"
           }
-          stroke="#1C2028"
-          strokeWidth="4"
+          stroke={ink}
+          strokeWidth={isPom ? "5" : "4"}
           fill="none"
           strokeLinecap="round"
         />
       </svg>
 
       {showPokeTag && (
-        <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono font-bold pointer-events-none">
-          TAP TO INTERACT 👆
+        <span
+          className={`neo-tag text-[10px] px-3 py-0.5 absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap font-bold pointer-events-none ${
+            isPom
+              ? "bg-[#F7B93E] text-[#3A0C22]"
+              : "bg-[#FAEAE4] text-[#B94726]"
+          }`}
+        >
+          Tap TailorBot ✦
         </span>
       )}
     </div>

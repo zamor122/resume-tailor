@@ -28,6 +28,8 @@ import ElicitationPanel from "./ElicitationPanel";
 import TailorBot from "./neo/TailorBot";
 import NeoButton from "./neo/NeoButton";
 import NeoBadge from "./neo/NeoBadge";
+import DesignSwitcher from "./DesignSwitcher";
+import { useTheme } from "./ThemeProvider";
 import { useGamification } from "@/app/contexts/GamificationContext";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
 import { DEFAULT_PREFERENCES } from "@/app/types/tailoringPreferences";
@@ -276,6 +278,8 @@ export default function SplitScreenTailorView() {
   const prefillResumeId = searchParams?.get("prefillResumeId") ?? null;
   const prefillVersion = searchParams?.get("prefillVersion") ?? null;
   const { user, session } = useAuth();
+  const { design } = useTheme();
+  const isPom = design === "pomegranate";
   const [resume, setResume] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -734,68 +738,169 @@ export default function SplitScreenTailorView() {
             className="mt-2"
           />
         )}
-        {/* Retrofuturistic Hero Console */}
-        <section className="py-6 md:py-8">
-          <div className="neo-box bg-[#F4F1EA] p-6 md:p-8 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex-1 text-left">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 font-mono font-bold tracking-wider uppercase">
-                  🚀 Target Match Optimizer
+        {/* Dual-Design Calm Hero (Pomegranate Tactile & Warm Paper Risograph) */}
+        <section className="py-4 md:py-6">
+          <div
+            className={`rounded-[28px] overflow-hidden transition-all ${
+              isPom
+                ? "bg-white border-[2px] border-[#3A0C22] shadow-[0_5px_0_#3A0C22]"
+                : "bg-[#FFFDF8] border border-[#241F1A]/12 shadow-[5px_5px_0_rgba(43,107,90,0.14)]"
+            }`}
+          >
+            {/* Top Cream / Editorial Strip */}
+            <div
+              className={`px-5 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-2 border-b ${
+                isPom
+                  ? "bg-[#F6F1E4] border-[#3A0C22]/15"
+                  : "bg-[#EFE8DA]/55 border-[#241F1A]/10"
+              }`}
+            >
+              <span
+                className={`text-xs font-bold flex items-center gap-2 ${
+                  isPom ? "text-[#3A0C22]" : "font-mono uppercase tracking-[0.14em] text-[#D65A38] text-[11px]"
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    isPom ? "bg-[#EA375D]" : "bg-[#2B6B5A]"
+                  }`}
+                  aria-hidden="true"
+                />
+                <span>ATS Match &amp; AI Experience Studio</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-[var(--design-ink-muted)] hidden sm:inline">
+                  Theme:
                 </span>
-                <span className="text-xs font-mono text-gray-500 hidden sm:inline">
-                  SERIES-2026 • RETROFUTURISTIC
-                </span>
-              </div>
-
-              <h1 className="font-extrabold text-3xl sm:text-4xl md:text-5xl leading-tight mb-3 tracking-tight text-[#1C2028] font-display">
-                Tailor your resume to any job — <span className="bg-[#FF5722] text-white px-2 py-0.5 neo-box-sm inline-block rotate-[-1deg]">in seconds.</span>
-              </h1>
-
-              <p className="text-sm md:text-base text-gray-700 max-w-xl mb-4 leading-relaxed font-medium">
-                No generic filler. We extract your real achievements, rewrite bullets using Google&apos;s X-Y-Z formula, and boost your ATS keyword match score before your eyes.
-              </p>
-
-              <div className="flex flex-wrap items-center gap-4 pt-2">
-                <button
-                  onClick={() => {
-                    playSfx("click");
-                    analytics.trackEvent(analytics.events.CLICK, {
-                      ...analytics.getTrackingContext({ section: "hero", element: "hero_cta", label: "Get Started" }),
-                      destination: "#tailorResume",
-                    });
-                    scrollToSection("tailorResume");
-                  }}
-                  className="neo-btn bg-[#FF5722] text-white px-6 py-3 text-sm font-bold font-mono uppercase tracking-wider flex items-center gap-2"
-                >
-                  <span>⚡ START FREE TAILOR</span>
-                  <span className="bg-black/25 text-white text-[10px] px-2 py-0.5 rounded-full">+50 XP</span>
-                </button>
-                <span className="text-xs font-mono text-gray-500">
-                  {FREE_RESUME_LIMIT > 0 ? `First ${FREE_RESUME_LIMIT} free` : "Free ATS audit & preview"} • No card required
-                </span>
-              </div>
-
-              <div className="mt-5 pt-3 border-t border-black/10 flex items-center gap-4 sm:gap-6 text-xs font-mono font-bold text-gray-600 flex-wrap">
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[#10B981]">✓</span> Google X-Y-Z Formula
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[#10B981]">✓</span> Real-Time Score Gauge
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[#10B981]">✓</span> One-Time Pass from ${ENTRY_PRICE}
-                </span>
+                <DesignSwitcher variant="compact" />
               </div>
             </div>
 
-            {/* Interactive TailorBot Mascot Unit */}
-            <div className="shrink-0 flex flex-col items-center">
-              <TailorBot
-                state="idle"
-                size={140}
-                onPoke={() => pokeMascot()}
-                showPokeTag={true}
-              />
+            <div className="p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="flex-1 text-left space-y-4">
+                <h1
+                  className={`font-bold text-3xl sm:text-4xl md:text-5xl leading-[1.12] tracking-tight text-[var(--design-ink)] ${
+                    isPom ? "font-pom-display" : "font-riso-serif"
+                  }`}
+                >
+                  Tailor your resume to any job —{" "}
+                  {isPom ? (
+                    <span className="inline-block px-3 py-0.5 rounded-full bg-[#F7B93E] text-[#3A0C22] border-[2px] border-[#3A0C22] shadow-[0_3px_0_#3A0C22]">
+                      in seconds.
+                    </span>
+                  ) : (
+                    <span className="italic text-[#2B6B5A]">in seconds.</span>
+                  )}
+                </h1>
+
+                <p className="text-sm sm:text-base text-[var(--design-ink-muted)] max-w-xl leading-relaxed font-medium">
+                  No filler, no walls of text. Keep your exact 1-page fit, sharpen real impact with X-Y-Z metrics, and watch your ATS score jump live.
+                </p>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSfx("click");
+                      analytics.trackEvent(analytics.events.CLICK, {
+                        ...analytics.getTrackingContext({ section: "hero", element: "hero_cta", label: "Get Started" }),
+                        destination: "#tailorResume",
+                      });
+                      scrollToSection("tailorResume");
+                    }}
+                    className={`neo-btn px-6 py-3 text-sm font-extrabold flex items-center gap-2 ${
+                      isPom
+                        ? "bg-[#EA375D] hover:bg-[#C9224A] text-white"
+                        : "bg-[#2B6B5A] hover:bg-[#225648] text-[#FFFDF8]"
+                    }`}
+                  >
+                    <span>Start Free Tailor →</span>
+                  </button>
+                  <Link
+                    href="/futureproof"
+                    onClick={() => playSfx("click")}
+                    className={`px-5 py-3 rounded-full text-sm font-bold transition-colors border ${
+                      isPom
+                        ? "bg-[#F6F1E4] hover:bg-[#FFFDF5] text-[#3A0C22] border-[1.75px] border-[#3A0C22]"
+                        : "bg-[#FAEAE4] hover:bg-[#f6ddd4] text-[#B94726] border-[#D65A38]/25"
+                    }`}
+                  >
+                    Add AI Skills
+                  </Link>
+                </div>
+
+                <div className="pt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-[var(--design-ink-muted)]">
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[var(--design-success)] font-bold">✓</span>
+                    {FREE_RESUME_LIMIT > 0 ? `First ${FREE_RESUME_LIMIT} free` : "Free ATS audit & diff"}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[var(--design-success)] font-bold">✓</span>
+                    Strict ≤2-line bullet fit
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[var(--design-success)] font-bold">✓</span>
+                    One-time pass from ${ENTRY_PRICE}
+                  </span>
+                </div>
+              </div>
+
+              {/* Right: Signature Overlapping Score Pill + TailorBot Medallion */}
+              <div className="shrink-0 w-full md:w-[300px] flex flex-col items-center gap-3">
+                {isPom ? (
+                  <div className="w-full bg-white border-[2px] border-[#3A0C22] rounded-full p-1.5 flex items-center justify-between shadow-[0_4px_0_#3A0C22]">
+                    <div className="flex-1 bg-[#F6F1E4] rounded-l-full py-2.5 pl-3 pr-1 text-center">
+                      <div className="text-xl font-extrabold leading-none text-[#3A0C22]">58%</div>
+                      <div className="text-[10px] font-bold text-[#7D4D61] mt-0.5">Before</div>
+                    </div>
+                    <div className="w-[74px] h-[74px] -my-4 -mx-1 rounded-full bg-[#EA375D] border-[2px] border-[#3A0C22] shadow-[0_4px_0_#3A0C22] flex items-center justify-center shrink-0 z-10">
+                      <div className="w-[58px] h-[58px] rounded-full bg-[#FFFDF5] border-[1.5px] border-[#3A0C22] flex items-center justify-center">
+                        <TailorBot state="celebrating" size={44} onPoke={() => pokeMascot()} />
+                      </div>
+                    </div>
+                    <div className="flex-1 bg-[#F6F1E4] rounded-r-full py-2.5 pr-3 pl-1 text-center">
+                      <div className="text-xl font-extrabold leading-none text-[#128C66]">92%</div>
+                      <div className="text-[10px] font-bold text-[#7D4D61] mt-0.5">After</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full rounded-[24px] bg-[#F6F0E4] border border-[#241F1A]/12 p-5 text-center space-y-3">
+                    <div className="flex justify-center">
+                      <div className="w-16 h-16 rounded-full bg-[#FAEAE4] border border-[#D65A38]/25 flex items-center justify-center">
+                        <TailorBot state="celebrating" size={48} onPoke={() => pokeMascot()} />
+                      </div>
+                    </div>
+                    <p className="font-riso-serif text-xl font-bold text-[#241F1A] leading-snug">
+                      Avg. lift{" "}
+                      <span className="text-[#8C7B6B]">58%</span> →{" "}
+                      <span className="italic text-[#2B6B5A]">92%</span>
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-2 w-full">
+                  {[
+                    { k: "X-Y-Z", sub: "Metrics", pomBg: "#FFF3D6", risoBg: "#E5EFEA" },
+                    { k: "15s", sub: "Tailor", pomBg: "#E6F4FF", risoBg: "#FAEAE4" },
+                    { k: "Zero", sub: "Sub Traps", pomBg: "#E6F7EF", risoBg: "#FBF1DA" },
+                  ].map((pill) => (
+                    <div
+                      key={pill.k}
+                      className={`rounded-2xl py-2 px-2 text-center border ${
+                        isPom ? "border-[#3A0C22]/20" : "border-[#241F1A]/10"
+                      }`}
+                      style={{ backgroundColor: isPom ? pill.pomBg : pill.risoBg }}
+                    >
+                      <div className="text-xs font-extrabold text-[var(--design-ink)]">
+                        {pill.k}
+                      </div>
+                      <div className="text-[10px] font-semibold text-[var(--design-ink-muted)]">
+                        {pill.sub}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
