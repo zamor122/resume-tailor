@@ -81,7 +81,7 @@
     --design-surface: #FFFFFF;
     --design-surface-tint: #F6F1E4;
     --design-ink: #3A0C22;
-    --design-ink-muted: #7D4D61;
+    --design-ink-muted: #6B3F52;
     --design-accent: #EA375D;
     --design-accent-hover: #C9224A;
     --design-accent-ink: #FFFFFF;
@@ -109,7 +109,7 @@
     --design-surface: #FFFDF8;
     --design-surface-tint: #EFE8DA;
     --design-ink: #241F1A;
-    --design-ink-muted: #6C6358;
+    --design-ink-muted: #5A5248;
     --design-accent: #2B6B5A;
     --design-accent-hover: #215446;
     --design-accent-ink: #FFFDF8;
@@ -151,9 +151,9 @@
     background-position: 0 0, 11px 11px;
   }
 
-  h1, h2, h3 {
+  h1, h2, h3, h4 {
     text-wrap: balance;
-    line-height: 1.25;
+    line-height: 1.24;
   }
 
   :where(html[data-design]) h1,
@@ -161,7 +161,7 @@
     font-family: var(--design-font-display);
   }
 
-  p {
+  p, blockquote, li {
     text-wrap: pretty;
   }
 
@@ -966,10 +966,25 @@
   }
 }
 
+/* Replace retro typewriter font-mono with clean, readable sans across UI prose;
+   keep genuine monospace strictly on code/pre/kbd/samp elements. */
+:where(html[data-design="pomegranate"], html[data-design="risograph"])
+  .font-mono:not(pre, code, kbd, samp, pre *, code *, [data-design-isolated="true"] *) {
+  font-family: var(--design-font-body);
+  letter-spacing: 0;
+}
+
 /* Ensure legacy font-mono headings across secondary routes adopt each design's warm display font */
-:where(html[data-design="pomegranate"], html[data-design="risograph"]) :is(h1, h2, h3).font-mono:not([data-design-isolated="true"] *) {
+:where(html[data-design="pomegranate"], html[data-design="risograph"])
+  :is(h1, h2, h3).font-mono:not([data-design-isolated="true"] *) {
   font-family: var(--design-font-display);
   letter-spacing: -0.015em;
+}
+
+/* Soften dense gray text utilities for crisp, warm AA readability in both designs */
+:where(html[data-design="pomegranate"], html[data-design="risograph"])
+  :is(.text-gray-500, .text-gray-600, .text-gray-700):not([data-design-isolated="true"] *) {
+  color: var(--design-ink-muted);
 }
 
 /* ============================================================================

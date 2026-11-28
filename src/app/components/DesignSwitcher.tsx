@@ -7,22 +7,19 @@ import { useGamification } from "@/app/contexts/GamificationContext";
 const OPTIONS: Array<{
   id: DesignOption;
   label: string;
-  shortLabel: string;
   description: string;
   swatches: [string, string, string];
 }> = [
   {
     id: "pomegranate",
-    label: "Pomegranate",
-    shortLabel: "Berry",
-    description: "Playful berry & cream, tactile pills",
+    label: "Modern",
+    description: "Berry & warm cream",
     swatches: ["#EA375D", "#FFFDF5", "#F7B93E"],
   },
   {
     id: "risograph",
-    label: "Risograph",
-    shortLabel: "Paper",
-    description: "Warm sand paper, sage & editorial serif",
+    label: "Classic",
+    description: "Warm paper & serif",
     swatches: ["#F6F0E4", "#2B6B5A", "#D65A38"],
   },
 ];
@@ -31,12 +28,12 @@ export default function DesignSwitcher({
   variant = "compact",
   className = "",
 }: {
-  variant?: "compact" | "menu" | "footer";
+  variant?: "compact" | "menu";
   className?: string;
 }) {
   const { design, setDesign } = useTheme();
   const { playSfx } = useGamification();
-  const isPom = design === "pomegranate";
+  const isModern = design === "pomegranate";
 
   const handleSelect = (next: DesignOption) => {
     if (next === design) return;
@@ -48,16 +45,16 @@ export default function DesignSwitcher({
     return (
       <div className={`space-y-2 ${className}`}>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--design-ink-muted)]">
-            Site Design
+          <span className="text-xs font-bold text-[var(--design-ink-muted)]">
+            Design Theme
           </span>
-          <span className="text-[11px] font-semibold text-[var(--design-accent)]">
-            {isPom ? "Pomegranate" : "Warm Paper"}
+          <span className="text-xs font-bold text-[var(--design-accent)]">
+            {isModern ? "Modern" : "Classic"}
           </span>
         </div>
         <div
           role="radiogroup"
-          aria-label="Choose site design"
+          aria-label="Choose design theme"
           className="grid grid-cols-2 gap-2"
         >
           {OPTIONS.map((opt) => {
@@ -69,15 +66,15 @@ export default function DesignSwitcher({
                 role="radio"
                 aria-checked={active}
                 onClick={() => handleSelect(opt.id)}
-                className={`p-2.5 rounded-2xl text-left transition-all border ${
+                className={`p-3 rounded-2xl text-left transition-all border ${
                   active
-                    ? isPom
+                    ? isModern
                       ? "bg-[#FFFDF5] border-[2px] border-[#3A0C22] shadow-[0_2px_0_#3A0C22]"
                       : "bg-[#FFFDF8] border-[#2B6B5A] shadow-[2px_2px_0_rgba(43,107,90,0.2)]"
                     : "bg-[var(--design-surface-tint)]/70 border-transparent opacity-80 hover:opacity-100"
                 }`}
               >
-                <div className="flex items-center justify-between gap-1 mb-1">
+                <div className="flex items-center justify-between gap-1 mb-1.5">
                   <span className="flex -space-x-1" aria-hidden="true">
                     {opt.swatches.map((color, idx) => (
                       <span
@@ -89,17 +86,17 @@ export default function DesignSwitcher({
                   </span>
                   {active && (
                     <span
-                      className="text-[10px] font-extrabold text-[var(--design-accent)]"
+                      className="text-xs font-extrabold text-[var(--design-accent)]"
                       aria-hidden="true"
                     >
                       ✓
                     </span>
                   )}
                 </div>
-                <div className="text-xs font-bold text-[var(--design-ink)] leading-tight">
+                <div className="text-sm font-bold text-[var(--design-ink)] leading-tight">
                   {opt.label}
                 </div>
-                <div className="text-[10px] text-[var(--design-ink-muted)] leading-tight mt-0.5">
+                <div className="text-xs text-[var(--design-ink-muted)] leading-snug mt-0.5">
                   {opt.description}
                 </div>
               </button>
@@ -113,13 +110,9 @@ export default function DesignSwitcher({
   return (
     <div
       role="radiogroup"
-      aria-label="Switch website design"
+      aria-label="Switch design theme"
       className={`inline-flex items-center rounded-full p-0.5 shrink-0 ${
-        variant === "footer"
-          ? isPom
-            ? "bg-white border-[1.75px] border-[#3A0C22] shadow-[0_2px_0_#3A0C22]"
-            : "bg-[#FFFDF8] border border-[#241F1A]/15"
-          : isPom
+        isModern
           ? "bg-white border-[1.75px] border-[#3A0C22] shadow-[0_2px_0_#3A0C22]"
           : "bg-[#FFFDF8] border border-[#241F1A]/15"
       } ${className}`}
@@ -134,14 +127,14 @@ export default function DesignSwitcher({
             aria-checked={active}
             onClick={() => handleSelect(opt.id)}
             title={`Switch to ${opt.label} design`}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all whitespace-nowrap ${
+            className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap ${
               active
-                ? isPom
+                ? isModern
                   ? "bg-[#F6F1E4] text-[#3A0C22] border border-[#3A0C22]/30"
                   : "bg-[#2B6B5A] text-[#FFFDF8] border border-[#2B6B5A]"
-                : isPom
-                ? "text-[#7D4D61] hover:text-[#3A0C22] border border-transparent"
-                : "text-[#6C6358] hover:text-[#241F1A] border border-transparent"
+                : isModern
+                ? "text-[#6B3F52] hover:text-[#3A0C22] border border-transparent"
+                : "text-[#5C544B] hover:text-[#241F1A] border border-transparent"
             }`}
           >
             <span className="flex -space-x-1" aria-hidden="true">

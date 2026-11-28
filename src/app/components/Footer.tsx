@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import TailorBot from "./neo/TailorBot";
-import DesignSwitcher from "./DesignSwitcher";
 import { useTheme } from "./ThemeProvider";
 
 export default function Footer() {
@@ -80,10 +79,9 @@ export default function Footer() {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--design-ink-muted)]">
           <p>© {currentYear} AI Resume Tailor. All rights reserved.</p>
-          <div className="flex items-center gap-2.5">
-            <span className="font-semibold">Style:</span>
-            <DesignSwitcher variant="footer" />
-          </div>
+          <p className="font-medium">
+            One-time passes · Zero subscriptions · Private by default
+          </p>
         </div>
       </div>
     </footer>

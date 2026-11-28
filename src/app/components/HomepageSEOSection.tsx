@@ -1,102 +1,101 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import { FREE_RESUME_LIMIT, FREE_AUDIT_LIMIT } from "@/app/config/pricing";
 
 /**
- * Below-the-fold SEO content section for the homepage.
- * Provides indexable text for search engines without cluttering the main tool UI.
+ * Progressive-disclosure FAQ & guide section below the fold.
+ * Shows only concise questions by default so the homepage stays calm and
+ * scannable, while keeping full helpful explanations 1 tap away.
  */
 export default function HomepageSEOSection() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const items = [
+    {
+      q: "Why tailor your resume for every job?",
+      a: "Recruiters and applicant tracking systems (ATS) scan for the exact skills and language in each job posting. Tailoring highlights your most relevant achievements without keyword stuffing so you pass automated screens and read naturally to hiring managers.",
+    },
+    {
+      q: "How does AI Resume Tailor work?",
+      a: "Paste your resume and target job description. We identify missing keywords, reframe your real impact using Google's X-Y-Z structure, preserve your 1-page layout, and show side-by-side diffs so you approve every single line.",
+    },
+    {
+      q: "Is it free to try?",
+      a:
+        FREE_RESUME_LIMIT > 0
+          ? `Yes — start with no credit card for a free preview, then create a free account to get your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume" : "resumes"} free. After that, passes are strictly one-time starting at $9.`
+          : `Yes — try a free ATS match audit and bullet preview with no credit card, and unlock up to ${FREE_AUDIT_LIMIT} free audits with a free account. Paid passes start at $9 one-time and never auto-renew.`,
+    },
+    {
+      q: "Will my resume sound robotic or like AI?",
+      a: "No. We avoid generic clichés and keep your authentic voice. Every edit is transparent, concise (≤2 lines per bullet), and grounded in your real work history.",
+    },
+  ];
+
   return (
     <section
       id="about-resume-tailoring"
-      className="py-12 md:py-16 border-t-2 border-[#1C2028] mt-12 md:mt-16"
+      className="py-10 md:py-12 border-t border-[var(--design-border-soft)] mt-10 md:mt-14"
     >
-      <div className="max-w-3xl mx-auto px-4 space-y-10 text-gray-800 dark:text-gray-300">
-        <div className="p-6 rounded-2xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028]">
-          <h2 className="text-xl sm:text-2xl font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-4 uppercase">
-            Why You Need to Tailor Your Resume for Every Job
-          </h2>
-          <p className="font-mono text-xs sm:text-sm leading-relaxed mb-4">
-            Most job seekers send the same resume to dozens of openings. But recruiters and applicant tracking systems (ATS) look for specific keywords and phrases from each job description. A generic resume rarely makes it past the initial screen. Tailoring your resume for each role—emphasizing relevant skills, matching the language of the posting, and highlighting the right achievements—dramatically increases your chances of landing an interview.
-          </p>
-          <p className="font-mono text-xs sm:text-sm leading-relaxed">
-            Our free AI resume tailor acts as both a <strong>job description matcher</strong> and an <strong>ATS resume checker</strong>. It analyzes the job posting, identifies what recruiters are looking for, and rewrites your experience to align—without keyword stuffing or robotic phrasing. You get a resume that passes ATS filters while still sounding like you.
-          </p>
-        </div>
-
-        <div className="p-6 rounded-2xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028]">
-          <h2 className="text-xl sm:text-2xl font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-4 uppercase">
-            How AI Resume Tailoring Works
-          </h2>
-          <p className="font-mono text-xs sm:text-sm leading-relaxed mb-4">
-            AI resume tailoring uses natural language processing to understand both your resume and the job description. The tool identifies overlapping skills, missing keywords, and opportunities to reframe your experience. It then rewrites your bullet points to emphasize relevance while preserving your voice. Unlike generic AI resume builders that produce stiff, repetitive text, our resume optimizer focuses on natural phrasing and variation.
-          </p>
-          <p className="font-mono text-xs sm:text-sm leading-relaxed">
-            You paste your resume and the job posting, click one button, and receive a tailored version with a relevancy score. No manual editing required. It&apos;s the fastest way to create job-specific resumes without spending hours on each application.
-          </p>
-        </div>
-
-        <div className="p-6 rounded-2xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028]">
-          <h2 className="text-xl sm:text-2xl font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-4 uppercase">
-            Frequently Asked Questions
-          </h2>
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-1.5 text-sm sm:text-base">
-                How does AI resume tailoring work?
-              </h3>
-              <p className="font-mono text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                You provide your resume and the job description. Our AI analyzes both, identifies key requirements and keywords, and rewrites your experience to match—while keeping your voice and avoiding robotic language. The result is a tailored resume optimized for that specific role.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-1.5 text-sm sm:text-base">
-                Is this free?
-              </h3>
-              <p className="font-mono text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                Yes. You can try it right now with no login — paste your resume and the job posting for 1 free preview to see your score and the keywords you are missing.{" "}
-                {FREE_RESUME_LIMIT > 0
-                  ? `Create a free account (Google or email, no credit card) to save it and get your first ${FREE_RESUME_LIMIT} tailored ${FREE_RESUME_LIMIT === 1 ? "resume" : "resumes"} free.`
-                  : `Create a free account (Google or email, no credit card) to save your progress and get up to ${FREE_AUDIT_LIMIT} free ATS audits & bullet previews.`}
-                {" "}After that, access is a one-time pass starting at $9, and nothing auto-renews.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-1.5 text-sm sm:text-base">
-                Does this work with ATS systems?
-              </h3>
-              <p className="font-mono text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                Yes. The output is formatted for applicant tracking systems and includes relevant keywords from the job description. We avoid the robotic keyword stuffing that screams &quot;AI wrote this&quot;—so your resume passes ATS filters while still reading naturally to recruiters.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-mono font-bold text-[#1C2028] dark:text-[#FAF7F0] mb-1.5 text-sm sm:text-base">
-                Will it make my resume sound like every other AI resume?
-              </h3>
-              <p className="font-mono text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                No. We&apos;re built to avoid the telltale AI resume: no &quot;leveraged&quot; and &quot;synergized&quot; every other word, no perfectly uniform bullet structures. The result reads like a real person wrote it—because we optimize for natural phrasing and your voice, not just keyword density.
-              </p>
-            </div>
+      <div className="max-w-3xl mx-auto px-4 space-y-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--design-ink)]">
+              Common Questions
+            </h2>
+            <p className="text-sm text-[var(--design-ink-muted)] mt-1">
+              Tap any topic to learn more — zero clutter until you need it.
+            </p>
           </div>
-          <p className="mt-6 pt-4 border-t border-[#1C2028]/20">
-            <Link
-              href="/faq"
-              className="text-[#FF5722] hover:underline font-mono font-bold text-xs sm:text-sm"
-            >
-              View all FAQs →
-            </Link>
-          </p>
+          <Link
+            href="/faq"
+            className="text-sm font-bold text-[var(--design-accent)] hover:underline"
+          >
+            All FAQs →
+          </Link>
         </div>
 
-        <div className="pt-6 text-center">
-          <Link
-            href="/#tailorResume"
-            className="neo-btn inline-block px-8 py-3.5 bg-[#FF5722] hover:bg-[#F4511E] text-white font-mono font-bold text-sm rounded-xl border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028] transition-all"
-          >
-            ⚡ TRY THE FREE RESUME OPTIMIZER
-          </Link>
+        <div className="neo-box bg-[var(--design-surface)] overflow-hidden divide-y divide-[var(--design-border-soft)]">
+          {items.map((item, idx) => {
+            const isOpen = openIndex === idx;
+            return (
+              <div key={item.q}>
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => setOpenIndex(isOpen ? null : idx)}
+                  className="w-full px-5 sm:px-6 py-4 flex items-center justify-between gap-4 text-left hover:bg-[var(--design-surface-tint)]/50 transition-colors"
+                >
+                  <span className="text-sm sm:text-base font-bold text-[var(--design-ink)]">
+                    {item.q}
+                  </span>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className={`shrink-0 text-[var(--design-ink-muted)] transition-transform duration-200 ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+                {isOpen && (
+                  <div className="px-5 sm:px-6 pb-5 text-sm sm:text-[15px] leading-relaxed text-[var(--design-ink-muted)] max-w-[62ch]">
+                    {item.a}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

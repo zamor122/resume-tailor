@@ -21,7 +21,7 @@ export default function Navigation() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { streak, xp, level, sfxEnabled, toggleSfx, playSfx } = useGamification();
-  const { design, toggleDesign } = useTheme();
+  const { design } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isFunnelMode, setIsFunnelMode] = useState(false);
@@ -155,7 +155,7 @@ export default function Navigation() {
           </div>
 
           <div className="flex items-center gap-2">
-            <DesignSwitcher variant="compact" className="hidden sm:inline-flex" />
+            <DesignSwitcher variant="compact" className="hidden md:inline-flex" />
             {hasActivePass ? (
               <span className="px-2.5 py-1 rounded-full bg-[#E6F7EF] border border-[#128C66]/40 text-[#125D44] text-xs font-bold">
                 ✓ Pass Active
@@ -313,35 +313,10 @@ export default function Navigation() {
           </Link>
         </div>
 
-        {/* Right: Instant Design Switcher + Primary CTA + Menu Button */}
+        {/* Right: Single Desktop Design Switcher + Primary CTA + Menu Button */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Desktop / Tablet Segmented Design Switcher */}
-          <DesignSwitcher variant="compact" className="hidden lg:inline-flex" />
-
-          {/* Mobile / Compact 1-Tap Design Flip Pill */}
-          <button
-            type="button"
-            onClick={() => {
-              playSfx("click");
-              toggleDesign();
-            }}
-            aria-label={`Switch to ${isPom ? "Warm Paper Risograph" : "Pomegranate"} design`}
-            title={`Switch to ${isPom ? "Warm Paper Risograph" : "Pomegranate"} design`}
-            className={`lg:hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-all ${
-              isPom
-                ? "bg-white text-[#3A0C22] border-[1.75px] border-[#3A0C22] shadow-[0_2px_0_#3A0C22]"
-                : "bg-[#FFFDF8] text-[#241F1A] border border-[#241F1A]/18"
-            }`}
-          >
-            <span
-              className="w-2.5 h-2.5 rounded-full border border-black/25 shrink-0"
-              style={{ backgroundColor: isPom ? "#2B6B5A" : "#EA375D" }}
-              aria-hidden="true"
-            />
-            <span className="inline">
-              {isPom ? "Paper" : "Berry"}
-            </span>
-          </button>
+          {/* Desktop Top-Nav Theme Switcher (Modern | Classic) — Hidden on Mobile */}
+          <DesignSwitcher variant="compact" className="hidden md:inline-flex" />
 
           {user ? (
             <Link
@@ -429,40 +404,51 @@ export default function Navigation() {
               : "bg-[#FFFDF8] text-[#241F1A] border-t md:border border-[#241F1A]/15 md:shadow-[6px_6px_0_rgba(43,107,90,0.16)]"
           }`}
         >
-          {/* Full Visual Design Switcher inside Menu */}
-          <DesignSwitcher variant="menu" />
+          {/* Mobile-Only Central Design Theme Switcher (Modern | Classic) */}
+          <DesignSwitcher variant="menu" className="md:hidden" />
 
           {/* Active Pass Time Limit */}
           {hasActivePass && accessInfo?.expiresAt && (
             <div className="p-3 rounded-2xl bg-[var(--design-success-tint)] border border-[var(--design-success)]/30 text-[var(--design-success)] space-y-0.5">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 text-xs font-bold">
                 <span className="w-2 h-2 rounded-full bg-[var(--design-success)]" aria-hidden="true" />
                 <span>{accessInfo.tierLabel || "Active Pass"}</span>
               </div>
-              <p className="text-xs font-bold">
+              <p className="text-xs font-semibold">
                 {formatRemainingTime(accessInfo.expiresAt)}
               </p>
             </div>
           )}
 
-          {/* Standalone Futureproof Feature Link */}
+          {/* Futureproof Primary Action Button inside Menu */}
           <Link
             href="/futureproof"
             aria-current={pathname?.startsWith("/futureproof") ? "page" : undefined}
-            onClick={() => playSfx("click")}
-            className={`p-3 rounded-2xl border transition-colors ${
+            onClick={() => {
+              playSfx("click");
+              setMenuOpen(false);
+            }}
+            className={`neo-btn w-full px-4 py-3 flex items-center justify-between gap-2 text-left transition-transform active:translate-y-0.5 ${
               isPom
-                ? "bg-[#FDE7EE] border-[#3A0C22]/25 hover:border-[#3A0C22] text-[#3A0C22]"
-                : "bg-[#FAEAE4] border-[#D65A38]/25 hover:border-[#D65A38] text-[#241F1A]"
+                ? "bg-[#EA375D] hover:bg-[#C9224A] text-white"
+                : "bg-[#2B6B5A] hover:bg-[#225648] text-[#FFFDF8]"
             }`}
           >
-            <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider">
-              <span className={isPom ? "text-[#C41E46]" : "text-[#B94726]"}>
-                NEW · FUTUREPROOF
+            <span className="flex flex-col">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider opacity-90">
+                <span className="px-1.5 py-0.5 rounded-full bg-white/20">NEW</span>
+                <span>Futureproof AI</span>
               </span>
-              <span>→</span>
-            </div>
-            <p className="text-xs font-bold mt-0.5">Add AI Skills to Resume</p>
+              <span className="text-sm font-bold leading-snug mt-0.5">
+                Add AI Skills to Resume
+              </span>
+            </span>
+            <span
+              className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm font-extrabold shrink-0"
+              aria-hidden="true"
+            >
+              →
+            </span>
           </Link>
 
           {/* Mobile Navigation Links */}
@@ -475,7 +461,10 @@ export default function Navigation() {
                   key={href}
                   href={href}
                   aria-current={isActive ? "page" : undefined}
-                  onClick={() => playSfx("click")}
+                  onClick={() => {
+                    playSfx("click");
+                    setMenuOpen(false);
+                  }}
                   className={`px-3.5 py-2 rounded-full text-xs font-bold ${
                     isActive
                       ? "bg-[var(--design-accent)] text-[var(--design-accent-ink)]"
@@ -489,7 +478,10 @@ export default function Navigation() {
             <Link
               href="/profile"
               aria-current={pathname?.startsWith("/profile") ? "page" : undefined}
-              onClick={() => playSfx("click")}
+              onClick={() => {
+                playSfx("click");
+                setMenuOpen(false);
+              }}
               className={`px-3.5 py-2 rounded-full text-xs font-bold ${
                 pathname?.startsWith("/profile")
                   ? "bg-[var(--design-accent)] text-[var(--design-accent-ink)]"

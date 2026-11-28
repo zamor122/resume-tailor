@@ -16,8 +16,12 @@ export const DESIGN_STORAGE_KEY = "airesumetailor_design";
 
 const VALID_DESIGNS: readonly DesignOption[] = ["pomegranate", "risograph"];
 
-function isValidDesign(val: string | null | undefined): val is DesignOption {
-  return val === "pomegranate" || val === "risograph";
+function parseDesignParam(val: string | null | undefined): DesignOption | null {
+  if (!val) return null;
+  const lower = val.toLowerCase();
+  if (lower === "pomegranate" || lower === "modern") return "pomegranate";
+  if (lower === "risograph" || lower === "classic") return "risograph";
+  return null;
 }
 
 interface ThemeContextValue {
@@ -68,20 +72,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.colorScheme = "light";
     if (body) body.style.colorScheme = "light";
 
-    // Resolve persisted or URL-requested design option (?design=pomegranate|risograph)
+    // Resolve persisted or URL-requested design option (?design=modern|classic|pomegranate|risograph)
     let resolved: DesignOption = "pomegranate";
     try {
       const params = new URLSearchParams(window.location.search);
-      const queryDesign = params.get("design")?.toLowerCase();
-      const attrDesign = root.getAttribute("data-design");
-      const storedDesign = window.localStorage.getItem(DESIGN_STORAGE_KEY);
+      const queryDesign = parseDesignParam(params.get("design"));
+      const attrDesign = parseDesignParam(root.getAttribute("data-design"));
+      const storedDesign = parseDesignParam(
+        window.localStorage.getItem(DESIGN_STORAGE_KEY)
+      );
 
-      if (isValidDesign(queryDesign)) {
+      if (queryDesign) {
         resolved = queryDesign;
         window.localStorage.setItem(DESIGN_STORAGE_KEY, queryDesign);
-      } else if (isValidDesign(storedDesign)) {
+      } else if (storedDesign) {
         resolved = storedDesign;
-      } else if (isValidDesign(attrDesign)) {
+      } else if (attrDesign) {
         resolved = attrDesign;
       }
     } catch {

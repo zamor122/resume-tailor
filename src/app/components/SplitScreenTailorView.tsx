@@ -28,7 +28,6 @@ import ElicitationPanel from "./ElicitationPanel";
 import TailorBot from "./neo/TailorBot";
 import NeoButton from "./neo/NeoButton";
 import NeoBadge from "./neo/NeoBadge";
-import DesignSwitcher from "./DesignSwitcher";
 import { useTheme } from "./ThemeProvider";
 import { useGamification } from "@/app/contexts/GamificationContext";
 import type { TailoringPreferences } from "@/app/types/tailoringPreferences";
@@ -738,7 +737,7 @@ export default function SplitScreenTailorView() {
             className="mt-2"
           />
         )}
-        {/* Dual-Design Calm Hero (Pomegranate Tactile & Warm Paper Risograph) */}
+        {/* Dual-Design Calm Hero (Modern & Classic) */}
         <section className="py-4 md:py-6">
           <div
             className={`rounded-[28px] overflow-hidden transition-all ${
@@ -747,36 +746,7 @@ export default function SplitScreenTailorView() {
                 : "bg-[#FFFDF8] border border-[#241F1A]/12 shadow-[5px_5px_0_rgba(43,107,90,0.14)]"
             }`}
           >
-            {/* Top Cream / Editorial Strip */}
-            <div
-              className={`px-5 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-2 border-b ${
-                isPom
-                  ? "bg-[#F6F1E4] border-[#3A0C22]/15"
-                  : "bg-[#EFE8DA]/55 border-[#241F1A]/10"
-              }`}
-            >
-              <span
-                className={`text-xs font-bold flex items-center gap-2 ${
-                  isPom ? "text-[#3A0C22]" : "font-mono uppercase tracking-[0.14em] text-[#D65A38] text-[11px]"
-                }`}
-              >
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    isPom ? "bg-[#EA375D]" : "bg-[#2B6B5A]"
-                  }`}
-                  aria-hidden="true"
-                />
-                <span>ATS Match &amp; AI Experience Studio</span>
-              </span>
-              <div className="flex items-center gap-2 lg:hidden">
-                <span className="text-[11px] font-semibold text-[var(--design-ink-muted)] hidden sm:inline">
-                  Theme:
-                </span>
-                <DesignSwitcher variant="compact" />
-              </div>
-            </div>
-
-            <div className="p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="p-6 sm:p-9 flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="flex-1 text-left space-y-4">
                 <h1
                   className={`font-bold text-3xl sm:text-4xl md:text-5xl leading-[1.12] tracking-tight text-[var(--design-ink)] ${
@@ -793,8 +763,8 @@ export default function SplitScreenTailorView() {
                   )}
                 </h1>
 
-                <p className="text-sm sm:text-base text-[var(--design-ink-muted)] max-w-xl leading-relaxed font-medium">
-                  No filler, no walls of text. Keep your exact 1-page fit, sharpen real impact with X-Y-Z metrics, and watch your ATS score jump live.
+                <p className="text-[15px] sm:text-base text-[var(--design-ink-muted)] max-w-lg leading-relaxed font-medium">
+                  Keep your 1-page fit, sharpen real achievements, and watch your ATS match jump live.
                 </p>
 
                 <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -829,29 +799,29 @@ export default function SplitScreenTailorView() {
                   </Link>
                 </div>
 
-                <div className="pt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-[var(--design-ink-muted)]">
+                <div className="pt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs sm:text-[13px] font-semibold text-[var(--design-ink-muted)]">
                   <span className="flex items-center gap-1.5">
                     <span className="text-[var(--design-success)] font-bold">✓</span>
-                    {FREE_RESUME_LIMIT > 0 ? `First ${FREE_RESUME_LIMIT} free` : "Free ATS audit & diff"}
+                    {FREE_RESUME_LIMIT > 0 ? `First ${FREE_RESUME_LIMIT} free` : "Free ATS audit"}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="text-[var(--design-success)] font-bold">✓</span>
-                    Strict ≤2-line bullet fit
+                    1-page fit preserved
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="text-[var(--design-success)] font-bold">✓</span>
-                    One-time pass from ${ENTRY_PRICE}
+                    One-time from ${ENTRY_PRICE}
                   </span>
                 </div>
               </div>
 
               {/* Right: Signature Overlapping Score Pill + TailorBot Medallion */}
-              <div className="shrink-0 w-full md:w-[300px] flex flex-col items-center gap-3">
+              <div className="shrink-0 w-full md:w-[290px] flex flex-col items-center gap-3">
                 {isPom ? (
                   <div className="w-full bg-white border-[2px] border-[#3A0C22] rounded-full p-1.5 flex items-center justify-between shadow-[0_4px_0_#3A0C22]">
                     <div className="flex-1 bg-[#F6F1E4] rounded-l-full py-2.5 pl-3 pr-1 text-center">
                       <div className="text-xl font-extrabold leading-none text-[#3A0C22]">58%</div>
-                      <div className="text-[10px] font-bold text-[#7D4D61] mt-0.5">Before</div>
+                      <div className="text-[11px] font-bold text-[#6B3F52] mt-0.5">Before</div>
                     </div>
                     <div className="w-[74px] h-[74px] -my-4 -mx-1 rounded-full bg-[#EA375D] border-[2px] border-[#3A0C22] shadow-[0_4px_0_#3A0C22] flex items-center justify-center shrink-0 z-10">
                       <div className="w-[58px] h-[58px] rounded-full bg-[#FFFDF5] border-[1.5px] border-[#3A0C22] flex items-center justify-center">
@@ -860,7 +830,7 @@ export default function SplitScreenTailorView() {
                     </div>
                     <div className="flex-1 bg-[#F6F1E4] rounded-r-full py-2.5 pr-3 pl-1 text-center">
                       <div className="text-xl font-extrabold leading-none text-[#128C66]">92%</div>
-                      <div className="text-[10px] font-bold text-[#7D4D61] mt-0.5">After</div>
+                      <div className="text-[11px] font-bold text-[#6B3F52] mt-0.5">After</div>
                     </div>
                   </div>
                 ) : (
@@ -877,29 +847,6 @@ export default function SplitScreenTailorView() {
                     </p>
                   </div>
                 )}
-
-                <div className="grid grid-cols-3 gap-2 w-full">
-                  {[
-                    { k: "X-Y-Z", sub: "Metrics", pomBg: "#FFF3D6", risoBg: "#E5EFEA" },
-                    { k: "15s", sub: "Tailor", pomBg: "#E6F4FF", risoBg: "#FAEAE4" },
-                    { k: "Zero", sub: "Sub Traps", pomBg: "#E6F7EF", risoBg: "#FBF1DA" },
-                  ].map((pill) => (
-                    <div
-                      key={pill.k}
-                      className={`rounded-2xl py-2 px-2 text-center border ${
-                        isPom ? "border-[#3A0C22]/20" : "border-[#241F1A]/10"
-                      }`}
-                      style={{ backgroundColor: isPom ? pill.pomBg : pill.risoBg }}
-                    >
-                      <div className="text-xs font-extrabold text-[var(--design-ink)]">
-                        {pill.k}
-                      </div>
-                      <div className="text-[10px] font-semibold text-[var(--design-ink-muted)]">
-                        {pill.sub}
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
@@ -1070,73 +1017,55 @@ export default function SplitScreenTailorView() {
           </div>
         )}
 
-        {/* Sticky Mobile Floating Action Bar */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FAF7F0] border-t-2 border-[#1C2028] p-3 px-4 shadow-[0px_-4px_0px_rgba(28,32,40,0.15)] flex items-center justify-between gap-3">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-mono font-bold text-[#1C2028]">
-              {resume.trim().length >= 100 && jobDescription.trim().length >= 100
-                ? "⚡ READY TO TAILOR"
-                : `${resume.trim().length < 100 ? "ADD RESUME" : ""} ${jobDescription.trim().length < 100 ? "ADD JOB POSTING" : ""}`}
-            </span>
-            <div className="flex items-center gap-1.5 text-[10px] font-mono text-gray-600">
-              <span className={resume.trim().length >= 100 ? "text-[#10B981] font-bold" : ""}>
-                Resume {resume.trim().length >= 100 ? "✓" : "..."}
-              </span>
-              <span>•</span>
-              <span className={jobDescription.trim().length >= 100 ? "text-[#10B981] font-bold" : ""}>
-                Job {jobDescription.trim().length >= 100 ? "✓" : "..."}
-              </span>
-            </div>
+        {/* Floating Mobile Ready-to-Tailor Action Pill — only shown when both inputs are ready, cleanly above MobileBottomNav */}
+        {resume.trim().length >= 100 && jobDescription.trim().length >= 100 && (
+          <div className="md:hidden fixed bottom-[84px] inset-x-4 z-40">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                playSfx("click");
+                handleTailor();
+              }}
+              className="neo-btn w-full py-3.5 px-5 bg-[var(--design-accent)] text-[var(--design-accent-ink)] text-sm font-extrabold flex items-center justify-center gap-2 shadow-lg"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>{agentTool ? `${agentTool}...` : "Tailoring..."}</span>
+                </>
+              ) : (
+                <span>Tailor My Resume →</span>
+              )}
+            </button>
           </div>
+        )}
 
-          <button
-            type="button"
-            disabled={loading || !resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100}
-            onClick={() => {
-              playSfx("click");
-              handleTailor();
-            }}
-            className={`neo-btn px-4 py-2 font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 ${
-              loading || !resume.trim() || !jobDescription.trim() || resume.trim().length < 100 || jobDescription.trim().length < 100
-                ? "bg-[#E5E0D8] text-gray-400 border border-gray-400 cursor-not-allowed shadow-none"
-                : "bg-[#FF5722] text-white border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028] active:translate-x-[1px] active:translate-y-[1px]"
-            }`}
-          >
-            {loading ? (
-              <>
-                <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <span>{agentTool ? `${agentTool}...` : "Tailoring..."}</span>
-              </>
-            ) : (
-              <span>⚡ TAILOR RESUME</span>
-            )}
-          </button>
-        </div>
-
-        {/* How It Works - below the form */}
+        {/* How It Works - concise, calm 3-step visual strip */}
         <section id="howItWorks" className="py-6 md:py-8">
-          <h2 className="text-xl md:text-2xl font-mono font-bold text-center text-[#1C2028] dark:text-[#FAF7F0] mb-6 md:mb-8 uppercase tracking-wide">
-            How to Optimize Your Resume for ATS and Job Descriptions
+          <h2 className="text-xl md:text-2xl font-bold text-center text-[var(--design-ink)] mb-6">
+            How it works in 3 steps
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8">
-            <div className="text-center p-4 rounded-xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028]">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#FF5722] text-white flex items-center justify-center font-mono font-bold text-lg border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]">1</div>
-              <h3 className="font-mono font-bold text-sm sm:text-base text-[#1C2028] dark:text-[#FAF7F0] mb-2 uppercase">Add your resume</h3>
-              <p className="text-xs font-mono text-gray-600 dark:text-gray-400">Upload a PDF or paste your resume text</p>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028]">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#F59E0B] text-white flex items-center justify-center font-mono font-bold text-lg border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]">2</div>
-              <h3 className="font-mono font-bold text-sm sm:text-base text-[#1C2028] dark:text-[#FAF7F0] mb-2 uppercase">Paste the job posting</h3>
-              <p className="text-xs font-mono text-gray-600 dark:text-gray-400">Copy the job description you&apos;re applying for</p>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-[#FAF7F0] dark:bg-[#161B22] border-2 border-[#1C2028] shadow-[3px_3px_0px_#1C2028]">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#10B981] text-white flex items-center justify-center font-mono font-bold text-lg border-2 border-[#1C2028] shadow-[2px_2px_0px_#1C2028]">3</div>
-              <h3 className="font-mono font-bold text-sm sm:text-base text-[#1C2028] dark:text-[#FAF7F0] mb-2 uppercase">Get ATS-Optimized Bullets</h3>
-              <p className="text-xs font-mono text-gray-600 dark:text-gray-400">Receive a tailored version that matches the job, sounds human, and keeps your voice</p>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {[
+              { n: "1", title: "Add your resume", body: "Upload a PDF or paste your text.", bg: isPom ? "#F7B93E" : "#E5EFEA", ink: isPom ? "#3A0C22" : "#2B6B5A" },
+              { n: "2", title: "Paste the job", body: "Drop a job link or posting.", bg: isPom ? "#7BC6FA" : "#FAEAE4", ink: isPom ? "#3A0C22" : "#B94726" },
+              { n: "3", title: "Approve & export", body: "Review clean diffs and download.", bg: isPom ? "#74D4A0" : "#FBF1DA", ink: isPom ? "#3A0C22" : "#8E620C" },
+            ].map((step) => (
+              <div key={step.n} className="neo-box bg-[var(--design-surface)] p-5 text-center space-y-2.5">
+                <div
+                  className="w-10 h-10 mx-auto rounded-full flex items-center justify-center font-extrabold text-sm border border-[var(--design-border)]"
+                  style={{ backgroundColor: step.bg, color: step.ink }}
+                >
+                  {step.n}
+                </div>
+                <h3 className="font-bold text-base text-[var(--design-ink)]">{step.title}</h3>
+                <p className="text-sm text-[var(--design-ink-muted)] leading-relaxed">{step.body}</p>
+              </div>
+            ))}
           </div>
         </section>
 

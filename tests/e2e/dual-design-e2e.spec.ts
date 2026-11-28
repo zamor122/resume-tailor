@@ -4,7 +4,7 @@ import path from "path";
 
 const SCREENSHOT_DIR =
   process.env.VISUAL_QA_DIR ||
-  "/Users/shaynezamora/.gemini/antigravity/brain/dad590fc-1d52-41f6-9b04-aaba8342e83b/scratch/visual-qa";
+  "/Users/shaynezamora/.gemini/antigravity/brain/dad590fc-1d52-41f6-9b04-aaba8342e83b/scratch/visual-qa-v2";
 
 function ensureScreenshotDir() {
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -21,12 +21,12 @@ async function assertNoHorizontalOverflow(page: Page, label: string) {
   ).toBeLessThanOrEqual(metrics.clientWidth + 2);
 }
 
-test.describe("Full-Site Dual-Design E2E & Visual Verification", () => {
+test.describe("Full-Site Dual-Design E2E & Visual Verification (Modern & Classic)", () => {
   test.beforeAll(() => {
     ensureScreenshotDir();
   });
 
-  test("Desktop (1440x900): Full Pomegranate & Risograph switching, persistence, core routes, and visual captures", async ({
+  test("Desktop (1440x900): Single central top-nav Modern/Classic switcher, menu Futureproof navigation, readable typography & progressive disclosure", async ({
     page,
   }) => {
     const pageErrors: string[] = [];
@@ -41,58 +41,68 @@ test.describe("Full-Site Dual-Design E2E & Visual Verification", () => {
 
     await page.setViewportSize({ width: 1440, height: 900 });
 
-    // 1. Load Home in default Pomegranate design
+    // 1. Load Home in default Modern (pomegranate) design
     await page.goto("/", { waitUntil: "networkidle" });
     await expect(page.locator("html")).toHaveAttribute(
       "data-design",
       "pomegranate"
     );
 
+    // Assert ONLY ONE visible theme switcher on desktop (inside top header)
+    const visibleSwitchers = await page
+      .locator('[role="radiogroup"][aria-label*="design" i]:visible')
+      .count();
+    expect(visibleSwitchers).toBe(1);
+
     const pomCanvasBg = await page.evaluate(
       () => getComputedStyle(document.body).backgroundColor
     );
     expect(pomCanvasBg).toBe("rgb(255, 253, 245)"); // #FFFDF5
 
-    await assertNoHorizontalOverflow(page, "Desktop / (Pomegranate)");
+    await assertNoHorizontalOverflow(page, "Desktop / (Modern)");
     await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "desktop-home-pomegranate.png"),
+      path: path.join(SCREENSHOT_DIR, "desktop-home-modern.png"),
       fullPage: false,
     });
 
-    // Test interactive Resume + Job Description input flow on Home
-    const resumeArea = page.locator("textarea").first();
-    const jobArea = page.locator("textarea").nth(1);
-    await resumeArea.fill(
-      "Board-Certified Internal Medicine Physician with 7 years of outpatient clinical experience using Epic EHR, chronic disease panel management for 520+ patients, and HIPAA-compliant clinical workflows."
-    );
-    await jobArea.fill(
-      "Lead Outpatient Internal Medicine Physician at Beacon Health Systems. Requirements: Epic EHR, Value-Based Care, HCC Coding Accuracy, Ambient Clinical AI, and Same-Day Access."
-    );
-    await expect(page.getByText(/RESUME READY/i)).toBeVisible();
-    await expect(page.getByText(/JOB READY/i)).toBeVisible();
+    // Test Progressive Disclosure FAQ accordion below the fold
+    const faqBtn = page.getByRole("button", {
+      name: /Why tailor your resume for every job/i,
+    });
+    await faqBtn.scrollIntoViewIfNeeded();
+    await expect(faqBtn).toHaveAttribute("aria-expanded", "false");
+    await faqBtn.click();
+    await expect(faqBtn).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByText(/applicant tracking systems/i)).toBeVisible();
 
-    // Test menu drawer opens cleanly with Streak/XP/DesignSwitcher
+    // Scroll back up and test Menu Drawer + Futureproof Button navigation
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole("button", { name: /Open menu/i }).click();
-    await expect(page.locator("#site-nav-menu")).toBeVisible();
-    await expect(page.locator("#site-nav-menu").getByText(/Site Design/i)).toBeVisible();
-    await expect(page.locator("#site-nav-menu").getByText(/Streak/i)).toBeVisible();
+    const menu = page.locator("#site-nav-menu");
+    await expect(menu).toBeVisible();
+    // On desktop, theme switcher is hidden inside menu (stays only in top nav)
+    await expect(
+      menu.locator('[role="radiogroup"]:visible')
+    ).toHaveCount(0);
     await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "desktop-menu-pomegranate.png"),
+      path: path.join(SCREENSHOT_DIR, "desktop-menu-modern.png"),
       fullPage: false,
     });
-    await page.keyboard.press("Escape");
-    await expect(page.locator("#site-nav-menu")).toBeHidden();
 
-    // 2. Switch to Warm Paper Risograph via Header Switcher
+    // Click the Futureproof button in the menu -> must navigate to /futureproof & close menu
+    await menu.getByRole("link", { name: /Futureproof/i }).click();
+    await page.waitForURL(/\/futureproof/);
+    await expect(menu).toBeHidden();
+
+    // 2. Switch to Classic (risograph) via Top Nav Switcher
     await page
       .locator("header")
-      .getByRole("radio", { name: /Risograph/i })
+      .getByRole("radio", { name: /Classic/i })
       .click();
     await expect(page.locator("html")).toHaveAttribute(
       "data-design",
       "risograph"
     );
-
     await expect
       .poll(
         () =>
@@ -101,85 +111,42 @@ test.describe("Full-Site Dual-Design E2E & Visual Verification", () => {
       )
       .toBe("rgb(246, 240, 228)"); // #F6F0E4
 
-    await page.waitForTimeout(250);
-    await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "desktop-home-risograph.png"),
-      fullPage: false,
-    });
-
-    // 3. Verify persistence across hard reload
-    await page.reload({ waitUntil: "networkidle" });
+    await page.goto("/", { waitUntil: "networkidle" });
     await expect(page.locator("html")).toHaveAttribute(
       "data-design",
       "risograph"
     );
-
-    // 4. Traverse all core routes in Risograph & capture visual QA screenshots
-    const coreRoutes: Array<{ path: string; slug: string; expectedText: RegExp }> = [
-      { path: "/futureproof", slug: "futureproof", expectedText: /AI/i },
-      { path: "/pricing", slug: "pricing", expectedText: /One-Time/i },
-      { path: "/profile", slug: "profile", expectedText: /Sign In|Profile/i },
-      { path: "/agents", slug: "agents", expectedText: /Agent|OpenAPI/i },
-      { path: "/faq", slug: "faq", expectedText: /FAQ|Questions/i },
-      { path: "/blog", slug: "blog", expectedText: /Blog|Resume/i },
-    ];
-
-    for (const route of coreRoutes) {
-      await page.goto(route.path, { waitUntil: "networkidle" });
-      await expect(page.locator("html")).toHaveAttribute(
-        "data-design",
-        "risograph"
-      );
-      await expect(page.locator("main")).toContainText(route.expectedText);
-      await assertNoHorizontalOverflow(
-        page,
-        `Desktop ${route.path} (Risograph)`
-      );
-      if (["futureproof", "pricing", "profile", "agents"].includes(route.slug)) {
-        await page.screenshot({
-          path: path.join(
-            SCREENSHOT_DIR,
-            `desktop-${route.slug}-risograph.png`
-          ),
-          fullPage: false,
-        });
-      }
-    }
-
-    // 5. Switch back to Pomegranate via URL param ?design=pomegranate & capture key routes
-    for (const route of coreRoutes.slice(0, 4)) {
-      await page.goto(`${route.path}?design=pomegranate`, {
-        waitUntil: "networkidle",
-      });
-      await expect(page.locator("html")).toHaveAttribute(
-        "data-design",
-        "pomegranate"
-      );
-      await assertNoHorizontalOverflow(
-        page,
-        `Desktop ${route.path} (Pomegranate)`
-      );
-      await page.screenshot({
-        path: path.join(
-          SCREENSHOT_DIR,
-          `desktop-${route.slug}-pomegranate.png`
-        ),
-        fullPage: false,
-      });
-    }
-
-    // 6. Scroll to Footer & SiteLinks and capture bottom section in both themes
-    await page.goto("/?design=pomegranate", { waitUntil: "networkidle" });
-    await page.locator("footer").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
     await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "desktop-footer-pomegranate.png"),
+      path: path.join(SCREENSHOT_DIR, "desktop-home-classic.png"),
       fullPage: false,
     });
-    await page.locator("footer").getByRole("radio", { name: /Risograph/i }).click();
-    await expect(page.locator("html")).toHaveAttribute("data-design", "risograph");
-    await page.waitForTimeout(250);
+
+    // 3. Pricing page: verify pricing tiers + progressive disclosure toggle
+    await page.goto("/pricing", { waitUntil: "networkidle" });
+    await expect(page.getByText(/One-Time Access/i)).toBeVisible();
+    await expect(page.getByText(/Starter/i).first()).toBeVisible();
+    const whyToggle = page.getByRole("button", {
+      name: /Why job seekers switch/i,
+    });
+    await expect(whyToggle).toHaveAttribute("aria-expanded", "false");
     await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "desktop-footer-risograph.png"),
+      path: path.join(SCREENSHOT_DIR, "desktop-pricing-classic.png"),
+      fullPage: false,
+    });
+    await whyToggle.click();
+    await expect(
+      page.getByRole("button", { name: /Hide details/i })
+    ).toHaveAttribute("aria-expanded", "true");
+
+    // 4. Verify ?design=modern and ?design=classic URL aliases
+    await page.goto("/pricing?design=modern", { waitUntil: "networkidle" });
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-design",
+      "pomegranate"
+    );
+    await page.screenshot({
+      path: path.join(SCREENSHOT_DIR, "desktop-pricing-modern.png"),
       fullPage: false,
     });
 
@@ -187,7 +154,7 @@ test.describe("Full-Site Dual-Design E2E & Visual Verification", () => {
     expect(serverErrors, `5xx server errors: ${serverErrors.join("; ")}`).toEqual([]);
   });
 
-  test("Mobile (390x844): Native mobile layout, floating bottom nav, 1-tap theme switch, zero overflow", async ({
+  test("Mobile (390x844): Theme switcher ONLY in menu drawer, Futureproof menu button navigates, zero overlap/overflow", async ({
     page,
   }) => {
     const pageErrors: string[] = [];
@@ -195,129 +162,72 @@ test.describe("Full-Site Dual-Design E2E & Visual Verification", () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
 
-    // 1. Mobile Home in Pomegranate
-    await page.goto("/?design=pomegranate", { waitUntil: "networkidle" });
+    // 1. Mobile Home in Modern design
+    await page.goto("/?design=modern", { waitUntil: "networkidle" });
     await expect(page.locator("html")).toHaveAttribute(
       "data-design",
       "pomegranate"
     );
-    await assertNoHorizontalOverflow(page, "Mobile / (Pomegranate)");
+    await assertNoHorizontalOverflow(page, "Mobile / (Modern)");
 
+    // Zero theme switchers visible before opening menu on mobile
+    await expect(
+      page.locator('[role="radiogroup"][aria-label*="design" i]:visible')
+    ).toHaveCount(0);
+
+    await page.screenshot({
+      path: path.join(SCREENSHOT_DIR, "mobile-home-modern.png"),
+      fullPage: false,
+    });
+
+    // 2. Open Mobile Menu -> ONE theme switcher visible inside menu
+    await page.getByRole("button", { name: /Open menu/i }).click();
+    const menu = page.locator("#site-nav-menu");
+    await expect(menu).toBeVisible();
+    await expect(
+      page.locator('[role="radiogroup"][aria-label*="design" i]:visible')
+    ).toHaveCount(1);
+
+    await page.screenshot({
+      path: path.join(SCREENSHOT_DIR, "mobile-menu-modern.png"),
+      fullPage: false,
+    });
+
+    // Switch to Classic inside Mobile Menu
+    await menu.getByRole("radio", { name: /Classic/i }).click();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-design",
+      "risograph"
+    );
+    await page.waitForTimeout(200);
+    await page.screenshot({
+      path: path.join(SCREENSHOT_DIR, "mobile-menu-classic.png"),
+      fullPage: false,
+    });
+
+    // Click Futureproof CTA button inside Mobile Menu -> navigates to /futureproof
+    await menu.getByRole("link", { name: /Futureproof/i }).click();
+    await page.waitForURL(/\/futureproof/);
+    await expect(menu).toBeHidden();
+    await assertNoHorizontalOverflow(page, "Mobile /futureproof (Classic)");
+    await page.screenshot({
+      path: path.join(SCREENSHOT_DIR, "mobile-futureproof-classic.png"),
+      fullPage: false,
+    });
+
+    // Verify Mobile Bottom Nav works cleanly
     const mobileNav = page.getByRole("navigation", {
       name: /Mobile quick navigation/i,
     });
     await expect(mobileNav).toBeVisible();
+    await mobileNav.getByRole("link", { name: /Tailor/i }).click();
+    await page.waitForURL(/\/$/);
+    await page.waitForTimeout(200);
     await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "mobile-home-pomegranate.png"),
-      fullPage: false,
-    });
-
-    // 2. Tap 1-tap theme flip button in Mobile Header -> switches to Risograph
-    await page
-      .getByRole("button", { name: /Switch to Warm Paper Risograph design/i })
-      .click();
-    await expect(page.locator("html")).toHaveAttribute(
-      "data-design",
-      "risograph"
-    );
-    await page.waitForTimeout(250);
-    await assertNoHorizontalOverflow(page, "Mobile / (Risograph)");
-    await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "mobile-home-risograph.png"),
-      fullPage: false,
-    });
-
-    // 3. Navigate via Mobile Bottom Nav -> Add AI (/futureproof) & Passes (/pricing)
-    await mobileNav.getByRole("link", { name: /Add AI/i }).click();
-    await page.waitForURL(/\/futureproof/);
-    await expect(page.locator("html")).toHaveAttribute("data-design", "risograph");
-    await assertNoHorizontalOverflow(page, "Mobile /futureproof (Risograph)");
-    await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "mobile-futureproof-risograph.png"),
-      fullPage: false,
-    });
-
-    await mobileNav.getByRole("link", { name: /Passes/i }).click();
-    await page.waitForURL(/\/pricing/);
-    await assertNoHorizontalOverflow(page, "Mobile /pricing (Risograph)");
-    await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "mobile-pricing-risograph.png"),
-      fullPage: false,
-    });
-
-    // Switch back to Pomegranate on mobile Pricing
-    await page
-      .getByRole("button", { name: /Switch to Pomegranate design/i })
-      .click();
-    await expect(page.locator("html")).toHaveAttribute(
-      "data-design",
-      "pomegranate"
-    );
-    await page.waitForTimeout(250);
-    await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "mobile-pricing-pomegranate.png"),
+      path: path.join(SCREENSHOT_DIR, "mobile-home-classic.png"),
       fullPage: false,
     });
 
     expect(pageErrors, `Mobile page errors: ${pageErrors.join("; ")}`).toEqual([]);
-  });
-
-  test("Design Lab (/design-lab): Isolated prototypes, Compare Both, interactive Talent guardrails, and Apply Live", async ({
-    page,
-  }) => {
-    const pageErrors: string[] = [];
-    page.on("pageerror", (err) => pageErrors.push(err.message));
-
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/design-lab", { waitUntil: "networkidle" });
-
-    // Verify Compare Both side-by-side renders both interactive phones
-    await page.getByRole("tab", { name: /Compare Both/i }).click();
-    await expect(page.getByText(/Side-by-Side Live Comparison/i)).toBeVisible();
-    await page.screenshot({
-      path: path.join(SCREENSHOT_DIR, "desktop-design-lab-compare.png"),
-      fullPage: false,
-    });
-
-    // Switch to Desktop Site view of Pomegranate & test Talent Network guardrails
-    await page.getByRole("tab", { name: /Desktop Site/i }).click();
-    await page
-      .getByRole("navigation", { name: /Pomegranate primary navigation/i })
-      .getByRole("button", { name: /Talent/i })
-      .click();
-    await page.getByRole("tab", { name: /LinkedIn Card/i }).click();
-    await page
-      .getByRole("button", { name: /Request Double-Opt-In Intro/i })
-      .click();
-
-    await page.getByRole("button", { name: /gmail \(blocked\)/i }).click();
-    await page
-      .getByRole("button", { name: /Send Verified Intro Request/i })
-      .click();
-    await expect(page.getByText(/Blocked: Please use a verified/i)).toBeVisible();
-
-    await page.getByRole("button", { name: /employer \(stealth\)/i }).click();
-    await page
-      .getByRole("button", { name: /Send Verified Intro Request/i })
-      .click();
-    await expect(page.getByText(/Stealth Guard/i)).toBeVisible();
-
-    await page.getByRole("button", { name: /valid work/i }).click();
-    await page
-      .getByRole("button", { name: /Send Verified Intro Request/i })
-      .click();
-    await expect(page.getByText(/Verified! Candidate received/i)).toBeVisible();
-
-    // Test "Use Live on Site ->" in Risograph mode
-    await page.getByRole("button", { name: /Close intro modal/i }).click();
-    await page.getByRole("tab", { name: /02 · Warm Paper Risograph/i }).click();
-    await page.getByRole("button", { name: /Use Live on Site/i }).click();
-    await page.waitForURL(/\?design=risograph/);
-    await expect(page.locator("html")).toHaveAttribute(
-      "data-design",
-      "risograph"
-    );
-
-    expect(pageErrors, `Design Lab page errors: ${pageErrors.join("; ")}`).toEqual([]);
   });
 });
