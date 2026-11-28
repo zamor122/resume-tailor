@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { POST as POST_ANALYZE } from "@/app/api/futureproof/analyze/route";
 import { POST as POST_GENERATE } from "@/app/api/futureproof/generate/route";
+import {
+  FUTUREPROOF_FALLBACK_MODELS,
+  clampConciseText,
+  enforceTimelineGuard,
+  resolveVerbatimHighlight,
+} from "@/app/services/futureproofAgent";
 
 const mockGenerateContent = vi.fn();
 const mockExtractAuthToken = vi.fn();
@@ -199,6 +205,135 @@ describe("Futureproof API Routes", () => {
       expect(data.mergedResume).toContain("SECRET_FULL_MERGED_RESUME_TEXT");
       expect(data.interviewTalkingPoints[0].isLocked).toBe(false);
       expect(data.interviewTalkingPoints[0].thirtySecondAnswer.length).toBeGreaterThan(40);
+    });
+
+    it("deterministically enforces modern_workflows_section when all roles are pre-2023 even if LLM returns inline_roles", async () => {
+      mockExtractAuthToken.mockReturnValue("valid-jwt");
+      mockGetAuthenticatedUser.mockResolvedValue({ id: "paid-user-1" });
+      mockGetAccessInfoServer.mockResolvedValue({ hasAccess: true, isExpired: false });
+
+      // Simulate an LLM ignoring the prompt and stamping 2023+ AI onto a 2018-2021 role
+      mockGenerateContent.mockResolvedValueOnce({
+        text: JSON.stringify({
+          placementMode: "inline_roles",
+          bulletUpgrades: [
+            {
+              roleTitle: "Senior Accountant",
+              company: "Midwest Industrial Supply",
+              dateRange: "May 2018 - August 2021",
+              placementType: "role_experience",
+              toolId: "microsoft-365-copilot",
+              toolName: "Microsoft 365 Copilot",
+              originalBullet: "Led monthly general ledger close in Excel.",
+              upgradedBullet:
+                "Streamlined monthly GL close using Microsoft 365 Copilot in Excel to summarize variance explanations.",
+              addedHighlight: "non-existent highlight phrase",
+              rationale: "Shows practical Excel Copilot usage.",
+            },
+          ],
+          skillsBlock: ["Microsoft 365 Copilot"],
+          mergedResume: "PATRICIA CHEN CPA\nMODERN WORKFLOWS & AI PROFICIENCY\n- Streamlined monthly GL close using Microsoft 365 Copilot.",
+        }),
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/futureproof/generate", {
+        method: "POST",
+        headers: { Authorization: "Bearer valid-jwt" },
+        body: JSON.stringify({
+          resumeText: SAMPLE_DOCTOR_RESUME,
+          industry: "finance_accounting",
+          hasRecentRoles: false,
+          useIndustryStandards: true,
+        }),
+      });
+
+      const res = await POST_GENERATE(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(data.placementMode).toBe("modern_workflows_section");
+      expect(data.bulletUpgrades[0].placementType).toBe("modern_workflows_section");
+      expect(data.bulletUpgrades[0].roleTitle).toBe("Modern Workflows & AI Proficiency");
+      expect(data.bulletUpgrades[0].dateRange).toBe("2024 - Present");
+      // Verbatim highlight repair fell back to toolName which IS in upgradedBullet
+      expect(data.bulletUpgrades[0].upgradedBullet.toLowerCase()).toContain(
+        data.bulletUpgrades[0].addedHighlight.toLowerCase()
+      );
+    });
+  });
+
+  describe("Futureproof Agent Guardrails", () => {
+    it("includes non-Gemini fallback model for 503/429 resilience", () => {
+      expect(FUTUREPROOF_FALLBACK_MODELS).toContain("groq:openai/gpt-oss-120b");
+    });
+
+    it("remaps historical pre-2023 inline bullets on mixed-timeline resumes to modern_workflows_section", () => {
+      const guarded = enforceTimelineGuard({
+        rawPlacementMode: "inline_roles",
+        hasRecentRoles: true,
+        detectedRoles: [
+          {
+            id: "role-0",
+            title: "ICU Registered Nurse",
+            company: "Mass Bay Medical Center",
+            dateRange: "Jan 2024 - Present",
+            isRecentForAi: true,
+          },
+          {
+            id: "role-1",
+            title: "Med-Surg Nurse",
+            company: "Charles River Hospital",
+            dateRange: "Jun 2017 - Dec 2021",
+            isRecentForAi: false,
+          },
+        ],
+        bulletUpgrades: [
+          {
+            id: "upgrade-0",
+            roleTitle: "ICU Registered Nurse",
+            company: "Mass Bay Medical Center",
+            dateRange: "Jan 2024 - Present",
+            placementType: "role_experience",
+            toolId: "epic-inbasket-ai",
+            toolName: "Epic In-Basket & Chart Summary AI",
+            originalBullet: "Document vitals in Epic",
+            upgradedBullet: "Used Epic In-Basket & Chart Summary AI for ICU handoffs.",
+            rationale: "Recent role stays inline.",
+          },
+          {
+            id: "upgrade-1",
+            roleTitle: "Med-Surg Nurse",
+            company: "Charles River Hospital",
+            dateRange: "Jun 2017 - Dec 2021",
+            placementType: "role_experience",
+            toolId: "epic-inbasket-ai",
+            toolName: "Epic In-Basket & Chart Summary AI",
+            originalBullet: "Managed med-surg ward",
+            upgradedBullet: "Applied Epic AI summaries to med-surg handoffs.",
+            rationale: "Should not be stamped on 2017-2021.",
+          },
+        ],
+      });
+
+      expect(guarded.placementMode).toBe("inline_roles");
+      expect(guarded.bulletUpgrades[0].placementType).toBe("role_experience");
+      expect(guarded.bulletUpgrades[1].placementType).toBe("modern_workflows_section");
+      expect(guarded.bulletUpgrades[1].dateRange).toBe("2024 - Present");
+    });
+
+    it("repairs non-verbatim addedHighlight and clamps verbose fitReason text cleanly", () => {
+      const highlight = resolveVerbatimHighlight(
+        "Built automated unit tests using GitHub Copilot across Next.js services.",
+        "hallucinated phrase not in bullet",
+        "GitHub Copilot / Cursor"
+      );
+      expect(highlight).toBe("GitHub Copilot");
+
+      const clamped = clampConciseText(
+        "Aligns with your healthcare and clinical operations workflow by drafting HIPAA-compliant ambient clinical notes during busy outpatient visits every single day.",
+        105
+      );
+      expect(clamped.length).toBeLessThanOrEqual(105);
     });
   });
 });

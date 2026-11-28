@@ -230,6 +230,8 @@ export default function FutureproofClient({
         body: JSON.stringify({
           resumeText: resumeText.trim(),
           industry: analysis.industry,
+          hasRecentRoles: analysis.hasRecentRoles,
+          detectedRoles: analysis.detectedRoles,
           selectedToolIds: forceIndustryStandards ? [] : selectedToolIds,
           useIndustryStandards:
             forceIndustryStandards || usedAutoStandard || selectedToolIds.length === 0,

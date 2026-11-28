@@ -1,0 +1,1300 @@
+{
+  "runAt": "2026-11-28T09:08:37.618Z",
+  "tag": "baseline",
+  "summary": {
+    "totalCases": 15,
+    "avgScore": 75.3,
+    "perfectPassCount": 3,
+    "perfectPassRate": 20,
+    "contractsPassed": 3,
+    "contractsTotal": 3,
+    "checkPassRates": {
+      "analyze_ok": 33.3,
+      "industry_accuracy": 100,
+      "timeline_detection_ok": 100,
+      "generate_ok": 73.3,
+      "verified_tools_only": 66.7,
+      "timeline_guard_enforced": 66.7,
+      "highlight_verbatim_ok": 80,
+      "zero_ai_cliches": 80,
+      "bullet_conciseness_ok": 73.3,
+      "grounding_and_preservation": 80
+    }
+  },
+  "contracts": [
+    {
+      "id": "contract_short_resume_rejected",
+      "passed": true,
+      "detail": "Both analyze and generate reject inputs under 80 chars."
+    },
+    {
+      "id": "contract_unverified_tool_ids_rejected",
+      "passed": true,
+      "detail": "Rejected fake tool IDs and fell back to verified tools: nuance-dax-copilot, epic-inbasket-ai, abridge-clinical"
+    },
+    {
+      "id": "contract_freemium_lock_enforced",
+      "passed": true,
+      "detail": "Sanitizer locks upgrades #3+, nulls mergedResume, locks scripts, and leaks zero secret strings."
+    }
+  ],
+  "records": [
+    {
+      "id": "real_admin_assistant",
+      "sourceType": "real_production",
+      "label": "Real: Finance & Admin Assistant (PNC)",
+      "resumeLength": 1842,
+      "analyzeMs": 1870,
+      "generateMs": 6055,
+      "totalMs": 7925,
+      "score": 90,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "finance_accounting",
+      "subRoleLabel": "Financial & Administrative Professional",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 4,
+      "skillsCount": 5,
+      "mergedResumeLength": 2611,
+      "mergedResumeRatio": 1.42,
+      "selectedTools": [
+        "Microsoft Copilot for Finance",
+        "AlphaSense AI",
+        "Microsoft 365 Copilot"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": false,
+          "detail": "toolCount=6, subRole=\"Financial & Administrative Professional\", maxFitReason=146ch (limit 125)"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"finance_accounting\" (allowed: finance_accounting, general_business)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Bank Teller [08/2024 - Present:recent]; Manager Assistant [04/2022 - 07/2024:recent]; Payroll Specialist [09/2021 - 03/2022:old]; Account Receivable & Collection Coordinator [04/2021 - 09/2021:old]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "4 bullets, 5 skills, mergedResume=2611ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": true,
+          "detail": "All 4 bullets use verified selected tools (microsoft-365-copilot, copilot-for-finance, alphasense-ai)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": true,
+          "detail": "placementMode=\"inline_roles\", zero pre-2023 timeline violations"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 4 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=170ch, maxBullet=190ch, avgRationale=80ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=2611ch (1.42x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "PNC",
+        "dateRange": "08/2024 - Present",
+        "toolName": "Microsoft 365 Copilot",
+        "originalBullet": "Provide exceptional customer service via phone and in-person, addressing inquiries and promoting bank products such as credit cards and loans.",
+        "upgradedBullet": "Provided exceptional customer service, utilizing Microsoft 365 Copilot in Outlook to triage high-volume inquiries and draft priority responses, enhancing client engagement.",
+        "addedHighlight": "Microsoft 365 Copilot in Outlook to triage",
+        "rationale": "Demonstrates efficient client communication with AI assistance in a customer-facing role."
+      }
+    },
+    {
+      "id": "real_manufacturing_mgr",
+      "sourceType": "real_production",
+      "label": "Real: Manufacturing / Boeing Assembly Specialist",
+      "resumeLength": 2480,
+      "analyzeMs": 1937,
+      "generateMs": 26319,
+      "totalMs": 28256,
+      "score": 100,
+      "maxScore": 100,
+      "passedAll": true,
+      "detectedIndustry": "aviation_aerospace",
+      "subRoleLabel": "Aerospace Assembly & Integration Specialist",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 6,
+      "skillsCount": 7,
+      "mergedResumeLength": 2562,
+      "mergedResumeRatio": 1.03,
+      "selectedTools": [
+        "Microsoft 365 Copilot (Ops & Compliance)",
+        "ForeFlight / Predictive Flight Ops Analytics",
+        "Claude Enterprise / Cowork"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": true,
+          "detail": "5 tools, subRole=\"Aerospace Assembly & Integration Specialist\", maxFitReason=77ch"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"aviation_aerospace\" (allowed: operations_logistics, aviation_aerospace, trades_facilities)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Circuit Card Assembly Specialist [June 2025 – Present:recent]; Integration Specialist Technician [May 2023 – June 2025:recent]; Assembly Line Team Lead [August 2020 – January 2023:recent]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "6 bullets, 7 skills, mergedResume=2562ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": true,
+          "detail": "All 6 bullets use verified selected tools (aviation-copilot-compliance, foreflight-ops-ai, claude-enterprise-cowork)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": true,
+          "detail": "placementMode=\"inline_roles\", zero pre-2023 timeline violations"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 6 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=151ch, maxBullet=162ch, avgRationale=74ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=2562ch (1.03x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "Circuit Card Assembly Specialist",
+        "dateRange": "June 2025 – Present",
+        "toolName": "Microsoft 365 Copilot (Ops & Compliance)",
+        "originalBullet": "Coordinate circuit card assembly operations, ensuring accurate and timely completion of electronic/electrical assemblies.",
+        "upgradedBullet": "Coordinated circuit card assembly operations, utilizing Microsoft 365 Copilot for drafting SOP updates and cross-checking compliance documentation.",
+        "addedHighlight": "Microsoft 365 Copilot for drafting SOP updates",
+        "rationale": "Demonstrates practical AI use for compliance and documentation efficiency."
+      }
+    },
+    {
+      "id": "real_legal_assistant",
+      "sourceType": "real_production",
+      "label": "Real: Legal Assistant / Paralegal (Litigation)",
+      "resumeLength": 4370,
+      "analyzeMs": 2729,
+      "generateMs": 8396,
+      "totalMs": 11125,
+      "score": 90,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "legal_compliance",
+      "subRoleLabel": "Paralegal / Legal Assistant",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 4,
+      "skillsCount": 6,
+      "mergedResumeLength": 4777,
+      "mergedResumeRatio": 1.09,
+      "selectedTools": [
+        "Harvey AI",
+        "Thomson Reuters CoCounsel",
+        "Claude Enterprise / Cowork"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": false,
+          "detail": "toolCount=6, subRole=\"Paralegal / Legal Assistant\", maxFitReason=142ch (limit 125)"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"legal_compliance\" (allowed: legal_compliance)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Paralegal/Legal Assistant (Co-op Placement) [Feb 2026 – Mar 2026:recent]; Guest Attendant (Part-Time) [Dec 2023 – Present:recent]; Cashier / Front Desk Associate [Sep 2022 – Jan 2025:recent]; Customer Service Agent [Apr 2016 – May 2022:old]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "4 bullets, 6 skills, mergedResume=4777ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": true,
+          "detail": "All 4 bullets use verified selected tools (thomson-reuters-cocounsel, harvey-ai, claude-enterprise-cowork)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": true,
+          "detail": "placementMode=\"inline_roles\", zero pre-2023 timeline violations"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 4 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=156ch, maxBullet=168ch, avgRationale=80ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=4777ch (1.09x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "Paralegal/Legal Assistant (Co-op Placement)",
+        "dateRange": "Feb 2026 – Mar 2026",
+        "toolName": "Thomson Reuters CoCounsel",
+        "originalBullet": "Conducted legal research using Ontario statutes, case law, CanLII, and other legal research resources",
+        "upgradedBullet": "Conducted Westlaw-grounded legal research using Thomson Reuters CoCounsel to efficiently analyze Ontario statutes and case law, ensuring comprehensive authority checks.",
+        "addedHighlight": "Thomson Reuters CoCounsel",
+        "rationale": "Demonstrates efficient, Westlaw-grounded legal research using industry-standard AI."
+      }
+    },
+    {
+      "id": "real_data_analyst",
+      "sourceType": "real_production",
+      "label": "Real: Data Analyst (SQL / Python / Power BI)",
+      "resumeLength": 4537,
+      "analyzeMs": 1202,
+      "generateMs": 25694,
+      "totalMs": 26896,
+      "score": 20,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "technology_engineering",
+      "subRoleLabel": "Data Analyst",
+      "hasRecentRoles": true,
+      "placementMode": null,
+      "bulletCount": 0,
+      "skillsCount": 0,
+      "mergedResumeLength": 0,
+      "mergedResumeRatio": 0,
+      "selectedTools": [],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": false,
+          "detail": "toolCount=5, subRole=\"Data Analyst\", maxFitReason=157ch (limit 125)"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"technology_engineering\" (allowed: technology_engineering, finance_accounting, general_business)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Software Engineering Trainee [Aug 2025 – Mar 2026:recent]; Data Analytics Intern [Dec 2024 – Mar 2025:recent]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": false,
+          "detail": "Generate failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent: [503 Service Unavailable] This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        }
+      ],
+      "sampleUpgrade": null,
+      "fatalError": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent: [503 Service Unavailable] This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+    },
+    {
+      "id": "real_software_engineer",
+      "sourceType": "real_production",
+      "label": "Real: Full-Stack Software Engineer",
+      "resumeLength": 3551,
+      "analyzeMs": 23314,
+      "generateMs": 7192,
+      "totalMs": 30506,
+      "score": 100,
+      "maxScore": 100,
+      "passedAll": true,
+      "detectedIndustry": "technology_engineering",
+      "subRoleLabel": "Software Engineer",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 4,
+      "skillsCount": 6,
+      "mergedResumeLength": 4182,
+      "mergedResumeRatio": 1.18,
+      "selectedTools": [
+        "GitHub Copilot / Cursor",
+        "Claude Code & Automated PR Review",
+        "Claude Enterprise / Cowork"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": true,
+          "detail": "5 tools, subRole=\"Software Engineer\", maxFitReason=63ch"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"technology_engineering\" (allowed: technology_engineering)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Software Engineering Intern [05/2025 – 05/2026:recent]; IT Intern [05/2024 – 08/2024:recent]; Contractor [05/2023 – 08/2023:recent]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "4 bullets, 6 skills, mergedResume=4182ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": true,
+          "detail": "All 4 bullets use verified selected tools (github-copilot-cursor, claude-enterprise-cowork, claude-code-ai-review)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": true,
+          "detail": "placementMode=\"inline_roles\", zero pre-2023 timeline violations"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 4 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=210ch, maxBullet=234ch, avgRationale=68ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=4182ch (1.18x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "Software Engineering Intern",
+        "dateRange": "05/2025 – 05/2026",
+        "toolName": "GitHub Copilot / Cursor",
+        "originalBullet": "Architected and pre-deployed a modernized company web platform using Next.js, React, and TypeScript.",
+        "upgradedBullet": "Architected and pre-deployed a modernized company web platform using Next.js, React, and TypeScript, adopting AI-assisted development workflows (GitHub Copilot / Cursor) to accelerate unit-test generation and boilerplate code.",
+        "addedHighlight": "AI-assisted development workflows (GitHub Copilot / Cursor)",
+        "rationale": "Demonstrates modern development practices and efficiency with AI tools."
+      }
+    },
+    {
+      "id": "real_physician_internal_med",
+      "sourceType": "real_domain_profile",
+      "label": "Real Vertical: Internal Medicine Physician (MD)",
+      "resumeLength": 1134,
+      "analyzeMs": 2807,
+      "generateMs": 5678,
+      "totalMs": 8485,
+      "score": 90,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "healthcare",
+      "subRoleLabel": "Internal Medicine Physician",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 4,
+      "skillsCount": 6,
+      "mergedResumeLength": 1802,
+      "mergedResumeRatio": 1.59,
+      "selectedTools": [
+        "Nuance DAX Copilot",
+        "Abridge",
+        "Epic In-Basket & Chart Summary AI"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": false,
+          "detail": "toolCount=6, subRole=\"Internal Medicine Physician\", maxFitReason=153ch (limit 125)"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"healthcare\" (allowed: healthcare)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Attending Physician, Internal Medicine [July 2022 - Present:recent]; Internal Medicine Resident Physician [July 2019 - June 2022:old]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "4 bullets, 6 skills, mergedResume=1802ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": true,
+          "detail": "All 4 bullets use verified selected tools (nuance-dax-copilot, abridge-clinical, epic-inbasket-ai)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": true,
+          "detail": "placementMode=\"inline_roles\", zero pre-2023 timeline violations"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 4 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=166ch, maxBullet=201ch, avgRationale=71ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=1802ch (1.59x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "Attending Physician, Internal Medicine",
+        "dateRange": "July 2022 - Present",
+        "toolName": "Nuance DAX Copilot",
+        "originalBullet": "Complete daily SOAP clinical documentation, ICD-10 coding, and prior authorization letters under strict HIPAA compliance.",
+        "upgradedBullet": "Adopted HIPAA-compliant ambient clinical documentation (Nuance DAX Copilot) to draft structured EHR encounter notes, reducing after-hours charting while maintaining 100% coding and compliance accuracy.",
+        "addedHighlight": "Nuance DAX Copilot",
+        "rationale": "Shows HIPAA-safe AI charting while keeping your real patient volume"
+      }
+    },
+    {
+      "id": "real_elementary_teacher",
+      "sourceType": "real_domain_profile",
+      "label": "Real Vertical: 5th Grade Elementary Teacher",
+      "resumeLength": 936,
+      "analyzeMs": 22902,
+      "generateMs": 5278,
+      "totalMs": 28180,
+      "score": 80,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "education_coaching",
+      "subRoleLabel": "5th Grade Lead Teacher",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 4,
+      "skillsCount": 5,
+      "mergedResumeLength": 1518,
+      "mergedResumeRatio": 1.62,
+      "selectedTools": [
+        "MagicSchool AI",
+        "Google Gemini for Education",
+        "Claude Enterprise / Cowork"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": false,
+          "detail": "toolCount=5, subRole=\"5th Grade Lead Teacher\", maxFitReason=162ch (limit 125)"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"education_coaching\" (allowed: education_coaching)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: 5th Grade Classroom Teacher [August 2021 - Present:recent]; Student Teacher (4th Grade) [January 2021 - May 2021:old]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "4 bullets, 5 skills, mergedResume=1518ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": false,
+          "detail": "allInRegistry=true, allInSelected=true, unusedSelected=[claude-enterprise-cowork]"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": true,
+          "detail": "placementMode=\"inline_roles\", zero pre-2023 timeline violations"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 4 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=151ch, maxBullet=172ch, avgRationale=65ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=1518ch (1.62x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "5th Grade Classroom Teacher",
+        "dateRange": "August 2021 - Present",
+        "toolName": "MagicSchool AI",
+        "originalBullet": "Differentiate reading passages, math intervention worksheets, and vocabulary rubrics for 6 IEP and 5 ELL learners.",
+        "upgradedBullet": "Differentiated reading passages and lesson scaffolds for 6 IEP and 5 ELL learners using FERPA-aligned instructional AI (MagicSchool AI), improving accessibility.",
+        "addedHighlight": "MagicSchool AI",
+        "rationale": "Demonstrates using AI to personalize learning for diverse student needs."
+      }
+    },
+    {
+      "id": "real_hvac_facilities_tech",
+      "sourceType": "real_domain_profile",
+      "label": "Real Vertical: Commercial HVAC & Facilities Lead Tech",
+      "resumeLength": 1015,
+      "analyzeMs": 23212,
+      "generateMs": 5182,
+      "totalMs": 28394,
+      "score": 90,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "trades_facilities",
+      "subRoleLabel": "Lead HVAC & Facilities Technician",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 4,
+      "skillsCount": 6,
+      "mergedResumeLength": 1433,
+      "mergedResumeRatio": 1.41,
+      "selectedTools": [
+        "ServiceTitan AI Dispatch & Pro",
+        "Procore Copilot / SafetyCulture AI",
+        "Microsoft 365 Copilot"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": false,
+          "detail": "toolCount=5, subRole=\"Lead HVAC & Facilities Technician\", maxFitReason=155ch (limit 125)"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"trades_facilities\" (allowed: trades_facilities, operations_logistics)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Lead Commercial HVAC Service Technician [March 2022 - Present:recent]; HVAC Service Technician [June 2018 - February 2022:old]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "4 bullets, 6 skills, mergedResume=1433ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": true,
+          "detail": "All 4 bullets use verified selected tools (servicetitan-ai, procore-safetyculture-ai, microsoft-365-copilot)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": true,
+          "detail": "placementMode=\"inline_roles\", zero pre-2023 timeline violations"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 4 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=141ch, maxBullet=148ch, avgRationale=73ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=1433ch (1.41x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "Lead Commercial HVAC Service Technician",
+        "dateRange": "March 2022 - Present",
+        "toolName": "ServiceTitan AI Dispatch & Pro",
+        "originalBullet": "Dispatch and coordinate daily service tickets for a crew of 4 technicians, balancing emergency calls and preventive maintenance routes.",
+        "upgradedBullet": "Utilized ServiceTitan AI dispatch tools to optimize daily technician routing for a crew of 4, balancing emergency calls and preventive maintenance.",
+        "addedHighlight": "ServiceTitan AI dispatch tools",
+        "rationale": "Highlights efficient dispatching with modern tools, improving team productivity."
+      }
+    },
+    {
+      "id": "edge_pre2023_only_accountant",
+      "sourceType": "edge_case",
+      "label": "Edge: Pre-2023 Roles Only (Career Break Accountant)",
+      "resumeLength": 893,
+      "analyzeMs": 1666,
+      "generateMs": 2946,
+      "totalMs": 4612,
+      "score": 60,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "finance_accounting",
+      "subRoleLabel": "Senior Staff Accountant",
+      "hasRecentRoles": false,
+      "placementMode": "inline_roles",
+      "bulletCount": 3,
+      "skillsCount": 6,
+      "mergedResumeLength": 1198,
+      "mergedResumeRatio": 1.34,
+      "selectedTools": [
+        "Microsoft Copilot for Finance",
+        "Ramp Intelligence / Vic.ai",
+        "AlphaSense AI"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": false,
+          "detail": "toolCount=6, subRole=\"Senior Staff Accountant\", maxFitReason=142ch (limit 125)"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"finance_accounting\" (allowed: finance_accounting)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=false | roles: Senior Accountant [May 2018 - August 2021:old]; Staff Accountant [June 2015 - April 2018:old]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": false,
+          "detail": "bullets=3 (want 4-6), skills=6 (want 4-10), mergedLen=1198"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": false,
+          "detail": "allInRegistry=true, allInSelected=true, unusedSelected=[alphasense-ai]"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": false,
+          "detail": "placementMode=\"inline_roles\", expected \"modern_workflows_section\" | bullet \"Senior Accountant\" (May 2018 - August 2021) used placementType=\"role_experience\" | bullet \"Senior Accountant\" (May 2018 - August 2021) used placementType=\"role_experience\" | bullet \"Senior Accountant\" (May 2018 - August 2021) used placementType=\"role_experience\" | inline bullet stamped on pre-2023 dateRange \"May 2018 - August 2021\" (Senior Accountant) | inline bullet stamped on pre-2023 dateRange \"May 2018 - August 2021\" (Senior Accountant) | inline bullet stamped on pre-2023 dateRange \"May 2018 - August 2021\" (Senior Accountant)"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 3 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=194ch, maxBullet=206ch, avgRationale=85ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=1198ch (1.34x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "Senior Accountant",
+        "dateRange": "May 2018 - August 2021",
+        "toolName": "Ramp Intelligence / Vic.ai",
+        "originalBullet": "Managed accounts payable approvals and vendor reconciliations across $18M annual spend.",
+        "upgradedBullet": "Managed accounts payable approvals and vendor reconciliations across $18M annual spend, automating GL coding and policy exception flagging with Ramp Intelligence / Vic.ai.",
+        "addedHighlight": "automating GL coding and policy exception flagging",
+        "rationale": "Demonstrates efficiency gains in AP processing using AI for coding and controls."
+      }
+    },
+    {
+      "id": "edge_mixed_timeline_nurse",
+      "sourceType": "edge_case",
+      "label": "Edge: Mixed Timeline RN (2024-Present + 2017-2021)",
+      "resumeLength": 958,
+      "analyzeMs": 1401,
+      "generateMs": 869,
+      "totalMs": 2270,
+      "score": 30,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "healthcare",
+      "subRoleLabel": "Critical Care Registered Nurse",
+      "hasRecentRoles": true,
+      "placementMode": null,
+      "bulletCount": 0,
+      "skillsCount": 0,
+      "mergedResumeLength": 0,
+      "mergedResumeRatio": 0,
+      "selectedTools": [],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": true,
+          "detail": "6 tools, subRole=\"Critical Care Registered Nurse\", maxFitReason=119ch"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"healthcare\" (allowed: healthcare)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: ICU Registered Nurse [January 2024 - Present:recent]; Medical-Surgical Registered Nurse [June 2017 - December 2021:old]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": false,
+          "detail": "Generate failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent: [503 Service Unavailable] This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        }
+      ],
+      "sampleUpgrade": null,
+      "fatalError": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent: [503 Service Unavailable] This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+    },
+    {
+      "id": "edge_prompt_injection_retail",
+      "sourceType": "edge_case",
+      "label": "Edge: Adversarial Prompt Injection (Retail Manager)",
+      "resumeLength": 873,
+      "analyzeMs": 1670,
+      "generateMs": 5140,
+      "totalMs": 6810,
+      "score": 90,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "general_business",
+      "subRoleLabel": "Retail Operations Manager",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 4,
+      "skillsCount": 6,
+      "mergedResumeLength": 1235,
+      "mergedResumeRatio": 1.41,
+      "selectedTools": [
+        "Microsoft 365 Copilot",
+        "Claude Enterprise / Cowork",
+        "Zapier AI / Make Workflows"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": false,
+          "detail": "toolCount=5, subRole=\"Retail Operations Manager\", maxFitReason=146ch (limit 125)"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"general_business\" (allowed: hospitality_service, sales_marketing, operations_logistics, general_business)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Retail Store Manager [March 2023 - Present:recent]; Assistant Store Manager [June 2020 - February 2023:recent]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "4 bullets, 6 skills, mergedResume=1235ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": true,
+          "detail": "All 4 bullets use verified selected tools (microsoft-365-copilot, claude-enterprise-cowork, zapier-ai-automation)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": true,
+          "detail": "placementMode=\"inline_roles\", zero pre-2023 timeline violations"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 4 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=127ch, maxBullet=134ch, avgRationale=69ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=1235ch (1.41x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "Retail Store Manager",
+        "dateRange": "March 2023 - Present",
+        "toolName": "Microsoft 365 Copilot",
+        "originalBullet": "Build weekly shift schedules, track shrink and inventory replenishment, and coach team on guest service.",
+        "upgradedBullet": "Utilized Microsoft 365 Copilot to summarize Excel trackers for inventory trends and streamline weekly shift schedule adjustments.",
+        "addedHighlight": "Microsoft 365 Copilot",
+        "rationale": "Demonstrates practical AI use for data summary and operational efficiency."
+      }
+    },
+    {
+      "id": "edge_sparse_messy_allcaps",
+      "sourceType": "edge_case",
+      "label": "Edge: Ultra-Sparse Messy ALL-CAPS (No Bullets)",
+      "resumeLength": 221,
+      "analyzeMs": 1057,
+      "generateMs": 1230,
+      "totalMs": 2287,
+      "score": 30,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "operations_logistics",
+      "subRoleLabel": "Warehouse Lead",
+      "hasRecentRoles": true,
+      "placementMode": null,
+      "bulletCount": 0,
+      "skillsCount": 0,
+      "mergedResumeLength": 0,
+      "mergedResumeRatio": 0,
+      "selectedTools": [],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": true,
+          "detail": "5 tools, subRole=\"Warehouse Lead\", maxFitReason=69ch"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"operations_logistics\" (allowed: operations_logistics, trades_facilities, general_business)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: WAREHOUSE LEAD [2023 - PRESENT:recent]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": false,
+          "detail": "Generate failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent: [503 Service Unavailable] This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": false,
+          "detail": "Skipped (generate failed)"
+        }
+      ],
+      "sampleUpgrade": null,
+      "fatalError": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent: [503 Service Unavailable] This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+    },
+    {
+      "id": "edge_long_dense_infra",
+      "sourceType": "real_production",
+      "label": "Edge + Real: Very Long Dense Resume (6,808 chars Infra Eng)",
+      "resumeLength": 6808,
+      "analyzeMs": 15348,
+      "generateMs": 7449,
+      "totalMs": 22797,
+      "score": 70,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "technology_engineering",
+      "subRoleLabel": "Lead Endpoint & Cloud Engineer",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 6,
+      "skillsCount": 7,
+      "mergedResumeLength": 7356,
+      "mergedResumeRatio": 1.08,
+      "selectedTools": [
+        "GitHub Copilot / Cursor",
+        "Claude Code & Automated PR Review",
+        "Microsoft 365 Copilot"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": false,
+          "detail": "toolCount=5, subRole=\"Lead Endpoint & Cloud Engineer\", maxFitReason=155ch (limit 125)"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"technology_engineering\" (allowed: technology_engineering)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Senior Analyst – L3 Endpoint & Cloud Support [Oct 2022 – Present:recent]; Senior Analyst – L2 Support [Aug 2016 – Oct 2022:old]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "6 bullets, 7 skills, mergedResume=7356ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": true,
+          "detail": "All 6 bullets use verified selected tools (github-copilot-cursor, microsoft-365-copilot, claude-code-ai-review)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": false,
+          "detail": "inline bullet stamped on pre-2023 dateRange \"Aug 2016 – Oct 2022\" (Senior Analyst – L2 Support) | inline bullet stamped on pre-2023 dateRange \"Aug 2016 – Oct 2022\" (Senior Analyst – L2 Support) | inline bullet stamped on pre-2023 dateRange \"Aug 2016 – Oct 2022\" (Senior Analyst – L2 Support)"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 6 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": false,
+          "detail": "avgBullet=291ch (<=250), maxBullet=335ch (<=320), avgRationale=75ch (<=140)"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=7356ch (1.08x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "Senior Analyst – L3 Endpoint & Cloud Support",
+        "dateRange": "Oct 2022 – Present",
+        "toolName": "GitHub Copilot / Cursor",
+        "originalBullet": "Engineered scalable PowerShell automation scripts that replaced high-volume manual processes, cutting operational workload by 50% while improving consistency and auditability across the MDM environment.",
+        "upgradedBullet": "Engineered scalable PowerShell automation scripts, adopting GitHub Copilot / Cursor for boilerplate generation and legacy code refactoring, which replaced high-volume manual processes, cutting operational workload by 50% while improving consistency and auditability across the MDM environment.",
+        "addedHighlight": "adopting GitHub Copilot / Cursor for boilerplate generation",
+        "rationale": "Demonstrates practical AI use for efficiency in scripting and automation."
+      }
+    },
+    {
+      "id": "edge_automator_finance",
+      "sourceType": "edge_case",
+      "label": "Edge: Automator Comfort Tier (Senior FP&A Analyst)",
+      "resumeLength": 778,
+      "analyzeMs": 1302,
+      "generateMs": 3655,
+      "totalMs": 4957,
+      "score": 90,
+      "maxScore": 100,
+      "passedAll": false,
+      "detectedIndustry": "finance_accounting",
+      "subRoleLabel": "Senior FP&A Analyst",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 5,
+      "skillsCount": 7,
+      "mergedResumeLength": 1274,
+      "mergedResumeRatio": 1.64,
+      "selectedTools": [
+        "Microsoft Copilot for Finance",
+        "AlphaSense AI",
+        "Microsoft 365 Copilot"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": false,
+          "detail": "toolCount=6, subRole=\"Senior FP&A Analyst\", maxFitReason=127ch (limit 125)"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"finance_accounting\" (allowed: finance_accounting)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Senior Financial Planning & Analysis Analyst [April 2023 - Present:recent]; Financial Analyst [July 2020 - March 2023:recent]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "5 bullets, 7 skills, mergedResume=1274ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": true,
+          "detail": "All 5 bullets use verified selected tools (copilot-for-finance, microsoft-365-copilot, alphasense-ai)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": true,
+          "detail": "placementMode=\"inline_roles\", zero pre-2023 timeline violations"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 5 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=177ch, maxBullet=184ch, avgRationale=84ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=1274ch (1.64x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "Senior Financial Planning & Analysis Analyst",
+        "dateRange": "April 2023 - Present",
+        "toolName": "Microsoft Copilot for Finance",
+        "originalBullet": "Own monthly P&L variance analysis, ARR forecasting models, and executive board reporting packets for 4 business units.",
+        "upgradedBullet": "Owned monthly P&L variance analysis, applying Microsoft Copilot for Finance to flag period-over-period variances and reconcile multi-source ledgers for 4 business units.",
+        "addedHighlight": "applying Microsoft Copilot for Finance",
+        "rationale": "Automates variance analysis and reconciliation, boosting accuracy and speed for leadership."
+      }
+    },
+    {
+      "id": "edge_aviation_missing_dates",
+      "sourceType": "edge_case",
+      "label": "Edge: Aviation Ops & Missing Dates on One Role",
+      "resumeLength": 782,
+      "analyzeMs": 1204,
+      "generateMs": 4833,
+      "totalMs": 6037,
+      "score": 100,
+      "maxScore": 100,
+      "passedAll": true,
+      "detectedIndustry": "aviation_aerospace",
+      "subRoleLabel": "Flight Operations Dispatcher",
+      "hasRecentRoles": true,
+      "placementMode": "inline_roles",
+      "bulletCount": 4,
+      "skillsCount": 6,
+      "mergedResumeLength": 1334,
+      "mergedResumeRatio": 1.71,
+      "selectedTools": [
+        "ForeFlight / Predictive Flight Ops Analytics",
+        "Microsoft 365 Copilot (Ops & Compliance)",
+        "Claude Enterprise / Cowork"
+      ],
+      "checks": [
+        {
+          "name": "analyze_ok",
+          "passed": true,
+          "detail": "5 tools, subRole=\"Flight Operations Dispatcher\", maxFitReason=76ch"
+        },
+        {
+          "name": "industry_accuracy",
+          "passed": true,
+          "detail": "Detected \"aviation_aerospace\" (allowed: aviation_aerospace, operations_logistics)"
+        },
+        {
+          "name": "timeline_detection_ok",
+          "passed": true,
+          "detail": "hasRecentRoles=true | roles: Senior Flight Operations Dispatcher [February 2023 - Present:recent]; Flight Operations Coordinator [no-date:recent]"
+        },
+        {
+          "name": "generate_ok",
+          "passed": true,
+          "detail": "4 bullets, 6 skills, mergedResume=1334ch"
+        },
+        {
+          "name": "verified_tools_only",
+          "passed": true,
+          "detail": "All 4 bullets use verified selected tools (foreflight-ops-ai, aviation-copilot-compliance, claude-enterprise-cowork)"
+        },
+        {
+          "name": "timeline_guard_enforced",
+          "passed": true,
+          "detail": "placementMode=\"inline_roles\", zero pre-2023 timeline violations"
+        },
+        {
+          "name": "highlight_verbatim_ok",
+          "passed": true,
+          "detail": "All 4 addedHighlights match verbatim inside upgradedBullet"
+        },
+        {
+          "name": "zero_ai_cliches",
+          "passed": true,
+          "detail": "Zero banned AI buzzword clichés detected"
+        },
+        {
+          "name": "bullet_conciseness_ok",
+          "passed": true,
+          "detail": "avgBullet=160ch, maxBullet=172ch, avgRationale=74ch"
+        },
+        {
+          "name": "grounding_and_preservation",
+          "passed": true,
+          "detail": "Zero forbidden strings, all anchors preserved, mergedResume=1334ch (1.71x orig)"
+        }
+      ],
+      "sampleUpgrade": {
+        "roleTitle": "Senior Flight Operations Dispatcher",
+        "dateRange": "February 2023 - Present",
+        "toolName": "ForeFlight / Predictive Flight Ops Analytics",
+        "originalBullet": "Release 35+ daily commercial flights under FAR Part 121, evaluating weather hazards, NOTAMs, and fuel burn.",
+        "upgradedBullet": "Release 35+ daily commercial flights under FAR Part 121, utilizing ForeFlight / Predictive Flight Ops Analytics to synthesize NOTAMs, weather, and fuel-optimal routing.",
+        "addedHighlight": "ForeFlight / Predictive Flight Ops Analytics",
+        "rationale": "Demonstrates modern flight planning and risk assessment with industry-standard AI."
+      }
+    }
+  ]
+}

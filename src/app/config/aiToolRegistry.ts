@@ -854,10 +854,23 @@ export function detectFutureproofIndustry(resumeText: string): IndustryCategory 
     /\b(administrative assistant|executive assistant|office manager|chief of staff|receptionist|executive support)\b/.test(
       lower
     );
+  const hasStrongLegalSignals =
+    /\b(paralegal|litigation|attorney|lawyer|law clerk|legal assistant|juris doctor|canlii|westlaw|lexisnexis|small claims court)\b/.test(
+      lower
+    );
+  const hasSoftwareRoleSignals =
+    /\b(software engineer|software developer|full[- ]?stack|backend engineer|frontend engineer|devops|site reliability|ml engineer|ai engineer)\b/.test(
+      lower
+    );
 
   // Prevent words like "inbox triage" on an Admin/EA resume from misclassifying as healthcare
   if (hasAdminSignals && !hasClinicalSignals) {
     return "general_business";
+  }
+
+  // Prevent words like "legal case management software" on a Paralegal resume from misclassifying as technology_engineering
+  if (hasStrongLegalSignals && !hasSoftwareRoleSignals) {
+    return "legal_compliance";
   }
 
   return detectIndustryCategory("", resumeText);
