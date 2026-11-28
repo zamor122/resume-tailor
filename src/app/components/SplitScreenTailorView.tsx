@@ -768,7 +768,7 @@ export default function SplitScreenTailorView() {
                 />
                 <span>ATS Match &amp; AI Experience Studio</span>
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 lg:hidden">
                 <span className="text-[11px] font-semibold text-[var(--design-ink-muted)] hidden sm:inline">
                   Theme:
                 </span>
