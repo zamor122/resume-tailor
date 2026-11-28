@@ -58,6 +58,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showWhyDetails, setShowWhyDetails] = useState(false);
   const [activePass, setActivePass] = useState<{
     tierLabel: string | null;
     expiresAt: Date | null;
@@ -158,30 +159,51 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF7F0] text-[#1C2028]">
-      {/* Hero Header HUD */}
-      <section className="py-12 md:py-16">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="neo-box bg-[#F4F1EA] p-6 sm:p-10 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl flex flex-col md:flex-row items-center justify-between gap-8 mb-12">
+      {/* Calm Pricing Hero */}
+      <section className="py-8 md:py-10">
+        <div className="container mx-auto px-4 max-w-6xl space-y-6">
+          <div className="neo-box bg-[var(--design-surface)] p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex-1 text-center md:text-left space-y-3">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                <span className="neo-tag bg-[#FF5722] text-white text-[10px] px-2.5 py-0.5 font-mono font-bold uppercase tracking-wider">
-                  HONEST PRICING
+                <span className="neo-tag bg-[var(--design-accent)] text-[var(--design-accent-ink)] text-xs px-3 py-1 font-bold">
+                  Honest Pricing
                 </span>
-                <span className="text-xs font-mono text-gray-500">
-                  NO HIDDEN RECURRING FEES
+                <span className="text-xs font-semibold text-[var(--design-ink-muted)]">
+                  No hidden recurring fees
                 </span>
               </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-mono tracking-tight text-[#1C2028]">
-                One-Time Access. <span className="bg-[#10B981] text-white px-2 py-0.5 neo-box-sm inline-block">Zero Traps.</span>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[var(--design-ink)]">
+                One-Time Access.{" "}
+                <span className="text-[var(--design-success)]">Zero Traps.</span>
               </h1>
-              <p className="text-sm sm:text-base text-gray-700 font-sans max-w-xl leading-relaxed">
-                Most resume builders quietly bill you $39/month until you notice. We never auto-renew. Run {FREE_AUDIT_LIMIT} free ATS audits &amp; bullet previews before spending a dime, and paid passes are strictly one-time.
+              <p className="text-sm sm:text-base text-[var(--design-ink-muted)] max-w-xl leading-relaxed">
+                Start with {FREE_AUDIT_LIMIT} free ATS audits &amp; bullet previews. Paid passes never auto-renew.
               </p>
+
+              {/* Compact Trust Strip + Optional Details Disclosure */}
+              <div className="pt-1 flex flex-wrap items-center justify-center md:justify-start gap-2">
+                {VALUE_PROPS.map((prop) => (
+                  <span
+                    key={prop.title}
+                    className="px-3 py-1 rounded-full bg-[var(--design-surface-tint)] text-xs font-semibold text-[var(--design-ink)] border border-[var(--design-border-soft)]"
+                  >
+                    ✓ {prop.title}
+                  </span>
+                ))}
+                <button
+                  type="button"
+                  aria-expanded={showWhyDetails}
+                  onClick={() => setShowWhyDetails((v) => !v)}
+                  className="px-3 py-1 rounded-full text-xs font-bold text-[var(--design-accent)] hover:underline"
+                >
+                  {showWhyDetails ? "Hide details ↑" : "Why job seekers switch ↓"}
+                </button>
+              </div>
             </div>
 
             <div className="shrink-0 flex flex-col items-center">
               <TailorBot
-                size={130}
+                size={112}
                 state="idle"
                 onPoke={() => playSfx("boop")}
                 showPokeTag={true}
@@ -189,19 +211,21 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Value Props Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            {VALUE_PROPS.map((prop) => (
-              <div
-                key={prop.title}
-                className="neo-box bg-white p-6 border-2 border-[#1C2028] shadow-[4px_4px_0px_#1C2028] rounded-xl space-y-2"
-              >
-                <span className="text-3xl block">{prop.icon}</span>
-                <h3 className="text-base font-bold font-mono text-[#1C2028]">{prop.title}</h3>
-                <p className="text-gray-600 font-sans text-xs sm:text-sm leading-relaxed">{prop.description}</p>
-              </div>
-            ))}
-          </div>
+          {/* Optional Value Props Grid (Progressive Disclosure) */}
+          {showWhyDetails && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {VALUE_PROPS.map((prop) => (
+                <div
+                  key={prop.title}
+                  className="neo-box bg-[var(--design-surface)] p-5 space-y-2"
+                >
+                  <span className="text-2xl block" aria-hidden="true">{prop.icon}</span>
+                  <h3 className="text-base font-bold text-[var(--design-ink)]">{prop.title}</h3>
+                  <p className="text-[var(--design-ink-muted)] text-sm leading-relaxed">{prop.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

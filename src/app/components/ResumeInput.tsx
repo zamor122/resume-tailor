@@ -54,35 +54,35 @@ const ResumeInput: React.FC<ResumeInputProps> = ({
 
   return (
     <div className="input-container flex flex-col flex-1 gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b-2 border-[#1C2028] flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[var(--design-border-soft)] flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <span className="neo-tag bg-[#FF5722] text-white text-xs px-2.5 py-1 font-mono font-bold border border-[#1C2028] shadow-[1px_1px_0px_#1C2028]">
-            STEP 01
+          <span className="neo-tag bg-[var(--design-accent)] text-[var(--design-accent-ink)] text-xs px-2.5 py-1 font-bold">
+            Step 1
           </span>
           <div>
-            <h2 className="text-base sm:text-lg md:text-xl font-mono font-bold text-[#1C2028] leading-tight mb-0">
-              YOUR CURRENT RESUME
+            <h2 className="text-base sm:text-lg font-bold text-[var(--design-ink)] leading-snug mb-0">
+              Your Current Resume
             </h2>
-            <p className="text-[11px] sm:text-xs font-mono text-gray-600 mb-0">
-              Upload PDF/TXT or paste text below
+            <p className="text-xs text-[var(--design-ink-muted)] mb-0">
+              Upload PDF/TXT or paste below
             </p>
           </div>
         </div>
         <span
-          className={`neo-tag text-[11px] font-mono font-bold px-2.5 py-1 border border-[#1C2028] ${
+          className={`neo-tag text-xs font-bold px-3 py-1 ${
             charCount === 0
-              ? "bg-white text-gray-500 shadow-[1px_1px_0px_#1C2028]"
+              ? "bg-[var(--design-surface-tint)] text-[var(--design-ink-muted)]"
               : isSufficient
-                ? "bg-[#10B981] text-white shadow-[1px_1px_0px_#1C2028]"
-                : "bg-[#F59E0B] text-white shadow-[1px_1px_0px_#1C2028]"
+                ? "bg-[#128C66] text-white"
+                : "bg-[#F7B93E] text-[#3A0C22]"
           }`}
         >
-          {charCount.toLocaleString()} CHARS
+          {charCount.toLocaleString()} chars
           {charCount > 0 && charCount < MIN_CHARS && (
-            <span className="ml-1 opacity-90">(MIN {MIN_CHARS})</span>
+            <span className="ml-1 opacity-90">(min {MIN_CHARS})</span>
           )}
           {isSufficient && charCount > 0 && (
-            <span className="ml-1">READY ✓</span>
+            <span className="ml-1">Ready ✓</span>
           )}
         </span>
       </div>
@@ -90,10 +90,10 @@ const ResumeInput: React.FC<ResumeInputProps> = ({
       {fileDropComponent && (
         <div className="space-y-3">
           {fileDropComponent}
-          <div className="flex items-center gap-3 text-[10px] sm:text-[11px] font-mono font-bold text-gray-500 uppercase tracking-wider my-1">
-            <div className="h-[2px] flex-1 bg-[#1C2028]/15" />
-            <span>OR PASTE RESUME TEXT DIRECTLY</span>
-            <div className="h-[2px] flex-1 bg-[#1C2028]/15" />
+          <div className="flex items-center gap-3 text-xs font-semibold text-[var(--design-ink-muted)] my-1">
+            <div className="h-px flex-1 bg-[var(--design-border-soft)]" />
+            <span>Or paste resume text</span>
+            <div className="h-px flex-1 bg-[var(--design-border-soft)]" />
           </div>
         </div>
       )}

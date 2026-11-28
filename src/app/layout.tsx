@@ -71,7 +71,7 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
-const DESIGN_INIT_SCRIPT = `(function(){try{var p=new URLSearchParams(window.location.search).get('design');var s=window.localStorage.getItem('airesumetailor_design');var d=(p==='risograph'||p==='pomegranate')?p:((s==='risograph'||s==='pomegranate')?s:'pomegranate');document.documentElement.setAttribute('data-design',d);document.documentElement.style.setProperty('--design-mode',d);}catch(e){}})();`;
+const DESIGN_INIT_SCRIPT = `(function(){try{var p=(new URLSearchParams(window.location.search).get('design')||'').toLowerCase();var s=(window.localStorage.getItem('airesumetailor_design')||'').toLowerCase();var m=function(v){return(v==='risograph'||v==='classic')?'risograph':((v==='pomegranate'||v==='modern')?'pomegranate':null);};var d=m(p)||m(s)||'pomegranate';document.documentElement.setAttribute('data-design',d);document.documentElement.style.setProperty('--design-mode',d);}catch(e){}})();`;
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://airesumetailor.com'),

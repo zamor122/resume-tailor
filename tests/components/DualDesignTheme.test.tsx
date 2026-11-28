@@ -9,14 +9,14 @@ import DesignSwitcher from "@/app/components/DesignSwitcher";
 import Footer from "@/app/components/Footer";
 import MobileBottomNav from "@/app/components/MobileBottomNav";
 
-describe("Dual-Design Theme System (Pomegranate & Warm Paper Risograph)", () => {
+describe("Dual-Design Theme System (Modern & Classic)", () => {
   beforeEach(() => {
     window.localStorage.clear();
     document.documentElement.removeAttribute("data-design");
     document.body.removeAttribute("data-design");
   });
 
-  it("defaults to Pomegranate and switches cleanly to Warm Paper Risograph with persistence", () => {
+  it("defaults to Modern (pomegranate) and switches cleanly to Classic (risograph) with persistence", () => {
     render(
       <ThemeProvider>
         <DesignSwitcher variant="compact" />
@@ -29,17 +29,17 @@ describe("Dual-Design Theme System (Pomegranate & Warm Paper Risograph)", () => 
     );
     expect(screen.getByText("AI Resume Tailor")).toBeInTheDocument();
 
-    const risoRadios = screen.getAllByRole("radio", { name: /Risograph/i });
-    fireEvent.click(risoRadios[0]);
+    const classicRadio = screen.getByRole("radio", { name: /Classic/i });
+    fireEvent.click(classicRadio);
 
     expect(document.documentElement.getAttribute("data-design")).toBe(
       "risograph"
     );
     expect(window.localStorage.getItem(DESIGN_STORAGE_KEY)).toBe("risograph");
-    expect(screen.getByText(/Tailor Studio/i)).toBeInTheDocument();
+    expect(screen.getByText("Tailor Studio")).toBeInTheDocument();
 
-    const pomRadios = screen.getAllByRole("radio", { name: /Pomegranate/i });
-    fireEvent.click(pomRadios[0]);
+    const modernRadio = screen.getByRole("radio", { name: /Modern/i });
+    fireEvent.click(modernRadio);
 
     expect(document.documentElement.getAttribute("data-design")).toBe(
       "pomegranate"
@@ -60,7 +60,7 @@ describe("Dual-Design Theme System (Pomegranate & Warm Paper Risograph)", () => 
     ).toBeInTheDocument();
     expect(screen.getByText("TAILOR")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("radio", { name: /Risograph/i }));
+    fireEvent.click(screen.getByRole("radio", { name: /Classic/i }));
     expect(screen.getByText("Tailor")).toBeInTheDocument();
   });
 });
