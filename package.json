@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "eval:futureproof": "npx tsx evals/run-futureproof-eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

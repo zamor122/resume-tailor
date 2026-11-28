@@ -91,4 +91,14 @@ describe("Futureproof AI Tool Registry", () => {
     const fallback = getFutureproofVariant("unknown-role");
     expect(fallback.key).toBe("default");
   });
+
+  it("classifies a paralegal resume mentioning case management software as legal_compliance", () => {
+    const paralegalResume = `
+      LEGAL ASSISTANT | PARALEGAL | LITIGATION SUPPORT
+      Detail-oriented Paralegal with experience in Small Claims Court filings, CanLII legal research,
+      and client file management using Clio legal software and Microsoft Office software.
+    `;
+    const result = getRecommendedToolsForResume({ resumeText: paralegalResume });
+    expect(result.industry).toBe("legal_compliance");
+  });
 });
