@@ -74,8 +74,8 @@
   }
 
   /* Dual-Design Token System: Pomegranate Tactile (default) & Warm Paper Risograph */
-  :root,
-  :where([data-design="pomegranate"]) {
+  :where(:root),
+  :where(html[data-design="pomegranate"]) {
     --design-mode: pomegranate;
     --design-canvas: #FFFDF5;
     --design-surface: #FFFFFF;
@@ -102,7 +102,8 @@
     --design-font-body: var(--font-prototype-sans), var(--font-geist-sans), system-ui, sans-serif;
   }
 
-  :where([data-design="risograph"]) {
+  :where(html[data-design="risograph"]),
+  html[data-design="risograph"] {
     --design-mode: risograph;
     --design-canvas: #F6F0E4;
     --design-surface: #FFFDF8;
@@ -939,6 +940,36 @@
   .font-design-display {
     font-family: var(--design-font-display);
   }
+
+  /* Tactile cotton paper grain & helpers used by Risograph and Design Lab */
+  .riso-paper-bg {
+    background-color: #F6F0E4;
+    background-image:
+      radial-gradient(rgba(36, 31, 26, 0.032) 1px, transparent 0),
+      radial-gradient(rgba(43, 107, 90, 0.025) 1px, transparent 0);
+    background-size: 22px 22px, 34px 34px;
+    background-position: 0 0, 11px 11px;
+  }
+
+  .proto-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .proto-scroll::-webkit-scrollbar-thumb {
+    background: rgba(58, 12, 34, 0.18);
+    border-radius: 9999px;
+  }
+
+  .proto-container {
+    container-type: inline-size;
+  }
+}
+
+/* Ensure legacy font-mono headings across secondary routes adopt each design's warm display font */
+:where(html[data-design="pomegranate"], html[data-design="risograph"]) :is(h1, h2, h3).font-mono:not([data-design-isolated="true"] *) {
+  font-family: var(--design-font-display);
+  letter-spacing: -0.015em;
 }
 
 /* ============================================================================

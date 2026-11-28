@@ -338,7 +338,7 @@ export default function Navigation() {
               style={{ backgroundColor: isPom ? "#2B6B5A" : "#EA375D" }}
               aria-hidden="true"
             />
-            <span className="hidden sm:inline">
+            <span className="inline">
               {isPom ? "Paper" : "Berry"}
             </span>
           </button>

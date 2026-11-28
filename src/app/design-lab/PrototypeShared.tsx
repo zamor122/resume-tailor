@@ -272,18 +272,7 @@ export function BrandTailorBot({
       ? "#EA375D"
       : "#D65A38";
 
-  return (
-    <button
-      type="button"
-      onClick={onPoke}
-      aria-label="Interact with TailorBot mascot"
-      className={`relative inline-flex items-center justify-center select-none transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
-        onPoke
-          ? "cursor-pointer hover:scale-105 active:scale-95"
-          : "cursor-default"
-      }`}
-      style={{ width: size, height: size }}
-    >
+  const svgContent = (
       <svg
         viewBox="0 0 160 160"
         className="w-full h-full overflow-visible"
@@ -398,6 +387,28 @@ export function BrandTailorBot({
           strokeLinecap="round"
         />
       </svg>
+  );
+
+  if (!onPoke) {
+    return (
+      <span
+        className="relative inline-flex items-center justify-center select-none"
+        style={{ width: size, height: size }}
+      >
+        {svgContent}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onPoke}
+      aria-label="Interact with TailorBot mascot"
+      className="relative inline-flex items-center justify-center select-none transition-transform cursor-pointer hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+      style={{ width: size, height: size }}
+    >
+      {svgContent}
     </button>
   );
 }
